@@ -21,10 +21,12 @@ package edu.columbia.tjw.item;
 
 /**
  *
+ * A factory that can create datasets needed for fitting.
+ * 
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T>
+ * @param <S> The status type for this model
+ * @param <R> The regressor type for this model
+ * @param <T> The curve type for this model
  */
 public interface ItemGridFactory<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {

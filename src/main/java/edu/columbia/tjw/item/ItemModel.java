@@ -26,10 +26,12 @@ import java.util.List;
 
 /**
  *
+ * A class representing an ITEM model.
+ *
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T>
+ * @param <S> The status type for this model
+ * @param <R> The regressor type for this model
+ * @param <T> The curve type for this model
  */
 public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
@@ -42,6 +44,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final int _reachableSize;
     private final int[] _reachableMap;
 
+    /**
+     * Create a new item model from its parameters.
+     * @param params_ 
+     */
     public ItemModel(final ItemParameters<S, R, T> params_)
     {
         _params = params_;

@@ -20,14 +20,22 @@
 package edu.columbia.tjw.item;
 
 /**
+ * A thin wrapper used to read specific regressors from the model data.
+ *
+ * This is used by the curve drawing logic.
  *
  * @author tyler
  */
 public interface ItemRegressorReader
 {
-
-    public int size();
-
+    /**
+     * Get the regressor for observation index_
+     *
+     * Must support index values from 0 to modelGrid.size(), exclusive.
+     *
+     * @param index_ The index of the observation
+     * @return The value of the regressor for that observation.
+     */
     public double asDouble(final int index_);
 
 }

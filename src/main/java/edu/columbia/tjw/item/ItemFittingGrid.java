@@ -21,9 +21,12 @@ package edu.columbia.tjw.item;
 
 /**
  *
+ * Data that will be used for fitting.
+ * 
+ * 
  * @author tyler
- * @param <S>
- * @param <R>
+ * @param <S> The status type for this model
+ * @param <R> The regressor type for this model
  */
 public interface ItemFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> extends ItemModelGrid<S, R>
 {

@@ -20,15 +20,37 @@
 package edu.columbia.tjw.item;
 
 /**
+ * A filter that can be used to exclude certain coefficients and regressors from
+ * fitting.
+ *
+ * Any item excluded here will be skipped by the curve drawing. If a coefficient
+ * already exists for this item, it will be ignored (left unchanged) by the
+ * coefficient fitting.
+ *
  *
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T>
+ * @param <S> The status type for this model
+ * @param <R> The regressor type for this model
+ * @param <T> The curve type for this model
  */
 public interface ParamFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
 
+    /**
+     * True if this item is to be ignored.
+     *
+     * Coefficients are described by the tuple (from, to, field, transformation)
+     * -> coeff
+     *
+     * This filter allows some of these tuples to be ignored.
+     *
+     * @param fromStatus_ Status of the model in question
+     * @param toStatus_ Status of this transitions (e.g. from -> to)
+     * @param field_ The regressor
+     * @param trans_ The transformation to be applied, null if no
+     * transformation.
+     * @return True if this coefficient should not be adjusted.
+     */
     public boolean isFiltered(final S fromStatus_, final S toStatus_, final R field_, final ItemCurve<T> trans_);
 
 }

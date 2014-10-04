@@ -22,7 +22,7 @@ package edu.columbia.tjw.item;
 /**
  *
  * @author tyler
- * @param <V>
+ * @param <V> The type of the ITEM curve
  */
 public interface ItemCurve<V extends ItemCurveType<V>>
 {

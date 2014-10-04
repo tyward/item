@@ -26,7 +26,7 @@ import edu.columbia.tjw.item.util.EnumMember;
  * drawing.
  *
  * @author tyler
- * @param <V>
+ * @param <V> The type of the item curve
  */
 public interface ItemCurveType<V extends ItemCurveType<V>> extends EnumMember<V>
 {

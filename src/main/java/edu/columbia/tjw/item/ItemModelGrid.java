@@ -20,10 +20,15 @@
 package edu.columbia.tjw.item;
 
 /**
+ * A grid of data needed by the model.
+ *
+ * This grid would have enough data to perform projection, additional
+ * information is needed for fitting.
+ *
  *
  * @author tyler
- * @param <S>
- * @param <R>
+ * @param <S> The status type for this model
+ * @param <R> The regressor type for this model
  */
 public interface ItemModelGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>>
 {

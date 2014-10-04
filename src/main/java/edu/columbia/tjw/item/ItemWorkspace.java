@@ -20,9 +20,13 @@
 package edu.columbia.tjw.item;
 
 /**
+ * A workspace appropriate for use with ItemStatus S.
+ *
+ * The size of some of these vectors depends on the number of elements in the
+ * family represented by the status type S.
  *
  * @author tyler
- * @param <S>
+ * @param <S> The status type for this workspace.
  */
 public final class ItemWorkspace<S extends ItemStatus<S>>
 {

@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,12 +29,13 @@ import java.util.Set;
 /**
  *
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T>
+ * @param <S> The status type for this model
+ * @param <R> The regressor type for this model
+ * @param <T> The curve type for this model
  */
-public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
 {
+    private static final long serialVersionUID = 21032932723181271L;
     private final S _status;
     private final int _selfIndex;
     private final double[][] _betas;

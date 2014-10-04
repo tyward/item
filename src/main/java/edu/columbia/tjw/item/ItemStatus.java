@@ -25,7 +25,7 @@ import java.util.List;
 /**
  *
  * @author tyler
- * @param <V>
+ * @param <V> The type of this status
  */
 public interface ItemStatus<V extends ItemStatus<V>> extends EnumMember<V>
 {
