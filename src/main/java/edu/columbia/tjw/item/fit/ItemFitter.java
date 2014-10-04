@@ -31,8 +31,10 @@ import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
+import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Collection;
 import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  *
@@ -48,6 +50,8 @@ import java.util.Set;
  */
 public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
+    private static final Logger LOG = LogUtil.getLogger(ItemFitter.class);
+
     private final ItemCurveFactory<T> _factory;
 
     public ItemFitter(final ItemCurveFactory<T> factory_)
@@ -55,10 +59,29 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _factory = factory_;
     }
 
-    public ItemModel<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    public ItemModel<S, R, T> addCoefficients(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Collection<ParamFilter<S, R, T>> filters_,
+            final Collection<R> coefficients_) throws ConvergenceException
     {
-        final ItemModel<S, R, T> model = new ItemModel<>(params_);
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(model);
+        ItemParameters<S, R, T> params = params_;
+
+        for (final R field : coefficients_)
+        {
+            params = params.addBeta(field, null);
+        }
+
+        return fitCoefficients(params, gridFactory_, filters_);
+    }
+
+    public ItemModel<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    {
+        ItemModel<S, R, T> model = new ItemModel<>(params_);
+        final ItemFittingGrid<S, R> grid = gridFactory_.prepareGrid(params_);
+        return fitCoefficients(model, grid, filters_);
+    }
+
+    public ItemModel<S, R, T> fitCoefficients(final ItemModel<S, R, T> model_, final ItemFittingGrid<S, R> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    {
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(model_);
 
         final ItemModel<S, R, T> m2 = fitter.fit(fittingGrid_, null);
 
@@ -72,18 +95,20 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     public ItemModel<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Set<R> curveFields_, final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
     {
+        final long start = System.currentTimeMillis();
         ItemModel<S, R, T> model = new ItemModel<>(params_);
-        ItemFittingGrid<S, R> grid = gridFactory_.prepareGrid(params_);
 
         for (int i = 0; i < curveCount_; i++)
         {
+            final ItemFittingGrid<S, R> grid = gridFactory_.prepareGrid(model.getParams());
+
             try
             {
-                model = fitCoefficients(params_, grid, filters_);
+                model = fitCoefficients(model, grid, filters_);
             }
             catch (final ConvergenceException e)
             {
-                //Ignore this exception, just move on.
+                LOG.info("Unable to improve results in coefficient fit, moving on.");
             }
 
             final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, model, grid);
@@ -94,8 +119,24 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             }
             catch (final ConvergenceException e)
             {
+                LOG.info("Unable to make progress, breaking out.");
                 break;
             }
+            finally
+            {
+                LOG.info("Completed one round of curve drawing, moving on.");
+                LOG.info("Time marker: " + (System.currentTimeMillis() - start));
+                LOG.info("Heap used: " + Runtime.getRuntime().totalMemory() / (1024 * 1024));
+            }
+        }
+
+        try
+        {
+            model = fitCoefficients(model.getParams(), gridFactory_, filters_);
+        }
+        catch (final ConvergenceException e)
+        {
+            LOG.info("Unable to improve results in coefficient fit, moving on.");
         }
 
         return model;
