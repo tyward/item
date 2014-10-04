@@ -5,7 +5,6 @@
  */
 package edu.columbia.tjw.item.fit.param;
 
-import edu.columbia.tjw.item.fit.param.LogisticModelFunction;
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemFittingGrid;
@@ -20,7 +19,7 @@ import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
-import edu.columbia.tjw19.rigel.util.LogUtil;
+import edu.columbia.tjw.item.util.LogUtil;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;

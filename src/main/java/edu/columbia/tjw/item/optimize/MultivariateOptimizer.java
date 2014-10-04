@@ -5,13 +5,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.tjw.item.optimize.MultivariateOptimizationResult;
-import edu.columbia.tjw.item.optimize.MultivariateGradient;
-import edu.columbia.tjw.item.optimize.GoldenSectionOptimizer;
-import edu.columbia.tjw.item.optimize.EvaluationResult;
-import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
-import edu.columbia.tjw19.rigel.util.LogUtil;
+import edu.columbia.tjw.item.util.LogUtil;
 import java.util.logging.Logger;
 
 /**
@@ -112,14 +106,13 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         final double desiredMagnitude = stepMagnitude * SCALE_MULTIPLE;
                         final double scale = desiredMagnitude / directionMagnitude;
 
-                        if(directionMagnitude < 1.0e-8)
+                        if (directionMagnitude < 1.0e-8)
                         {
                             LOG.info("Ambiguous derivative, root search done.");
                             break;
                         }
-                        
-                        //LOG.info("Rescaled direction: " + scale);
 
+                        //LOG.info("Rescaled direction: " + scale);
                         trialPoint.scale(scale);
                         trialPoint.add(currentPoint);
                     }
@@ -183,7 +176,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
                 nextPoint.copy(result.getOptimum());
                 final EvaluationResult nextResult = result.minResult();
-       
+
                 final double zScore = this.getComparator().compare(f_, currentPoint, nextPoint, currentResult, nextResult);
 
 //                final double currentVal = currentResult.getMean();
@@ -194,7 +187,6 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 //                    break;
 //                }
                 //LOG.info("Finished one line search: " + zScore);
-
                 if (zScore < STD_DEV_CUTOFF)
                 {
                     LOG.info("Unable to make progress.");

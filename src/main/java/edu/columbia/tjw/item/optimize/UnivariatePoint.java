@@ -5,8 +5,6 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.item.rigel.optimize.EvaluationPoint;
-
 /**
  *
  * @author tyler
@@ -86,7 +84,8 @@ public final class UnivariatePoint implements EvaluationPoint<UnivariatePoint>, 
         {
             final UnivariatePoint output = (UnivariatePoint) super.clone();
             return output;
-        } catch (final CloneNotSupportedException e_)
+        }
+        catch (final CloneNotSupportedException e_)
         {
             throw new RuntimeException(e_);
         }

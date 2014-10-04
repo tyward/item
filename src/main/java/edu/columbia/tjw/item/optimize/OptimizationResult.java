@@ -5,9 +5,6 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.tjw.item.optimize.EvaluationResult;
-import edu.columbia.item.rigel.optimize.EvaluationPoint;
-
 /**
  *
  * @author tyler

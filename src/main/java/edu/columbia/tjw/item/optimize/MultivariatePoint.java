@@ -5,7 +5,6 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.item.rigel.optimize.EvaluationPoint;
 import java.util.Arrays;
 
 /**
@@ -169,7 +168,8 @@ public class MultivariatePoint implements EvaluationPoint<MultivariatePoint>
             point._point = point._point.clone();
             return point;
 
-        } catch (final CloneNotSupportedException e)
+        }
+        catch (final CloneNotSupportedException e)
         {
             throw new RuntimeException(e);
         }

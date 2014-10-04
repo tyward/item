@@ -5,9 +5,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.tjw.item.optimize.AdaptiveComparator;
-import edu.columbia.item.rigel.optimize.EvaluationPoint;
-import edu.columbia.tjw19.rigel.util.LogUtil;
+import edu.columbia.tjw.item.util.LogUtil;
 import java.util.logging.Logger;
 
 /**

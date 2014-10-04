@@ -5,8 +5,6 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.item.rigel.optimize.EvaluationPoint;
-
 /**
  *
  * @author tyler
@@ -15,15 +13,16 @@ public interface AdaptiveComparator<V extends EvaluationPoint<V>, F extends Opti
 {
     /**
      * Return (aRes - bRes) as a zScore.
+     *
      * @param function_
      * @param a_
      * @param b_
      * @param aResult_
      * @param bResult_
-     * @return 
+     * @return
      */
     public double compare(final F function_, final V a_, final V b_, final EvaluationResult aResult_, final EvaluationResult bResult_);
-    
+
     public double getSigmaTarget();
 
 }

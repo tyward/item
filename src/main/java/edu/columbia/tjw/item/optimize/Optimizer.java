@@ -5,14 +5,6 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.tjw.item.optimize.OptimizationResult;
-import edu.columbia.tjw.item.optimize.OptimizationFunction;
-import edu.columbia.tjw.item.optimize.EvaluationResult;
-import edu.columbia.item.rigel.optimize.EvaluationPoint;
-import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.optimize.BasicAdaptiveComparator;
-import edu.columbia.tjw.item.optimize.AdaptiveComparator;
-
 /**
  *
  * @author tyler

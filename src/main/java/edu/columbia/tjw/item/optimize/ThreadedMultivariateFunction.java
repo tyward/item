@@ -5,11 +5,8 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
-import edu.columbia.tjw.item.optimize.MultivariateFunction;
-import edu.columbia.tjw.item.optimize.EvaluationResult;
-import edu.columbia.tjw19.rigel.util.thread.GeneralTask;
-import edu.columbia.tjw19.rigel.util.thread.GeneralThreadPool;
+import edu.columbia.tjw.item.util.thread.GeneralTask;
+import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
 import java.util.ArrayList;
 import java.util.List;
 
