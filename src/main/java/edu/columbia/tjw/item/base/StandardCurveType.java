@@ -24,6 +24,8 @@ import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
  *
+ * The curve types described in the paper.
+ *
  * @author tyler
  */
 public enum StandardCurveType implements ItemCurveType<StandardCurveType>

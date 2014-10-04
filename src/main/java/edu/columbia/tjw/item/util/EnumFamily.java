@@ -28,8 +28,11 @@ import java.util.TreeSet;
 
 /**
  *
+ * This is needed because many of the relevant methods in enum (e.g. values())
+ * are static, so they cannot be used against objects of unknown types.
+ *
  * @author tyler
- * @param <V>
+ * @param <V> The type of enum that composes this family.
  */
 public final class EnumFamily<V extends EnumMember<V>>
 {
@@ -37,6 +40,10 @@ public final class EnumFamily<V extends EnumMember<V>>
     private final SortedSet<V> _memberSet;
     private final Map<String, V> _nameMap;
 
+    /**
+     * Initialize a new enum family, should pass it enum.values().
+     * @param values_ The output of enum.values() should be given here.
+     */
     public EnumFamily(final V[] values_)
     {
         _members = values_;
@@ -62,21 +69,39 @@ public final class EnumFamily<V extends EnumMember<V>>
 
     }
 
+    /**
+     * Returns all members of this enum family.
+     * @return Same as enum.values()
+     */
     public SortedSet<V> getMembers()
     {
         return _memberSet;
     }
 
+    /**
+     * How many members does this enum have.
+     * @return enum.values().length
+     */
     public int size()
     {
         return _members.length;
     }
 
+    /**
+     * Look up an enum by its ordinal
+     * @param ordinal_ The ordinal of the enum to retrieve. 
+     * @return enum.values()[ordinal_]
+     */
     public V getFromOrdinal(final int ordinal_)
     {
         return _members[ordinal_];
     }
 
+    /**
+     * Look up an enum by name. 
+     * @param name_ The name of the enum to look up. 
+     * @return enum.fromName(name_)
+     */
     public V getFromName(final String name_)
     {
         return _nameMap.get(name_);

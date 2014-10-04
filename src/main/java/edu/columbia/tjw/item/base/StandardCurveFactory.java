@@ -27,11 +27,21 @@ import edu.columbia.tjw.item.util.MathFunctions;
 import org.apache.commons.math3.util.FastMath;
 
 /**
+ * This is the default implementation of the curve factory.
+ *
+ * This provides curves for the standard curve types described in the paper
+ *
+ * Unless there is good reason, use this as the curve factory.
+ *
  *
  * @author tyler
  */
 public final class StandardCurveFactory implements ItemCurveFactory<StandardCurveType>
 {
+    /**
+     * The singleton for this class. It has no free parameters, so no need for
+     * more than one.
+     */
     public static final StandardCurveFactory SINGLETON = new StandardCurveFactory();
 
     private StandardCurveFactory()

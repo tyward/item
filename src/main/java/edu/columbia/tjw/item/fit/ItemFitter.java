@@ -44,9 +44,9 @@ import java.util.logging.Logger;
  *
  *
  * @author tyler
- * @param <S> The status type
- * @param <R> The regressor type
- * @param <T> The curve type
+ * @param <S> The status type for this model
+ * @param <R> The regressor type for this model
+ * @param <T> The curve type for this model
  */
 public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
@@ -59,6 +59,17 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _factory = factory_;
     }
 
+    /**
+     * Add a group of coefficients to the model, then refit all coefficients.
+     *
+     * @param params_ The parameters to expand
+     * @param gridFactory_ The factory that will construct datasets
+     * @param filters_ Any filters that should be used to limit the allowed
+     * coefficients, else null
+     * @param coefficients_ The set of coefficients to fit.
+     * @return A model fit with all the additional allowed coefficients.
+     * @throws ConvergenceException If no progress could be made
+     */
     public ItemModel<S, R, T> addCoefficients(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Collection<ParamFilter<S, R, T>> filters_,
             final Collection<R> coefficients_) throws ConvergenceException
     {
@@ -72,6 +83,17 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return fitCoefficients(params, gridFactory_, filters_);
     }
 
+    /**
+     *
+     * Optimize the coefficients.
+     *
+     * @param params_ The parameters to start with
+     * @param gridFactory_ A factory that can create datasets for fitting
+     * @param filters_ Filters describing any coefficients that should not be
+     * adjusted
+     * @return A model with newly optimized coefficients.
+     * @throws ConvergenceException If no progress could be made
+     */
     public ItemModel<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         ItemModel<S, R, T> model = new ItemModel<>(params_);
@@ -79,6 +101,15 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return fitCoefficients(model, grid, filters_);
     }
 
+    /**
+     * Same as overloaded method, different parameters.
+     *
+     * @param model_
+     * @param fittingGrid_
+     * @param filters_
+     * @return
+     * @throws ConvergenceException
+     */
     public ItemModel<S, R, T> fitCoefficients(final ItemModel<S, R, T> model_, final ItemFittingGrid<S, R> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         final ParamFitter<S, R, T> fitter = new ParamFitter<>(model_);
@@ -93,6 +124,21 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return m2;
     }
 
+    /**
+     * Add some new curves to this model.
+     *
+     * This function is the heart of the ITEM system, and uses most of the
+     * computational resources.
+     *
+     * @param params_ The parameters to start with
+     * @param gridFactory_ A factory that can create datasets for fitting
+     * @param curveFields_ The regressors on which to draw curves
+     * @param filters_ Filters describing any curves that should not be drawn or
+     * optimized
+     * @param curveCount_ The total number of curves that will be allowed.
+     * @return A new model with additional curves added, and all coefficients
+     * optimized.
+     */
     public ItemModel<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Set<R> curveFields_, final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
     {
         final long start = System.currentTimeMillis();

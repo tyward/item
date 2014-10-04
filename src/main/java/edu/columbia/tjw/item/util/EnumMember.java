@@ -20,16 +20,39 @@
 package edu.columbia.tjw.item.util;
 
 /**
+ * A base class for enumerations.
+ *
+ * This allows for the efficient enumeration of the ordinal members, for
+ * instance.
+ *
+ * This is needed because many of the relevant methods in enum (e.g. values())
+ * are static, so they cannot be used against objects of unknown types.
+ *
  *
  * @author tyler
- * @param <V>
+ * @param <V> The type of this enum member.
  */
 public interface EnumMember<V extends EnumMember<V>> extends Comparable<V>
 {
+    /**
+     * Same as enum.name()
+     *
+     * @return enum.name()
+     */
     public String name();
 
+    /**
+     * Same as enum.ordinal()
+     *
+     * @return enum.ordinal()
+     */
     public int ordinal();
 
+    /**
+     * Return the family describing all members of this enum class.
+     *
+     * @return The family describing all members of this enum.
+     */
     public EnumFamily<V> getFamily();
 
 }

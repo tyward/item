@@ -22,6 +22,8 @@ package edu.columbia.tjw.item;
 import edu.columbia.tjw.item.util.EnumMember;
 
 /**
+ * A base interface for descriptions of the curves to be used by ITEM curve
+ * drawing.
  *
  * @author tyler
  * @param <V>
@@ -29,10 +31,11 @@ import edu.columbia.tjw.item.util.EnumMember;
 public interface ItemCurveType<V extends ItemCurveType<V>> extends EnumMember<V>
 {
 
+    /**
+     * How many parameters are required to describe a curve of this type.
+     *
+     * @return The number of parameters needed for curves of this type.
+     */
     public int getParamCount();
-    
-    
-    
-    
-    
+
 }
