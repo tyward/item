@@ -200,8 +200,10 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
                 {
                     actual[w] = 1.0;
                 }
-
-                actual[w] = 0.0;
+                else
+                {
+                    actual[w] = 0.0;
+                }
             }
 
             for (int z = 0; z < dimension; z++)
