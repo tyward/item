@@ -22,18 +22,12 @@ package edu.columbia.tjw.item;
 /**
  *
  * @author tyler
- * @param <S>
- * @param <R>
  */
-public interface ItemFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> extends ItemModelGrid<S, R>
+public interface ItemRegressorReader
 {
 
-    public ItemRegressorReader getRegressorReader(final R field_);
+    public int size();
 
-    public int getStatus(final int index_);
-
-    public int getNextStatus(final int index_);
-
-    public boolean hasNextStatus(final int index_);
+    public double asDouble(final int index_);
 
 }

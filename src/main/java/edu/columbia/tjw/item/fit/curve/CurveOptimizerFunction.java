@@ -24,6 +24,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemFittingGrid;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 import edu.columbia.tjw.item.util.LogLikelihood;
@@ -90,10 +91,12 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         double eX = 0.0;
         double eX2 = 0.0;
 
+        final ItemRegressorReader reader = grid_.getRegressorReader(_field);
+
         for (int i = 0; i < _size; i++)
         {
             final int mapped = indexList_[i];
-            final double regressor = grid_.getRawRegressor(mapped, _field);
+            final double regressor = reader.asDouble(mapped);
 
             _regressor[i] = regressor;
 

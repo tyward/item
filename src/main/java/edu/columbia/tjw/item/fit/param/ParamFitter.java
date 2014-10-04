@@ -46,7 +46,7 @@ import java.util.logging.Logger;
  * @param <R>
  * @param <T>
  */
-public abstract class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private static final int BLOCK_SIZE = 500 * 1000;
     //private static final int BLOCK_SIZE = 10 * 1000;

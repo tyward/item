@@ -19,40 +19,85 @@
  */
 package edu.columbia.tjw.item.fit;
 
+import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveType;
+import edu.columbia.tjw.item.ItemFittingGrid;
 import edu.columbia.tjw.item.ItemGridFactory;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.ParamFilter;
+import edu.columbia.tjw.item.fit.curve.CurveFitter;
+import edu.columbia.tjw.item.fit.param.ParamFitter;
+import edu.columbia.tjw.item.optimize.ConvergenceException;
+import java.util.Collection;
+import java.util.Set;
 
 /**
  *
+ * A class designed to expand the model by adding curves.
+ *
+ * In addition, it may be used to fit only coefficients if needed.
+ *
+ *
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T>
+ * @param <S> The status type
+ * @param <R> The regressor type
+ * @param <T> The curve type
  */
 public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
+    private final ItemCurveFactory<T> _factory;
 
-    public ItemFitter(final R interceptRegressor_)
+    public ItemFitter(final ItemCurveFactory<T> factory_)
     {
-
+        _factory = factory_;
     }
 
-    public ItemModel<S, R, T> generateBaseModel(final ItemGridFactory<S, R, T> gridFactory_)
+    public ItemModel<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
+        final ItemModel<S, R, T> model = new ItemModel<>(params_);
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(model);
 
-        return null;
+        final ItemModel<S, R, T> m2 = fitter.fit(fittingGrid_, null);
+
+        if (null == m2)
+        {
+            throw new ConvergenceException("Unable to improve parameter fit.");
+        }
+
+        return m2;
     }
 
-    public ItemModel<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_)
+    public ItemModel<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Set<R> curveFields_, final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
     {
-        
-        
-        
-        
-        return null;
+        ItemModel<S, R, T> model = new ItemModel<>(params_);
+        ItemFittingGrid<S, R> grid = gridFactory_.prepareGrid(params_);
+
+        for (int i = 0; i < curveCount_; i++)
+        {
+            try
+            {
+                model = fitCoefficients(params_, grid, filters_);
+            }
+            catch (final ConvergenceException e)
+            {
+                //Ignore this exception, just move on.
+            }
+
+            final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, model, grid);
+
+            try
+            {
+                model = fitter.generateCurve(curveFields_, filters_);
+            }
+            catch (final ConvergenceException e)
+            {
+                break;
+            }
+        }
+
+        return model;
     }
 }
