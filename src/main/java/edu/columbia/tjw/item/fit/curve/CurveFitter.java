@@ -38,6 +38,7 @@ import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
+import edu.columbia.tjw.item.util.random.RandomTool;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -53,6 +54,8 @@ import java.util.logging.Logger;
  */
 public class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
+    private static final boolean RANDOM_SHUFFLE = true;
+
     private static final int BLOCK_SIZE = 200 * 1000;
     private static final Logger LOG = LogUtil.getLogger(CurveFitter.class);
     private static final double AIC_CUTOFF = -5.0;
@@ -110,7 +113,7 @@ public class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T 
         final int baseCase = fromStatus.getReachable().indexOf(fromStatus);
         int pointer = 0;
 
-        for (int i = 0; i < gridSize; i++)
+        for (int i = 0; i < count; i++)
         {
             final int statOrdinal = _grid.getStatus(i);
 
@@ -124,31 +127,39 @@ public class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T 
             }
 
             _indexList[pointer] = i;
+            pointer++;
+        }
 
-            model_.transitionProbability(_grid, workspace, i, probabilities);
+        if (RANDOM_SHUFFLE)
+        {
+            RandomTool.shuffle(_indexList);
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            final int index = _indexList[i];
+
+            model_.transitionProbability(_grid, workspace, index, probabilities);
 
             MultiLogistic.multiLogitFunction(baseCase, probabilities, probabilities);
 
             for (int w = 0; w < reachableCount; w++)
             {
                 final double next = probabilities[w];
-                _powerScores.set(pointer, w, next);
+                _powerScores.set(i, w, next);
 
                 final S stat = reachable.get(w);
-                final int actualTrans = _grid.getNextStatus(i);
+                final int actualTrans = _grid.getNextStatus(index);
 
                 if (actualTrans == stat.ordinal())
                 {
-                    _actualProbabilities.set(pointer, w, 1.0);
+                    _actualProbabilities.set(i, w, 1.0);
                 }
                 else
                 {
-                    _actualProbabilities.set(pointer, w, 0.0);
+                    _actualProbabilities.set(i, w, 0.0);
                 }
             }
-
-            pointer++;
-
         }
     }
 
@@ -270,7 +281,7 @@ public class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T 
 
         final double startingLL = res.getMean();
 
-        final double mean = func.getMean();
+        final double mean = func.getCentrality();
         final double stdDev = func.getStdDev();
 
         final double[] starting = generator_.getStartingParams(mean, stdDev);

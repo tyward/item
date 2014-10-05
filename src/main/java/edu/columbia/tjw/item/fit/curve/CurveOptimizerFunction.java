@@ -35,6 +35,7 @@ import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
 import edu.columbia.tjw.item.optimize.MultivariateGradient;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
+import edu.columbia.tjw.item.util.random.RandomTool;
 import java.util.List;
 
 /**
@@ -47,6 +48,8 @@ import java.util.List;
 public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
 {
+    private static final boolean RANDOM_CENTRALITY = true;
+
     private final LogLikelihood<S> _likelihood;
     private final ParamGenerator<S, R, T> _generator;
     private final R _field;
@@ -54,7 +57,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final int _size;
     private final double[] _workspace;
     private final int _toIndex;
-    private final double _mean;
+    private final double _centrality;
     private final double _stdDev;
 
     private final ItemModel<S, R, T> _model;
@@ -107,14 +110,22 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         eX = eX / _size;
         eX2 = eX2 / _size;
 
-        _mean = eX;
+        if (RANDOM_CENTRALITY)
+        {
+            final int index = RandomTool.nextInt(_size);
+            _centrality = _regressor[index];
+        }
+        else
+        {
+            _centrality = eX;
+        }
+
         _stdDev = Math.sqrt(eX2 - (eX * eX));
-        //_diff = new MultivariateFiniteDiffDerivFunction(this, new BasicAdaptiveComparator<MultivariatePoint, MultivariateFunction>(100000, 3.0));
     }
 
-    public double getMean()
+    public double getCentrality()
     {
-        return _mean;
+        return _centrality;
     }
 
     public double getStdDev()

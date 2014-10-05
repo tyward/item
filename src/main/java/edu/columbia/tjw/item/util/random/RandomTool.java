@@ -7,7 +7,6 @@ package edu.columbia.tjw.item.util.random;
 
 import edu.columbia.tjw.item.util.ByteTool;
 import edu.columbia.tjw.item.util.HashTool;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Random;
 
@@ -21,14 +20,7 @@ public class RandomTool
 
     static
     {
-        try
-        {
-            CORE = SecureRandom.getInstance("NativePRNGNonBlocking");
-        }
-        catch (final NoSuchAlgorithmException e)
-        {
-            throw new RuntimeException(e);
-        }
+        CORE = new SecureRandom();
     }
 
     private RandomTool()
@@ -55,6 +47,19 @@ public class RandomTool
         final double selector = nextDouble();
         final int selected = (int) (selector * max_);
         return selected;
+    }
+
+    public static void shuffle(final int[] input_)
+    {
+        for (int i = 0; i < input_.length; i++)
+        {
+            final int swapIndex = nextInt(input_.length);
+
+            final int a = input_[i];
+            final int b = input_[swapIndex];
+            input_[swapIndex] = a;
+            input_[i] = b;
+        }
     }
 
     public synchronized static int nextInt()
