@@ -149,6 +149,73 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return trans1_.equals(trans2_);
     }
 
+    public ItemParameters<S, R, T> dropRegressor(final R field_)
+    {
+        final int regCount = this.regressorCount();
+        final boolean[] keep = new boolean[regCount];
+
+        final List<R> regressorList = this.getRegressorList();
+        final List<ItemCurve<T>> tranList = this.getTransformationList();
+        final List<R> reducedReg = new ArrayList<>();
+        final List<ItemCurve<T>> reducedTran = new ArrayList<>();
+
+        int keepCount = 0;
+
+        for (int i = 0; i < regCount; i++)
+        {
+            final R next = regressorList.get(i);
+
+            if (field_.equals(next))
+            {
+                keep[i] = false;
+            }
+            else
+            {
+                reducedReg.add(next);
+                reducedTran.add(tranList.get(i));
+                keep[i] = true;
+                keepCount++;
+            }
+        }
+
+        final double[][] reducedBeta = new double[_betas.length][keepCount];
+
+        int pointer = 0;
+
+        for (int k = 0; k < regCount; k++)
+        {
+            if (!keep[k])
+            {
+                continue;
+            }
+
+            for (int i = 0; i < reducedBeta.length; i++)
+            {
+                reducedBeta[i][pointer] = _betas[i][k];
+            }
+
+            pointer++;
+        }
+
+        final List<ParamFilter<S, R, T>> reducedFilters = new ArrayList<>();
+
+        //Get rid of any filters related specifically to this regressor, and that should
+        //be dropped when this regressor is dropped.
+        for (final ParamFilter<S, R, T> filter : _filters)
+        {
+            final R related = filter.relatedRegressor();
+
+            if (!field_.equals(related))
+            {
+                reducedFilters.add(filter);
+            }
+        }
+
+        final ItemParameters<S, R, T> output = new ItemParameters<>(_status, reducedBeta, reducedReg, reducedTran, reducedFilters);
+
+        return output;
+    }
+
     /**
      * Creates a new set of parameters with an additional beta.
      *
@@ -284,6 +351,12 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         {
             final boolean output = fromStatus_.equals(toStatus_);
             return output;
+        }
+
+        @Override
+        public R relatedRegressor()
+        {
+            return null;
         }
 
     }

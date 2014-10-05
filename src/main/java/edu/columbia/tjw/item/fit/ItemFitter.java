@@ -34,6 +34,8 @@ import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Collection;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.logging.Logger;
 
 /**
@@ -124,6 +126,36 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return m2;
     }
 
+    public ItemModel<S, R, T> runAnnealingPass(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Set<R> curveFields_,
+            final Collection<ParamFilter<S, R, T>> filters_)
+    {
+        final int regCount = params_.regressorCount();
+        ItemParameters<S, R, T> base = params_;
+
+        for (final R regressor : curveFields_)
+        {
+            final ItemParameters<S, R, T> reduced = base.dropRegressor(regressor);
+
+            final int reducedCount = reduced.regressorCount();
+
+            final int reduction = regCount - reducedCount;
+
+            if (reduction <= 0)
+            {
+                continue;
+            }
+
+            final ItemParameters<S, R, T> rebuilt = expandModel(reduced, gridFactory_, curveFields_, filters_, reduction).getParams();
+
+            //TODO: Check this for improvement?
+            base = rebuilt;
+
+            LOG.info("---->Finished rebuilt after dropping regressor: " + regressor);
+        }
+
+        return new ItemModel<>(base);
+    }
+
     /**
      * Add some new curves to this model.
      *
@@ -139,7 +171,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A new model with additional curves added, and all coefficients
      * optimized.
      */
-    public ItemModel<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Set<R> curveFields_, final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
+    public ItemModel<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Set<R> curveFields_,
+            final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
     {
         final long start = System.currentTimeMillis();
         ItemModel<S, R, T> model = new ItemModel<>(params_);

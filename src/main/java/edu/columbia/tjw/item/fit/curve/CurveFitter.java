@@ -330,63 +330,13 @@ public class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T 
         }
     }
 
-    private static final class CurveFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements ParamFilter<S, R, T>
-    {
-        private final S _fromStatus;
-        private final S _toStatus;
-        private final R _field;
-        private final ItemCurve _trans;
-
-        public CurveFilter(final S fromStatus_, final S toStatus_, final R field_, final ItemCurve trans_)
-        {
-            _fromStatus = fromStatus_;
-            _toStatus = toStatus_;
-            _field = field_;
-            _trans = trans_;
-        }
-
-        @Override
-        public boolean isFiltered(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_)
-        {
-            if (fromStatus_ != _fromStatus)
-            {
-                //not the same model, ignore. 
-                return false;
-            }
-            if (field_ != _field)
-            {
-                //not the same field, ignore. 
-                return false;
-            }
-            if (null == _trans)
-            {
-                //No fitting is allowed on raw regressors once we have curves on them.
-                return true;
-            }
-            if (!_trans.equals(trans_))
-            {
-                //someone else's curve, leave it up to them to filter it.
-                return false;
-            }
-
-            if (toStatus_ != _toStatus)
-            {
-                //Curves are good for only one from -> to pair.
-                return true;
-            }
-
-            //OK, we're good, everything matches. 
-            return false;
-        }
-
-    }
 
     private static final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
     {
         private final double _startingLogL;
         private final double _logL;
         private final double _llImprovement;
-        private final ItemCurve<?> _trans;
+        private final ItemCurve<T> _trans;
         private final ParamGenerator<S, R, T> _generator;
         private final R _field;
         private final MultivariatePoint _point;

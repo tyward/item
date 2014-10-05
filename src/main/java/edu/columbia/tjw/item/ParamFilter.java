@@ -37,6 +37,16 @@ public interface ParamFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 {
 
     /**
+     * The associated regressor for this filter, or null.
+     *
+     * Should be set only if this filter is to be dropped when the regressor is
+     * dropped. Typically the case for filters generated during curve drawing.
+     *
+     * @return
+     */
+    public R relatedRegressor();
+
+    /**
      * True if this item is to be ignored.
      *
      * Coefficients are described by the tuple (from, to, field, transformation)
