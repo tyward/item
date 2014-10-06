@@ -62,6 +62,17 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
         _model = model_;
     }
 
+    public double[] getBeta()
+    {
+        return _beta.clone();
+    }
+
+    public ItemParameters<S, R, T> generateParams(final double[] beta_)
+    {
+        final ItemParameters<S, R, T> updated = updateParams(_params, _statusPointers, _regPointers, beta_);
+        return updated;
+    }
+
     @Override
     public int dimension()
     {
@@ -96,7 +107,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
             return;
         }
 
-        final ItemParameters updated = updateParams(_params, _statusPointers, _regPointers, _beta);
+        final ItemParameters<S, R, T> updated = generateParams(_beta);
         _params = updated;
         _model = _model.updateParameters(_params);
     }

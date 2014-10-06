@@ -33,18 +33,17 @@ import java.util.logging.Logger;
 public final class LogUtil
 {
 
-    static
-    {
-        final Logger rootLogger = Logger.getLogger("");
-
-        for (final Handler next : rootLogger.getHandlers())
-        {
-            rootLogger.removeHandler(next);
-        }
-
-        rootLogger.addHandler(new InnerHandler());
-    }
-
+//    static
+//    {
+//        final Logger rootLogger = Logger.getLogger("");
+//
+//        for (final Handler next : rootLogger.getHandlers())
+//        {
+//            rootLogger.removeHandler(next);
+//        }
+//
+//        rootLogger.addHandler(new InnerHandler());
+//    }
     private LogUtil()
     {
     }

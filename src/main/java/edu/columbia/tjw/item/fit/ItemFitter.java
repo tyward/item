@@ -34,8 +34,6 @@ import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Collection;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.logging.Logger;
 
 /**
@@ -130,6 +128,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final Collection<ParamFilter<S, R, T>> filters_)
     {
         final int regCount = params_.regressorCount();
+
+        final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params_));
+
+        final double startingLL = f1.computeLogLikelihood(params_, gridFactory_.prepareGrid(params_), filters_);
+        double baseLL = startingLL;
+
         ItemParameters<S, R, T> base = params_;
 
         for (final R regressor : curveFields_)
@@ -147,13 +151,32 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             final ItemParameters<S, R, T> rebuilt = expandModel(reduced, gridFactory_, curveFields_, filters_, reduction).getParams();
 
-            //TODO: Check this for improvement?
-            base = rebuilt;
+            final ParamFitter<S, R, T> f2 = new ParamFitter<>(new ItemModel<>(rebuilt));
 
-            LOG.info("---->Finished rebuilt after dropping regressor: " + regressor);
+            final double ll2 = f2.computeLogLikelihood(rebuilt, gridFactory_.prepareGrid(rebuilt), filters_);
+
+            if (ll2 < baseLL)
+            {
+                LOG.info("Annealing improved model: " + baseLL + " -> " + ll2);
+                base = rebuilt;
+                baseLL = ll2;
+            }
+            else
+            {
+                LOG.info("Annealing did not improve model, keeping old model: " + baseLL + " -> " + ll2);
+            }
+
+            //TODO: Check this for improvement?
+            LOG.info("---->Finished rebuild after dropping regressor: " + regressor);
         }
 
         return new ItemModel<>(base);
+    }
+
+    public double computeLogLikelihood(final ItemModel<S, R, T> model_, final ItemGridFactory<S, R, T> gridFactory_)
+    {
+
+        return Double.NaN;
     }
 
     /**
