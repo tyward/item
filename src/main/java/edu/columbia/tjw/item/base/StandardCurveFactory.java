@@ -22,7 +22,6 @@ package edu.columbia.tjw.item.base;
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.util.EnumFamily;
-import edu.columbia.tjw.item.util.HashUtil;
 import edu.columbia.tjw.item.util.MathFunctions;
 import org.apache.commons.math3.util.FastMath;
 
@@ -86,72 +85,7 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
         return StandardCurveType.FAMILY;
     }
 
-    private abstract static class StandardCurve implements ItemCurve<StandardCurveType>
-    {
-        @Override
-        public final boolean equals(final Object other_)
-        {
-            if (null == other_)
-            {
-                return false;
-            }
-            if (this == other_)
-            {
-                return true;
-            }
-            if (this.getClass() != other_.getClass())
-            {
-                return false;
-            }
-
-            final StandardCurve that = (StandardCurve) other_;
-
-            if (this.getCurveType() != that.getCurveType())
-            {
-                return false;
-            }
-
-            final int size = this.getCurveType().getParamCount();
-
-            for (int i = 0; i < size; i++)
-            {
-                final Double d1 = this.getParam(i);
-                final Double d2 = that.getParam(i);
-
-                //Compare as longs, since that's how we hashed them. THis is not exactly the same as comparing doubles directly. 
-                final long l1 = Double.doubleToLongBits(d1);
-                final long l2 = Double.doubleToLongBits(d2);
-
-                if (l1 != l2)
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        @Override
-        public final int hashCode()
-        {
-            int hash = HashUtil.startHash(this.getClass());
-            hash = HashUtil.mix(hash, this.getCurveType().hashCode());
-
-            final int paramCount = this.getCurveType().getParamCount();
-
-            hash = HashUtil.mix(hash, paramCount);
-
-            for (int i = 0; i < paramCount; i++)
-            {
-                final long longBits = Double.doubleToLongBits(this.getParam(i));
-                hash = HashUtil.mix(hash, longBits);
-            }
-
-            return hash;
-        }
-    }
-
-    private static final class GaussianCurve extends StandardCurve
+    private static final class GaussianCurve extends StandardCurve<StandardCurveType>
     {
         private final double _stdDev;
         private final double _invStdDev;
@@ -160,6 +94,8 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
 
         public GaussianCurve(final double mean_, final double stdDev_)
         {
+            super(StandardCurveType.GAUSSIAN);
+
             if (Double.isInfinite(mean_) || Double.isNaN(mean_))
             {
                 throw new IllegalArgumentException("Invalid mean: " + mean_);
@@ -223,15 +159,9 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
                     throw new IllegalArgumentException("Bad index: " + index_);
             }
         }
-
-        @Override
-        public StandardCurveType getCurveType()
-        {
-            return StandardCurveType.GAUSSIAN;
-        }
     }
 
-    private static final class LogisticCurve extends StandardCurve
+    private static final class LogisticCurve extends StandardCurve<StandardCurveType>
     {
         private final double _center;
         private final double _slope;
@@ -240,6 +170,8 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
 
         public LogisticCurve(final double center_, final double slope_)
         {
+            super(StandardCurveType.LOGISTIC);
+
             if (Double.isInfinite(center_) || Double.isNaN(center_))
             {
                 throw new IllegalArgumentException("Invalid center: " + center_);
@@ -305,12 +237,6 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
                 default:
                     throw new IllegalArgumentException("Bad index: " + index_);
             }
-        }
-
-        @Override
-        public StandardCurveType getCurveType()
-        {
-            return StandardCurveType.LOGISTIC;
         }
 
     }
