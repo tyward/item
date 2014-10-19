@@ -206,17 +206,16 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     }
 
     @Override
-    public MultivariateGradient calculateDerivative(MultivariatePoint input_, EvaluationResult result_, double precision_)
+    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_, EvaluationResult result_)
     {
-
-        this.prepare(input_);
-
-        final int start = 0;
-        final int end = this.numRows();
         final int dimension = input_.getDimension();
-
         final double[] derivative = new double[dimension];
-        final ItemWorkspace<S> workspace = _model.generateWorkspace();
+
+        if (start_ >= end_)
+        {
+            final MultivariatePoint der = new MultivariatePoint(derivative);
+            return new MultivariateGradient(input_, der, null, 0.0);
+        }
 
         final List<S> reachable = _model.getParams().getStatus().getReachable();
         int count = 0;
@@ -237,7 +236,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         final int interceptIndex = _generator.getInterceptParamNumber();
         final int betaIndex = _generator.getBetaParamNumber();
 
-        for (int i = start; i < end; i++)
+        for (int i = start_; i < end_; i++)
         {
             for (int w = 0; w < reachableCount; w++)
             {
@@ -291,7 +290,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
         final MultivariatePoint der = new MultivariatePoint(derivative);
 
-        //final MultivariateGradient grad = _diff.calculateDerivative(input_, result_, precision_);
         final MultivariateGradient grad = new MultivariateGradient(input_, der, null, 0.0);
         return grad;
     }

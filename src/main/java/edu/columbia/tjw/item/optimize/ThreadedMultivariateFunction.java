@@ -94,35 +94,117 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
             final int taskSize = this.resultSize(thisStart, thisEnd);
             final FunctionTask task = new FunctionTask(thisStart, thisEnd, taskSize);
             taskList.add(task);
-
-            if (USE_THREADS)
-            {
-                POOL.execute(task);
-            }
-            else
-            {
-                task.run();
-                final EvaluationResult res = task.waitForCompletion();
-                result_.add(res, result_.getHighWater(), res.getHighRow());
-            }
         }
 
-        if (USE_THREADS)
-        {
-            //Some synchronization to make sure we don't read old data.
-            synchronized (result_)
-            {
-                for (final FunctionTask next : taskList)
-                {
-                    final EvaluationResult res = next.waitForCompletion();
+        final List<EvaluationResult> results = executeTasks(taskList);
 
-                    synchronized (res)
-                    {
-                        result_.add(res, result_.getHighWater(), res.getHighRow());
-                    }
+        //Some synchronization to make sure we don't read old data.
+        synchronized (result_)
+        {
+            for (final EvaluationResult next : results)
+            {
+                synchronized (next)
+                {
+                    result_.add(next, result_.getHighWater(), next.getHighRow());
                 }
             }
         }
+    }
+
+    private static <W> List<W> executeTasks(final List<? extends GeneralTask<W>> tasks_)
+    {
+        final List<W> output = new ArrayList<>(tasks_.size());
+
+        for (final GeneralTask<W> next : tasks_)
+        {
+            if (USE_THREADS)
+            {
+                POOL.execute(next);
+            }
+            else
+            {
+                next.run();
+            }
+        }
+
+        for (final GeneralTask<W> next : tasks_)
+        {
+            final W res = next.waitForCompletion();
+            output.add(res);
+        }
+
+        return output;
+    }
+
+    public final MultivariateGradient calculateDerivative(MultivariatePoint input_, EvaluationResult result_, double precision_)
+    {
+        this.prepare(input_);
+
+        final int start = 0;
+        final int end = this.numRows();
+
+        final int numRows = (end - start);
+        final int numTasks = 1 + (numRows / _blockSize);
+
+        final List<DerivativeTask> taskList = new ArrayList<>(numTasks);
+
+        for (int i = 0; i < numTasks; i++)
+        {
+            final int thisStart = start + (i * _blockSize);
+
+            if (thisStart > end)
+            {
+                break;
+            }
+
+            final int blockEnd = thisStart + _blockSize;
+            final int thisEnd = Math.min(end, blockEnd);
+
+            if (thisEnd == thisStart)
+            {
+                break;
+            }
+
+            final int size = (thisEnd - thisStart);
+            final DerivativeTask task = new DerivativeTask(thisStart, thisEnd, input_, result_, size);
+            taskList.add(task);
+        }
+
+        final List<MultivariateGradient> results = executeTasks(taskList);
+
+        int totalSize = 0;
+        final double[] gradient = new double[results.get(0).getGradient().getDimension()];
+
+        for (int i = 0; i < results.size(); i++)
+        {
+            final MultivariateGradient next = results.get(i);
+            final DerivativeTask task = taskList.get(i);
+
+            synchronized (task)
+            {
+                final int size = task.getRowCount();
+                totalSize += size;
+
+                final MultivariatePoint nextGrad = next.getGradient();
+
+                for (int w = 0; w < nextGrad.getDimension(); w++)
+                {
+                    final double gradVal = nextGrad.getElement(w);
+                    final double weighted = size * gradVal;
+                    gradient[w] += weighted;
+                }
+            }
+        }
+
+        for (int w = 0; w < gradient.length; w++)
+        {
+            gradient[w] = gradient[w] / totalSize;
+        }
+
+        final MultivariatePoint point = new MultivariatePoint(gradient);
+
+        final MultivariateGradient grad = new MultivariateGradient(input_, point, null, 0.0);
+        return grad;
     }
 
     @Override
@@ -131,6 +213,8 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
     protected abstract void prepare(final MultivariatePoint input_);
 
     protected abstract void evaluate(final int start_, final int end_, EvaluationResult result_);
+
+    protected abstract MultivariateGradient evaluateDerivative(final int start_, final int end_, MultivariatePoint input_, EvaluationResult result_);
 
     @Override
     public EvaluationResult generateResult(int start_, int end_)
@@ -144,6 +228,43 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
     public EvaluationResult generateResult()
     {
         return generateResult(0, this.numRows());
+    }
+
+    private final class DerivativeTask extends GeneralTask<MultivariateGradient>
+    {
+        private final int _start;
+        private final int _end;
+        private final int _rowCount;
+        private final MultivariatePoint _input;
+        private final EvaluationResult _result;
+
+        public DerivativeTask(final int start_, final int end_, MultivariatePoint input_, EvaluationResult result_, int rowCount_)
+        {
+            if (end_ <= start_)
+            {
+                throw new IllegalArgumentException("Invalid.");
+            }
+            _start = start_;
+            _end = end_;
+            _input = input_;
+            _result = result_;
+            _rowCount = rowCount_;
+        }
+
+        public int getRowCount()
+        {
+            return _rowCount;
+        }
+
+        @Override
+        protected MultivariateGradient subRun()
+        {
+            synchronized (this)
+            {
+                return ThreadedMultivariateFunction.this.evaluateDerivative(_start, _end, _input, _result);
+            }
+        }
+
     }
 
     private final class FunctionTask extends GeneralTask<EvaluationResult>

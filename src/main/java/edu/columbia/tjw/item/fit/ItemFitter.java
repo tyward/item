@@ -126,7 +126,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     }
 
     public ItemModel<S, R, T> runAnnealingPass(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Set<R> curveFields_,
-            final Collection<ParamFilter<S, R, T>> filters_)
+            final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         final int regCount = params_.regressorCount();
 
@@ -171,6 +171,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             LOG.info("---->Finished rebuild after dropping regressor: " + regressor);
         }
 
+        if(baseLL == startingLL)
+        {
+            throw new ConvergenceException("Unable to make progress.");
+        }
+        
+        
         return new ItemModel<>(base);
     }
 

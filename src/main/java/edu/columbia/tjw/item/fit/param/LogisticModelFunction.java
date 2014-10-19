@@ -166,17 +166,17 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     }
 
     @Override
-    public MultivariateGradient calculateDerivative(MultivariatePoint input_, EvaluationResult result_, double precision_)
+    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_, EvaluationResult result_)
     {
-        //final MultivariateGradient grad = _derivFunction.calculateDerivative(input_, result_, precision_);
-
-        this.prepare(input_);
-
-        final int start = 0;
-        final int end = _grid.totalSize();
         final int dimension = input_.getDimension();
-
         final double[] derivative = new double[dimension];
+
+        if (start_ >= end_)
+        {
+            final MultivariatePoint der = new MultivariatePoint(derivative);
+            return new MultivariateGradient(input_, der, null, 0.0);
+        }
+
         final ItemWorkspace<S> workspace = _model.generateWorkspace();
 
         final double[] computed = workspace.getComputedProbabilityWorkspace();
@@ -187,7 +187,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
         final int fromOrdinal = _params.getStatus().ordinal();
 
-        for (int i = start; i < end; i++)
+        for (int i = start_; i < end_; i++)
         {
             if (_grid.getStatus(i) != fromOrdinal)
             {
