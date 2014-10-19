@@ -174,9 +174,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         //means no change....
         final MultivariatePoint startingPoint = new MultivariatePoint(dimension);
 
-        func.prepare(startingPoint);
         final EvaluationResult res = func.generateResult();
-        func.evaluate(0, func.numRows(), res);
+        func.value(startingPoint, 0, func.numRows(), res);
 
         final double startingLL = res.getMean();
 

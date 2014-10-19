@@ -32,7 +32,7 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
 {
     private static final boolean USE_THREADS = true;
     private static final GeneralThreadPool POOL = GeneralThreadPool.singleton();
-    private static final int DEFAULT_BLOCK_SIZE = 100;
+    private static final int DEFAULT_BLOCK_SIZE = 10 * 1000;
     private final int _blockSize;
 
     public ThreadedMultivariateFunction()
