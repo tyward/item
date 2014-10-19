@@ -56,9 +56,10 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         _toStatus = toStatus_;
     }
 
+    @Override
     public final ItemModel<S, R, T> generatedModel(double[] params_, final R field_)
     {
-        final int paramCount = paramCount();
+        //final int paramCount = paramCount();
 
         final ItemCurve<T> curve = generateTransformation(params_);
 
