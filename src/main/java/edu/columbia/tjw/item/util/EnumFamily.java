@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.util;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,7 +35,7 @@ import java.util.TreeSet;
  * @author tyler
  * @param <V> The type of enum that composes this family.
  */
-public final class EnumFamily<V extends EnumMember<V>>
+public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 {
     private final V[] _members;
     private final SortedSet<V> _memberSet;

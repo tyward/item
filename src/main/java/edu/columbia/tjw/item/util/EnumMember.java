@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item.util;
 
+import java.io.Serializable;
+
 /**
  * A base class for enumerations.
  *
@@ -32,7 +34,7 @@ package edu.columbia.tjw.item.util;
  * @author tyler
  * @param <V> The type of this enum member.
  */
-public interface EnumMember<V extends EnumMember<V>> extends Comparable<V>
+public interface EnumMember<V extends EnumMember<V>> extends Comparable<V>, Serializable
 {
     /**
      * Same as enum.name()

@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.util.random.RandomTool;
 import java.util.List;
 
 /**
@@ -110,8 +111,13 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     {
         final double[] output = new double[this._paramCount];
         fillStartingParams(regressorMean_, regressorStdDev_, output);
-        output[getInterceptParamNumber()] = -0.5;
-        output[getBetaParamNumber()] = 1.0;
+
+        //If we assume the curve increases propensity, then intercept should be negative,
+        //otherwise, flip. Let's pick randomly so we don't always get stuck on one side of zero.
+        final double scaleValue = RandomTool.nextDouble() - 0.5;
+
+        output[getInterceptParamNumber()] = -0.5 * scaleValue;
+        output[getBetaParamNumber()] = scaleValue;
         return output;
     }
 

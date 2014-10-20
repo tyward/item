@@ -19,12 +19,14 @@
  */
 package edu.columbia.tjw.item;
 
+import java.io.Serializable;
+
 /**
  *
  * @author tyler
  * @param <V> The type of the ITEM curve
  */
-public interface ItemCurve<V extends ItemCurveType<V>>
+public interface ItemCurve<V extends ItemCurveType<V>> extends Serializable
 {
 
     /**

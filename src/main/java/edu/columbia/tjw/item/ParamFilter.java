@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item;
 
+import java.io.Serializable;
+
 /**
  * A filter that can be used to exclude certain coefficients and regressors from
  * fitting.
@@ -33,7 +35,7 @@ package edu.columbia.tjw.item;
  * @param <R> The regressor type for this model
  * @param <T> The curve type for this model
  */
-public interface ParamFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public interface ParamFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends Serializable
 {
 
     /**
