@@ -32,11 +32,36 @@ package edu.columbia.tjw.item;
  */
 public interface ItemModelGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>>
 {
+    /**
+     * Get the regressors for this observation.
+     *
+     * Note that the results will be transformed (according to the curves from
+     * getTransformation)
+     *
+     * @param index_
+     * @param output_
+     */
     public void getRegressors(final int index_, final double[] output_);
 
+    /**
+     * The total number of observations in this data set.
+     * @return 
+     */
     public int totalSize();
 
+    /**
+     * The regressor corresponding to the i'th element of the output of getRegressors
+     * @param fieldIndex_
+     * @return 
+     */
     public R getField(final int fieldIndex_);
 
+    /**
+     * The transformation (possibly null, which means the identity) corresponding
+     * to the i'th element of the output of getRegressors. 
+     * 
+     * @param fieldIndex_
+     * @return 
+     */
     public ItemCurve<?> getTransformation(final int fieldIndex_);
 }

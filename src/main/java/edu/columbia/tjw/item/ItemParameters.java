@@ -301,6 +301,14 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return _fields.size();
     }
 
+    /**
+     * The list of all (not necessarily unique) regressors underlying this model's
+     * inputs. 
+     * 
+     * A regressor may appear many times if it is transformed by several curves. 
+     * 
+     * @return 
+     */
     public List<R> getRegressorList()
     {
         return _fields;
