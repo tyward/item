@@ -21,32 +21,47 @@ package edu.columbia.tjw.item;
 
 import edu.columbia.tjw.item.util.random.PrngType;
 import edu.columbia.tjw.item.util.random.RandomTool;
+import java.io.Serializable;
 import java.util.Random;
 
 /**
  *
  * @author tyler
  */
-public final class ItemSettings
+public final class ItemSettings implements Serializable
 {
+    private static final double STANDARD_AIC_CUTOFF = -5.0;
+    
     private final Random _rand;
     private final boolean _randomScale;
     private final boolean _randomShuffle;
     private final boolean _randomCentrality;
+    private final double _aicCutoff;
 
     public ItemSettings()
     {
-        this(true, true, true, RandomTool.getRandom(PrngType.STANDARD));
+        this(true, true, true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD));
     }
 
-    public ItemSettings(final boolean randomScale_, final boolean randomShuffle_, final boolean randomCentrality_, final Random rand_)
+    public ItemSettings(final boolean randomScale_, final boolean randomShuffle_, final boolean randomCentrality_, final double aicCutoff_, final Random rand_)
     {
+        if(aicCutoff_ > 0.0)
+        {
+            throw new IllegalArgumentException("The AIC cutoff must be negative: " + aicCutoff_);
+        }
+        
         _rand = rand_;
         _randomScale = randomScale_;
         _randomShuffle = randomShuffle_;
         _randomCentrality = randomCentrality_;
+        _aicCutoff = aicCutoff_;
     }
 
+    public double getAicCutoff()
+    {
+        return _aicCutoff;
+    }
+    
     public boolean isRandomCentrality()
     {
         return _randomCentrality;

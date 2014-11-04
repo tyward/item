@@ -27,6 +27,7 @@ import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
@@ -51,11 +52,13 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
     private final EnumFamily<T> _family;
     private final ItemParameters<S, R, T> _params;
+    private final ItemSettings _settings;
 
-    public CurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_)
+    public CurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemSettings settings_)
     {
         _family = factory_.getFamily();
         _params = model_.getParams();
+        _settings = settings_;
     }
 
     public final ItemModel<S, R, T> generateCurve(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filter_) throws ConvergenceException
@@ -79,7 +82,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
         LOG.info("AIC diff: " + aicDiff);
 
-        if (aicDiff > AIC_CUTOFF)
+        if (aicDiff > _settings.getAicCutoff())
         {
             //We demand that the AIC improvement is more than the bare minimum. 
             //We want this curve to be good enough to support at least N+5 parameters.

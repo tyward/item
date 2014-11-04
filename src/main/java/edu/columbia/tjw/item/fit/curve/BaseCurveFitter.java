@@ -64,7 +64,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemFittingGrid<S, R> grid_, final ItemSettings settings_)
     {
-        super(factory_, model_);
+        super(factory_, model_, settings_);
 
         _settings = settings_;
 
