@@ -111,26 +111,15 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         return beta;
     }
 
-    public final double[] getStartingParams(final double regressorMean_, final double regressorStdDev_)
+    public final double[] getStartingParams(final double regressorMean_, final double regressorStdDev_, final double startingBeta_)
     {
         final double[] output = new double[this._paramCount];
         fillStartingParams(regressorMean_, regressorStdDev_, output);
 
-        //If we assume the curve increases propensity, then intercept should be negative,
-        //otherwise, flip. Let's pick randomly so we don't always get stuck on one side of zero.
-        final double scaleValue;
 
-        if (_settings.isRandomScale())
-        {
-            scaleValue = _settings.getRandom().nextDouble() - 0.5;
-        }
-        else
-        {
-            scaleValue = 1.0;
-        }
 
-        output[getInterceptParamNumber()] = -0.5 * scaleValue;
-        output[getBetaParamNumber()] = scaleValue;
+        output[getInterceptParamNumber()] = -0.5 * startingBeta_;
+        output[getBetaParamNumber()] = startingBeta_;
         return output;
     }
 

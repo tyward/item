@@ -42,7 +42,7 @@ public interface ParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
 
     public double getBeta(final double[] params_);
 
-    public double[] getStartingParams(final double regressorMean_, final double regressorStdDev_);
+    public double[] getStartingParams(final double regressorMean_, final double regressorStdDev_, final double startingBeta_);
 
     public int paramCount();
 

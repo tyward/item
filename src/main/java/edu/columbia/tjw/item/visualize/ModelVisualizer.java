@@ -27,6 +27,9 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.ItemWorkspace;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.ObjectInputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -42,20 +45,30 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 {
     private final ItemModel<S, R, T> _model;
 
-    public static void main(final String[] args_)
-    {
-        try
-        {
-            
-            
-            
-
-        }
-        catch (final Exception e)
-        {
-            e.printStackTrace();
-        }
-    }
+//    public static void main(final String[] args_)
+//    {
+//        try
+//        {
+//            if(args_.length != 1)
+//            {
+//                System.out.println("Usage: ModelVisualizer <modelParameterFile>");
+//            }
+//
+//            final File paramFile = new File(args_[0]);
+//            
+//            final ObjectInputStream oIn = new ObjectInputStream(new FileInputStream(paramFile));
+//            final ItemParameters<?, ?, ?> params = (ItemParameters<?, ?, ?>) oIn.readObject();
+//            
+//            
+//            
+//            
+//
+//        }
+//        catch (final Exception e)
+//        {
+//            e.printStackTrace();
+//        }
+//    }
 
     public ModelVisualizer(final ItemModel<S, R, T> model_)
     {

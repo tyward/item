@@ -182,14 +182,46 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final double mean = func.getCentrality();
         final double stdDev = func.getStdDev();
 
-        final double[] starting = generator.getStartingParams(mean, stdDev);
+        //If we assume the curve increases propensity, then intercept should be negative,
+        //otherwise, flip. Let's pick randomly so we don't always get stuck on one side of zero.
+        final double scaleValue;
+
+        if (_settings.isRandomScale())
+        {
+            scaleValue = _settings.getRandom().nextDouble() - 0.5;
+        }
+        else
+        {
+            scaleValue = 1.0;
+        }
+
+        final double[] starting = generator.getStartingParams(mean, stdDev, scaleValue);
 
         for (int i = 0; i < dimension; i++)
         {
             startingPoint.setElement(i, starting[i]);
         }
 
-        final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(func, startingPoint);
+        OptimizationResult<MultivariatePoint> result = _optimizer.optimize(func, startingPoint);
+
+        if (_settings.isTwoSidedBeta())
+        {
+            LOG.info("Trying alternate scale calculation.s");
+            final double[] starting2 = generator.getStartingParams(mean, stdDev, -scaleValue);
+
+            for (int i = 0; i < dimension; i++)
+            {
+                startingPoint.setElement(i, starting2[i]);
+            }
+
+            OptimizationResult<MultivariatePoint> result2 = _optimizer.optimize(func, startingPoint);
+
+            if (result2.minValue() < result.minValue())
+            {
+                LOG.info("Alternate scale calc is better, using it.");
+                result = result2;
+            }
+        }
 
         final MultivariatePoint best = result.getOptimum();
         final double[] bestVal = best.getElements();

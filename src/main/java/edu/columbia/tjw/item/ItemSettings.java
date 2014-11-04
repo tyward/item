@@ -26,34 +26,41 @@ import java.util.Random;
 
 /**
  *
+ * Some general settings that control how curves are constructed and fit.
+ * 
+ * 
+ * 
  * @author tyler
  */
 public final class ItemSettings implements Serializable
 {
     private static final double STANDARD_AIC_CUTOFF = -5.0;
-    
+    private static final long serialVersionUID = 1L;
+
     private final Random _rand;
     private final boolean _randomScale;
     private final boolean _randomShuffle;
     private final boolean _randomCentrality;
+    private final boolean _useBothBetaSigns;
     private final double _aicCutoff;
 
     public ItemSettings()
     {
-        this(true, true, true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD));
+        this(true, true, true, true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD));
     }
 
-    public ItemSettings(final boolean randomScale_, final boolean randomShuffle_, final boolean randomCentrality_, final double aicCutoff_, final Random rand_)
+    public ItemSettings(final boolean randomScale_, final boolean randomShuffle_, final boolean randomCentrality_, final boolean bothBetaSigns_, final double aicCutoff_, final Random rand_)
     {
-        if(aicCutoff_ > 0.0)
+        if (aicCutoff_ > 0.0)
         {
             throw new IllegalArgumentException("The AIC cutoff must be negative: " + aicCutoff_);
         }
-        
+
         _rand = rand_;
         _randomScale = randomScale_;
         _randomShuffle = randomShuffle_;
         _randomCentrality = randomCentrality_;
+        _useBothBetaSigns = bothBetaSigns_;
         _aicCutoff = aicCutoff_;
     }
 
@@ -61,12 +68,18 @@ public final class ItemSettings implements Serializable
     {
         return _aicCutoff;
     }
+
+    public boolean isTwoSidedBeta()
+    {
+        return _useBothBetaSigns;
+    }
+    
     
     public boolean isRandomCentrality()
     {
         return _randomCentrality;
     }
-    
+
     public boolean isRandomScale()
     {
         return _randomScale;
@@ -76,7 +89,7 @@ public final class ItemSettings implements Serializable
     {
         return _randomShuffle;
     }
-    
+
     public Random getRandom()
     {
         return _rand;
