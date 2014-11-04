@@ -25,6 +25,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemFittingGrid;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.ItemWorkspace;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
@@ -48,15 +49,12 @@ import java.util.logging.Logger;
  */
 public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends CurveFitter<S, R, T>
 {
-    private static final boolean RANDOM_SHUFFLE = true;
-
     private static final int BLOCK_SIZE = 200 * 1000;
     private static final Logger LOG = LogUtil.getLogger(BaseCurveFitter.class);
-    //private static final double AIC_CUTOFF = -5.0;
 
-    //private final EnumFamily<T> _family;
     private final ItemCurveFactory<T> _factory;
 
+    private final ItemSettings _settings;
     private final ItemModel<S, R, T> _model;
     private final ItemFittingGrid<S, R> _grid;
     private final RectangularDoubleArray _powerScores;
@@ -64,9 +62,11 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final MultivariateOptimizer _optimizer;
     private final int[] _indexList;
 
-    public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemFittingGrid<S, R> grid_)
+    public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemFittingGrid<S, R> grid_, final ItemSettings settings_)
     {
         super(factory_, model_);
+
+        _settings = settings_;
 
         //_family = factory_.getFamily();
         _factory = factory_;
@@ -126,9 +126,9 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
             pointer++;
         }
 
-        if (RANDOM_SHUFFLE)
+        if (_settings.isRandomShuffle())
         {
-            RandomTool.shuffle(_indexList);
+            RandomTool.shuffle(_indexList, _settings.getRandom());
         }
 
         for (int i = 0; i < count; i++)
@@ -162,11 +162,11 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     @Override
     protected FitResult<S, R, T> findBest(T curveType_, R field_, S toStatus_) throws ConvergenceException
     {
-        final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, _model, toStatus_);
+        final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, _model, toStatus_, _settings);
         //LOG.info("\n\nFinding best: " + generator_ + " " + field_ + " " + toStatus_);
 
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(generator, field_, this._model.getParams().getStatus(), toStatus_, _powerScores, _actualProbabilities,
-                _grid, _model, _indexList);
+                _grid, _model, _indexList, _settings);
 
         final int dimension = generator.paramCount();
 

@@ -39,21 +39,46 @@ public class RandomTool
      */
     public static int nextInt(final int max_)
     {
+        return nextInt(max_, CORE);
+    }
+
+    /**
+     *
+     * @param max_
+     * @param rand_
+     * @return
+     */
+    public static int nextInt(final int max_, final Random rand_)
+    {
         if (max_ <= 0)
         {
             throw new IllegalArgumentException("Max must be positive.");
         }
 
-        final double selector = nextDouble();
+        final double selector = rand_.nextDouble();
         final int selected = (int) (selector * max_);
         return selected;
     }
 
+    /**
+     * 
+     * @param input_ 
+     */
     public static void shuffle(final int[] input_)
+    {
+        shuffle(input_, CORE);
+    }
+
+    /**
+     * 
+     * @param input_
+     * @param rand_ 
+     */
+    public static void shuffle(final int[] input_, final Random rand_)
     {
         for (int i = 0; i < input_.length; i++)
         {
-            final int swapIndex = nextInt(input_.length);
+            final int swapIndex = nextInt(input_.length, rand_);
 
             final int a = input_[i];
             final int b = input_[swapIndex];

@@ -25,6 +25,7 @@ import edu.columbia.tjw.item.ItemFittingGrid;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 import edu.columbia.tjw.item.util.LogLikelihood;
@@ -47,8 +48,6 @@ import java.util.List;
 public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
 {
-    private static final boolean RANDOM_CENTRALITY = true;
-
     private final LogLikelihood<S> _likelihood;
     private final ParamGenerator<S, R, T> _generator;
     private final R _field;
@@ -67,14 +66,17 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private double _interceptAdjustment;
     private double _beta;
     private MultivariatePoint _prevPoint;
-    //private final MultivariateDifferentiableFunction _diff;
 
+    private final ItemSettings _settings;
+
+    //private final MultivariateDifferentiableFunction _diff;
     public CurveOptimizerFunction(final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_,
             final RectangularDoubleArray powerScores_, final RectangularDoubleArray actualProbabilities_, final ItemFittingGrid<S, R> grid_,
-            final ItemModel<S, R, T> model_, final int[] indexList_)
+            final ItemModel<S, R, T> model_, final int[] indexList_, final ItemSettings settings_)
     {
         super(10 * 1000);
 
+        _settings = settings_;
         _likelihood = new LogLikelihood<>(fromStatus_.getFamily());
         _powerScores = powerScores_;
         _actualProbabilities = actualProbabilities_;
@@ -109,9 +111,9 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         eX = eX / _size;
         eX2 = eX2 / _size;
 
-        if (RANDOM_CENTRALITY)
+        if (_settings.isRandomCentrality())
         {
-            final int index = RandomTool.nextInt(_size);
+            final int index = RandomTool.nextInt(_size, _settings.getRandom());
             _centrality = _regressor[index];
         }
         else

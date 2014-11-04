@@ -25,6 +25,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.random.RandomTool;
 import java.util.List;
@@ -39,6 +40,7 @@ import java.util.List;
 public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         implements ParamGenerator<S, R, T>
 {
+    private final ItemSettings _settings;
     private final ItemCurveFactory<T> _factory;
     private final T _type;
     private final ItemModel<S, R, T> _baseModel;
@@ -46,7 +48,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     private final int _paramCount;
     private final S _toStatus;
 
-    public BaseParamGenerator(final ItemCurveFactory<T> factory_, final T curveType_, final ItemModel<S, R, T> baseModel_, final S toStatus_)
+    public BaseParamGenerator(final ItemCurveFactory<T> factory_, final T curveType_, final ItemModel<S, R, T> baseModel_, final S toStatus_, final ItemSettings settings_)
     {
         _factory = factory_;
         _type = curveType_;
@@ -55,6 +57,8 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         _paramCount = _tranParamCount + 2;
 
         _toStatus = toStatus_;
+
+        _settings = settings_;
     }
 
     @Override
@@ -114,7 +118,16 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
 
         //If we assume the curve increases propensity, then intercept should be negative,
         //otherwise, flip. Let's pick randomly so we don't always get stuck on one side of zero.
-        final double scaleValue = RandomTool.nextDouble() - 0.5;
+        final double scaleValue;
+
+        if (_settings.isRandomScale())
+        {
+            scaleValue = _settings.getRandom().nextDouble() - 0.5;
+        }
+        else
+        {
+            scaleValue = 1.0;
+        }
 
         output[getInterceptParamNumber()] = -0.5 * scaleValue;
         output[getBetaParamNumber()] = scaleValue;

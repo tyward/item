@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.ItemGridFactory;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.fit.curve.BaseCurveFitter;
@@ -54,10 +55,17 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private static final Logger LOG = LogUtil.getLogger(ItemFitter.class);
 
     private final ItemCurveFactory<T> _factory;
+    private final ItemSettings _settings;
 
     public ItemFitter(final ItemCurveFactory<T> factory_)
     {
+        this(factory_, new ItemSettings());
+    }
+    
+    public ItemFitter(final ItemCurveFactory<T> factory_, ItemSettings settings_)
+    {
         _factory = factory_;
+        _settings = settings_;
     }
 
     /**
@@ -220,7 +228,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 LOG.info("Unable to improve results in coefficient fit, moving on.");
             }
 
-            final CurveFitter<S, R, T> fitter = new BaseCurveFitter<>(_factory, model, grid);
+            final CurveFitter<S, R, T> fitter = new BaseCurveFitter<>(_factory, model, grid, _settings);
 
             try
             {
