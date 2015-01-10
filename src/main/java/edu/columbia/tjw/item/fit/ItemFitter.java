@@ -29,12 +29,14 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.ParamFilter;
+import edu.columbia.tjw.item.base.StandardCurveType;
 import edu.columbia.tjw.item.fit.curve.BaseCurveFitter;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -56,16 +58,42 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     private final ItemCurveFactory<T> _factory;
     private final ItemSettings _settings;
+    private final R _intercept;
 
-    public ItemFitter(final ItemCurveFactory<T> factory_)
+    public ItemFitter(final ItemCurveFactory<T> factory_, final R intercept_)
     {
-        this(factory_, new ItemSettings());
+        this(factory_, intercept_, new ItemSettings());
     }
-    
-    public ItemFitter(final ItemCurveFactory<T> factory_, ItemSettings settings_)
+
+    public ItemFitter(final ItemCurveFactory<T> factory_, final R intercept_, ItemSettings settings_)
     {
+        if (null == factory_)
+        {
+            throw new NullPointerException("Factory cannot be null.");
+        }
+        if (null == intercept_)
+        {
+            throw new NullPointerException("Intercept cannot be null.");
+        }
+        if (null == settings_)
+        {
+            throw new NullPointerException("Settings cannot be null.");
+        }
+
         _factory = factory_;
         _settings = settings_;
+        _intercept = intercept_;
+    }
+
+    public ItemParameters<S, R, T> generateInitialParameters(final S status_)
+    {
+        if (status_.getReachableCount() < 2)
+        {
+            throw new IllegalArgumentException("Only one reachable state, no need for a model.");
+        }
+
+        final ItemParameters<S, R, T> initial = new ItemParameters<>(status_, Collections.singletonList(_intercept));
+        return initial;
     }
 
     /**
@@ -179,12 +207,11 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             LOG.info("---->Finished rebuild after dropping regressor: " + regressor);
         }
 
-        if(baseLL == startingLL)
+        if (baseLL == startingLL)
         {
             throw new ConvergenceException("Unable to make progress.");
         }
-        
-        
+
         return new ItemModel<>(base);
     }
 
@@ -228,7 +255,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 LOG.info("Unable to improve results in coefficient fit, moving on.");
             }
 
-            final CurveFitter<S, R, T> fitter = new BaseCurveFitter<>(_factory, model, grid, _settings);
+            final CurveFitter<S, R, T> fitter = new BaseCurveFitter<>(_factory, model, grid, _settings, _intercept);
 
             try
             {

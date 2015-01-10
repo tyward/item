@@ -62,6 +62,8 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
         if ((_a != aResult_) || (_b != bResult_))
         {
             _comp = new ResultComparator(aResult_, bResult_);
+            _a = aResult_;
+            _b = bResult_;
         }
 
         int aCount = aResult_.getHighRow();
@@ -98,6 +100,8 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
                 function_.value(b_, bCount, end, bResult_);
                 bCount = bResult_.getHighRow();
             }
+            
+            zScore = _comp.computeZScore();
         }
 
         final double output = -zScore;

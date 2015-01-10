@@ -47,9 +47,16 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     private final int _tranParamCount;
     private final int _paramCount;
     private final S _toStatus;
+    private final R _intercept;
 
-    public BaseParamGenerator(final ItemCurveFactory<T> factory_, final T curveType_, final ItemModel<S, R, T> baseModel_, final S toStatus_, final ItemSettings settings_)
+    public BaseParamGenerator(final ItemCurveFactory<T> factory_, final T curveType_, final ItemModel<S, R, T> baseModel_, final S toStatus_, final ItemSettings settings_, final R intercept_)
     {
+        if (null == intercept_)
+        {
+            throw new NullPointerException("Intercept cannot be null.");
+        }
+
+        _intercept = intercept_;
         _factory = factory_;
         _type = curveType_;
         _baseModel = baseModel_;
@@ -72,7 +79,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         final ItemParameters<S, R, T> updated = orig.addBeta(field_, curve);
 
         final int matchIndex = updated.getIndex(field_, curve);
-        final int interceptIndex = updated.getIndex(field_.getIntercept(), null);
+        final int interceptIndex = updated.getIndex(_intercept, null);
 
         final S status = updated.getStatus();
         final List<S> reachable = status.getReachable();
@@ -115,8 +122,6 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     {
         final double[] output = new double[this._paramCount];
         fillStartingParams(regressorMean_, regressorStdDev_, output);
-
-
 
         output[getInterceptParamNumber()] = -0.5 * startingBeta_;
         output[getBetaParamNumber()] = startingBeta_;

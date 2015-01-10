@@ -61,11 +61,18 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final RectangularDoubleArray _actualProbabilities;
     private final MultivariateOptimizer _optimizer;
     private final int[] _indexList;
+    private final R _intercept;
 
-    public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemFittingGrid<S, R> grid_, final ItemSettings settings_)
+    public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemFittingGrid<S, R> grid_, final ItemSettings settings_, final R intercept_)
     {
         super(factory_, model_, settings_);
 
+        if(null == intercept_)
+        {
+            throw new NullPointerException("Intercept cannot be null.");
+        }
+        
+        _intercept = intercept_;
         _settings = settings_;
 
         //_family = factory_.getFamily();
@@ -162,7 +169,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     @Override
     protected FitResult<S, R, T> findBest(T curveType_, R field_, S toStatus_) throws ConvergenceException
     {
-        final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, _model, toStatus_, _settings);
+        final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, _model, toStatus_, _settings, _intercept);
         //LOG.info("\n\nFinding best: " + generator_ + " " + field_ + " " + toStatus_);
 
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(generator, field_, this._model.getParams().getStatus(), toStatus_, _powerScores, _actualProbabilities,

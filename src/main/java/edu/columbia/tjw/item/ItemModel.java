@@ -35,18 +35,19 @@ import java.util.List;
  */
 public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
+    private final double ROUNDING_TOLERANCE = 1.0e-8;
     private final LogLikelihood<S> _likelihood;
     private final ItemParameters<S, R, T> _params;
     private final List<S> _reachable;
 
-    //private final S _status;
     private final double[][] _betas;
     private final int _reachableSize;
     private final int[] _reachableMap;
 
     /**
      * Create a new item model from its parameters.
-     * @param params_ 
+     *
+     * @param params_
      */
     public ItemModel(final ItemParameters<S, R, T> params_)
     {
@@ -67,6 +68,11 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         {
             _reachableMap[_reachable.get(i).ordinal()] = i;
         }
+    }
+
+    public S getStatus()
+    {
+        return _params.getStatus();
     }
 
     public final int getRegressorCount()
@@ -103,6 +109,57 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double logLikelihood = _likelihood.logLikelihood(_params.getStatus(), computed, mapped);
         return logLikelihood;
+    }
+
+    /**
+     * This will take packed probabilities (only the reachable states for this
+     * status), and fill out a vector of unpacked probabilities (all statuses
+     * are represented).
+     *
+     * @param packed_ The probabilities for reachable statuses. (input)
+     * @param unpacked_ A vector to hold the probabilities for all statuses.
+     * Unreachable statuses will get 0.0.
+     */
+    public void unpackProbabilities(final double[] packed_, final double[] unpacked_)
+    {
+        final S status = getStatus();
+        //final List<S> reachable = status.getReachable();
+        final int reachableCount = status.getReachableCount();
+        final int statCount = status.getFamily().size();
+
+        if (packed_.length != reachableCount)
+        {
+            throw new IllegalArgumentException("Input is the wrong size: " + packed_.length);
+        }
+        if (unpacked_.length != statCount)
+        {
+            throw new IllegalArgumentException("Output is the wrong size: " + packed_.length);
+        }
+
+        Arrays.fill(unpacked_, 0.0);
+        double sum = 0.0;
+
+        for (int i = 0; i < statCount; i++)
+        {
+            final int reachableOrdinal = _reachableMap[i];
+
+            if (reachableOrdinal < 0)
+            {
+                unpacked_[i] = 0.0;
+                continue;
+            }
+
+            final double prob = packed_[reachableOrdinal];
+            sum += prob;
+            unpacked_[i] = prob;
+        }
+
+        final double diff = Math.abs(sum - 1.0);
+
+        if (!(diff < ROUNDING_TOLERANCE))
+        {
+            throw new IllegalArgumentException("Rounding tolerance exceeded by probability vector: " + diff);
+        }
     }
 
     public ItemWorkspace<S> generateWorkspace()
