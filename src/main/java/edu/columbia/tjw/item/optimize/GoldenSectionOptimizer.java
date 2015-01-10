@@ -30,6 +30,7 @@ import java.util.logging.Logger;
  */
 public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>> extends Optimizer<V, F>
 {
+    private static final double MAX_BRACKET_SCALE = 2000.0;
     private static final double STD_DEV_CUTOFF = 1.0;
     //private static final double STD_DEV_DIFF = 5.0;
     private static final Logger LOG = LogUtil.getLogger(GoldenSectionOptimizer.class);
@@ -153,7 +154,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
 
         while (comparisonCB < sigmaScale)
         {
-            if (ab.getMagnitude() > 2000.0 * initMag)
+            if (ab.getMagnitude() > MAX_BRACKET_SCALE * initMag)
             {
                 throw new ConvergenceException("Unable to bracket root.");
             }
@@ -228,7 +229,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                     //Fall back. 
                     presumedMinimum = cScalar;
                 }
-                else if(extremum <= cScalar)
+                else if (extremum <= cScalar)
                 {
                     presumedMinimum = cScalar;
                 }
@@ -254,29 +255,29 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             bRes = cRes;
             cRes = tmp;
             cRes.clear();
-            
-            if(presumedMinimum != cScalar)
+
+            if (presumedMinimum != cScalar)
             {
                 c.copy(aClone);
                 c.add(ab);
                 cRes.clear();
                 comparisonCB = comparator.compare(f_, c, b, cRes, bRes);
-                
+
                 //Assumed minimum higher than previous value of b. We are done.
-                if(comparisonCB > sigmaScale)
+                if (comparisonCB > sigmaScale)
                 {
                     return new Bracket<>(a, b, c, aRes, bRes, cRes);
                 }
-                if(comparisonCB < -sigmaScale)
+                if (comparisonCB < -sigmaScale)
                 {
                     //Minimum definitely lower than b, we can rotate b -> a, c -> b, compute new c.
                     a.copy(b);
                     b.copy(c);
-                    
+
                     ab.copy(a);
                     ab.scale(-1.0);
                     ab.add(b);
-                    
+
                     c.add(ab);
                     tmp = aRes;
                     aRes = bRes;
@@ -301,7 +302,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                 c.add(ab);
                 cRes.clear();
             }
-            
+
             //Now we know that a > b, and we think that c is probably higher than b, but haven't checked. 
             comparisonCB = comparator.compare(f_, c, b, cRes, bRes);
         }
@@ -368,7 +369,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             aRes.clear();
             cRes.clear();
 
-            if (scale > 2000.0)
+            if (scale > MAX_BRACKET_SCALE)
             {
                 throw new ConvergenceException("Unable to bracket root.");
             }
@@ -394,63 +395,6 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             final Bracket<V> expanded = new Bracket<>(b, a, c, bRes, aRes, cRes);
             return completeBracket(f_, expanded);
         }
-//
-//        boolean isCSet = false;
-//
-//        while (comparison < 0.0)
-//        {
-//            isCSet = true;
-//            c.copy(b);
-//            b.copy(a);
-//            final EvaluationResult temp = cRes;
-//            cRes = bRes;
-//            bRes = aRes;
-//            aRes = temp;
-//            aRes.clear();
-//
-//            ca.scale(2.0);
-//            a.add(ca);
-//            scale *= 2.0;
-//
-//            if (scale > 200.0)
-//            {
-//                throw new ConvergenceException("Unable to bracket root.");
-//            }
-//
-//            comparison = comparator.compare(f_, a, b, aRes, bRes);
-//        }
-//
-//        if (!isCSet)
-//        {
-//            //We have a > b. now let's make sure e get c > b. 
-//            comparison = comparator.compare(f_, c, b, cRes, bRes);
-//            scale = 0.5;
-//
-//            while (comparison < 0.0)
-//            {
-//                a.copy(b);
-//                b.copy(c);
-//                final EvaluationResult temp = aRes;
-//                aRes = bRes;
-//                bRes = cRes;
-//                cRes = temp;
-//                cRes.clear();
-//
-//                ac.scale(2.0);
-//                c.add(ac);
-//                scale *= 2.0;
-//
-//                if (scale > 200.0)
-//                {
-//                    throw new ConvergenceException("Unable to bracket root.");
-//                }
-//
-//                comparison = comparator.compare(f_, c, b, cRes, bRes);
-//            }
-//        }
-//
-//        final Bracket<V> output = new Bracket<>(a, b, c, aRes, bRes, cRes);
-//        return output;
     }
 
     private OptimizationResult<V> optimize(final F f_, final Bracket<V> bracket_) throws ConvergenceException
