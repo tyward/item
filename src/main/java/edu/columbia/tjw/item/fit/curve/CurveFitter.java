@@ -56,11 +56,11 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
     public CurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemSettings settings_)
     {
-        if(null == settings_)
+        if (null == settings_)
         {
             throw new NullPointerException("Settings cannot be null.");
         }
-        
+
         _family = factory_.getFamily();
         _params = model_.getParams();
         _settings = settings_;
@@ -221,6 +221,12 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             final double aicDiff = 2.0 * (paramContribution - scaledImprovement);
             return aicDiff;
         }
+
+        public String toString()
+        {
+            return "Fit result[" + _trans + ", " + _llImprovement + "]";
+        }
+
     }
 
 }
