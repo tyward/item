@@ -29,9 +29,8 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
 {
     private static final double DEFAULT_XTOL = 1.0e-6;
     private static final double DEFAULT_YTOL = 1.0e-6;
-    //private static final int DEFAULT_BLOCK_SIZE = 10000;
-
-    private final double _stdDevThreshold = 3;
+    
+    private final double _stdDevThreshold = 5.0;
     private final double _xTol;
     private final double _yTol;
     private final int _blockSize;
@@ -53,7 +52,7 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         _yTol = yTol_;
         _maxEvalCount = maxEvalCount_;
 
-        _comparator = new BasicAdaptiveComparator<V, F>(_blockSize, _stdDevThreshold);
+        _comparator = new BasicAdaptiveComparator<>(_blockSize, _stdDevThreshold);
     }
 
     public double getXTolerance()
