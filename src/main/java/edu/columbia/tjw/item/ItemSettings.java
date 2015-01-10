@@ -27,9 +27,9 @@ import java.util.Random;
 /**
  *
  * Some general settings that control how curves are constructed and fit.
- * 
- * 
- * 
+ *
+ *
+ *
  * @author tyler
  */
 public final class ItemSettings implements Serializable
@@ -42,18 +42,32 @@ public final class ItemSettings implements Serializable
     private final boolean _randomShuffle;
     private final boolean _randomCentrality;
     private final boolean _useBothBetaSigns;
+    private final boolean _useThreading;
     private final double _aicCutoff;
+
+    private final int _blockSize;
+    private final int _threadBlockSize;
 
     public ItemSettings()
     {
-        this(true, true, true, true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD));
+        this(true, true, true, true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD), 200 * 1000, 10 * 1000, true);
     }
 
-    public ItemSettings(final boolean randomScale_, final boolean randomShuffle_, final boolean randomCentrality_, final boolean bothBetaSigns_, final double aicCutoff_, final Random rand_)
+    public ItemSettings(final boolean randomScale_, final boolean randomShuffle_, final boolean randomCentrality_, final boolean bothBetaSigns_, final double aicCutoff_,
+            final Random rand_, final int blockSize_, final int threadBlockSize_, final boolean useThreading_)
     {
         if (aicCutoff_ > 0.0)
         {
             throw new IllegalArgumentException("The AIC cutoff must be negative: " + aicCutoff_);
+        }
+
+        if (threadBlockSize_ < 100)
+        {
+            throw new IllegalArgumentException("Thread block size should not be too small: " + threadBlockSize_);
+        }
+        if (blockSize_ < threadBlockSize_)
+        {
+            throw new IllegalArgumentException("Block size cannot be less than ThreadBlockSize: " + blockSize_);
         }
 
         _rand = rand_;
@@ -62,6 +76,24 @@ public final class ItemSettings implements Serializable
         _randomCentrality = randomCentrality_;
         _useBothBetaSigns = bothBetaSigns_;
         _aicCutoff = aicCutoff_;
+        _blockSize = blockSize_;
+        _threadBlockSize = threadBlockSize_;
+        _useThreading = useThreading_;
+    }
+
+    public boolean getUseThreading()
+    {
+        return _useThreading;
+    }
+    
+    public int getBlockSize()
+    {
+        return _blockSize;
+    }
+
+    public int getThreadBlockSize()
+    {
+        return _threadBlockSize;
     }
 
     public double getAicCutoff()
@@ -73,8 +105,7 @@ public final class ItemSettings implements Serializable
     {
         return _useBothBetaSigns;
     }
-    
-    
+
     public boolean isRandomCentrality()
     {
         return _randomCentrality;

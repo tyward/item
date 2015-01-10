@@ -74,7 +74,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             final RectangularDoubleArray powerScores_, final RectangularDoubleArray actualProbabilities_, final ItemFittingGrid<S, R> grid_,
             final ItemModel<S, R, T> model_, final int[] indexList_, final ItemSettings settings_)
     {
-        super(10 * 1000);
+        super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
         _settings = settings_;
         _likelihood = new LogLikelihood<>(fromStatus_.getFamily());

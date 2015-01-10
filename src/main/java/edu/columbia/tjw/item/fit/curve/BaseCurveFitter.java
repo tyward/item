@@ -49,7 +49,7 @@ import java.util.logging.Logger;
  */
 public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends CurveFitter<S, R, T>
 {
-    private static final int BLOCK_SIZE = 200 * 1000;
+    //private static final int BLOCK_SIZE = 200 * 1000;
     private static final Logger LOG = LogUtil.getLogger(BaseCurveFitter.class);
 
     private final ItemCurveFactory<T> _factory;
@@ -79,7 +79,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _factory = factory_;
         _model = model_;
         _grid = grid_;
-        _optimizer = new MultivariateOptimizer(BLOCK_SIZE, 300, 20, 0.1);
+        _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
 
         int count = 0;
 

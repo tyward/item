@@ -29,7 +29,7 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
 {
     private static final double DEFAULT_XTOL = 1.0e-6;
     private static final double DEFAULT_YTOL = 1.0e-6;
-    private static final int DEFAULT_BLOCK_SIZE = 10000;
+    //private static final int DEFAULT_BLOCK_SIZE = 10000;
 
     private final double _stdDevThreshold = 3;
     private final double _xTol;
@@ -42,11 +42,6 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
     public Optimizer(final int blockSize_, final int maxEvalCount_)
     {
         this(DEFAULT_XTOL, DEFAULT_YTOL, blockSize_, maxEvalCount_);
-    }
-
-    public Optimizer(final int maxEvalCount_)
-    {
-        this(DEFAULT_XTOL, DEFAULT_YTOL, DEFAULT_BLOCK_SIZE, maxEvalCount_);
     }
 
     public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_) throws ConvergenceException;

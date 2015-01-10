@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
@@ -47,16 +48,16 @@ import java.util.logging.Logger;
  */
 public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
-    private static final int BLOCK_SIZE = 500 * 1000;
-    //private static final int BLOCK_SIZE = 10 * 1000;
     private static final Logger LOG = LogUtil.getLogger(ParamFitter.class);
     private ItemModel<S, R, T> _model;
     private final MultivariateOptimizer _optimizer;
+    private final ItemSettings _settings;
 
-    public ParamFitter(final ItemModel<S, R, T> model_)
+    public ParamFitter(final ItemModel<S, R, T> model_, final ItemSettings settings_)
     {
         _model = model_;
-        _optimizer = new MultivariateOptimizer(BLOCK_SIZE, 300, 20, 0.1);
+        _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
+        _settings = settings_;
     }
 
     public LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_)
@@ -117,7 +118,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         statusPointers = Arrays.copyOf(statusPointers, pointer);
         regPointers = Arrays.copyOf(regPointers, pointer);
 
-        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(beta, statusPointers, regPointers, params_, grid_, new ItemModel<>(params_));
+        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(beta, statusPointers, regPointers, params_, grid_, new ItemModel<>(params_), _settings);
 
         return function;
     }

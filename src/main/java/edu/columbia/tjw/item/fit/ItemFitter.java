@@ -29,7 +29,6 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.ParamFilter;
-import edu.columbia.tjw.item.base.StandardCurveType;
 import edu.columbia.tjw.item.fit.curve.BaseCurveFitter;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
@@ -149,7 +148,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      */
     public ItemModel<S, R, T> fitCoefficients(final ItemModel<S, R, T> model_, final ItemFittingGrid<S, R> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(model_);
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(model_, _settings);
 
         final ItemModel<S, R, T> m2 = fitter.fit(fittingGrid_, filters_);
 
@@ -166,7 +165,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     {
         final int regCount = params_.regressorCount();
 
-        final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params_));
+        final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params_), _settings);
 
         final double startingLL = f1.computeLogLikelihood(params_, gridFactory_.prepareGrid(params_), filters_);
         double baseLL = startingLL;
@@ -188,7 +187,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             final ItemParameters<S, R, T> rebuilt = expandModel(reduced, gridFactory_, curveFields_, filters_, reduction).getParams();
 
-            final ParamFitter<S, R, T> f2 = new ParamFitter<>(new ItemModel<>(rebuilt));
+            final ParamFitter<S, R, T> f2 = new ParamFitter<>(new ItemModel<>(rebuilt), _settings);
 
             final double ll2 = f2.computeLogLikelihood(rebuilt, gridFactory_.prepareGrid(rebuilt), filters_);
 

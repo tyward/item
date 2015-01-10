@@ -24,6 +24,7 @@ import edu.columbia.tjw.item.ItemFittingGrid;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.ItemWorkspace;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
@@ -52,8 +53,9 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     //private MultivariateFiniteDiffDerivFunction _derivFunction;
 
     public LogisticModelFunction(final double[] beta_, final int[] statusPointers_, final int[] regPointers_,
-            final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_, final ItemModel<S, R, T> model_)
+            final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_, final ItemModel<S, R, T> model_, ItemSettings settings_)
     {
+        super(settings_.getThreadBlockSize(), settings_.getUseThreading());
         _beta = beta_.clone();
         _statusPointers = statusPointers_;
         _regPointers = regPointers_;

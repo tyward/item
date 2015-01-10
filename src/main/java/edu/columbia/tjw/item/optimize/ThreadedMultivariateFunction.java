@@ -30,19 +30,15 @@ import java.util.List;
  */
 public abstract class ThreadedMultivariateFunction implements MultivariateFunction
 {
-    private static final boolean USE_THREADS = true;
     private static final GeneralThreadPool POOL = GeneralThreadPool.singleton();
-    private static final int DEFAULT_BLOCK_SIZE = 10 * 1000;
     private final int _blockSize;
+    private final boolean _useThreading;
 
-    public ThreadedMultivariateFunction()
-    {
-        this(DEFAULT_BLOCK_SIZE);
-    }
 
-    public ThreadedMultivariateFunction(final int blockSize_)
+    public ThreadedMultivariateFunction(final int blockSize_, final boolean useThreading_)
     {
         _blockSize = blockSize_;
+        _useThreading = useThreading_;
     }
 
     @Override
@@ -111,13 +107,13 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
         }
     }
 
-    private static <W> List<W> executeTasks(final List<? extends GeneralTask<W>> tasks_)
+    private <W> List<W> executeTasks(final List<? extends GeneralTask<W>> tasks_)
     {
         final List<W> output = new ArrayList<>(tasks_.size());
 
         for (final GeneralTask<W> next : tasks_)
         {
-            if (USE_THREADS)
+            if (_useThreading)
             {
                 POOL.execute(next);
             }
