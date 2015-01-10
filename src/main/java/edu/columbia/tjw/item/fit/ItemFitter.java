@@ -123,7 +123,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     {
         final ParamFitter<S, R, T> fitter = new ParamFitter<>(model_);
 
-        final ItemModel<S, R, T> m2 = fitter.fit(fittingGrid_, null);
+        final ItemModel<S, R, T> m2 = fitter.fit(fittingGrid_, filters_);
 
         if (null == m2)
         {

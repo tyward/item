@@ -196,9 +196,12 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
             }
         }
 
-        for (int w = 0; w < gradient.length; w++)
+        if (totalSize > 0)
         {
-            gradient[w] = gradient[w] / totalSize;
+            for (int w = 0; w < gradient.length; w++)
+            {
+                gradient[w] = gradient[w] / totalSize;
+            }
         }
 
         final MultivariatePoint point = new MultivariatePoint(gradient);

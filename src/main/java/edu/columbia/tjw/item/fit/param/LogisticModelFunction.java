@@ -123,7 +123,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
         //Slightly wasteful, but we will reuse this for enough calcs it shouldn't matter...
         final ItemWorkspace<S> workspace = _model.generateWorkspace();
         final S fromStatus = this._model.getParams().getStatus();
-        int count = 0;
+        //int count = 0;
 
         final int fromStatusOrdinal = fromStatus.ordinal();
 
@@ -141,7 +141,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
             }
 
             final double ll = _model.logLikelihood(_grid, workspace, i);
-            count++;
+            //count++;
 
             result_.add(ll, result_.getHighWater(), i + 1);
         }
@@ -238,12 +238,15 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
             count++;
         }
 
-        //N.B: we are computing the negative log likelihood. 
-        final double invCount = -1.0 / count;
-
-        for (int i = 0; i < derivative.length; i++)
+        if (count > 0)
         {
-            derivative[i] = derivative[i] * invCount;
+            //N.B: we are computing the negative log likelihood. 
+            final double invCount = -1.0 / count;
+
+            for (int i = 0; i < derivative.length; i++)
+            {
+                derivative[i] = derivative[i] * invCount;
+            }
         }
 
         final MultivariatePoint der = new MultivariatePoint(derivative);
