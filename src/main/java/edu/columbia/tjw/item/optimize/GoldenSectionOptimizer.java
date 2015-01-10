@@ -31,6 +31,7 @@ import java.util.logging.Logger;
 public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>> extends Optimizer<V, F>
 {
     private static final double STD_DEV_CUTOFF = 1.0;
+    //private static final double STD_DEV_DIFF = 5.0;
     private static final Logger LOG = LogUtil.getLogger(GoldenSectionOptimizer.class);
     private static final double PHI = 0.5 * (1.0 + Math.sqrt(5.0));
     private static final double INV_PHI = 1.0 / PHI;
@@ -48,7 +49,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
     @Override
     public OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V scaleStep_) throws ConvergenceException
     {
-        final AdaptiveComparator<V, F> comparator = this.getComparator();
+        //final AdaptiveComparator<V, F> comparator = this.getComparator();
         V scaleStep = scaleStep_;
         V a = startingPoint_.clone();
         V b = a.clone();
@@ -101,6 +102,214 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
         return this.optimize(f_, bracket);
     }
 
+    /**
+     * We start with a bracket where we know that a > b (to at least
+     * comparator.sigmaTarget())
+     *
+     * We then need only to compute a C that is known to be greater than b (we
+     * may also adjust b).
+     *
+     * @param f_
+     * @param bracket_
+     * @return
+     * @throws ConvergenceException
+     */
+    private Bracket<V> completeBracket(final F f_, final Bracket<V> bracket_) throws ConvergenceException
+    {
+        final AdaptiveComparator<V, F> comparator = this.getComparator();
+
+        //We know that the three points are in order, but don't know how they compare. 
+        final V a = bracket_.getA().clone();
+        final V b = bracket_.getB().clone();
+        final V c = bracket_.getC().clone();
+        final V ac = bracket_.getDirection().clone();
+        final V ca = bracket_.getNegDirection().clone();
+
+        final double initMag = ac.getMagnitude();
+
+        //Compute the vector from a -> b. 
+        final V ab = a.clone();
+        ab.scale(-1.0);
+        ab.add(b);
+
+        EvaluationResult aRes = bracket_.getaRes();
+        EvaluationResult bRes = bracket_.getbRes();
+        EvaluationResult cRes = bracket_.getcRes();
+
+        double comparisonAB = comparator.compare(f_, a, b, aRes, bRes);
+        final double sigmaScale = comparator.getSigmaTarget();
+
+        if (comparisonAB < sigmaScale)
+        {
+            throw new IllegalArgumentException("Impossible.");
+        }
+
+        c.copy(b);
+        c.add(ab);
+        cRes.clear();
+
+        double comparisonCB = comparator.compare(f_, c, b, cRes, bRes);
+        double scale = 0.5;
+
+        while (comparisonCB < sigmaScale)
+        {
+            if (ab.getMagnitude() > 2000.0 * initMag)
+            {
+                throw new ConvergenceException("Unable to bracket root.");
+            }
+
+            while (Math.abs(comparisonCB) < sigmaScale)
+            {
+                c.add(ab);
+                ab.scale(2.0);
+                cRes.clear();
+                scale *= 2.0;
+
+                if (scale > 2000.0)
+                {
+                    throw new ConvergenceException("Unable to bracket root.");
+                }
+
+                comparisonCB = comparator.compare(f_, c, b, cRes, bRes);
+            }
+
+            if (comparisonCB >= sigmaScale)
+            {
+                //We are done, return the bracket. 
+                return new Bracket<>(a, b, c, aRes, bRes, cRes);
+            }
+
+            //We are sure the C differs from B, but it is less than B instead of greater. 
+            final double aScalar = a.project(ab);
+            final double bScalar = b.project(ab);
+            final double cScalar = c.project(ab);
+            final double aVal = aRes.getMean();
+            final double bVal = bRes.getMean();
+            final double cVal = cRes.getMean();
+
+            //Assume f(x) is quadratic, (alpha)a^2 + (beta)a + (gamma) = value(a). 
+            //Now we have three equations and three unknowns, solve....
+            final double a2 = aScalar * aScalar;
+            final double b2 = bScalar * bScalar;
+            final double c2 = cScalar * cScalar;
+            final double dab = (aScalar - bScalar);
+            final double dac = (aScalar - cScalar);
+            final double d2ab = (a2 - b2);
+            final double d2ac = (a2 - c2);
+            final double dvac = (aVal - cVal);
+            final double dvab = (aVal - bVal);
+
+            final double dRatio = dab / dac;
+            final double alphaNum = (dvac * dRatio) - dvab;
+            final double alphaDenom = (d2ac * dRatio) - d2ab;
+            final double alpha = alphaNum / alphaDenom;
+
+            final double presumedMinimum;
+
+            //Alpha is the 2nd derivative of this function, let's see if it's positive (indicating we will find a minimum). 
+            if (alpha <= 0.0)
+            {
+                //Drat, this has the wrong convexity.
+                presumedMinimum = cScalar;
+            }
+            else
+            {
+                final double beta = (dvab - (d2ab * alpha)) / dab;
+
+                //We don't need gamma.
+                //f'(x) = 2*alpha*x + beta, set that to zero.....
+                final double extremum = -beta / (2.0 * alpha);
+
+                final double sanityValue = Math.abs(aScalar) + Math.abs(cScalar);
+
+                if (Math.abs(extremum) > 100.0 * sanityValue)
+                {
+                    //Root is too far away, we don't actually believe these results. 
+                    //Fall back. 
+                    presumedMinimum = cScalar;
+                }
+                else if(extremum <= cScalar)
+                {
+                    presumedMinimum = cScalar;
+                }
+                else
+                {
+                    presumedMinimum = extremum;
+                }
+            }
+
+            //We know that a > b > c, and we have a new estimate for the minimum. 
+            //Therefore, b -> a (since we know b > c), c -> b
+            //Now, if min != c, then min is past c, so we can put in the minimum and check if min > b. 
+            //Now, if min < b, it becomes the new b, and c becomes b + (b - a). 
+            final V aClone = a.clone();
+            final double pointerScale = (presumedMinimum - aScalar) / ab.getMagnitude();
+            ab.scale(pointerScale);
+
+            a.copy(b);
+            b.copy(c);
+
+            EvaluationResult tmp = aRes;
+            aRes = bRes;
+            bRes = cRes;
+            cRes = tmp;
+            cRes.clear();
+            
+            if(presumedMinimum != cScalar)
+            {
+                c.copy(aClone);
+                c.add(ab);
+                cRes.clear();
+                comparisonCB = comparator.compare(f_, c, b, cRes, bRes);
+                
+                //Assumed minimum higher than previous value of b. We are done.
+                if(comparisonCB > sigmaScale)
+                {
+                    return new Bracket<>(a, b, c, aRes, bRes, cRes);
+                }
+                if(comparisonCB < -sigmaScale)
+                {
+                    //Minimum definitely lower than b, we can rotate b -> a, c -> b, compute new c.
+                    a.copy(b);
+                    b.copy(c);
+                    
+                    ab.copy(a);
+                    ab.scale(-1.0);
+                    ab.add(b);
+                    
+                    c.add(ab);
+                    tmp = aRes;
+                    aRes = bRes;
+                    bRes = cRes;
+                    cRes = tmp;
+                    cRes.clear();
+                }
+                else
+                {
+                    //Minimum likely lower than b, replace b only, compute new c, don't update ab. 
+                    b.copy(c);
+                    c.add(ab);
+                    tmp = bRes;
+                    bRes = cRes;
+                    cRes = tmp;
+                    cRes.clear();
+                }
+            }
+            else
+            {
+                //Compute new value of c, the old value got assigned to b. 
+                c.add(ab);
+                cRes.clear();
+            }
+            
+            //Now we know that a > b, and we think that c is probably higher than b, but haven't checked. 
+            comparisonCB = comparator.compare(f_, c, b, cRes, bRes);
+        }
+
+        final Bracket<V> output = new Bracket<>(a, b, c, aRes, bRes, cRes);
+        return output;
+    }
+
     private Bracket<V> bracket(final F f_, final Bracket<V> bracket_) throws ConvergenceException
     {
         final AdaptiveComparator<V, F> comparator = this.getComparator();
@@ -110,73 +319,138 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
         final V b = bracket_.getB().clone();
         final V c = bracket_.getC().clone();
         final V ac = bracket_.getDirection().clone();
-        final V ca = bracket_.getDirection().clone();
-        ca.scale(-1.0);
+        final V ca = bracket_.getNegDirection().clone();
 
         EvaluationResult aRes = bracket_.getaRes();
         EvaluationResult bRes = bracket_.getbRes();
         EvaluationResult cRes = bracket_.getcRes();
 
         //A negative value here indicates that a is lower than b. 
-        double comparison = comparator.compare(f_, a, b, aRes, bRes);
+        double comparisonAB = comparator.compare(f_, a, b, aRes, bRes);
+        final double sigmaScale = comparator.getSigmaTarget();
         double scale = 0.5;
 
-        boolean isCSet = false;
-
-        while (comparison < 0.0)
+        while (Math.abs(comparisonAB) < sigmaScale)
         {
-            isCSet = true;
-            c.copy(b);
-            b.copy(a);
-            final EvaluationResult temp = cRes;
-            cRes = bRes;
-            bRes = aRes;
-            aRes = temp;
-            aRes.clear();
+            //We will move both endpoints out trying to find one that is materially different from b. 
+            //Perhaps B and C are sufficiently different, let's try that. 
+            final double comparisonBC = comparator.compare(f_, b, c, bRes, cRes);
 
+            if (Math.abs(comparisonBC) > sigmaScale)
+            {
+                //Swap the bracket order, and restart now that we know c and b are different.
+                final Bracket<V> swapped = new Bracket<>(c, b, a, cRes, bRes, aRes);
+                return bracket(f_, swapped);
+            }
+
+            if (Math.abs(comparisonBC + comparisonAB) > sigmaScale)
+            {
+                //Both endpoints failed, but we think they differ enough from each other. 
+                final double comparisonAC = comparator.compare(f_, a, c, aRes, cRes);
+
+                if (Math.abs(comparisonAC) > sigmaScale)
+                {
+                    //Success
+                    b.copy(c);
+                    b.add(ac);
+                    bRes.clear();
+                    final Bracket<V> expanded = new Bracket<>(a, c, b, aRes, cRes, bRes);
+                    return bracket(f_, expanded);
+                }
+            }
+
+            //move them both out and try again.
             ca.scale(2.0);
+            ac.scale(2.0);
             a.add(ca);
+            c.add(ac);
             scale *= 2.0;
+            aRes.clear();
+            cRes.clear();
 
-            if (scale > 200.0)
+            if (scale > 2000.0)
             {
                 throw new ConvergenceException("Unable to bracket root.");
             }
 
-            comparison = comparator.compare(f_, a, b, aRes, bRes);
+            comparisonAB = comparator.compare(f_, a, b, aRes, bRes);
         }
 
-        if (!isCSet)
+        //OK, we know that a and b are significantly different. 
+        //Get the ordering right.
+        if (comparisonAB > 0)
         {
-            //We have a > b. now let's make sure e get c > b. 
-            comparison = comparator.compare(f_, c, b, cRes, bRes);
-            scale = 0.5;
-
-            while (comparison < 0.0)
-            {
-                a.copy(b);
-                b.copy(c);
-                final EvaluationResult temp = aRes;
-                aRes = bRes;
-                bRes = cRes;
-                cRes = temp;
-                cRes.clear();
-
-                ac.scale(2.0);
-                c.add(ac);
-                scale *= 2.0;
-
-                if (scale > 200.0)
-                {
-                    throw new ConvergenceException("Unable to bracket root.");
-                }
-
-                comparison = comparator.compare(f_, c, b, cRes, bRes);
-            }
+            //A is higher than B. 
+            final Bracket<V> expanded = new Bracket<>(a, b, c, aRes, bRes, cRes);
+            return completeBracket(f_, expanded);
         }
-
-        final Bracket<V> output = new Bracket<>(a, b, c, aRes, bRes, cRes);
-        return output;
+        else
+        {
+            //B is higher than A, so C needs to switch sides.
+            c.copy(a);
+            c.add(ca);
+            cRes.clear();
+            //B is higher than A, move to the other side.
+            final Bracket<V> expanded = new Bracket<>(b, a, c, bRes, aRes, cRes);
+            return completeBracket(f_, expanded);
+        }
+//
+//        boolean isCSet = false;
+//
+//        while (comparison < 0.0)
+//        {
+//            isCSet = true;
+//            c.copy(b);
+//            b.copy(a);
+//            final EvaluationResult temp = cRes;
+//            cRes = bRes;
+//            bRes = aRes;
+//            aRes = temp;
+//            aRes.clear();
+//
+//            ca.scale(2.0);
+//            a.add(ca);
+//            scale *= 2.0;
+//
+//            if (scale > 200.0)
+//            {
+//                throw new ConvergenceException("Unable to bracket root.");
+//            }
+//
+//            comparison = comparator.compare(f_, a, b, aRes, bRes);
+//        }
+//
+//        if (!isCSet)
+//        {
+//            //We have a > b. now let's make sure e get c > b. 
+//            comparison = comparator.compare(f_, c, b, cRes, bRes);
+//            scale = 0.5;
+//
+//            while (comparison < 0.0)
+//            {
+//                a.copy(b);
+//                b.copy(c);
+//                final EvaluationResult temp = aRes;
+//                aRes = bRes;
+//                bRes = cRes;
+//                cRes = temp;
+//                cRes.clear();
+//
+//                ac.scale(2.0);
+//                c.add(ac);
+//                scale *= 2.0;
+//
+//                if (scale > 200.0)
+//                {
+//                    throw new ConvergenceException("Unable to bracket root.");
+//                }
+//
+//                comparison = comparator.compare(f_, c, b, cRes, bRes);
+//            }
+//        }
+//
+//        final Bracket<V> output = new Bracket<>(a, b, c, aRes, bRes, cRes);
+//        return output;
     }
 
     private OptimizationResult<V> optimize(final F f_, final Bracket<V> bracket_) throws ConvergenceException
