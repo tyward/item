@@ -221,7 +221,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             workspace2_[i] = _betas[i][regressorIndex_];
         }
 
-        MultiLogistic.multiLogisticRegressorDerivatives(powerScores_, workspace2_, regressorIndex_, workspace_, output_);
+        MultiLogistic.multiLogisticRegressorDerivatives(powerScores_, workspace2_, workspace_, output_);
     }
 
 }

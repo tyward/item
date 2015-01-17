@@ -246,7 +246,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             }
 
             //After this, workspace1 holds the model probabilities, output holds the xDerivatives of the probabilities.
-            MultiLogistic.multiLogisticRegressorDerivatives(scores, betas, this._toIndex, workspace1, output);
+            MultiLogistic.multiLogisticRegressorDerivatives(scores, betas, workspace1, output);
             MultiLogistic.multiLogisticFunction(scores, workspace1);
 
             double xDerivative = 0.0;

@@ -116,11 +116,11 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final List<S> reachable = fromStatus.getReachable();
 
         final int baseCase = fromStatus.getReachable().indexOf(fromStatus);
-
-        if (_settings.isRandomShuffle())
-        {
-            RandomTool.shuffle(_indexList, _settings.getRandom());
-        }
+//
+//        if (_settings.isRandomShuffle())
+//        {
+//            RandomTool.shuffle(_indexList, _settings.getRandom());
+//        }
 
         for (int i = 0; i < count; i++)
         {

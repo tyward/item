@@ -91,7 +91,7 @@ public final class MultiLogistic
         return result;
     }
 
-    public static void multiLogisticRegressorDerivatives(final double[] powerScores_, final double[] betaValues_, final int regressorIndex_, final double[] workspace_, final double[] output_)
+    public static void multiLogisticRegressorDerivatives(final double[] powerScores_, final double[] betaValues_, final double[] workspace_, final double[] output_)
     {
         final double expSum = multiLogisticFunction(powerScores_, workspace_);
 
