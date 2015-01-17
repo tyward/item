@@ -37,6 +37,7 @@ import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 import edu.columbia.tjw.item.util.random.RandomTool;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -67,11 +68,11 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     {
         super(factory_, model_, settings_);
 
-        if(null == intercept_)
+        if (null == intercept_)
         {
             throw new NullPointerException("Intercept cannot be null.");
         }
-        
+
         _intercept = intercept_;
         _settings = settings_;
 
@@ -86,6 +87,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final int gridSize = _grid.totalSize();
         final S fromStatus = model_.getParams().getStatus();
         final int fromStatusOrdinal = fromStatus.ordinal();
+        final int[] indexList = new int[gridSize];
 
         for (int i = 0; i < gridSize; i++)
         {
@@ -100,38 +102,20 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 continue;
             }
 
-            count++;
+            indexList[count++] = i;
         }
 
         final int reachableCount = fromStatus.getReachableCount();
         final ItemWorkspace<S> workspace = model_.generateWorkspace();
         final double[] probabilities = new double[reachableCount];
 
-        _indexList = new int[count];
+        _indexList = Arrays.copyOf(indexList, count);
         _powerScores = new RectangularDoubleArray(count, reachableCount);
         _actualProbabilities = new RectangularDoubleArray(count, reachableCount);
 
         final List<S> reachable = fromStatus.getReachable();
 
         final int baseCase = fromStatus.getReachable().indexOf(fromStatus);
-        int pointer = 0;
-
-        for (int i = 0; i < count; i++)
-        {
-            final int statOrdinal = _grid.getStatus(i);
-
-            if (statOrdinal != fromStatusOrdinal)
-            {
-                continue;
-            }
-            if (!grid_.hasNextStatus(i))
-            {
-                continue;
-            }
-
-            _indexList[pointer] = i;
-            pointer++;
-        }
 
         if (_settings.isRandomShuffle())
         {
