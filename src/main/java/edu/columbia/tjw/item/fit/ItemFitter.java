@@ -308,12 +308,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         public ItemFittingGrid<S, R> prepareGrid(ItemParameters<S, R, T> params_)
         {
             final ItemFittingGrid<S, R> grid = _underlying.prepareGrid(params_);
-
-            if (!_settings.isRandomShuffle())
-            {
-                return grid;
-            }
-
             final RandomizedFittingGrid<S, R> random = new RandomizedFittingGrid<>(params_, grid, _settings);
             return random;
         }

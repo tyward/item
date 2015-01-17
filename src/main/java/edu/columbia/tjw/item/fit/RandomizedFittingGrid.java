@@ -28,6 +28,9 @@ import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.random.RandomTool;
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  *
@@ -39,12 +42,21 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
 {
     private final int[] _indexMap;
 
+    private final ItemParameters<S, R, ? extends ItemCurveType<?>> _params;
     private final ItemFittingGrid<S, R> _underlying;
     private final ItemRegressorReader[] _readers;
 
+    private final int[] _status;
+    private final int[] _nextStatus;
+
+    private final double[][] _regressors;
+
     public RandomizedFittingGrid(final ItemParameters<S, R, ? extends ItemCurveType<?>> params_, final ItemFittingGrid<S, R> underlying_, final ItemSettings settings_)
     {
+        _params = params_;
         _underlying = underlying_;
+
+        final int size = _underlying.totalSize();
 
         _indexMap = new int[_underlying.totalSize()];
 
@@ -53,9 +65,50 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
             _indexMap[i] = i;
         }
 
-        RandomTool.shuffle(_indexMap, settings_.getRandom());
+        if (settings_.isRandomShuffle())
+        {
+            RandomTool.shuffle(_indexMap, settings_.getRandom());
+        }
 
-        _readers = new ItemRegressorReader[params_.getStatus().getFamily().size()];
+        final SortedSet<R> regSet = new TreeSet<>(params_.getRegressorList());
+        final int regCount = regSet.first().getFamily().size();
+
+        _readers = new ItemRegressorReader[regCount];
+        _regressors = new double[regCount][];
+
+        for (final R next : regSet)
+        {
+            final int ordinal = next.ordinal();
+            _regressors[ordinal] = new double[size];
+
+            final ItemRegressorReader reader = _underlying.getRegressorReader(next);
+
+            for (int i = 0; i < size; i++)
+            {
+                final int mapped = mapIndex(i);
+                _regressors[ordinal][i] = reader.asDouble(mapped);
+            }
+        }
+
+        _status = new int[size];
+        _nextStatus = new int[size];
+
+        for (int i = 0; i < size; i++)
+        {
+            final int mapped = mapIndex(i);
+
+            _status[i] = _underlying.getStatus(mapped);
+
+            if (_underlying.hasNextStatus(mapped))
+            {
+                _nextStatus[i] = _underlying.getNextStatus(mapped);
+            }
+            else
+            {
+                _nextStatus[i] = -1;
+            }
+        }
+
     }
 
     @Override
@@ -68,36 +121,58 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
             return _readers[ordinal];
         }
 
-        _readers[ordinal] = new MappedReader(_underlying.getRegressorReader(field_));
+        _readers[ordinal] = new MappedReader(field_);
         return _readers[ordinal];
     }
 
     @Override
     public int getStatus(int index_)
     {
-        final int mapped = mapIndex(index_);
-        return _underlying.getStatus(mapped);
+        return _status[index_];
     }
 
     @Override
     public int getNextStatus(int index_)
     {
-        final int mapped = mapIndex(index_);
-        return _underlying.getNextStatus(mapped);
+        if (!hasNextStatus(index_))
+        {
+            throw new IllegalArgumentException("Unknown status.");
+        }
+
+        return _nextStatus[index_];
     }
 
     @Override
     public boolean hasNextStatus(int index_)
     {
-        final int mapped = mapIndex(index_);
-        return _underlying.hasNextStatus(mapped);
+        final boolean output = _nextStatus[index_] != -1;
+        return output;
     }
 
     @Override
     public void getRegressors(int index_, double[] output_)
     {
-        final int mapped = mapIndex(index_);
-        _underlying.getRegressors(mapped, output_);
+        final List<R> regs = _params.getRegressorList();
+        final List<? extends ItemCurve<?>> curves = _params.getTransformationList();
+        
+        final int regCount = regs.size();
+        
+        for(int i = 0; i < regCount; i++)
+        {
+            final R next = regs.get(i);
+            final double raw = _regressors[next.ordinal()][i];
+            
+            final ItemCurve<?> curve = curves.get(i);
+            
+            if(null == curve)
+            {
+                output_[i] = raw;
+            }
+            else
+            {
+                output_[i] = curve.transform(raw);
+            }
+        }
     }
 
     @Override
@@ -118,6 +193,29 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
         return _underlying.getTransformation(fieldIndex_);
     }
 
+    private double[] extractRegressor(final R regressor_)
+    {
+        final int ordinal = regressor_.ordinal();
+
+        if (null != _regressors[ordinal])
+        {
+            return _regressors[ordinal];
+        }
+
+        final int size = _underlying.totalSize();
+        _regressors[ordinal] = new double[size];
+
+        final ItemRegressorReader reader = _underlying.getRegressorReader(regressor_);
+
+        for (int i = 0; i < size; i++)
+        {
+            final int mapped = mapIndex(i);
+            _regressors[ordinal][i] = reader.asDouble(mapped);
+        }
+
+        return _regressors[ordinal];
+    }
+
     private int mapIndex(final int index_)
     {
         return _indexMap[index_];
@@ -125,18 +223,17 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
 
     private final class MappedReader implements ItemRegressorReader
     {
-        private final ItemRegressorReader _underlying;
+        private final double[] _data;
 
-        public MappedReader(final ItemRegressorReader underlying_)
+        public MappedReader(final R field_)
         {
-            _underlying = underlying_;
+            _data = extractRegressor(field_);
         }
 
         @Override
         public double asDouble(int index_)
         {
-            final int mapped = mapIndex(index_);
-            return _underlying.asDouble(mapped);
+            return _data[index_];
         }
 
     }
