@@ -46,10 +46,10 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
     private final ItemFittingGrid<S, R> _underlying;
     private final ItemRegressorReader[] _readers;
 
-    private final int[] _status;
-    private final int[] _nextStatus;
+    private final short[] _status;
+    private final short[] _nextStatus;
 
-    private final double[][] _regressors;
+    private final float[][] _regressors;
 
     public RandomizedFittingGrid(final ItemParameters<S, R, ? extends ItemCurveType<?>> params_, final ItemFittingGrid<S, R> underlying_, final ItemSettings settings_)
     {
@@ -74,34 +74,34 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
         final int regCount = regSet.first().getFamily().size();
 
         _readers = new ItemRegressorReader[regCount];
-        _regressors = new double[regCount][];
+        _regressors = new float[regCount][];
 
         for (final R next : regSet)
         {
             final int ordinal = next.ordinal();
-            _regressors[ordinal] = new double[size];
+            _regressors[ordinal] = new float[size];
 
             final ItemRegressorReader reader = _underlying.getRegressorReader(next);
 
             for (int i = 0; i < size; i++)
             {
                 final int mapped = mapIndex(i);
-                _regressors[ordinal][i] = reader.asDouble(mapped);
+                _regressors[ordinal][i] = (float) reader.asDouble(mapped);
             }
         }
 
-        _status = new int[size];
-        _nextStatus = new int[size];
+        _status = new short[size];
+        _nextStatus = new short[size];
 
         for (int i = 0; i < size; i++)
         {
             final int mapped = mapIndex(i);
 
-            _status[i] = _underlying.getStatus(mapped);
+            _status[i] = (short) _underlying.getStatus(mapped);
 
             if (_underlying.hasNextStatus(mapped))
             {
-                _nextStatus[i] = _underlying.getNextStatus(mapped);
+                _nextStatus[i] = (short) _underlying.getNextStatus(mapped);
             }
             else
             {
@@ -193,7 +193,7 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
         return _underlying.getTransformation(fieldIndex_);
     }
 
-    private double[] extractRegressor(final R regressor_)
+    private float[] extractRegressor(final R regressor_)
     {
         final int ordinal = regressor_.ordinal();
 
@@ -203,14 +203,14 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
         }
 
         final int size = _underlying.totalSize();
-        _regressors[ordinal] = new double[size];
+        _regressors[ordinal] = new float[size];
 
         final ItemRegressorReader reader = _underlying.getRegressorReader(regressor_);
 
         for (int i = 0; i < size; i++)
         {
             final int mapped = mapIndex(i);
-            _regressors[ordinal][i] = reader.asDouble(mapped);
+            _regressors[ordinal][i] = (float) reader.asDouble(mapped);
         }
 
         return _regressors[ordinal];
@@ -223,7 +223,7 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
 
     private final class MappedReader implements ItemRegressorReader
     {
-        private final double[] _data;
+        private final float[] _data;
 
         public MappedReader(final R field_)
         {
