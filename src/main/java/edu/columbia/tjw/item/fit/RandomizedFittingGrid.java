@@ -49,6 +49,9 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
     private final short[] _status;
     private final short[] _nextStatus;
 
+    private final short[] _regOrdinals;
+    private final ItemCurve[] _curves;
+
     private final float[][] _regressors;
 
     public RandomizedFittingGrid(final ItemParameters<S, R, ? extends ItemCurveType<?>> params_, final ItemFittingGrid<S, R> underlying_, final ItemSettings settings_)
@@ -70,7 +73,8 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
             RandomTool.shuffle(_indexMap, settings_.getRandom());
         }
 
-        final SortedSet<R> regSet = new TreeSet<>(params_.getRegressorList());
+        final List<R> regList = params_.getRegressorList();
+        final SortedSet<R> regSet = new TreeSet<>(regList);
         final int regCount = regSet.first().getFamily().size();
 
         _readers = new ItemRegressorReader[regCount];
@@ -107,6 +111,16 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
             {
                 _nextStatus[i] = -1;
             }
+        }
+
+        final List<? extends ItemCurve<?>> curveList = _params.getTransformationList();
+        _regOrdinals = new short[regList.size()];
+        _curves = new ItemCurve[regList.size()];
+
+        for (int i = 0; i < regList.size(); i++)
+        {
+            _regOrdinals[i] = (short) regList.get(i).ordinal();
+            _curves[i] = curveList.get(i);
         }
 
     }
@@ -152,19 +166,15 @@ public class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegres
     @Override
     public void getRegressors(int index_, double[] output_)
     {
-        final List<R> regs = _params.getRegressorList();
-        final List<? extends ItemCurve<?>> curves = _params.getTransformationList();
-        
-        final int regCount = regs.size();
-        
-        for(int i = 0; i < regCount; i++)
+        final int regCount = _regOrdinals.length;
+
+        for (int i = 0; i < regCount; i++)
         {
-            final R next = regs.get(i);
-            final double raw = _regressors[next.ordinal()][i];
-            
-            final ItemCurve<?> curve = curves.get(i);
-            
-            if(null == curve)
+            final double raw = _regressors[_regOrdinals[i]][index_];
+
+            final ItemCurve<?> curve = _curves[i];
+
+            if (null == curve)
             {
                 output_[i] = raw;
             }
