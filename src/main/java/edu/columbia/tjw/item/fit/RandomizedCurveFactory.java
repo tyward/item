@@ -28,6 +28,7 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.random.RandomTool;
 import java.util.List;
 import java.util.SortedSet;
@@ -44,25 +45,57 @@ public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends Ite
 {
     private final ItemGridFactory<S, R, T> _underlying;
     private final ItemSettings _settings;
+    private final EnumFamily<R> _family;
+    private final float[][] _regressors;
 
-    public RandomizedCurveFactory(final ItemGridFactory<S, R, T> underlying_, final ItemSettings settings_)
+    private int[] _indexMap = null;
+
+    public RandomizedCurveFactory(final ItemGridFactory<S, R, T> underlying_, final ItemSettings settings_, final EnumFamily<R> family_)
     {
         _underlying = underlying_;
         _settings = settings_;
+        _family = family_;
+
+        final int familySize = family_.size();
+        _regressors = new float[familySize][];
     }
 
     @Override
     public ItemFittingGrid<S, R> prepareGrid(ItemParameters<S, R, T> params_)
     {
         final ItemFittingGrid<S, R> grid = _underlying.prepareGrid(params_);
-        final RandomizedFittingGrid<S, R> random = new RandomizedFittingGrid<>(params_, grid, _settings);
+        ensureMapped(grid);
+        final RandomizedFittingGrid<S, R> random = new RandomizedFittingGrid<>(params_, grid, _settings, _family);
         return random;
+    }
+
+    private void ensureMapped(final ItemFittingGrid<S, R> grid_)
+    {
+        if (null != _indexMap)
+        {
+            return;
+        }
+
+        _indexMap = new int[grid_.totalSize()];
+
+        for (int i = 0; i < _indexMap.length; i++)
+        {
+            _indexMap[i] = i;
+        }
+
+        if (_settings.isRandomShuffle())
+        {
+            RandomTool.shuffle(_indexMap, _settings.getRandom());
+        }
+    }
+
+    private int mapIndex(final int index_)
+    {
+        return _indexMap[index_];
     }
 
     private final class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemFittingGrid<S, R>
     {
-        private final int[] _indexMap;
-
         private final ItemParameters<S, R, ? extends ItemCurveType<?>> _params;
         private final ItemFittingGrid<S, R> _underlying;
         private final ItemRegressorReader[] _readers;
@@ -70,50 +103,27 @@ public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends Ite
         private final short[] _status;
         private final short[] _nextStatus;
 
-        private final short[] _regOrdinals;
+        //private final short[] _regOrdinals;
         private final ItemCurve[] _curves;
+        private final EnumFamily<R> _family;
 
-        private final float[][] _regressors;
+        private final float[][] _regByPosition;
+        private final int _regCount;
 
-        public RandomizedFittingGrid(final ItemParameters<S, R, ? extends ItemCurveType<?>> params_, final ItemFittingGrid<S, R> underlying_, final ItemSettings settings_)
+        public RandomizedFittingGrid(final ItemParameters<S, R, ? extends ItemCurveType<?>> params_, final ItemFittingGrid<S, R> underlying_, final ItemSettings settings_, final EnumFamily<R> family_)
         {
+            _family = family_;
             _params = params_;
             _underlying = underlying_;
 
             final int size = _underlying.totalSize();
 
-            _indexMap = new int[_underlying.totalSize()];
-
-            for (int i = 0; i < _indexMap.length; i++)
-            {
-                _indexMap[i] = i;
-            }
-
-            if (settings_.isRandomShuffle())
-            {
-                RandomTool.shuffle(_indexMap, settings_.getRandom());
-            }
-
             final List<R> regList = params_.getRegressorList();
             final SortedSet<R> regSet = new TreeSet<>(regList);
-            final int regCount = regSet.first().getFamily().size();
+            final int allRegs = regSet.first().getFamily().size();
 
-            _readers = new ItemRegressorReader[regCount];
-            _regressors = new float[regCount][];
-
-            for (final R next : regSet)
-            {
-                final int ordinal = next.ordinal();
-                _regressors[ordinal] = new float[size];
-
-                final ItemRegressorReader reader = _underlying.getRegressorReader(next);
-
-                for (int i = 0; i < size; i++)
-                {
-                    final int mapped = mapIndex(i);
-                    _regressors[ordinal][i] = (float) reader.asDouble(mapped);
-                }
-            }
+            _readers = new ItemRegressorReader[allRegs];
+            _regCount = regList.size();
 
             _status = new short[size];
             _nextStatus = new short[size];
@@ -135,15 +145,18 @@ public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends Ite
             }
 
             final List<? extends ItemCurve<?>> curveList = _params.getTransformationList();
-            _regOrdinals = new short[regList.size()];
-            _curves = new ItemCurve[regList.size()];
+            _curves = new ItemCurve[_regCount];
+            _regByPosition = new float[_regCount][];
 
-            for (int i = 0; i < regList.size(); i++)
+            synchronized (this)
             {
-                _regOrdinals[i] = (short) regList.get(i).ordinal();
-                _curves[i] = curveList.get(i);
+                for (int i = 0; i < _regCount; i++)
+                {
+                    final int regOrdinal = regList.get(i).ordinal();
+                    _regByPosition[i] = fetchRegressor(regOrdinal, underlying_);
+                    _curves[i] = curveList.get(i);
+                }
             }
-
         }
 
         @Override
@@ -187,11 +200,9 @@ public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends Ite
         @Override
         public void getRegressors(int index_, double[] output_)
         {
-            final int regCount = _regOrdinals.length;
-
-            for (int i = 0; i < regCount; i++)
+            for (int i = 0; i < _regCount; i++)
             {
-                final double raw = _regressors[_regOrdinals[i]][index_];
+                final double raw = _regByPosition[i][index_];
 
                 final ItemCurve<?> curve = _curves[i];
 
@@ -224,41 +235,13 @@ public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends Ite
             return _underlying.getTransformation(fieldIndex_);
         }
 
-        private float[] extractRegressor(final R regressor_)
-        {
-            final int ordinal = regressor_.ordinal();
-
-            if (null != _regressors[ordinal])
-            {
-                return _regressors[ordinal];
-            }
-
-            final int size = _underlying.totalSize();
-            _regressors[ordinal] = new float[size];
-
-            final ItemRegressorReader reader = _underlying.getRegressorReader(regressor_);
-
-            for (int i = 0; i < size; i++)
-            {
-                final int mapped = mapIndex(i);
-                _regressors[ordinal][i] = (float) reader.asDouble(mapped);
-            }
-
-            return _regressors[ordinal];
-        }
-
-        private int mapIndex(final int index_)
-        {
-            return _indexMap[index_];
-        }
-
         private final class MappedReader implements ItemRegressorReader
         {
             private final float[] _data;
 
             public MappedReader(final R field_)
             {
-                _data = extractRegressor(field_);
+                _data = fetchRegressor(field_.ordinal(), _underlying);
             }
 
             @Override
@@ -269,6 +252,28 @@ public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends Ite
 
         }
 
+        private synchronized float[] fetchRegressor(final int ordinal_, final ItemFittingGrid<S, R> grid_)
+        {
+            final float[] cached = _regressors[ordinal_];
+
+            if (null != cached)
+            {
+                return cached;
+            }
+
+            final int tabSize = grid_.totalSize();
+            final R reg = _family.getFromOrdinal(ordinal_);
+            final ItemRegressorReader reader = grid_.getRegressorReader(reg);
+            _regressors[ordinal_] = new float[tabSize];
+
+            for (int i = 0; i < tabSize; i++)
+            {
+                final int mapped = mapIndex(i);
+                _regressors[ordinal_][i] = (float) reader.asDouble(mapped);
+            }
+
+            return _regressors[ordinal_];
+        }
     }
 
 }

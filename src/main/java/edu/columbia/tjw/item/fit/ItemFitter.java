@@ -33,6 +33,7 @@ import edu.columbia.tjw.item.fit.curve.BaseCurveFitter;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
+import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Collection;
 import java.util.Collections;
@@ -58,6 +59,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private final ItemCurveFactory<T> _factory;
     private final ItemSettings _settings;
     private final R _intercept;
+    private final EnumFamily<R> _family;
 
     public ItemFitter(final ItemCurveFactory<T> factory_, final R intercept_)
     {
@@ -82,6 +84,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _factory = factory_;
         _settings = settings_;
         _intercept = intercept_;
+        _family = intercept_.getFamily();
     }
 
     public ItemParameters<S, R, T> generateInitialParameters(final S status_)
@@ -116,7 +119,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             return factory_;
         }
 
-        final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(factory_, _settings);
+        final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(factory_, _settings, _family);
         return wrapped;
     }
 
