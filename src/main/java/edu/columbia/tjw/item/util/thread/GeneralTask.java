@@ -22,18 +22,26 @@ package edu.columbia.tjw.item.util.thread;
 /**
  *
  * @author tyler
+ * @param <V> The return type of this task
  */
 public abstract class GeneralTask<V> implements Runnable
 {
     private Throwable _exception;
     private V _result;
     private boolean _isDone;
+    private boolean _isRunning;
 
     public GeneralTask()
     {
         _exception = null;
         _result = null;
         _isDone = false;
+        _isRunning = false;
+    }
+
+    public synchronized boolean isRunning()
+    {
+        return _isRunning;
     }
 
     public synchronized boolean isDone()
@@ -41,30 +49,51 @@ public abstract class GeneralTask<V> implements Runnable
         return _isDone;
     }
 
-    public synchronized V waitForCompletion()
+    public V waitForCompletion()
     {
-        while (!_isDone)
+        //If we are not done, and not already running, then let's run the task
+        //rather than just waiting for it. Since run kicks out if it's already running or done,
+        //it is safe to call this unconditionally.
+        this.run();
+
+        synchronized (this)
         {
-            try
+            while (!_isDone)
             {
-                this.wait();
-            } catch (final InterruptedException e)
-            {
-                throw new RuntimeException(e);
+                try
+                {
+                    this.wait();
+                }
+                catch (final InterruptedException e)
+                {
+                    throw new RuntimeException(e);
+                }
             }
-        }
 
-        if (null != _exception)
-        {
-            throw new RuntimeException(_exception);
-        }
+            if (null != _exception)
+            {
+                throw new RuntimeException(_exception);
+            }
 
-        return _result;
+            return _result;
+        }
     }
 
     @Override
     public void run()
     {
+        synchronized (this)
+        {
+            if (this.isRunning() || this.isDone())
+            {
+                return;
+            }
+            else
+            {
+                _isRunning = true;
+            }
+        }
+
         V result = null;
         Throwable t = null;
 
@@ -73,17 +102,20 @@ public abstract class GeneralTask<V> implements Runnable
             result = subRun();
             t = null;
 
-        } catch (final Throwable t_)
+        }
+        catch (final Throwable t_)
         {
             t = t_;
             result = null;
-        } finally
+        }
+        finally
         {
             synchronized (this)
             {
                 this._result = result;
                 this._exception = t;
                 this._isDone = true;
+                this._isRunning = false;
 
                 this.notifyAll();
             }
