@@ -36,7 +36,6 @@ import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
-import edu.columbia.tjw.item.util.random.RandomTool;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -59,7 +58,9 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final ItemModel<S, R, T> _model;
     private final ItemFittingGrid<S, R> _grid;
     private final RectangularDoubleArray _powerScores;
-    private final RectangularDoubleArray _actualProbabilities;
+    
+    //N.B: These are ordinals, not offsets.
+    private final int[] _actualOutcomes;
     private final MultivariateOptimizer _optimizer;
     private final int[] _indexList;
     private final R _intercept;
@@ -111,7 +112,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         _indexList = Arrays.copyOf(indexList, count);
         _powerScores = new RectangularDoubleArray(count, reachableCount);
-        _actualProbabilities = new RectangularDoubleArray(count, reachableCount);
+        //_actualProbabilities = new RectangularDoubleArray(count, reachableCount);
+        _actualOutcomes = new int[count];
 
         final List<S> reachable = fromStatus.getReachable();
 
@@ -125,6 +127,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         for (int i = 0; i < count; i++)
         {
             final int index = _indexList[i];
+            _actualOutcomes[i] = _grid.getNextStatus(index);
 
             model_.transitionProbability(_grid, workspace, index, probabilities);
 
@@ -134,18 +137,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
             {
                 final double next = probabilities[w];
                 _powerScores.set(i, w, next);
-
-                final S stat = reachable.get(w);
-                final int actualTrans = _grid.getNextStatus(index);
-
-                if (actualTrans == stat.ordinal())
-                {
-                    _actualProbabilities.set(i, w, 1.0);
-                }
-                else
-                {
-                    _actualProbabilities.set(i, w, 0.0);
-                }
             }
         }
     }
@@ -156,7 +147,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, _model, toStatus_, _settings, _intercept);
         //LOG.info("\n\nFinding best: " + generator_ + " " + field_ + " " + toStatus_);
 
-        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(generator, field_, this._model.getParams().getStatus(), toStatus_, _powerScores, _actualProbabilities,
+        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(generator, field_, this._model.getParams().getStatus(), toStatus_, _powerScores, _actualOutcomes,
                 _grid, _model, _indexList, _settings);
 
         final int dimension = generator.paramCount();

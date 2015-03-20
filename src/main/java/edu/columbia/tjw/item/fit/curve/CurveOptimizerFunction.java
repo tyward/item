@@ -60,7 +60,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
     private final ItemModel<S, R, T> _model;
     private final RectangularDoubleArray _powerScores;
-    private final RectangularDoubleArray _actualProbabilities;
+    private final int[] _actualOffsets;
 
     private ItemCurve<?> _trans;
     private double _interceptAdjustment;
@@ -71,15 +71,22 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
     //private final MultivariateDifferentiableFunction _diff;
     public CurveOptimizerFunction(final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_,
-            final RectangularDoubleArray powerScores_, final RectangularDoubleArray actualProbabilities_, final ItemFittingGrid<S, R> grid_,
+            final RectangularDoubleArray powerScores_, final int[] actualOrdinals_, final ItemFittingGrid<S, R> grid_,
             final ItemModel<S, R, T> model_, final int[] indexList_, final ItemSettings settings_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
         _settings = settings_;
-        _likelihood = new LogLikelihood<>(fromStatus_.getFamily());
+        _likelihood = new LogLikelihood<>(fromStatus_);
         _powerScores = powerScores_;
-        _actualProbabilities = actualProbabilities_;
+        _actualOffsets = new int[actualOrdinals_.length]; //actualOrdinals_.clone();
+
+        //Convert ordinals to offsets. 
+        for (int i = 0; i < _actualOffsets.length; i++)
+        {
+            _actualOffsets[i] = _likelihood.ordinalToOffset(actualOrdinals_[i]);
+        }
+
         _model = model_;
         _generator = generator_;
         _field = field_;
@@ -181,16 +188,17 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         final int cols = _powerScores.getColumns();
 
         final double[] computed = new double[cols];
-        final double[] actual = new double[cols];
+        //final double[] actual = new double[cols];
 
         for (int i = start_; i < end_; i++)
         {
             for (int k = 0; k < cols; k++)
             {
                 computed[k] = _powerScores.get(i, k);
-                actual[k] = _actualProbabilities.get(i, k);
+                //actual[k] = _actualProbabilities.get(i, k);
             }
 
+            final int actualOffset = _actualOffsets[i];
             final double regressor = _regressor[i];
             final double transformed = _trans.transform(regressor);
             final double contribution = (_interceptAdjustment + (_beta * transformed));
@@ -200,7 +208,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             //Converte these power scores into probabilities.
             MultiLogistic.multiLogisticFunction(computed, computed);
 
-            final double logLikelihood = _likelihood.logLikelihood(_model.getParams().getStatus(), actual, computed);
+            final double logLikelihood = _likelihood.logLikelihood(computed, actualOffset);
 
             result_.add(logLikelihood, result_.getHighWater(), i + 1);
         }
@@ -232,7 +240,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
         final double[] workspace1 = new double[reachableCount];
         final double[] output = new double[reachableCount];
-        final double[] actual = new double[reachableCount];
+        //final double[] actual = new double[reachableCount];
 
         final int interceptIndex = _generator.getInterceptParamNumber();
         final int betaIndex = _generator.getBetaParamNumber();
@@ -242,7 +250,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             for (int w = 0; w < reachableCount; w++)
             {
                 scores[w] = _powerScores.get(i, w);
-                actual[w] = _actualProbabilities.get(i, w);
+                //actual[w] = _actualProbabilities.get(i, w);
             }
 
             //After this, workspace1 holds the model probabilities, output holds the xDerivatives of the probabilities.
@@ -251,12 +259,19 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
             double xDerivative = 0.0;
 
-            for (int w = 0; w < reachableCount; w++)
+            //for (int w = 0; w < reachableCount; w++)
+            //{
+            //    final double probRatio = actual[w] / workspace1[w];
+            //    final double derivTerm = output[w] * probRatio;
+            final int actualOffset = _actualOffsets[i];
+
+            if (actualOffset >= 0)
             {
-                final double probRatio = actual[w] / workspace1[w];
-                final double derivTerm = output[w] * probRatio;
+                //N.B: Ignore any transitions that we know to be impossible.
+                final double derivTerm = output[actualOffset] / workspace1[actualOffset];
                 xDerivative += derivTerm;
             }
+            //}
 
             final double regressor = this._regressor[i];
 

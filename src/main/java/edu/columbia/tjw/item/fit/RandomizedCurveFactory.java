@@ -250,6 +250,12 @@ public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends Ite
                 return _data[index_];
             }
 
+            public int size()
+            {
+                return _data.length;
+            }
+            
+            
         }
 
         private synchronized float[] fetchRegressor(final int ordinal_, final ItemFittingGrid<S, R> grid_)

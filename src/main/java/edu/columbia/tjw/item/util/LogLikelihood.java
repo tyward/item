@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.util;
 
 import edu.columbia.tjw.item.ItemStatus;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -33,81 +34,108 @@ public final class LogLikelihood<S extends ItemStatus<S>>
     private static final double LOG_CUTOFF = 14;
     private final double EXP_CUTOFF = Math.exp(-LOG_CUTOFF);
 
-    //This logic assumes all indistinguishable states are adjascent.
-    private final int[][] _mapping;
+    //This logic assumes all indistinguishable states are adjacent.
+    //private final int[][] _mapping;
+    private final int[] _reachabilityMap;
+    private final int[] _ordinalMap;
+    private final int[][] _indistinguishableMap;
 
-    public LogLikelihood(final EnumFamily<S> family_)
+    public LogLikelihood(final S fromStatus_)
     {
-        final int count = family_.size();
-        _mapping = new int[count][];
+        final EnumFamily<S> family = fromStatus_.getFamily();
+        final int count = family.size();
 
-        for (int i = 0; i < count; i++)
+        final List<S> reachable = fromStatus_.getReachable();
+
+        _reachabilityMap = new int[count];
+        _ordinalMap = new int[reachable.size()];
+        _indistinguishableMap = new int[reachable.size()][];
+
+        Arrays.fill(_reachabilityMap, -1);
+
+        for (int i = 0; i < reachable.size(); i++)
         {
-            final S next = family_.getFromOrdinal(i);
-            final List<S> reachable = next.getReachable();
-            final int reachableCount = reachable.size();
+            final S next = reachable.get(i);
+            final int nextOrdinal = next.ordinal();
+            _ordinalMap[i] = nextOrdinal;
+            _reachabilityMap[nextOrdinal] = i;
 
-            _mapping[i] = new int[reachableCount];
+        }
 
-            for (int k = 0; k < reachableCount; k++)
+        for (int i = 0; i < reachable.size(); i++)
+        {
+            final S next = reachable.get(i);
+            final List<S> indistinguishable = next.getIndistinguishable();
+            final int indCount = indistinguishable.size();
+
+            _indistinguishableMap[i] = new int[indCount];
+            int indPointer = 0;
+
+            //N.B: Watch carefully. If two (or more) states are indistinguishable, and we can get to both of them...
+            //Then for every one we can reach, add it to the indistinguishable set. This set will always contain at least one
+            //state (namely, the state itself). 
+            for (int w = 0; w < indCount; w++)
             {
-                final S target = reachable.get(k);
-                final List<S> indistingishable = target.getIndistinguishable();
-                final int maxIndistinguishable = indistingishable.get(indistingishable.size() - 1).ordinal();
-                _mapping[i][k] = maxIndistinguishable;
+                final int indOrdinal = indistinguishable.get(w).ordinal();
+                final int mapped = _reachabilityMap[indOrdinal];
+
+                if (mapped >= 0)
+                {
+                    _indistinguishableMap[i][indPointer++] = mapped;
+                }
             }
+
+            _indistinguishableMap[i] = Arrays.copyOf(_indistinguishableMap[i], indPointer);
         }
     }
 
-    private final int[] getMapping(final S stat_)
+    /**
+     * Computes the ordinal corresponding to the given offset.
+     *
+     * @param offset_
+     * @return
+     */
+    public final int offsetToOrdinal(final int offset_)
     {
-        return _mapping[stat_.ordinal()];
+        return _ordinalMap[offset_];
     }
 
-    public final double logLikelihood(final S fromStatus_, final double[] computed_, final int actual_)
+    /**
+     * Returns the expected offset into the computed array of the given ordinal.
+     *
+     * Returns -1 if this ordinal is not reachable from this state.
+     *
+     * @param ordinal_
+     * @return
+     */
+    public final int ordinalToOffset(final int ordinal_)
     {
-        //TODO: Clean this up and improve performance.
-        final int[] combineMapping = getMapping(fromStatus_);
+        return _reachabilityMap[ordinal_];
+    }
 
-        double computedVal = computed_[actual_];
-
-        if (combineMapping[actual_] != actual_)
+    public final double logLikelihood(final double[] computed_, final int actualTransitionOffset_)
+    {
+        if(actualTransitionOffset_ < 0)
         {
-            computedVal += computed_[combineMapping[actual_]];
+            //N.B: The data included a forbidden transition, we need to ignore that data point.
+            return 0.0;
+        }
+        
+        
+        double computed = 0.0;
+        final int[] indistinguishable = _indistinguishableMap[actualTransitionOffset_];
+
+        for (int i = 0; i < indistinguishable.length; i++)
+        {
+            final int next = indistinguishable[i];
+            computed += computed_[next];
         }
 
-        final double output = logLikelihoodTerm(1.0, computedVal);
+        final double output = logLikelihoodTerm(1.0, computed);
         return output;
     }
 
-    public final double logLikelihood(final S fromStatus_, final double[] actual_, final double[] computed_)
-    {
-        final int[] combineMapping = getMapping(fromStatus_);
-
-        double actSum = 0.0;
-        double computedSum = 0.0;
-
-        double sum = 0.0;
-
-        for (int i = 0; i < actual_.length; i++)
-        {
-            actSum += actual_[i];
-            computedSum += computed_[i];
-
-            if (combineMapping[i] != i)
-            {
-                continue;
-            }
-
-            sum += logLikelihoodTerm(actSum, computedSum);
-            actSum = 0.0;
-            computedSum = 0.0;
-        }
-
-        return sum;
-    }
-
-    private final double logLikelihoodTerm(final double actual_, final double computed_)
+    private double logLikelihoodTerm(final double actual_, final double computed_)
     {
         if (actual_ <= 0.0)
         {

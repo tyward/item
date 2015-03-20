@@ -37,5 +37,12 @@ public interface ItemRegressorReader
      * @return The value of the regressor for that observation.
      */
     public double asDouble(final int index_);
+    
+    /**
+     * Returns the number of elements in this array.
+     * @return 
+     */
+    public int size();
+    
 
 }

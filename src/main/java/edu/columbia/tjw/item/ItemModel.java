@@ -42,7 +42,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     private final double[][] _betas;
     private final int _reachableSize;
-    private final int[] _reachableMap;
+    //private final int[] _reachableMap;
 
     /**
      * Create a new item model from its parameters.
@@ -55,19 +55,22 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final S status = params_.getStatus();
 
         _reachable = status.getReachable();
-        _likelihood = new LogLikelihood<>(params_.getStatus().getFamily());
-
-        //_status = params_.getStatus();
+        
         _betas = params_.getBetas();
         _reachableSize = _params.getStatus().getReachableCount();
 
-        _reachableMap = new int[status.getFamily().size()];
-        Arrays.fill(_reachableMap, -1);
-
-        for (int i = 0; i < _reachableSize; i++)
-        {
-            _reachableMap[_reachable.get(i).ordinal()] = i;
-        }
+        _likelihood = new LogLikelihood<>(params_.getStatus());
+        
+        
+//        _reachableMap = new int[status.getFamily().size()];
+//        Arrays.fill(_reachableMap, -1);
+//
+//        for (int i = 0; i < _reachableSize; i++)
+//        {
+//            _reachableMap[_reachable.get(i).ordinal()] = i;
+//        }
+        
+        
     }
 
     public S getStatus()
@@ -93,12 +96,12 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
 
         final double[] computed = workspace_.getComputedProbabilityWorkspace();
-        final double[] actual = workspace_.getActualProbabilityWorkspace();
+        //final double[] actual = workspace_.getActualProbabilityWorkspace();
         transitionProbability(grid_, workspace_, index_, computed);
 
         //Arrays.fill(actual, 0.0);
         final int actualOutcome = grid_.getNextStatus(index_);
-        final int mapped = _reachableMap[actualOutcome];
+        final int mapped = _likelihood.ordinalToOffset(actualOutcome);
         //actual[mapped] = 1.0;
 
         //If this item took a forbidden transition, ignore the data point.
@@ -107,7 +110,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             return 0.0;
         }
 
-        final double logLikelihood = _likelihood.logLikelihood(_params.getStatus(), computed, mapped);
+        final double logLikelihood = _likelihood.logLikelihood(computed, mapped);
         return logLikelihood;
     }
 
@@ -141,7 +144,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         for (int i = 0; i < statCount; i++)
         {
-            final int reachableOrdinal = _reachableMap[i];
+            final int reachableOrdinal = _likelihood.ordinalToOffset(i);//_reachableMap[i];
 
             if (reachableOrdinal < 0)
             {
