@@ -43,10 +43,16 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 
     /**
      * Initialize a new enum family, should pass it enum.values().
+     *
      * @param values_ The output of enum.values() should be given here.
      */
     public EnumFamily(final V[] values_)
     {
+        if (values_.length < 1)
+        {
+            throw new IllegalArgumentException("Values must have positive length.");
+        }
+
         _members = values_;
         _memberSet = Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(values_)));
 
@@ -72,6 +78,7 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 
     /**
      * Returns all members of this enum family.
+     *
      * @return Same as enum.values()
      */
     public SortedSet<V> getMembers()
@@ -81,6 +88,7 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 
     /**
      * How many members does this enum have.
+     *
      * @return enum.values().length
      */
     public int size()
@@ -90,7 +98,8 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 
     /**
      * Look up an enum by its ordinal
-     * @param ordinal_ The ordinal of the enum to retrieve. 
+     *
+     * @param ordinal_ The ordinal of the enum to retrieve.
      * @return enum.values()[ordinal_]
      */
     public V getFromOrdinal(final int ordinal_)
@@ -99,8 +108,9 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
     }
 
     /**
-     * Look up an enum by name. 
-     * @param name_ The name of the enum to look up. 
+     * Look up an enum by name.
+     *
+     * @param name_ The name of the enum to look up.
      * @return enum.fromName(name_)
      */
     public V getFromName(final String name_)
@@ -108,4 +118,9 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
         return _nameMap.get(name_);
     }
 
+    private Object readResolve()
+    {
+        //Enforce the singleton condition.
+        return this._members[0].getFamily();
+    }
 }
