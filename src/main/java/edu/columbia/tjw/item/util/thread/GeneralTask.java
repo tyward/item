@@ -26,6 +26,7 @@ package edu.columbia.tjw.item.util.thread;
  */
 public abstract class GeneralTask<V> implements Runnable
 {
+    private final Object _runLock;
     private Throwable _exception;
     private V _result;
     private boolean _isDone;
@@ -33,6 +34,7 @@ public abstract class GeneralTask<V> implements Runnable
 
     public GeneralTask()
     {
+        _runLock = new Object();
         _exception = null;
         _result = null;
         _isDone = false;
@@ -69,7 +71,10 @@ public abstract class GeneralTask<V> implements Runnable
                     throw new RuntimeException(e);
                 }
             }
+        }
 
+        synchronized (_runLock)
+        {
             if (null != _exception)
             {
                 throw new RuntimeException(_exception);
@@ -97,27 +102,29 @@ public abstract class GeneralTask<V> implements Runnable
         V result = null;
         Throwable t = null;
 
-        try
+        synchronized (_runLock)
         {
-            result = subRun();
-            t = null;
-
-        }
-        catch (final Throwable t_)
-        {
-            t = t_;
-            result = null;
-        }
-        finally
-        {
-            synchronized (this)
+            try
             {
-                this._result = result;
-                this._exception = t;
-                this._isDone = true;
-                this._isRunning = false;
+                result = subRun();
+                t = null;
+            }
+            catch (final Throwable t_)
+            {
+                t = t_;
+                result = null;
+            }
+            finally
+            {
+                synchronized (this)
+                {
+                    this._result = result;
+                    this._exception = t;
+                    this._isDone = true;
+                    this._isRunning = false;
 
-                this.notifyAll();
+                    this.notifyAll();
+                }
             }
         }
     }
