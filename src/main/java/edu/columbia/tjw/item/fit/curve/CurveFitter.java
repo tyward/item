@@ -148,6 +148,11 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
                         LOG.info("Trouble converging, moving on to next curve.");
                         LOG.info(e.getMessage());
                     }
+                    catch (final IllegalArgumentException e)
+                    {
+                        LOG.info("Argument trouble (" + field + "), moving on to next curve.");
+                        LOG.info(e.getMessage());
+                    }
                 }
             }
         }
