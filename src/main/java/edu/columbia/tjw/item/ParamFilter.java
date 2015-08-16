@@ -52,12 +52,12 @@ public interface ParamFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * True if this item is to be ignored.
      *
      * Coefficients are described by the tuple (from, to, field, transformation)
-     * -> coeff
+     * to coeff
      *
      * This filter allows some of these tuples to be ignored.
      *
      * @param fromStatus_ Status of the model in question
-     * @param toStatus_ Status of this transitions (e.g. from -> to)
+     * @param toStatus_ Status of this transition 
      * @param field_ The regressor
      * @param trans_ The transformation to be applied, null if no
      * transformation.
