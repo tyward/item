@@ -26,10 +26,6 @@ import edu.columbia.tjw.item.ItemModelGrid;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.ItemWorkspace;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.ObjectInputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +65,6 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 //            e.printStackTrace();
 //        }
 //    }
-
     public ModelVisualizer(final ItemModel<S, R, T> model_)
     {
         _model = model_;
@@ -101,8 +96,6 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
             throw new IllegalArgumentException("Steps must be positive: " + steps_);
         }
 
-        final ItemWorkspace<S> workspace = _model.generateWorkspace();
-
         final double stepSize = (regMax_ - regMin_) / steps_;
 
         final InnerGrid grid = new InnerGrid(steps_, regMin_, stepSize, regressor_, regValues_, _model.getParams());
@@ -121,7 +114,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         for (int i = 0; i < steps_; i++)
         {
-            _model.transitionProbability(grid, workspace, i, probability);
+            _model.transitionProbability(grid, i, probability);
 
             final double x = regMin_ + (i * stepSize);
             final double y = probability[toIndex];

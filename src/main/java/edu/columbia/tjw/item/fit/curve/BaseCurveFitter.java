@@ -107,29 +107,22 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
 
         final int reachableCount = fromStatus.getReachableCount();
-        final ItemWorkspace<S> workspace = model_.generateWorkspace();
         final double[] probabilities = new double[reachableCount];
 
         _indexList = Arrays.copyOf(indexList, count);
         _powerScores = new RectangularDoubleArray(count, reachableCount);
-        //_actualProbabilities = new RectangularDoubleArray(count, reachableCount);
         _actualOutcomes = new int[count];
 
         final List<S> reachable = fromStatus.getReachable();
 
         final int baseCase = fromStatus.getReachable().indexOf(fromStatus);
-//
-//        if (_settings.isRandomShuffle())
-//        {
-//            RandomTool.shuffle(_indexList, _settings.getRandom());
-//        }
 
         for (int i = 0; i < count; i++)
         {
             final int index = _indexList[i];
             _actualOutcomes[i] = _grid.getNextStatus(index);
 
-            model_.transitionProbability(_grid, workspace, index, probabilities);
+            model_.transitionProbability(_grid, index, probabilities);
 
             MultiLogistic.multiLogitFunction(baseCase, probabilities, probabilities);
 

@@ -33,7 +33,7 @@ import java.util.List;
  * @param <R> The regressor type for this model
  * @param <T> The curve type for this model
  */
-public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Cloneable
 {
     private final double ROUNDING_TOLERANCE = 1.0e-8;
     private final LogLikelihood<S> _likelihood;
@@ -42,7 +42,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     private final double[][] _betas;
     private final int _reachableSize;
-    //private final int[] _reachableMap;
+    private final ItemWorkspace<S> _workspace;
 
     /**
      * Create a new item model from its parameters.
@@ -55,22 +55,13 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final S status = params_.getStatus();
 
         _reachable = status.getReachable();
-        
+
         _betas = params_.getBetas();
         _reachableSize = _params.getStatus().getReachableCount();
 
         _likelihood = new LogLikelihood<>(params_.getStatus());
-        
-        
-//        _reachableMap = new int[status.getFamily().size()];
-//        Arrays.fill(_reachableMap, -1);
-//
-//        for (int i = 0; i < _reachableSize; i++)
-//        {
-//            _reachableMap[_reachable.get(i).ordinal()] = i;
-//        }
-        
-        
+
+        _workspace = this.generateWorkspace();
     }
 
     public S getStatus()
@@ -88,16 +79,24 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return _params;
     }
 
-    public final double logLikelihood(final ItemFittingGrid<S, R> grid_, final ItemWorkspace<S> workspace_, final int index_)
+    /**
+     * N.B: This is NOT threadsafe! Generate a new model for each thread, there
+     * is some internal workspace associated that can't be shared.
+     *
+     * @param grid_
+     * @param index_
+     * @return
+     */
+    public final double logLikelihood(final ItemFittingGrid<S, R> grid_, final int index_)
     {
         if (!grid_.hasNextStatus(index_))
         {
             return 0.0;
         }
 
-        final double[] computed = workspace_.getComputedProbabilityWorkspace();
+        final double[] computed = _workspace.getComputedProbabilityWorkspace();
         //final double[] actual = workspace_.getActualProbabilityWorkspace();
-        transitionProbability(grid_, workspace_, index_, computed);
+        transitionProbability(grid_, index_, computed);
 
         //Arrays.fill(actual, 0.0);
         final int actualOutcome = grid_.getNextStatus(index_);
@@ -165,31 +164,45 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
+    public ItemWorkspace<S> getLocalWorkspace()
+    {
+        return _workspace;
+    }
+    
     public ItemWorkspace<S> generateWorkspace()
     {
         return new ItemWorkspace<>(_params.getStatus(), this.getRegressorCount());
     }
 
-    public int transitionProbability(final ItemModelGrid<S, R> grid_, final ItemWorkspace<S> workspace_, final int index_, final double[] output_)
+    /**
+     * N.B: This is NOT threadsafe. It contains some use of internal state that
+     * cannot be shared. Clone the model as needed.
+     *
+     * @param grid_
+     * @param index_
+     * @param output_
+     * @return
+     */
+    public int transitionProbability(final ItemModelGrid<S, R> grid_, final int index_, final double[] output_)
     {
-        final double[] regressors = workspace_.getRegressorWorkspace();
+        final double[] regressors = _workspace.getRegressorWorkspace();
 
         grid_.getRegressors(index_, regressors);
 
-        multiLogisticFunction(regressors, _betas, output_);
+        multiLogisticFunction(regressors, output_);
 
         return _betas.length;
     }
 
-    public void powerScores(final double[] regressors_, final double[][] betas_, final double[] workspace_)
+    public void powerScores(final double[] regressors_, final double[] workspace_)
     {
         final int inputSize = regressors_.length;
-        final int outputSize = betas_.length;
+        final int outputSize = _betas.length;
 
         for (int i = 0; i < outputSize; i++)
         {
             double sum = 0.0;
-            final double[] betaArray = betas_[i];
+            final double[] betaArray = _betas[i];
 
             for (int k = 0; k < inputSize; k++)
             {
@@ -200,9 +213,9 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
-    private void multiLogisticFunction(final double[] regressors_, final double[][] betas_, final double[] workspace_)
+    public void multiLogisticFunction(final double[] regressors_, final double[] workspace_)
     {
-        powerScores(regressors_, betas_, workspace_);
+        powerScores(regressors_, workspace_);
         MultiLogistic.multiLogisticFunction(workspace_, workspace_);
     }
 
@@ -217,14 +230,26 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return output;
     }
 
-    public void regressorDerivatives(final double[] powerScores_, final int regressorIndex_, final double[] workspace_, final double[] workspace2_, final double[] output_)
+//    public void regressorDerivatives(final double[] powerScores_, final int regressorIndex_, final double[] workspace_, final double[] workspace2_, final double[] output_)
+//    {
+//        for (int i = 0; i < _reachableSize; i++)
+//        {
+//            workspace2_[i] = _betas[i][regressorIndex_];
+//        }
+//
+//        MultiLogistic.multiLogisticRegressorDerivatives(powerScores_, workspace2_, workspace_, output_);
+//    }
+
+    /**
+     *
+     * @return
+     */
+    @Override
+    public final ItemModel<S, R, T> clone()
     {
-        for (int i = 0; i < _reachableSize; i++)
-        {
-            workspace2_[i] = _betas[i][regressorIndex_];
-        }
-
-        MultiLogistic.multiLogisticRegressorDerivatives(powerScores_, workspace2_, workspace_, output_);
+        //Yes, yes, this is bad form. However, this class is final and I don't feel like
+        //making all its internal variables not-final so that I can use the proper clone
+        //idiom.
+        return new ItemModel<>(this.getParams());
     }
-
 }

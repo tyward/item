@@ -50,7 +50,6 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     private final ItemFittingGrid<S, R> _grid;
     private ItemParameters<S, R, T> _params;
     private ItemModel<S, R, T> _model;
-    //private MultivariateFiniteDiffDerivFunction _derivFunction;
 
     public LogisticModelFunction(final double[] beta_, final int[] statusPointers_, final int[] regPointers_,
             final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_, final ItemModel<S, R, T> model_, ItemSettings settings_)
@@ -122,10 +121,8 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
             return;
         }
 
-        //Slightly wasteful, but we will reuse this for enough calcs it shouldn't matter...
-        final ItemWorkspace<S> workspace = _model.generateWorkspace();
+        final ItemModel<S, R, T> localModel = _model.clone();
         final S fromStatus = this._model.getParams().getStatus();
-        //int count = 0;
 
         final int fromStatusOrdinal = fromStatus.ordinal();
 
@@ -142,8 +139,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
                 continue;
             }
 
-            final double ll = _model.logLikelihood(_grid, workspace, i);
-            //count++;
+            final double ll = localModel.logLikelihood(_grid, i);
 
             result_.add(ll, result_.getHighWater(), i + 1);
         }
@@ -179,12 +175,13 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
             return new MultivariateGradient(input_, der, null, 0.0);
         }
 
-        final ItemWorkspace<S> workspace = _model.generateWorkspace();
+        final ItemModel<S, R, T> localModel = _model.clone();
+        final ItemWorkspace<S> localWorkspace = _model.getLocalWorkspace();
 
-        final double[] computed = workspace.getComputedProbabilityWorkspace();
-        final double[] actual = workspace.getActualProbabilityWorkspace();
-        final double[] regressors = workspace.getRegressorWorkspace();
-        final List<S> reachable = _model.getParams().getStatus().getReachable();
+        final double[] computed = localWorkspace.getComputedProbabilityWorkspace();
+        final double[] actual = localWorkspace.getActualProbabilityWorkspace();
+        final double[] regressors = localWorkspace.getRegressorWorkspace();
+        final List<S> reachable = localModel.getParams().getStatus().getReachable();
         int count = 0;
 
         final int fromOrdinal = _params.getStatus().ordinal();
@@ -200,7 +197,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
                 continue;
             }
 
-            _model.transitionProbability(_grid, workspace, i, computed);
+            localModel.transitionProbability(_grid, i, computed);
             _grid.getRegressors(i, regressors);
 
             final int actualTransition = _grid.getNextStatus(i);

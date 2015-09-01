@@ -20,6 +20,9 @@ public class RandomTool
 
     static
     {
+        //Should fix the occasional hang on start glitch. Caused by the linux /dev/random blocking (I still say this is a bug in Linux). 
+        System.setProperty("securerandom.source", "file:/dev/urandom");
+
         CORE = new SecureRandom();
     }
 
@@ -61,8 +64,8 @@ public class RandomTool
     }
 
     /**
-     * 
-     * @param input_ 
+     *
+     * @param input_
      */
     public static void shuffle(final int[] input_)
     {
@@ -70,9 +73,9 @@ public class RandomTool
     }
 
     /**
-     * 
+     *
      * @param input_
-     * @param rand_ 
+     * @param rand_
      */
     public static void shuffle(final int[] input_, final Random rand_)
     {
