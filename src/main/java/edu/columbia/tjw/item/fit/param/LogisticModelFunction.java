@@ -26,13 +26,11 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.ItemWorkspace;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
 import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
 import edu.columbia.tjw.item.optimize.MultivariateGradient;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
-import java.util.List;
 
 /**
  *
@@ -176,77 +174,20 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
         }
 
         final ItemModel<S, R, T> localModel = _model.clone();
-        final ItemWorkspace<S> localWorkspace = _model.getLocalWorkspace();
 
-        final double[] computed = localWorkspace.getComputedProbabilityWorkspace();
-        final double[] actual = localWorkspace.getActualProbabilityWorkspace();
-        final double[] regressors = localWorkspace.getRegressorWorkspace();
-        final List<S> reachable = localModel.getParams().getStatus().getReachable();
-        int count = 0;
-
-        final int fromOrdinal = _params.getStatus().ordinal();
-
-        for (int i = start_; i < end_; i++)
-        {
-            if (_grid.getStatus(i) != fromOrdinal)
-            {
-                continue;
-            }
-            if (!_grid.hasNextStatus(i))
-            {
-                continue;
-            }
-
-            localModel.transitionProbability(_grid, i, computed);
-            _grid.getRegressors(i, regressors);
-
-            final int actualTransition = _grid.getNextStatus(i);
-
-            for (int w = 0; w < reachable.size(); w++)
-            {
-                final S next = reachable.get(w);
-
-                if (next.ordinal() == actualTransition)
-                {
-                    actual[w] = 1.0;
-                }
-                else
-                {
-                    actual[w] = 0.0;
-                }
-            }
-
-            for (int z = 0; z < dimension; z++)
-            {
-                //looping over the betas.
-                double betaTerm = 0.0;
-
-                for (int q = 0; q < reachable.size(); q++)
-                {
-                    //looping over the to-states.
-                    final double betaDerivative = _model.betaDerivative(regressors, computed, _regPointers[z], q, _statusPointers[z]);
-                    final double actualProbability = actual[q];
-                    final double computedProb = computed[q];
-                    final double contribution = actualProbability * betaDerivative / computedProb;
-                    betaTerm += contribution;
-                }
-
-                derivative[z] += betaTerm;
-            }
-
-            count++;
-        }
+        final int count = localModel.computeDerivative(_grid, start_, end_, _regPointers, _statusPointers, derivative);
 
         if (count > 0)
         {
             //N.B: we are computing the negative log likelihood. 
             final double invCount = -1.0 / count;
 
-            for (int i = 0; i < derivative.length; i++)
+            for (int i = 0; i < dimension; i++)
             {
                 derivative[i] = derivative[i] * invCount;
             }
         }
+
 
         final MultivariatePoint der = new MultivariatePoint(derivative);
 

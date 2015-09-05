@@ -28,6 +28,9 @@ import java.util.List;
  *
  * A class representing an ITEM model.
  *
+ * Note that this class is not threadsafe. You need to synchronize on your own,
+ * or clone this model and use the clone in other threads.
+ *
  * @author tyler
  * @param <S> The status type for this model
  * @param <R> The regressor type for this model
@@ -42,7 +45,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     private final double[][] _betas;
     private final int _reachableSize;
-    private final ItemWorkspace<S> _workspace;
+
+    private final double[] _regWorkspace;
+    private final double[] _probWorkspace;
+    private final double[] _actualProbWorkspace;
 
     /**
      * Create a new item model from its parameters.
@@ -51,17 +57,28 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      */
     public ItemModel(final ItemParameters<S, R, T> params_)
     {
-        _params = params_;
-        final S status = params_.getStatus();
+        synchronized (this)
+        {
+            //This is synchronized so that clone may safely be called by any thread. 
+            //In this way, we can generate models that are detached form one another, 
+            //and may safely be used simultaneously in different threads without requiring
+            //any additiona synchronization. 
+            _params = params_;
+            final S status = params_.getStatus();
 
-        _reachable = status.getReachable();
+            _reachable = status.getReachable();
 
-        _betas = params_.getBetas();
-        _reachableSize = _params.getStatus().getReachableCount();
+            _betas = params_.getBetas();
+            _reachableSize = status.getReachableCount();
 
-        _likelihood = new LogLikelihood<>(params_.getStatus());
+            _likelihood = new LogLikelihood<>(status);
 
-        _workspace = new ItemWorkspace<>(_params.getStatus(), this.getRegressorCount());
+            final int regCount = this.getRegressorCount();
+
+            _regWorkspace = new double[regCount];
+            _probWorkspace = new double[_reachableSize];
+            _actualProbWorkspace = new double[_reachableSize];
+        }
     }
 
     public S getStatus()
@@ -94,7 +111,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             return 0.0;
         }
 
-        final double[] computed = _workspace.getComputedProbabilityWorkspace();
+        final double[] computed = _probWorkspace;
         //final double[] actual = workspace_.getActualProbabilityWorkspace();
         transitionProbability(grid_, index_, computed);
 
@@ -164,9 +181,93 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
-    public ItemWorkspace<S> getLocalWorkspace()
+    /**
+     * Compute the derivative of the log likelihood with respect to the given
+     * parameters, over the given data set.
+     *
+     * Note that this will be the SUM of the log likelihoods, meaning that
+     * you'll need to normalize it on your own if you plan to do so.
+     *
+     * This function returns the count of the observations examined, so to
+     * produce the average log likelihood, just divide each element of the
+     * derivative by this number.
+     *
+     * @param grid_ The data that will be used for this computation.
+     * @param start_ The row to start at.
+     * @param end_ The row to end at, half open interval (end_ is not included
+     * in the computation).
+     * @param regressorPointers_ An array of indices to the regressors you are
+     * interested in (may not be the full R x S matrix you want).
+     * @param statusPointers_ An array of indices to the statuses you are
+     * interested in.
+     * @param derivative_ The function's primary output, the derivative of the
+     * LL, the i'th element of which is with respect to the
+     * regressorPointer_[i]'th regressor and the statusPointers_[i]'th status.
+     * @return The total observation count used for this computation.
+     */
+    public int computeDerivative(final ItemFittingGrid<S, R> grid_, final int start_, final int end_, final int[] regressorPointers_, final int[] statusPointers_, final double[] derivative_)
     {
-        return _workspace;
+        final int dimension = regressorPointers_.length;
+        final double[] computed = _probWorkspace;
+        final double[] actual = _actualProbWorkspace;
+        final double[] regressors = _regWorkspace;
+        final List<S> reachable = getParams().getStatus().getReachable();
+        int count = 0;
+
+        final int fromOrdinal = _params.getStatus().ordinal();
+
+        for (int i = start_; i < end_; i++)
+        {
+            if (grid_.getStatus(i) != fromOrdinal)
+            {
+                continue;
+            }
+            if (!grid_.hasNextStatus(i))
+            {
+                continue;
+            }
+
+            transitionProbability(grid_, i, computed);
+            grid_.getRegressors(i, regressors);
+
+            final int actualTransition = grid_.getNextStatus(i);
+
+            for (int w = 0; w < reachable.size(); w++)
+            {
+                final S next = reachable.get(w);
+
+                if (next.ordinal() == actualTransition)
+                {
+                    actual[w] = 1.0;
+                }
+                else
+                {
+                    actual[w] = 0.0;
+                }
+            }
+
+            for (int z = 0; z < dimension; z++)
+            {
+                //looping over the betas.
+                double betaTerm = 0.0;
+
+                for (int q = 0; q < reachable.size(); q++)
+                {
+                    //looping over the to-states.
+                    final double betaDerivative = betaDerivative(regressors, computed, regressorPointers_[z], q, statusPointers_[z]);
+                    final double actualProbability = actual[q];
+                    final double computedProb = computed[q];
+                    final double contribution = actualProbability * betaDerivative / computedProb;
+                    betaTerm += contribution;
+                }
+
+                derivative_[z] += betaTerm;
+            }
+
+            count++;
+        }
+
+        return count;
     }
 
     /**
@@ -180,7 +281,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      */
     public int transitionProbability(final ItemModelGrid<S, R> grid_, final int index_, final double[] output_)
     {
-        final double[] regressors = _workspace.getRegressorWorkspace();
+        final double[] regressors = _regWorkspace;
 
         grid_.getRegressors(index_, regressors);
 
@@ -225,21 +326,15 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return output;
     }
 
-//    public void regressorDerivatives(final double[] powerScores_, final int regressorIndex_, final double[] workspace_, final double[] workspace2_, final double[] output_)
-//    {
-//        for (int i = 0; i < _reachableSize; i++)
-//        {
-//            workspace2_[i] = _betas[i][regressorIndex_];
-//        }
-//
-//        MultiLogistic.multiLogisticRegressorDerivatives(powerScores_, workspace2_, workspace_, output_);
-//    }
     /**
+     * Note that this method is synchronized. Therefore, it may be called from
+     * any thread, and you are guaranteed to get a viable model within that
+     * thread.
      *
      * @return
      */
     @Override
-    public final ItemModel<S, R, T> clone()
+    public final synchronized ItemModel<S, R, T> clone()
     {
         //Yes, yes, this is bad form. However, this class is final and I don't feel like
         //making all its internal variables not-final so that I can use the proper clone
