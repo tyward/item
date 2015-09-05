@@ -24,8 +24,18 @@ public class RandomTool
         System.setProperty("securerandom.source", "file:/dev/urandom");
 
         CORE = new SecureRandom();
+        CORE.setSeed(CORE.generateSeed(32));
     }
 
+    public static void main(final String[] args_)
+    {
+        for(int i = 0; i < 100; i++)
+        {
+            System.out.println(CORE.nextLong());
+        }
+    }
+    
+    
     private RandomTool()
     {
     }
@@ -102,6 +112,12 @@ public class RandomTool
         CORE.nextBytes(output);
         return output;
     }
+    
+    public static Random getRandom()
+    {
+        return getRandom(PrngType.STANDARD);
+    }
+    
 
     public static Random getRandom(final PrngType type_)
     {

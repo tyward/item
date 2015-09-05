@@ -37,15 +37,18 @@ import java.util.TreeSet;
  */
 public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 {
+    private static final long serialVersionUID = 2720474101494526203L;
     private final V[] _members;
     private final SortedSet<V> _memberSet;
     private final Map<String, V> _nameMap;
+    private final Class<? extends V> _componentClass;
 
     /**
      * Initialize a new enum family, should pass it enum.values().
      *
      * @param values_ The output of enum.values() should be given here.
      */
+    @SuppressWarnings("unchecked")
     public EnumFamily(final V[] values_)
     {
         if (values_.length < 1)
@@ -74,6 +77,17 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
             _nameMap.put(next.name(), next);
         }
 
+        //we actually know that this cast is valid, provided values is actually of type V. 
+        _componentClass = (Class<? extends V>) _members[0].getClass();
+    }
+
+    /**
+     * Returns the class of the component members of this family. 
+     * @return The class of the members of this family.
+     */
+    public Class<? extends V> getComponentType()
+    {
+        return _componentClass;
     }
 
     /**

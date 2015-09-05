@@ -11,6 +11,11 @@ package edu.columbia.tjw.item.util;
  */
 public final class ByteTool
 {
+    private static final char[] HEX_CHARS =
+    {
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+    };
+
     private ByteTool()
     {
     }
@@ -62,6 +67,95 @@ public final class ByteTool
     public static long bytesToLong(final byte[] input_, final int offset_)
     {
         final long output = fromBytes(input_, offset_, 8);
+        return output;
+    }
+
+    public static byte[] bytesFromHex(final String input_)
+    {
+        final int length = input_.length();
+
+        if (length % 2 != 0)
+        {
+            throw new IllegalArgumentException("Length must be even.");
+        }
+
+        final int outputLength = length / 2;
+
+        final byte[] output = new byte[outputLength];
+
+        for (int i = 0; i < outputLength; i++)
+        {
+            final byte high = (byte) (decodeOne(input_.charAt(2*i)) << 4);
+            final byte low = decodeOne(input_.charAt((2*i) + 1));
+            final byte next = (byte) (high | low);
+            output[i] = next;
+        }
+
+        return output;
+    }
+
+    public static byte decodeOne(final char input_)
+    {
+        switch (input_)
+        {
+            case '0':
+                return 0;
+            case '1':
+                return 1;
+            case '2':
+                return 2;
+            case '3':
+                return 3;
+            case '4':
+                return 4;
+            case '5':
+                return 5;
+            case '6':
+                return 6;
+            case '7':
+                return 7;
+            case '8':
+                return 8;
+            case '9':
+                return 9;
+            case 'a':
+            case 'A':
+                return 10;
+            case 'b':
+            case 'B':
+                return 11;
+            case 'c':
+            case 'C':
+                return 12;
+            case 'd':
+            case 'D':
+                return 13;
+            case 'e':
+            case 'E':
+                return 14;
+            case 'f':
+            case 'F':
+                return 15;
+            default:
+                throw new IllegalArgumentException("Unsupported: " + input_);
+        }
+
+    }
+
+    public static String bytesToHex(final byte[] input_)
+    {
+        char[] chars = new char[input_.length * 2];
+
+        for (int i = 0; i < input_.length; i++)
+        {
+            final int next = input_[i] & 0xFF;
+            final int high = (next >> 4) & 0x0F;
+            final int low = next & 0x0F;
+            chars[2 * i] = HEX_CHARS[high];
+            chars[2 * i + 1] = HEX_CHARS[low];
+        }
+
+        final String output = new String(chars);
         return output;
     }
 
