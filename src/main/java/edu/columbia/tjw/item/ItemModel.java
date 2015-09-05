@@ -61,7 +61,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         _likelihood = new LogLikelihood<>(params_.getStatus());
 
-        _workspace = this.generateWorkspace();
+        _workspace = new ItemWorkspace<>(_params.getStatus(), this.getRegressorCount());
     }
 
     public S getStatus()
@@ -168,11 +168,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     {
         return _workspace;
     }
-    
-    public ItemWorkspace<S> generateWorkspace()
-    {
-        return new ItemWorkspace<>(_params.getStatus(), this.getRegressorCount());
-    }
 
     /**
      * N.B: This is NOT threadsafe. It contains some use of internal state that
@@ -239,7 +234,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 //
 //        MultiLogistic.multiLogisticRegressorDerivatives(powerScores_, workspace2_, workspace_, output_);
 //    }
-
     /**
      *
      * @return

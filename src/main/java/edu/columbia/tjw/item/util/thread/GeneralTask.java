@@ -35,10 +35,17 @@ public abstract class GeneralTask<V> implements Runnable
     public GeneralTask()
     {
         _runLock = new Object();
-        _exception = null;
-        _result = null;
-        _isDone = false;
-        _isRunning = false;
+
+        synchronized (_runLock)
+        {
+            //This is being used as a memory barrier. We are making sure that the
+            //thread calling the constructor flushes all its info to main memory 
+            //where it will be visible to any thread running this task (which will also hold the runLock). 
+            _exception = null;
+            _result = null;
+            _isDone = false;
+            _isRunning = false;
+        }
     }
 
     public synchronized boolean isRunning()
