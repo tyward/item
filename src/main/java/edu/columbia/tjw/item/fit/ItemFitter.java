@@ -112,14 +112,14 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @param factory_
      * @return
      */
-    public ItemGridFactory<S, R, T> wrapGridGenerator(final ItemGridFactory<S, R, T> factory_)
+    public ItemGridFactory<S, R> wrapGridGenerator(final ItemGridFactory<S, R> factory_)
     {
         if (factory_ instanceof RandomizedCurveFactory)
         {
             return factory_;
         }
 
-        final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(factory_, _settings, _family);
+        final ItemGridFactory<S, R> wrapped = new RandomizedCurveFactory<>(factory_, _settings, _family);
         return wrapped;
     }
 
@@ -134,7 +134,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A model fit with all the additional allowed coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ItemModel<S, R, T> addCoefficients(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Collection<ParamFilter<S, R, T>> filters_,
+    public ItemModel<S, R, T> addCoefficients(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R> gridFactory_, final Collection<ParamFilter<S, R, T>> filters_,
             final Collection<R> coefficients_) throws ConvergenceException
     {
         ItemParameters<S, R, T> params = params_;
@@ -158,7 +158,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A model with newly optimized coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ItemModel<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    public ItemModel<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R> gridFactory_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         ItemModel<S, R, T> model = new ItemModel<>(params_);
         //final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(gridFactory_);
@@ -189,7 +189,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return m2;
     }
 
-    public ItemModel<S, R, T> runAnnealingPass(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Set<R> curveFields_,
+    public ItemModel<S, R, T> runAnnealingPass(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R> gridFactory_, final Set<R> curveFields_,
             final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         final int regCount = params_.regressorCount();
@@ -245,7 +245,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return new ItemModel<>(base);
     }
 
-    public double computeLogLikelihood(final ItemModel<S, R, T> model_, final ItemGridFactory<S, R, T> gridFactory_)
+    public double computeLogLikelihood(final ItemModel<S, R, T> model_, final ItemGridFactory<S, R> gridFactory_)
     {
         final ItemParameters<S, R, T> params = model_.getParams();
         final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params), _settings);
@@ -270,7 +270,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A new model with additional curves added, and all coefficients
      * optimized.
      */
-    public ItemModel<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R, T> gridFactory_, final Set<R> curveFields_,
+    public ItemModel<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R> gridFactory_, final Set<R> curveFields_,
             final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
     {
         final long start = System.currentTimeMillis();

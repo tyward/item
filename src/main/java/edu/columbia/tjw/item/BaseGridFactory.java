@@ -21,21 +21,28 @@ package edu.columbia.tjw.item;
 
 /**
  *
- * A factory that can create datasets needed for fitting.
- * 
  * @author tyler
- * @param <S> The status type for this model
- * @param <R> The regressor type for this model
+ * @param <S>
+ * @param <R>
  */
-public interface ItemGridFactory<S extends ItemStatus<S>, R extends ItemRegressor<R>>
+public class BaseGridFactory<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemGridFactory<S, R>
 {
+
+    public BaseGridFactory(final ItemStatusGrid<S, R> statusGrid_)
+    {
+
+    }
 
     /**
      * 
-     * @param <T> The curve type for this parameter set
+     * @param <T>
      * @param params_
      * @return 
      */
-    public <T extends ItemCurveType<T>> ItemFittingGrid<S, R> prepareGrid(final ItemParameters<S, R, T> params_);
+    @Override
+    public <T extends ItemCurveType<T>> ItemFittingGrid<S, R> prepareGrid(ItemParameters<S, R, T> params_)
+    {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 
 }

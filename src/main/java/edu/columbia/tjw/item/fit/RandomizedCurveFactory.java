@@ -39,18 +39,17 @@ import java.util.TreeSet;
  * @author tyler
  * @param <S>
  * @param <R>
- * @param <T>
  */
-public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements ItemGridFactory<S, R, T>
+public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemGridFactory<S, R>
 {
-    private final ItemGridFactory<S, R, T> _underlying;
+    private final ItemGridFactory<S, R> _underlying;
     private final ItemSettings _settings;
     private final EnumFamily<R> _family;
     private final float[][] _regressors;
 
     private int[] _indexMap = null;
 
-    public RandomizedCurveFactory(final ItemGridFactory<S, R, T> underlying_, final ItemSettings settings_, final EnumFamily<R> family_)
+    public RandomizedCurveFactory(final ItemGridFactory<S, R> underlying_, final ItemSettings settings_, final EnumFamily<R> family_)
     {
         _underlying = underlying_;
         _settings = settings_;
@@ -61,7 +60,7 @@ public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends Ite
     }
 
     @Override
-    public ItemFittingGrid<S, R> prepareGrid(ItemParameters<S, R, T> params_)
+    public <T extends ItemCurveType<T>> ItemFittingGrid<S, R> prepareGrid(ItemParameters<S, R, T> params_)
     {
         final ItemFittingGrid<S, R> grid = _underlying.prepareGrid(params_);
         ensureMapped(grid);
