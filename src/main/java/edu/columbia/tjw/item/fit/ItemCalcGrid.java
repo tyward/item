@@ -17,18 +17,36 @@
  * 
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
-package edu.columbia.tjw.item;
+package edu.columbia.tjw.item.fit;
 
-import edu.columbia.tjw.item.util.EnumMember;
+import edu.columbia.tjw.item.ItemCurveType;
+import edu.columbia.tjw.item.ItemGrid;
+import edu.columbia.tjw.item.ItemParameters;
+import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemStatus;
 
 /**
  *
  * @author tyler
- * @param <V>
+ * @param <S>
+ * @param <R>
+ * @param <T>
  */
-public interface ItemRegressor<V extends ItemRegressor<V>> extends EnumMember<V>
+public final class ItemCalcGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends ItemParamGrid<S, R, T>
 {
+    private final ItemGrid<R> _grid;
 
+    public ItemCalcGrid(ItemParameters<S, R, T> params_, ItemGrid<R> grid_)
+    {
+        super(params_, grid_);
 
+        _grid = grid_;
+    }
+
+    @Override
+    public ItemGrid<R> getUnderlying()
+    {
+        return _grid;
+    }
 
 }

@@ -19,16 +19,23 @@
  */
 package edu.columbia.tjw.item;
 
-import edu.columbia.tjw.item.util.EnumMember;
+import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
- *
+ * 
  * @author tyler
- * @param <V>
+ * @param <S> The Status type
+ * @param <R> The regressor type
  */
-public interface ItemRegressor<V extends ItemRegressor<V>> extends EnumMember<V>
+public interface ItemStatusGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> extends ItemGrid<R>
 {
-
-
-
+    
+    public EnumFamily<S> getStatusFamily();
+    
+    public int getStatus(final int index_);
+    
+    public int getNextStatus(final int index_);
+    
+    public boolean hasNextStatus(final int index_);
+    
 }

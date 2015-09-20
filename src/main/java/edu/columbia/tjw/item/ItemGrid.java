@@ -19,16 +19,21 @@
  */
 package edu.columbia.tjw.item;
 
-import edu.columbia.tjw.item.util.EnumMember;
-
 /**
- *
+ * 
  * @author tyler
- * @param <V>
+ * @param <R> 
  */
-public interface ItemRegressor<V extends ItemRegressor<V>> extends EnumMember<V>
+public interface ItemGrid<R extends ItemRegressor<R>>
 {
 
-
+    /**
+     * Gets the reader for the given field
+     * @param field_
+     * @return 
+     */
+    public ItemRegressorReader getRegressorReader(final R field_);
+    
+    public int size();
 
 }
