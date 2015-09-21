@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
 import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
 import edu.columbia.tjw.item.optimize.MultivariateGradient;
@@ -45,12 +46,12 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     private final double[] _beta;
     private final int[] _statusPointers;
     private final int[] _regPointers;
-    private final ItemFittingGrid<S, R> _grid;
+    private final ParamFittingGrid<S, R, T> _grid;
     private ItemParameters<S, R, T> _params;
     private ItemModel<S, R, T> _model;
 
     public LogisticModelFunction(final double[] beta_, final int[] statusPointers_, final int[] regPointers_,
-            final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_, final ItemModel<S, R, T> model_, ItemSettings settings_)
+            final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final ItemModel<S, R, T> model_, ItemSettings settings_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
         _beta = beta_.clone();
@@ -81,7 +82,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     @Override
     public int numRows()
     {
-        return _grid.totalSize();
+        return _grid.size();
     }
 
     @Override

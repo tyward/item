@@ -27,6 +27,7 @@ import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
@@ -55,7 +56,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     private final ItemSettings _settings;
     private final ItemModel<S, R, T> _model;
-    private final ItemFittingGrid<S, R> _grid;
+    private final ParamFittingGrid<S, R, T> _grid;
     private final RectangularDoubleArray _powerScores;
     
     //N.B: These are ordinals, not offsets.
@@ -64,7 +65,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final int[] _indexList;
     private final R _intercept;
 
-    public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemFittingGrid<S, R> grid_, final ItemSettings settings_, final R intercept_)
+    public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ParamFittingGrid<S, R, T> grid_, final ItemSettings settings_, final R intercept_)
     {
         super(factory_, model_, settings_);
 
@@ -84,7 +85,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         int count = 0;
 
-        final int gridSize = _grid.totalSize();
+        final int gridSize = _grid.size();
         final S fromStatus = model_.getParams().getStatus();
         final int fromStatusOrdinal = fromStatus.ordinal();
         final int[] indexList = new int[gridSize];

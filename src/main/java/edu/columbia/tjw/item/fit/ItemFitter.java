@@ -21,14 +21,13 @@ package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.ItemGridFactory;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.ParamFilter;
+import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.curve.BaseCurveFitter;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
@@ -98,43 +97,43 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return initial;
     }
 
-    /**
-     * This function will wrap the provided grid factory. The goal here is to
-     * handle the randomization needed for accurate calculation, and also to
-     * cache some data for efficiency.
-     *
-     * It is strongly recommended that all grid factories are wrapped before
-     * use.
-     * 
-     * N.B: The wrapped grid may cache, so if the underlying regressors are changed,
-     * the resulting factory should be wrapped again. 
-     *
-     * @param factory_
-     * @return
-     */
-    public ItemGridFactory<S, R> wrapGridGenerator(final ItemGridFactory<S, R> factory_)
-    {
-        if (factory_ instanceof RandomizedCurveFactory)
-        {
-            return factory_;
-        }
-
-        final ItemGridFactory<S, R> wrapped = new RandomizedCurveFactory<>(factory_, _settings, _family);
-        return wrapped;
-    }
+//    /**
+//     * This function will wrap the provided grid factory. The goal here is to
+//     * handle the randomization needed for accurate calculation, and also to
+//     * cache some data for efficiency.
+//     *
+//     * It is strongly recommended that all grid factories are wrapped before
+//     * use.
+//     * 
+//     * N.B: The wrapped grid may cache, so if the underlying regressors are changed,
+//     * the resulting factory should be wrapped again. 
+//     *
+//     * @param factory_
+//     * @return
+//     */
+//    public ParamFittingGrid<S, R, T> wrapGrid(final ItemStatusGrid<S, R> grid_)
+//    {
+//        if (grid_ instanceof RandomizedCurveFactory)
+//        {
+//            return factory_;
+//        }
+//
+//        final ItemGridFactory<S, R> wrapped = new RandomizedCurveFactory<>(factory_, _settings, _family);
+//        return wrapped;
+//    }
 
     /**
      * Add a group of coefficients to the model, then refit all coefficients.
      *
      * @param params_ The parameters to expand
-     * @param gridFactory_ The factory that will construct datasets
+     * @param grid_ The grid of raw data to use for fitting.
      * @param filters_ Any filters that should be used to limit the allowed
      * coefficients, else null
      * @param coefficients_ The set of coefficients to fit.
      * @return A model fit with all the additional allowed coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ItemModel<S, R, T> addCoefficients(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R> gridFactory_, final Collection<ParamFilter<S, R, T>> filters_,
+    public ItemModel<S, R, T> addCoefficients(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_,
             final Collection<R> coefficients_) throws ConvergenceException
     {
         ItemParameters<S, R, T> params = params_;
@@ -144,7 +143,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             params = params.addBeta(field, null);
         }
 
-        return fitCoefficients(params, gridFactory_, filters_);
+        return fitCoefficients(params, grid_, filters_);
     }
 
     /**
@@ -152,17 +151,20 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * Optimize the coefficients.
      *
      * @param params_ The parameters to start with
-     * @param gridFactory_ A factory that can create datasets for fitting
+     * @param grid_ A factory that can create datasets for fitting
      * @param filters_ Filters describing any coefficients that should not be
      * adjusted
      * @return A model with newly optimized coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ItemModel<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R> gridFactory_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    public ItemModel<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         ItemModel<S, R, T> model = new ItemModel<>(params_);
         //final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(gridFactory_);
-        final ItemFittingGrid<S, R> grid = gridFactory_.prepareGrid(params_);
+        //final ItemFittingGrid<S, R> grid = gridFactory_.prepareGrid(params_);
+        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
+        
+        
         return fitCoefficients(model, grid, filters_);
     }
 
@@ -175,7 +177,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return
      * @throws ConvergenceException
      */
-    public ItemModel<S, R, T> fitCoefficients(final ItemModel<S, R, T> model_, final ItemFittingGrid<S, R> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    private ItemModel<S, R, T> fitCoefficients(final ItemModel<S, R, T> model_, final ParamFittingGrid<S, R, T> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         final ParamFitter<S, R, T> fitter = new ParamFitter<>(model_, _settings);
 
@@ -189,16 +191,16 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return m2;
     }
 
-    public ItemModel<S, R, T> runAnnealingPass(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R> gridFactory_, final Set<R> curveFields_,
+    public ItemModel<S, R, T> runAnnealingPass(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Set<R> curveFields_,
             final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         final int regCount = params_.regressorCount();
 
         final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params_), _settings);
+        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
 
-        //final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(gridFactory_);
 
-        final double startingLL = f1.computeLogLikelihood(params_, gridFactory_.prepareGrid(params_), filters_);
+        final double startingLL = f1.computeLogLikelihood(params_, grid, filters_);
         double baseLL = startingLL;
 
         ItemParameters<S, R, T> base = params_;
@@ -216,11 +218,11 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 continue;
             }
 
-            final ItemParameters<S, R, T> rebuilt = expandModel(reduced, gridFactory_, curveFields_, filters_, reduction).getParams();
+            final ItemParameters<S, R, T> rebuilt = expandModel(reduced, grid_, curveFields_, filters_, reduction).getParams();
 
             final ParamFitter<S, R, T> f2 = new ParamFitter<>(new ItemModel<>(rebuilt), _settings);
 
-            final double ll2 = f2.computeLogLikelihood(rebuilt, gridFactory_.prepareGrid(rebuilt), filters_);
+            final double ll2 = f2.computeLogLikelihood(rebuilt, new ParamFittingGrid<>(rebuilt, grid_), filters_);
 
             if (ll2 < baseLL)
             {
@@ -245,12 +247,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return new ItemModel<>(base);
     }
 
-    public double computeLogLikelihood(final ItemModel<S, R, T> model_, final ItemGridFactory<S, R> gridFactory_)
+    public double computeLogLikelihood(final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> grid_)
     {
         final ItemParameters<S, R, T> params = model_.getParams();
         final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params), _settings);
 
-        final double startingLL = f1.computeLogLikelihood(params, gridFactory_.prepareGrid(params), null);
+        final double startingLL = f1.computeLogLikelihood(params, new ParamFittingGrid<>(params, grid_), null);
 
         return startingLL;
     }
@@ -262,7 +264,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * computational resources.
      *
      * @param params_ The parameters to start with
-     * @param gridFactory_ A factory that can create datasets for fitting
+     * @param grid_ A factory that can create datasets for fitting
      * @param curveFields_ The regressors on which to draw curves
      * @param filters_ Filters describing any curves that should not be drawn or
      * optimized
@@ -270,7 +272,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A new model with additional curves added, and all coefficients
      * optimized.
      */
-    public ItemModel<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final ItemGridFactory<S, R> gridFactory_, final Set<R> curveFields_,
+    public ItemModel<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Set<R> curveFields_,
             final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
     {
         final long start = System.currentTimeMillis();
@@ -280,7 +282,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         for (int i = 0; i < curveCount_; i++)
         {
-            final ItemFittingGrid<S, R> grid = gridFactory_.prepareGrid(model.getParams());
+            final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
 
             try
             {
@@ -312,7 +314,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         try
         {
-            final ItemFittingGrid<S, R> grid = gridFactory_.prepareGrid(model.getParams());
+            final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(model.getParams(), grid_);
             model = fitCoefficients(model, grid, filters_);
         }
         catch (final ConvergenceException e)

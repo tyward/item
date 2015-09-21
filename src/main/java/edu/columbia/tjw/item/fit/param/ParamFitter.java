@@ -21,13 +21,13 @@ package edu.columbia.tjw.item.fit.param;
 
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
@@ -60,7 +60,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         _settings = settings_;
     }
 
-    public LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_)
+    public LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_)
     {
         final ArrayList<ParamFilter<S, R, T>> filters = new ArrayList<>();
 
@@ -123,7 +123,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return function;
     }
 
-    public double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_)
+    public double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_)
     {
         final LogisticModelFunction<S, R, T> function = generateFunction(params_, grid_, filters_);
 
@@ -137,7 +137,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return logLikelihood;
     }
 
-    public ItemModel<S, R, T> fit(final ItemFittingGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    public ItemModel<S, R, T> fit(final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
 
         final LogisticModelFunction<S, R, T> function = generateFunction(_model.getParams(), grid_, filters_);
@@ -178,7 +178,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return output;
     }
 
-    public ItemModel<S, R, T> fitAndUpdate(final ItemFittingGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    public ItemModel<S, R, T> fitAndUpdate(final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         final ItemModel<S, R, T> result = fit(grid_, filters_);
 

@@ -19,8 +19,8 @@
  */
 package edu.columbia.tjw.item;
 
-import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.data.ItemModelGrid;
+import edu.columbia.tjw.item.fit.ItemParamGrid;
+import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import java.util.Arrays;
@@ -106,7 +106,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * @param index_
      * @return
      */
-    public final double logLikelihood(final ItemFittingGrid<S, R> grid_, final int index_)
+    public final double logLikelihood(final ParamFittingGrid<S, R, T> grid_, final int index_)
     {
         if (!grid_.hasNextStatus(index_))
         {
@@ -207,7 +207,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * regressorPointer_[i]'th regressor and the statusPointers_[i]'th status.
      * @return The total observation count used for this computation.
      */
-    public int computeDerivative(final ItemFittingGrid<S, R> grid_, final int start_, final int end_, final int[] regressorPointers_, final int[] statusPointers_, final double[] derivative_)
+    public int computeDerivative(final ParamFittingGrid<S, R, T> grid_, final int start_, final int end_, final int[] regressorPointers_, final int[] statusPointers_, final double[] derivative_)
     {
         final int dimension = regressorPointers_.length;
         final double[] computed = _probWorkspace;
@@ -281,7 +281,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * @param output_
      * @return
      */
-    public int transitionProbability(final ItemModelGrid<S, R> grid_, final int index_, final double[] output_)
+    public int transitionProbability(final ItemParamGrid<S, R, T> grid_, final int index_, final double[] output_)
     {
         final double[] regressors = _regWorkspace;
 

@@ -22,11 +22,13 @@ package edu.columbia.tjw.item.visualize;
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
-import edu.columbia.tjw.item.data.ItemModelGrid;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.ItemGrid;
+import edu.columbia.tjw.item.fit.ItemCalcGrid;
+import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -100,6 +102,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final double stepSize = (regMax_ - regMin_) / steps_;
 
         final InnerGrid grid = new InnerGrid(steps_, regMin_, stepSize, regressor_, regValues_, _model.getParams());
+        final ItemCalcGrid<S, R, T> paramGrid = new ItemCalcGrid<>(_model.getParams(), grid);
 
         final List<S> reachable = _model.getParams().getStatus().getReachable();
         final int toIndex = reachable.indexOf(to_);
@@ -115,7 +118,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         for (int i = 0; i < steps_; i++)
         {
-            _model.transitionProbability(grid, i, probability);
+            _model.transitionProbability(paramGrid, i, probability);
 
             final double x = regMin_ + (i * stepSize);
             final double y = probability[toIndex];
@@ -128,7 +131,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return output;
     }
 
-    private final class InnerGrid implements ItemModelGrid<S, R>
+    private final class InnerGrid implements ItemGrid<R>
     {
         private final int _steps;
         private final ItemParameters<S, R, T> _params;
@@ -173,7 +176,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             for (int i = 0; i < regCount; i++)
             {
-                final ItemCurve<?> curve = getTransformation(i);
+                final ItemCurve<?> curve = params_.getTransformation(i);
 
                 if (null == curve)
                 {
@@ -184,60 +187,40 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
             }
         }
 
+//        public void getRegressors(int index_, double[] output_)
+//        {
+//            System.arraycopy(_regValues, 0, output_, 0, _regValues.length);
+//
+//            final double regVal = _minValue + (_stepSize * index_);
+//
+//            for (int i = 0; i < _targetIndices.length; i++)
+//            {
+//                final int index = _targetIndices[i];
+//
+//                final ItemCurve<?> curve = getTransformation(index);
+//
+//                final double transformed;
+//
+//                if (null == curve)
+//                {
+//                    transformed = regVal;
+//                }
+//                else
+//                {
+//                    transformed = curve.transform(regVal);
+//                }
+//
+//                output_[index] = transformed;
+//            }
+//        }
         @Override
-        public void getRegressors(int index_, double[] output_)
-        {
-            System.arraycopy(_regValues, 0, output_, 0, _regValues.length);
-
-            final double regVal = _minValue + (_stepSize * index_);
-
-            for (int i = 0; i < _targetIndices.length; i++)
-            {
-                final int index = _targetIndices[i];
-
-                final ItemCurve<?> curve = getTransformation(index);
-
-                final double transformed;
-
-                if (null == curve)
-                {
-                    transformed = regVal;
-                }
-                else
-                {
-                    transformed = curve.transform(regVal);
-                }
-
-                output_[index] = transformed;
-            }
-        }
-
-        @Override
-        public int totalSize()
+        public int size()
         {
             return _steps;
         }
 
         @Override
-        public R getField(int fieldIndex_)
-        {
-            return _params.getRegressor(fieldIndex_);
-        }
-
-        @Override
-        public ItemCurve<?> getTransformation(int fieldIndex_)
-        {
-            return _params.getTransformation(fieldIndex_);
-        }
-
-        @Override
         public ItemRegressorReader getRegressorReader(R field_)
-        {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
-        public int size()
         {
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }

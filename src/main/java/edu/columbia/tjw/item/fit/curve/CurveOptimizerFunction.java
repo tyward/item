@@ -21,12 +21,12 @@ package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.MultiLogistic;
@@ -71,7 +71,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
     //private final MultivariateDifferentiableFunction _diff;
     public CurveOptimizerFunction(final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_,
-            final RectangularDoubleArray powerScores_, final int[] actualOrdinals_, final ItemFittingGrid<S, R> grid_,
+            final RectangularDoubleArray powerScores_, final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_,
             final ItemModel<S, R, T> model_, final int[] indexList_, final ItemSettings settings_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
