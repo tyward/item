@@ -20,7 +20,6 @@
 package edu.columbia.tjw.item.fit.param;
 
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;

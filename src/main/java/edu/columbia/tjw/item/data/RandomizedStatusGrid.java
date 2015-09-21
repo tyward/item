@@ -100,7 +100,7 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
     }
 
     @Override
-    public synchronized ItemRegressorReader getRegressorReader(R field_)
+    public ItemRegressorReader getRegressorReader(R field_)
     {
         final int ordinal = field_.ordinal();
 

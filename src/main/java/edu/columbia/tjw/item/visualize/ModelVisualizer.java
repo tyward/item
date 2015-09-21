@@ -28,7 +28,6 @@ import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.fit.ItemCalcGrid;
-import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -187,32 +186,6 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
             }
         }
 
-//        public void getRegressors(int index_, double[] output_)
-//        {
-//            System.arraycopy(_regValues, 0, output_, 0, _regValues.length);
-//
-//            final double regVal = _minValue + (_stepSize * index_);
-//
-//            for (int i = 0; i < _targetIndices.length; i++)
-//            {
-//                final int index = _targetIndices[i];
-//
-//                final ItemCurve<?> curve = getTransformation(index);
-//
-//                final double transformed;
-//
-//                if (null == curve)
-//                {
-//                    transformed = regVal;
-//                }
-//                else
-//                {
-//                    transformed = curve.transform(regVal);
-//                }
-//
-//                output_[index] = transformed;
-//            }
-//        }
         @Override
         public int size()
         {
