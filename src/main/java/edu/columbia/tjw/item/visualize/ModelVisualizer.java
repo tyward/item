@@ -28,6 +28,7 @@ import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.fit.ItemCalcGrid;
+import edu.columbia.tjw.item.util.EnumFamily;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -196,6 +197,12 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         public ItemRegressorReader getRegressorReader(R field_)
         {
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        @Override
+        public EnumFamily<R> getRegressorFamily()
+        {
+            return _regressor.getFamily();
         }
 
     }

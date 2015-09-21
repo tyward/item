@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.util.EnumFamily;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
@@ -137,6 +138,12 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
     public int size()
     {
         return this.getUnderlying().size();
+    }
+
+    @Override
+    public EnumFamily<R> getRegressorFamily()
+    {
+        return this.getUnderlying().getRegressorFamily();
     }
 
 }

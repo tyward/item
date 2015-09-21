@@ -119,6 +119,12 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
         return _underlying.size();
     }
 
+    @Override
+    public EnumFamily<R> getRegressorFamily()
+    {
+        return _underlying.getRegressorFamily();
+    }
+
     private final class MappedReader implements ItemRegressorReader
     {
         private final float[] _data;

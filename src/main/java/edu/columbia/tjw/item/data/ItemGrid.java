@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.data;
 
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
+import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
  * 
@@ -38,5 +39,7 @@ public interface ItemGrid<R extends ItemRegressor<R>>
     public ItemRegressorReader getRegressorReader(final R field_);
     
     public int size();
+    
+    public EnumFamily<R> getRegressorFamily();
 
 }

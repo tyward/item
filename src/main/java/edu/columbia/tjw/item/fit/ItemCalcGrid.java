@@ -24,6 +24,7 @@ import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
  *
@@ -48,5 +49,6 @@ public final class ItemCalcGrid<S extends ItemStatus<S>, R extends ItemRegressor
     {
         return _grid;
     }
+
 
 }
