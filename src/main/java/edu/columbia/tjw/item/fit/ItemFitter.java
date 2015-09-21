@@ -28,6 +28,7 @@ import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
+import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 import edu.columbia.tjw.item.fit.curve.BaseCurveFitter;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
@@ -97,30 +98,30 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return initial;
     }
 
-//    /**
-//     * This function will wrap the provided grid factory. The goal here is to
-//     * handle the randomization needed for accurate calculation, and also to
-//     * cache some data for efficiency.
-//     *
-//     * It is strongly recommended that all grid factories are wrapped before
-//     * use.
-//     * 
-//     * N.B: The wrapped grid may cache, so if the underlying regressors are changed,
-//     * the resulting factory should be wrapped again. 
-//     *
-//     * @param factory_
-//     * @return
-//     */
-//    public ParamFittingGrid<S, R, T> wrapGrid(final ItemStatusGrid<S, R> grid_)
-//    {
-//        if (grid_ instanceof RandomizedCurveFactory)
-//        {
-//            return factory_;
-//        }
-//
-//        final ItemGridFactory<S, R> wrapped = new RandomizedCurveFactory<>(factory_, _settings, _family);
-//        return wrapped;
-//    }
+    /**
+     * This function will wrap the provided grid factory. The goal here is to
+     * handle the randomization needed for accurate calculation, and also to
+     * cache some data for efficiency.
+     *
+     * It is strongly recommended that all grid factories are wrapped before
+     * use.
+     * 
+     * N.B: The wrapped grid may cache, so if the underlying regressors are changed,
+     * the resulting factory should be wrapped again. 
+     *
+     * @param grid_
+     * @return
+     */
+    public ItemStatusGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_)
+    {
+        if (grid_ instanceof RandomizedStatusGrid)
+        {
+            return grid_;
+        }
+
+        final ItemStatusGrid<S, R> wrapped = new RandomizedStatusGrid<>(grid_, _settings, _family);
+        return wrapped;
+    }
 
     /**
      * Add a group of coefficients to the model, then refit all coefficients.
