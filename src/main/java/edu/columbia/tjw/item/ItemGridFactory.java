@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item;
 
+import edu.columbia.tjw.item.data.ItemFittingGrid;
+
 /**
  *
  * A factory that can create datasets needed for fitting.

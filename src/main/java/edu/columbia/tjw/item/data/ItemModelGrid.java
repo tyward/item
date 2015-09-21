@@ -17,7 +17,12 @@
  * 
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
-package edu.columbia.tjw.item;
+package edu.columbia.tjw.item.data;
+
+import edu.columbia.tjw.item.ItemCurve;
+import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.ItemGrid;
 
 /**
  * A grid of data needed by the model.
@@ -30,7 +35,7 @@ package edu.columbia.tjw.item;
  * @param <S> The status type for this model
  * @param <R> The regressor type for this model
  */
-public interface ItemModelGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>>
+public interface ItemModelGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> extends ItemGrid<R>
 {
     /**
      * Get the regressors for this observation.

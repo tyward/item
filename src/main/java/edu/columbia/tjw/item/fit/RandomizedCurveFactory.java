@@ -21,7 +21,7 @@ package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemFittingGrid;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.ItemGridFactory;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
@@ -93,7 +93,7 @@ public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends Ite
         return _indexMap[index_];
     }
 
-    private final class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemFittingGrid<S, R>
+    public final class RandomizedFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemFittingGrid<S, R>
     {
         private final ItemParameters<S, R, ? extends ItemCurveType<?>> _params;
         private final ItemFittingGrid<S, R> _underlying;
@@ -232,6 +232,18 @@ public final class RandomizedCurveFactory<S extends ItemStatus<S>, R extends Ite
         public ItemCurve<?> getTransformation(int fieldIndex_)
         {
             return _underlying.getTransformation(fieldIndex_);
+        }
+
+        @Override
+        public int size()
+        {
+            return _underlying.size();
+        }
+
+        @Override
+        public EnumFamily<S> getStatusFamily()
+        {
+            return _underlying.getStatusFamily();
         }
 
         private final class MappedReader implements ItemRegressorReader

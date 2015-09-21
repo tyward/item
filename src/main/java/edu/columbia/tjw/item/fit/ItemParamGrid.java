@@ -21,7 +21,7 @@ package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemGrid;
+import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
@@ -38,11 +38,9 @@ import java.util.TreeSet;
  * @param <R>
  * @param <T>
  */
-public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements ItemGrid<R>
 {
     private final ItemParameters<S, R, T> _params;
-    //private final ItemGrid<R> _grid;
-
     private final int[] _regressorIndices;
     private final List<ItemCurve<T>> _transformations;
     private final List<R> _uniqueRegressors;
@@ -127,6 +125,18 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
             output_[i] = transformed;
         }
 
+    }
+
+    @Override
+    public ItemRegressorReader getRegressorReader(R field_)
+    {
+        return this.getUnderlying().getRegressorReader(field_);
+    }
+
+    @Override
+    public int size()
+    {
+        return this.getUnderlying().size();
     }
 
 }

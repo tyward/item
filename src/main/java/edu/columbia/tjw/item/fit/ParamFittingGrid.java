@@ -20,11 +20,11 @@
 package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemGrid;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.ItemStatusGrid;
+import edu.columbia.tjw.item.data.ItemStatusGrid;
+import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
  * 
@@ -33,7 +33,7 @@ import edu.columbia.tjw.item.ItemStatusGrid;
  * @param <R>
  * @param <T> 
  */
-public class ParamFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends ItemParamGrid<S, R, T>
+public class ParamFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends ItemParamGrid<S, R, T> implements ItemStatusGrid<S, R>
 {
     private final ItemStatusGrid<S, R> _grid;
 
@@ -45,9 +45,33 @@ public class ParamFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R
     }
 
     @Override
-    public ItemGrid<R> getUnderlying()
+    public ItemStatusGrid<S, R> getUnderlying()
     {
         return _grid;
+    }
+
+    @Override
+    public EnumFamily<S> getStatusFamily()
+    {
+        return _grid.getStatusFamily();
+    }
+
+    @Override
+    public int getStatus(int index_)
+    {
+        return _grid.getStatus(index_);
+    }
+
+    @Override
+    public int getNextStatus(int index_)
+    {
+        return _grid.getNextStatus(index_);
+    }
+
+    @Override
+    public boolean hasNextStatus(int index_)
+    {
+        return _grid.hasNextStatus(index_);
     }
     
 }

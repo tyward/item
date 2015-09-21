@@ -22,9 +22,10 @@ package edu.columbia.tjw.item.visualize;
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
-import edu.columbia.tjw.item.ItemModelGrid;
+import edu.columbia.tjw.item.data.ItemModelGrid;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
 import java.util.Arrays;
 import java.util.List;
@@ -227,6 +228,18 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         public ItemCurve<?> getTransformation(int fieldIndex_)
         {
             return _params.getTransformation(fieldIndex_);
+        }
+
+        @Override
+        public ItemRegressorReader getRegressorReader(R field_)
+        {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        @Override
+        public int size()
+        {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
 
     }

@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item;
 
+import edu.columbia.tjw.item.data.ItemFittingGrid;
+import edu.columbia.tjw.item.data.ItemModelGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import java.util.Arrays;

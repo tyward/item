@@ -19,6 +19,9 @@
  */
 package edu.columbia.tjw.item;
 
+import edu.columbia.tjw.item.data.ItemFittingGrid;
+import edu.columbia.tjw.item.data.ItemStatusGrid;
+
 /**
  *
  * @author tyler

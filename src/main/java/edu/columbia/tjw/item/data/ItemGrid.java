@@ -17,7 +17,10 @@
  * 
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
-package edu.columbia.tjw.item;
+package edu.columbia.tjw.item.data;
+
+import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemRegressorReader;
 
 /**
  * 

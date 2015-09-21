@@ -21,7 +21,7 @@ package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemFittingGrid;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.ItemGridFactory;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;

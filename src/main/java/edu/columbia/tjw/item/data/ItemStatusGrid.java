@@ -17,26 +17,28 @@
  * 
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
-package edu.columbia.tjw.item;
+package edu.columbia.tjw.item.data;
+
+import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.ItemGrid;
+import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
- *
- * Data that will be used for fitting.
- * 
  * 
  * @author tyler
- * @param <S> The status type for this model
- * @param <R> The regressor type for this model
+ * @param <S> The Status type
+ * @param <R> The regressor type
  */
-public interface ItemFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> extends ItemModelGrid<S, R>
+public interface ItemStatusGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> extends ItemGrid<R>
 {
-
-    public ItemRegressorReader getRegressorReader(final R field_);
-
+    
+    public EnumFamily<S> getStatusFamily();
+    
     public int getStatus(final int index_);
-
+    
     public int getNextStatus(final int index_);
-
+    
     public boolean hasNextStatus(final int index_);
-
+    
 }
