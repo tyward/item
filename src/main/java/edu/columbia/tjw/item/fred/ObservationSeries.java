@@ -22,6 +22,8 @@ package edu.columbia.tjw.item.fred;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
+import java.util.TreeMap;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
@@ -45,12 +47,15 @@ public final class ObservationSeries implements Serializable
             throw new IllegalArgumentException("Invalid element: " + tagName);
         }
 
-        final NodeList children = elem_.getChildNodes();
+        final NodeList children = elem_.getElementsByTagName("observation");
         final int childCount = children.getLength();
 
         _dates = new LocalDate[childCount];
         _values = new double[childCount];
 
+        final Map<String, String> dateMap = new TreeMap<>();
+        
+        
         for (int i = 0; i < childCount; i++)
         {
             final Element next = (Element) children.item(i);

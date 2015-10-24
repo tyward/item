@@ -20,8 +20,11 @@
 package edu.columbia.tjw.item.fred;
 
 import java.io.Serializable;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import org.w3c.dom.Element;
 
 /**
@@ -31,6 +34,8 @@ import org.w3c.dom.Element;
 public final class FredSeries implements Serializable
 {
     private static final long serialVersionUID = 364329225987396428L;
+    private static final String FORMAT_PATTERN = "yyyy-MM-dd HH:mm:ssX";
+
     private final String _id;
     private final String _title;
     private final String _units;
@@ -40,7 +45,7 @@ public final class FredSeries implements Serializable
     private final LocalDate _realtimeEnd;
     private final LocalDate _observationStart;
     private final LocalDate _observationEnd;
-    private final LocalDate _lastUpdated;
+    private final Instant _lastUpdated;
 
     private final String _frequency;
     private final String _seasonalAdjustment;
@@ -66,7 +71,7 @@ public final class FredSeries implements Serializable
         _realtimeEnd = extractDate("realtime_end", elem_);
         _observationStart = extractDate("observation_start", elem_);
         _observationEnd = extractDate("observation_end", elem_);
-        _lastUpdated = extractDate("last_updated", elem_);
+        _lastUpdated = extractDateTime("last_updated", elem_);
 
         _frequency = elem_.getAttribute("frequency_short");
         _seasonalAdjustment = elem_.getAttribute("seasonal_adjustment_short");
@@ -81,7 +86,7 @@ public final class FredSeries implements Serializable
         {
             _popularity = Integer.parseInt(popString);
         }
-        
+
         _series = series_;
     }
 
@@ -125,7 +130,7 @@ public final class FredSeries implements Serializable
         return _observationEnd;
     }
 
-    public LocalDate getLastUpdated()
+    public Instant getLastUpdated()
     {
         return _lastUpdated;
     }
@@ -150,9 +155,6 @@ public final class FredSeries implements Serializable
         return _series;
     }
 
-    
-    
-    
     private static LocalDate extractDate(final String attributeName_, final Element elem_)
     {
         final String val = elem_.getAttribute(attributeName_);
@@ -163,6 +165,25 @@ public final class FredSeries implements Serializable
         }
 
         final LocalDate converted = LocalDate.from(DateTimeFormatter.ISO_LOCAL_DATE.parse(val));
+        return converted;
+    }
+
+    private static Instant extractDateTime(final String attributeName_, final Element elem_)
+    {
+        final String val = elem_.getAttribute(attributeName_);
+
+        if (null == val)
+        {
+            return null;
+        }
+
+        final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(FORMAT_PATTERN);
+        final TemporalAccessor t = formatter.parse(val);
+        final OffsetDateTime dt = OffsetDateTime.from(t);
+
+        final Instant converted = dt.toInstant();
+        //final Instant converted = null;
+        
         return converted;
     }
 

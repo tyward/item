@@ -28,6 +28,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -40,6 +41,8 @@ public final class FredLink
 {
     private static final String PROTOCOL = "https";
     private static final String HOST = "api.stlouisfed.org";
+    private static final String SERIES_PATH = "/fred/series";
+    private static final String OBSERVATION_PATH = "/fred/series/observations";
 
     private final String _queryBase;
     private final String _apiKey;
@@ -69,6 +72,25 @@ public final class FredLink
             //Realistically, there's nothing the user could do about this anyway.
             throw new RuntimeException(e);
         }
+    }
+
+    public FredSeries fetchSeries(final String seriesName_) throws IOException
+    {
+        final String seriesQuery = "series_id=" + seriesName_;
+
+        final Document seriesDoc = fetchData(SERIES_PATH, seriesQuery);
+        final Document observationDoc = fetchData(OBSERVATION_PATH, seriesQuery);
+
+        final Element seriesRoot = seriesDoc.getDocumentElement();
+        final Element obsRoot = observationDoc.getDocumentElement();
+
+        final ObservationSeries obs = new ObservationSeries(obsRoot);
+
+        final Element seriesElem = (Element) seriesRoot.getElementsByTagName("series").item(0);
+
+        final FredSeries output = new FredSeries(seriesElem, obs);
+
+        return output;
     }
 
     private Document fetchData(final String pathName_, final String query_) throws IOException
