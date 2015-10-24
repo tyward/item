@@ -22,8 +22,10 @@ package edu.columbia.tjw.item.fred;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
+import java.util.HashMap;
+import java.util.Map;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -47,6 +49,8 @@ public final class FredLink
     private final String _queryBase;
     private final String _apiKey;
     private final DocumentBuilder _builder;
+    private final Map<String, FredSeries> _seriesMap;
+    private final Map<String, FredException> _exceptionMap;
 
     public FredLink(final String apiKey_)
     {
@@ -72,38 +76,97 @@ public final class FredLink
             //Realistically, there's nothing the user could do about this anyway.
             throw new RuntimeException(e);
         }
+
+        _seriesMap = new HashMap<>();
+        _exceptionMap = new HashMap<>();
     }
 
-    public FredSeries fetchSeries(final String seriesName_) throws IOException
+    public synchronized FredSeries fetchSeries(final String seriesName_) throws IOException, FredException
     {
+        if (_seriesMap.containsKey(seriesName_))
+        {
+            final FredSeries series = _seriesMap.get(seriesName_);
+
+            if (null == series)
+            {
+                final FredException e = _exceptionMap.get(seriesName_);
+                throw new FredException(e);
+            }
+
+            return series;
+        }
+
         final String seriesQuery = "series_id=" + seriesName_;
 
-        final Document seriesDoc = fetchData(SERIES_PATH, seriesQuery);
-        final Document observationDoc = fetchData(OBSERVATION_PATH, seriesQuery);
+        try
+        {
+            final Element seriesRoot = fetchData(SERIES_PATH, seriesQuery);
+            final Element obsRoot = fetchData(OBSERVATION_PATH, seriesQuery);
+            final ObservationSeries obs = new ObservationSeries(obsRoot);
+            final Element seriesElem = (Element) seriesRoot.getElementsByTagName("series").item(0);
+            final FredSeries output = new FredSeries(seriesElem, obs);
 
-        final Element seriesRoot = seriesDoc.getDocumentElement();
-        final Element obsRoot = observationDoc.getDocumentElement();
+            _seriesMap.put(seriesName_, output);
 
-        final ObservationSeries obs = new ObservationSeries(obsRoot);
-
-        final Element seriesElem = (Element) seriesRoot.getElementsByTagName("series").item(0);
-
-        final FredSeries output = new FredSeries(seriesElem, obs);
-
-        return output;
+            return output;
+        }
+        catch (final FredException e)
+        {
+            _seriesMap.put(seriesName_, null);
+            _exceptionMap.put(seriesName_, e);
+            throw new FredException(e);
+        }
     }
 
-    private Document fetchData(final String pathName_, final String query_) throws IOException
+    private void checkError(final Element elem_) throws FredException
+    {
+        final String tagName = elem_.getTagName();
+
+        if (!tagName.equals("error"))
+        {
+            return;
+        }
+
+        final String code = elem_.getAttribute("code");
+        final String error = elem_.getAttribute("message");
+
+        final int codeInt;
+
+        if (null == code)
+        {
+            codeInt = -1;
+        }
+        else
+        {
+            codeInt = Integer.parseInt(code);
+        }
+
+        final FredException exc = new FredException(error, codeInt);
+        throw exc;
+    }
+
+    private Element fetchData(final String pathName_, final String query_) throws IOException, FredException
     {
         final String fullQuery = pathName_ + "?" + _queryBase + query_;
         final URL thisUrl = new URL(PROTOCOL, HOST, fullQuery);
 
-        final URLConnection conn = thisUrl.openConnection();
+        final HttpURLConnection conn = (HttpURLConnection) thisUrl.openConnection();
+
+        final int responseCode = conn.getResponseCode();
+
+        if (400 == responseCode)
+        {
+            throw new FredException("Element does not exist: " + query_, responseCode);
+        }
 
         try (final InputStream stream = conn.getInputStream())
         {
             final Document output = readXml(stream);
-            return output;
+            final Element outputElem = output.getDocumentElement();
+
+            this.checkError(outputElem);
+
+            return outputElem;
         }
         catch (final SAXException e)
         {
