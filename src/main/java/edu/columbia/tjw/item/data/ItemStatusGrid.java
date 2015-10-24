@@ -21,7 +21,6 @@ package edu.columbia.tjw.item.data;
 
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
