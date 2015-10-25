@@ -17,8 +17,9 @@
  * 
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
-package edu.columbia.tjw.item.fred;
+package edu.columbia.tjw.fred;
 
+import edu.columbia.tjw.fred.FredException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -102,7 +103,7 @@ public final class FredLink
         {
             final Element seriesRoot = fetchData(SERIES_PATH, seriesQuery);
             final Element obsRoot = fetchData(OBSERVATION_PATH, seriesQuery);
-            final ObservationSeries obs = new ObservationSeries(obsRoot);
+            final FredSeriesData obs = new FredSeriesData(obsRoot);
             final Element seriesElem = (Element) seriesRoot.getElementsByTagName("series").item(0);
             final FredSeries output = new FredSeries(seriesElem, obs);
 

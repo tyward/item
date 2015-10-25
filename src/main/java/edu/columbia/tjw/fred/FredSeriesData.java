@@ -17,7 +17,7 @@
  * 
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
-package edu.columbia.tjw.item.fred;
+package edu.columbia.tjw.fred;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -31,14 +31,14 @@ import org.w3c.dom.NodeList;
  *
  * @author tyler
  */
-public final class ObservationSeries implements Serializable
+public final class FredSeriesData implements Serializable
 {
     private static final long serialVersionUID = 7422230574929407270L;
 
     private final LocalDate[] _dates;
     private final double[] _values;
 
-    protected ObservationSeries(final Element elem_)
+    protected FredSeriesData(final Element elem_)
     {
         final String tagName = elem_.getTagName();
 

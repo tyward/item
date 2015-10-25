@@ -17,7 +17,7 @@
  * 
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
-package edu.columbia.tjw.item.fred;
+package edu.columbia.tjw.fred;
 
 import java.io.Serializable;
 import java.time.Instant;
@@ -51,9 +51,9 @@ public final class FredSeries implements Serializable
     private final String _seasonalAdjustment;
 
     private final int _popularity;
-    private final ObservationSeries _series;
+    private final FredSeriesData _series;
 
-    protected FredSeries(final Element elem_, final ObservationSeries series_)
+    protected FredSeries(final Element elem_, final FredSeriesData series_)
     {
         final String tagName = elem_.getTagName();
 
@@ -150,7 +150,7 @@ public final class FredSeries implements Serializable
         return _popularity;
     }
 
-    public ObservationSeries getSeries()
+    public FredSeriesData getSeries()
     {
         return _series;
     }

@@ -17,7 +17,7 @@
  * 
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
-package edu.columbia.tjw.item.fred;
+package edu.columbia.tjw.fred;
 
 /**
  *
