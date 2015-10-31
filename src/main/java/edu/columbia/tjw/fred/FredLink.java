@@ -19,11 +19,11 @@
  */
 package edu.columbia.tjw.fred;
 
-import edu.columbia.tjw.fred.FredException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.net.HttpURLConnection;
+import java.net.Proxy;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,6 +38,12 @@ import org.xml.sax.SAXException;
 
 /**
  *
+ * This class is designed to fetch data from the FRED XML API. 
+ * 
+ * You can find the API docs here: https://api.stlouisfed.org/docs/fred/
+ * 
+ * FRED itself is here: https://research.stlouisfed.org/fred2/
+ * 
  * @author tyler
  */
 public final class FredLink
@@ -47,6 +53,7 @@ public final class FredLink
     private static final String SERIES_PATH = "/fred/series";
     private static final String OBSERVATION_PATH = "/fred/series/observations";
 
+    private final Proxy _proxy;
     private final String _queryBase;
     private final String _apiKey;
     private final DocumentBuilder _builder;
@@ -55,6 +62,12 @@ public final class FredLink
 
     public FredLink(final String apiKey_)
     {
+        this(apiKey_, null);
+    }
+
+    public FredLink(final String apiKey_, final Proxy proxy_)
+    {
+        _proxy = proxy_;
         _apiKey = apiKey_;
         _queryBase = "api_key=" + _apiKey + "&";
 
@@ -151,7 +164,16 @@ public final class FredLink
         final String fullQuery = pathName_ + "?" + _queryBase + query_;
         final URL thisUrl = new URL(PROTOCOL, HOST, fullQuery);
 
-        final HttpURLConnection conn = (HttpURLConnection) thisUrl.openConnection();
+        final HttpURLConnection conn;
+
+        if (null != _proxy)
+        {
+            conn = (HttpURLConnection) thisUrl.openConnection(_proxy);
+        }
+        else
+        {
+            conn = (HttpURLConnection) thisUrl.openConnection();
+        }
 
         final int responseCode = conn.getResponseCode();
 
