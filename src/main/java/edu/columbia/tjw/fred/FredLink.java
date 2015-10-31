@@ -126,7 +126,7 @@ public final class FredLink
     {
         final String catQuery = "category_id=" + cat_.getId();
 
-        final Element catRoot = fetchData(CATEGORY_PATH, catQuery);
+        final Element catRoot = fetchData(CHILDREN_PATH, catQuery);
         final NodeList list = catRoot.getElementsByTagName("category");
 
         final SortedSet<FredNavigationNode> nodes = new TreeSet<>();
