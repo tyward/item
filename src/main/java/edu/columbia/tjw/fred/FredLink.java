@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.fred;
 
+import edu.columbia.tjw.item.util.HashUtil;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -27,30 +28,36 @@ import java.net.Proxy;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 /**
  *
- * This class is designed to fetch data from the FRED XML API. 
- * 
+ * This class is designed to fetch data from the FRED XML API.
+ *
  * You can find the API docs here: https://api.stlouisfed.org/docs/fred/
- * 
+ *
  * FRED itself is here: https://research.stlouisfed.org/fred2/
- * 
+ *
  * @author tyler
  */
 public final class FredLink
 {
+    private static final int CLASS_HASH = HashUtil.startHash(FredLink.class);
     private static final String PROTOCOL = "https";
     private static final String HOST = "api.stlouisfed.org";
     private static final String SERIES_PATH = "/fred/series";
+    private static final String CATEGORY_PATH = "/fred/category";
+    private static final String CHILDREN_PATH = "/fred/category/children";
     private static final String OBSERVATION_PATH = "/fred/series/observations";
 
     private final Proxy _proxy;
@@ -59,6 +66,8 @@ public final class FredLink
     private final DocumentBuilder _builder;
     private final Map<String, FredSeries> _seriesMap;
     private final Map<String, FredException> _exceptionMap;
+    private final Map<String, FredCategory> _categoryMap;
+    private final Map<FredCategory, FredNavigationNode> _nodeMap;
 
     public FredLink(final String apiKey_)
     {
@@ -93,17 +102,107 @@ public final class FredLink
 
         _seriesMap = new HashMap<>();
         _exceptionMap = new HashMap<>();
+        _categoryMap = new HashMap<>();
+        _nodeMap = new HashMap<>();
+    }
+
+    public synchronized FredNavigationNode getNode(final FredCategory cat_) throws IOException, FredException
+    {
+        final FredNavigationNode cached = _nodeMap.get(cat_);
+
+        if (null != cached)
+        {
+            return cached;
+        }
+
+        final FredNavigationNode node = new FredNavigationNode(cat_);
+
+        _nodeMap.put(cat_, node);
+
+        return node;
+    }
+
+    private synchronized SortedSet<FredNavigationNode> getChildren(final FredCategory cat_) throws IOException, FredException
+    {
+        final String catQuery = "category_id=" + cat_.getId();
+
+        final Element catRoot = fetchData(CATEGORY_PATH, catQuery);
+        final NodeList list = catRoot.getElementsByTagName("category");
+
+        final SortedSet<FredNavigationNode> nodes = new TreeSet<>();
+
+        for (int i = 0; i < list.getLength(); i++)
+        {
+            final Element next = (Element) list.item(i);
+            FredCategory nextCat = new FredCategory(next);
+
+            final String catKey = "category:" + nextCat.getId();
+
+            if (!_categoryMap.containsKey(catKey))
+            {
+                _categoryMap.put(catKey, nextCat);
+            }
+            else
+            {
+                nextCat = _categoryMap.get(catKey);
+            }
+
+            final FredNavigationNode nextNode = getNode(nextCat);
+            nodes.add(nextNode);
+        }
+
+        return nodes;
+    }
+
+    public synchronized FredCategory fetchCategory(final int categoryId_) throws IOException, FredException
+    {
+        final String catName = "category:" + categoryId_;
+
+        if (_categoryMap.containsKey(catName))
+        {
+            final FredCategory cat = _categoryMap.get(catName);
+
+            if (null == cat)
+            {
+                final FredException e = _exceptionMap.get(catName);
+                throw new FredException(e);
+            }
+
+            return cat;
+        }
+
+        final String catQuery = "category_id=" + categoryId_;
+
+        try
+        {
+            final Element catRoot = fetchData(CATEGORY_PATH, catQuery);
+            final Element catElem = (Element) catRoot.getElementsByTagName("category").item(0);
+            final FredCategory output = new FredCategory(catElem);
+
+            _categoryMap.put(catName, output);
+
+            return output;
+        }
+        catch (final FredException e)
+        {
+            _categoryMap.put(catName, null);
+            _exceptionMap.put(catName, e);
+            throw new FredException(e);
+        }
+
     }
 
     public synchronized FredSeries fetchSeries(final String seriesName_) throws IOException, FredException
     {
-        if (_seriesMap.containsKey(seriesName_))
+        final String seriesName = "series:" + seriesName_;
+
+        if (_seriesMap.containsKey(seriesName))
         {
-            final FredSeries series = _seriesMap.get(seriesName_);
+            final FredSeries series = _seriesMap.get(seriesName);
 
             if (null == series)
             {
-                final FredException e = _exceptionMap.get(seriesName_);
+                final FredException e = _exceptionMap.get(seriesName);
                 throw new FredException(e);
             }
 
@@ -120,14 +219,14 @@ public final class FredLink
             final Element seriesElem = (Element) seriesRoot.getElementsByTagName("series").item(0);
             final FredSeries output = new FredSeries(seriesElem, obs);
 
-            _seriesMap.put(seriesName_, output);
+            _seriesMap.put(seriesName, output);
 
             return output;
         }
         catch (final FredException e)
         {
-            _seriesMap.put(seriesName_, null);
-            _exceptionMap.put(seriesName_, e);
+            _seriesMap.put(seriesName, null);
+            _exceptionMap.put(seriesName, e);
             throw new FredException(e);
         }
     }
@@ -210,6 +309,85 @@ public final class FredLink
                 IOException
         {
             return new InputSource(new StringReader(""));
+        }
+
+    }
+
+    /**
+     * N.B: This class is not serializable as it requires the repeated use of
+     * FRED.
+     */
+    public final class FredNavigationNode implements Comparable<FredNavigationNode>
+    {
+
+        private final FredCategory _category;
+        private SortedSet<FredNavigationNode> _children;
+
+        public FredNavigationNode(final FredCategory cat_)
+        {
+            _category = cat_;
+            _children = null;
+        }
+
+        public FredCategory getCategory()
+        {
+            return _category;
+        }
+
+        public synchronized SortedSet<FredNavigationNode> getChildren() throws IOException, FredException
+        {
+            if (null != _children)
+            {
+                return _children;
+            }
+
+            _children = FredLink.this.getChildren(_category);
+
+            return _children;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            final int hash = HashUtil.mix(CLASS_HASH, _category.hashCode());
+            return hash;
+        }
+
+        @Override
+        public boolean equals(final Object that_)
+        {
+            if (this == that_)
+            {
+                return true;
+            }
+            if (null == that_)
+            {
+                return false;
+            }
+            if (this.getClass() != that_.getClass())
+            {
+                return false;
+            }
+
+            final FredNavigationNode that = (FredNavigationNode) that_;
+            final int comp = this.compareTo(that);
+            final boolean equal = (0 == comp);
+            return equal;
+        }
+
+        @Override
+        public int compareTo(FredNavigationNode that_)
+        {
+            if (null == that_)
+            {
+                return 1;
+            }
+            if (this == that_)
+            {
+                return 0;
+            }
+
+            return this._category.compareTo(that_.getCategory());
         }
 
     }

@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.fred;
 
+import edu.columbia.tjw.item.util.HashUtil;
 import java.io.Serializable;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -31,10 +32,11 @@ import org.w3c.dom.Element;
  *
  * @author tyler
  */
-public final class FredSeries implements Serializable
+public final class FredSeries implements Serializable, Comparable<FredSeries>
 {
     private static final long serialVersionUID = 364329225987396428L;
     private static final String FORMAT_PATTERN = "yyyy-MM-dd HH:mm:ssX";
+    private static final int CLASS_HASH = HashUtil.startHash(FredSeries.class);
 
     private final String _id;
     private final String _title;
@@ -52,6 +54,7 @@ public final class FredSeries implements Serializable
 
     private final int _popularity;
     private final FredSeriesData _series;
+    private final int _hash;
 
     protected FredSeries(final Element elem_, final FredSeriesData series_)
     {
@@ -88,6 +91,13 @@ public final class FredSeries implements Serializable
         }
 
         _series = series_;
+
+        int hash = HashUtil.mix(CLASS_HASH, _id.hashCode());
+        hash = HashUtil.mix(hash, _realtimeStart.hashCode());
+        hash = HashUtil.mix(hash, _realtimeEnd.hashCode());
+        hash = HashUtil.mix(hash, _observationStart.hashCode());
+        hash = HashUtil.mix(hash, _observationEnd.hashCode());
+        _hash = HashUtil.mix(hash, _lastUpdated.hashCode());
     }
 
     public String getId()
@@ -183,8 +193,89 @@ public final class FredSeries implements Serializable
 
         final Instant converted = dt.toInstant();
         //final Instant converted = null;
-        
+
         return converted;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return _hash;
+    }
+
+    @Override
+    public boolean equals(final Object other_)
+    {
+        if (null == other_)
+        {
+            return false;
+        }
+        if (this.getClass() != other_.getClass())
+        {
+            return false;
+        }
+
+        final FredSeries that = (FredSeries) other_;
+        final int comparison = this.compareTo(that);
+        return (0 == comparison);
+    }
+
+    @Override
+    public int compareTo(FredSeries that_)
+    {
+        if (this == that_)
+        {
+            return 0;
+        }
+        if (null == that_)
+        {
+            return 1;
+        }
+
+        int comparison = this._id.compareTo(that_._id);
+
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        //This would be very rare, same ID, but different object. Probably different dates, but which ones? 
+        comparison = this._realtimeStart.compareTo(that_._realtimeStart);
+
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        comparison = this._realtimeEnd.compareTo(that_._realtimeEnd);
+
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        comparison = this._observationStart.compareTo(that_._observationStart);
+
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        comparison = this._observationEnd.compareTo(that_._observationEnd);
+
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        comparison = this._lastUpdated.compareTo(that_._lastUpdated);
+
+        if (comparison != 0)
+        {
+            return comparison;
+        }
+
+        return 0;
     }
 
 }
