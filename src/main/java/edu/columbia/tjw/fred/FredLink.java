@@ -26,9 +26,12 @@ import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
 import java.net.URL;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -58,6 +61,7 @@ public final class FredLink
     private static final String SERIES_PATH = "/fred/series";
     private static final String CATEGORY_PATH = "/fred/category";
     private static final String CHILDREN_PATH = "/fred/category/children";
+    private static final String CAT_SERIES_PATH = "/fred/category/children";
     private static final String OBSERVATION_PATH = "/fred/series/observations";
 
     private final Proxy _proxy;
@@ -120,6 +124,33 @@ public final class FredLink
         _nodeMap.put(cat_, node);
 
         return node;
+    }
+
+    private synchronized SortedMap<String, FredSeries> getChildSeries(final FredCategory cat_) throws IOException, FredException
+    {
+        final String catQuery = "category_id=" + cat_.getId();
+
+        final Element catRoot = fetchData(CAT_SERIES_PATH, catQuery);
+        final String rootName = catRoot.getTagName();
+
+        if (!rootName.equals("seriess"))
+        {
+            throw new FredException("Unexpected tag name: " + rootName, 101);
+        }
+
+        final NodeList list = catRoot.getElementsByTagName("series");
+
+        final SortedMap<String, FredSeries> nodes = new TreeMap<>();
+
+        for (int i = 0; i < list.getLength(); i++)
+        {
+            final Element next = (Element) list.item(i);
+            final String seriesName = next.getAttribute("id");
+            final FredSeries series = this.fetchSeries(seriesName);
+            nodes.put(series.getId(), series);
+        }
+
+        return nodes;
     }
 
     private synchronized SortedSet<FredNavigationNode> getChildren(final FredCategory cat_) throws IOException, FredException
@@ -322,16 +353,29 @@ public final class FredLink
 
         private final FredCategory _category;
         private SortedSet<FredNavigationNode> _children;
+        private SortedMap<String, FredSeries> _series;
 
         public FredNavigationNode(final FredCategory cat_)
         {
             _category = cat_;
             _children = null;
+            _series = null;
         }
 
         public FredCategory getCategory()
         {
             return _category;
+        }
+
+        public synchronized SortedMap<String, FredSeries> getSeries() throws IOException, FredException
+        {
+            if (null != _series)
+            {
+                return _series;
+            }
+
+            _series = Collections.unmodifiableSortedMap(FredLink.this.getChildSeries(_category));
+            return _series;
         }
 
         public synchronized SortedSet<FredNavigationNode> getChildren() throws IOException, FredException

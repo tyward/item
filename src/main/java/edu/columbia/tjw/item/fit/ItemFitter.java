@@ -283,7 +283,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         for (int i = 0; i < curveCount_; i++)
         {
-            final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
+            final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(model.getParams(), grid_);
 
             try
             {
