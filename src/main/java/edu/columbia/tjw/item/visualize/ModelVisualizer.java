@@ -19,7 +19,6 @@
  */
 package edu.columbia.tjw.item.visualize;
 
-import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
@@ -29,7 +28,6 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.fit.ItemCalcGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -136,55 +134,24 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         private final int _steps;
         private final ItemParameters<S, R, T> _params;
         private final R _regressor;
-        private final double[] _regValues;
-        private final double _minValue;
-        private final double _stepSize;
-        private final int[] _targetIndices;
+        private final ItemRegressorReader[] _readers;
 
         public InnerGrid(final int steps_, final double minValue_, final double stepSize_, final R regressor_, final Map<R, Double> regValues_, final ItemParameters<S, R, T> params_)
         {
             _steps = steps_;
             _params = params_;
             _regressor = regressor_;
-            _minValue = minValue_;
-            _stepSize = stepSize_;
 
-            final int regCount = _params.regressorCount();
+            _readers = new ItemRegressorReader[regressor_.getFamily().size()];
 
-            _regValues = new double[regCount];
-            final int[] indices = new int[regCount];
-            int pointer = 0;
-
-            final List<R> regList = _params.getRegressorList();
-
-            for (int i = 0; i < regCount; i++)
+            for (final Map.Entry<R, Double> entry : regValues_.entrySet())
             {
-                final R next = regList.get(i);
-
-                if (regressor_.equals(next))
-                {
-                    _regValues[i] = minValue_;
-                    indices[pointer++] = i;
-                }
-                else
-                {
-                    _regValues[i] = regValues_.get(next);
-                }
+                final R next = entry.getKey();
+                final Double value = entry.getValue();
+                _readers[next.ordinal()] = new ConstantRegressorReader(_steps, value);
             }
 
-            _targetIndices = Arrays.copyOf(indices, pointer);
-
-            for (int i = 0; i < regCount; i++)
-            {
-                final ItemCurve<?> curve = params_.getTransformation(i);
-
-                if (null == curve)
-                {
-                    continue;
-                }
-
-                _regValues[i] = curve.transform(_regValues[i]);
-            }
+            _readers[regressor_.ordinal()] = new SteppedRegressorReader(_steps, minValue_, stepSize_);
         }
 
         @Override
@@ -196,13 +163,67 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         @Override
         public ItemRegressorReader getRegressorReader(R field_)
         {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            return _readers[field_.ordinal()];
         }
 
         @Override
         public EnumFamily<R> getRegressorFamily()
         {
             return _regressor.getFamily();
+        }
+
+    }
+
+    private static final class ConstantRegressorReader implements ItemRegressorReader
+    {
+        private final int _size;
+        private final double _regValue;
+
+        public ConstantRegressorReader(final int size_, final double regValue_)
+        {
+            _regValue = regValue_;
+            _size = size_;
+
+        }
+
+        @Override
+        public double asDouble(int index_)
+        {
+            return _regValue;
+        }
+
+        @Override
+        public int size()
+        {
+            return _size;
+        }
+
+    }
+
+    private static final class SteppedRegressorReader implements ItemRegressorReader
+    {
+        private final int _size;
+        private final double _startValue;
+        private final double _stepValue;
+
+        public SteppedRegressorReader(final int size_, final double startValue_, final double stepValue_)
+        {
+            _startValue = startValue_;
+            _stepValue = stepValue_;
+            _size = size_;
+        }
+
+        @Override
+        public double asDouble(int index_)
+        {
+            final double reg = _startValue + (index_ * _stepValue);
+            return reg;
+        }
+
+        @Override
+        public int size()
+        {
+            return _size;
         }
 
     }
