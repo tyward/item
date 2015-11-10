@@ -61,7 +61,7 @@ public final class FredLink
     private static final String SERIES_PATH = "/fred/series";
     private static final String CATEGORY_PATH = "/fred/category";
     private static final String CHILDREN_PATH = "/fred/category/children";
-    private static final String CAT_SERIES_PATH = "/fred/category/children";
+    private static final String CAT_SERIES_PATH = "/fred/category/series";
     private static final String OBSERVATION_PATH = "/fred/series/observations";
 
     private final Proxy _proxy;

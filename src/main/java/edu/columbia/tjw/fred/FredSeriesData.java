@@ -50,12 +50,8 @@ public final class FredSeriesData implements Serializable
         final NodeList children = elem_.getElementsByTagName("observation");
         final int childCount = children.getLength();
 
-        _dates = new LocalDate[childCount];
-        _values = new double[childCount];
-
         final Map<String, String> dateMap = new TreeMap<>();
-        
-        
+
         for (int i = 0; i < childCount; i++)
         {
             final Element next = (Element) children.item(i);
@@ -63,8 +59,30 @@ public final class FredSeriesData implements Serializable
             final String dateString = next.getAttribute("date");
             final String valueString = next.getAttribute("value");
 
-            _dates[i] = LocalDate.from(DateTimeFormatter.ISO_LOCAL_DATE.parse(dateString));
-            _values[i] = Double.parseDouble(valueString);
+            if (valueString.equals("."))
+            {
+                //This is a special value used by FRED to indicate that the data is not available. 
+                //Typically, this is because the markets are closed for some reason. Just skip it. 
+                continue;
+            }
+
+            dateMap.put(dateString, valueString);
+        }
+
+        final int dataCount = dateMap.size();
+        _dates = new LocalDate[dataCount];
+        _values = new double[dataCount];
+
+        int pointer = 0;
+
+        for (final Map.Entry<String, String> entry : dateMap.entrySet())
+        {
+            final String dateString = entry.getKey();
+            final String valueString = entry.getValue();
+
+            _dates[pointer] = LocalDate.from(DateTimeFormatter.ISO_LOCAL_DATE.parse(dateString));
+            _values[pointer] = Double.parseDouble(valueString);
+            pointer++;
         }
     }
 
