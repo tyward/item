@@ -25,6 +25,7 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.InterpolatedCurve;
 import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.fit.ItemCalcGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
@@ -86,7 +87,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * @param steps_
      * @return
      */
-    public double[][] graph(final S to_, final R regressor_, final Map<R, Double> regValues_, final double regMin_, final double regMax_, final int steps_)
+    public InterpolatedCurve graph(final S to_, final R regressor_, final Map<R, Double> regValues_, final double regMin_, final double regMax_, final int steps_)
     {
         if (regMin_ >= regMax_)
         {
@@ -99,7 +100,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double stepSize = (regMax_ - regMin_) / steps_;
 
-        final InnerGrid grid = new InnerGrid(steps_, regMin_, stepSize, regressor_, regValues_, _model.getParams());
+        final InnerGrid grid = new InnerGrid(steps_, regMin_, stepSize, regressor_, regValues_);
         final ItemCalcGrid<S, R, T> paramGrid = new ItemCalcGrid<>(_model.getParams(), grid);
 
         final List<S> reachable = _model.getParams().getStatus().getReachable();
@@ -112,34 +113,30 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double[] probability = new double[reachable.size()];
 
-        final double[][] output = new double[2][steps_];
+        final double[] x = new double[steps_];
+        final double[] y = new double[steps_];
 
         for (int i = 0; i < steps_; i++)
         {
             _model.transitionProbability(paramGrid, i, probability);
 
-            final double x = regMin_ + (i * stepSize);
-            final double y = probability[toIndex];
-
-            output[0][i] = x;
-            output[1][i] = y;
-
+            x[i] = regMin_ + (i * stepSize);
+            y[i] = probability[toIndex];
         }
 
+        final InterpolatedCurve output = new InterpolatedCurve(x, y, true, false);
         return output;
     }
 
     private final class InnerGrid implements ItemGrid<R>
     {
         private final int _steps;
-        private final ItemParameters<S, R, T> _params;
         private final R _regressor;
         private final ItemRegressorReader[] _readers;
 
-        public InnerGrid(final int steps_, final double minValue_, final double stepSize_, final R regressor_, final Map<R, Double> regValues_, final ItemParameters<S, R, T> params_)
+        public InnerGrid(final int steps_, final double minValue_, final double stepSize_, final R regressor_, final Map<R, Double> regValues_)
         {
             _steps = steps_;
-            _params = params_;
             _regressor = regressor_;
 
             _readers = new ItemRegressorReader[regressor_.getFamily().size()];
