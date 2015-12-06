@@ -32,6 +32,7 @@ public final class QuantileStatistics
 {
     private static final int BLOCK_SIZE = 10 * 1000;
     private static final double SIGMA_LIMIT = 3;
+    private static final double RELATIVE_ERROR_THRESHOLD = 100.0;
 
     private final QuantApprox _approx;
 
@@ -106,6 +107,12 @@ public final class QuantileStatistics
 
                     final double diff = (ya - yb);
                     final double d2 = diff * diff;
+
+                    if (Math.abs(ya) > RELATIVE_ERROR_THRESHOLD * Math.sqrt(va))
+                    {
+                        //If the bucket is very large compared to its relative error, then accept it as-is. 
+                        continue;
+                    }
 
                     //Same as saying that the root squared diff is greater than several sigma. 
                     //i.e. we pulled in enough data that we can distinguish between these buckets. 
