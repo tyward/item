@@ -31,19 +31,14 @@ import java.util.logging.Logger;
  *
  * Given a set of values (x, y), we are going to approximate the quantiles of x.
  *
- * More specifically, we are going to construct a set of N cutoffs, divding the
+ * More specifically, we are going to construct a set of N cutoffs, dividing the
  * space into N buckets, such that each bucket has an approximately equal number
  * of points.
  *
  * Then we are going to compute the approximate average and std. Dev of y over
  * each bucket.
  *
- * We will do this all while looking at only the amount of data we need.
- *
- * The result will always be a power of 2 buckets, so if your bucket count is
- * 100, you will really get 128 buckets out.
- *
- * You will never get fewer than MIN_BUCKETS out.
+ * The goal is to construct an easy characterization of a distribution, which can then be used for computations. 
  *
  *
  * @author tyler
@@ -73,7 +68,7 @@ public final class QuantApprox implements Iterable<QuantileNode>
 
             final int bucketCount = 100;
             final int loadFactor = 10;
-            final int sampleSize = 10 * 1000;
+            final int sampleSize = 100 * 1000;
 
             final QuantApprox approx = new QuantApprox(bucketCount, loadFactor);
             final SortedMap<Double, Double> valMap = new TreeMap<>();
