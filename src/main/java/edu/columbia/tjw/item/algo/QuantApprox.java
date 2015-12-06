@@ -44,9 +44,10 @@ import java.util.logging.Logger;
  *
  * @author tyler
  */
-public final class QuantApprox implements Iterable<QuantileNode>
+public final class QuantApprox extends DistStats2D implements Iterable<QuantileNode>
 {
     private static final Logger LOG = LogUtil.getLogger(QuantApprox.class);
+    private static final long serialVersionUID = 8383047095582432490L;
 
     public static final int DEFAULT_LOAD = 10;
     public static final int DEFAULT_BUCKETS = 100;
@@ -116,7 +117,7 @@ public final class QuantApprox implements Iterable<QuantileNode>
             for (final QuantileNode next : approx)
             {
 
-                System.out.println(index + ", " + next.getMinX() + ", " + next.getEX() + ", " + next.getEY() + ", " + next.getDevY() + ", " + next.getCount() + ", "
+                System.out.println(index + ", " + next.getMinX() + ", " + next.getMeanX() + ", " + next.getMeanY() + ", " + next.getStdDevY() + ", " + next.getCount() + ", "
                         + eX[index] + ", " + eY[index] + ", " + actStart[index] + ", " + (eY2[index] - (eY[index] * eY[index])));
                 index++;
             }
@@ -149,7 +150,7 @@ public final class QuantApprox implements Iterable<QuantileNode>
         _maxBuckets = maxBuckets_;
         _loadFactor = loadFactor_;
         _bucketCount = 0;
-        _observationCount++;
+        _observationCount = 0;
     }
 
     public boolean isValidObservation(final double x_, final double y_)
@@ -179,6 +180,7 @@ public final class QuantApprox implements Iterable<QuantileNode>
 
         _observationCount++;
         _root.addObservation(x_, y_);
+        this.update(x_, y_);
     }
 
     public int size()
@@ -255,8 +257,10 @@ public final class QuantApprox implements Iterable<QuantileNode>
 
     }
 
-    public final class QuantileNode
+    public final class QuantileNode extends DistStats2D
     {
+        private static final long serialVersionUID = 5520011448976824958L;
+
         //This node represents a half open interval. 
         private double _start;
         private final double _end;
@@ -264,12 +268,11 @@ public final class QuantApprox implements Iterable<QuantileNode>
         private double _xMax;
         private double _xMin;
 
-        private double _xSum;
-        private double _x2Sum;
-        private double _ySum;
-        private double _y2Sum;
-        private double _count;
-
+//        private double _xSum;
+//        private double _x2Sum;
+//        private double _ySum;
+//        private double _y2Sum;
+//        private double _count;
         private int _height;
         private QuantileNode _leftChild;
         private QuantileNode _rightChild;
@@ -285,38 +288,14 @@ public final class QuantApprox implements Iterable<QuantileNode>
             _leftChild = null;
             _rightChild = null;
             _height = 1;
-
-            _xSum = 0.0;
-            _ySum = 0.0;
-            _y2Sum = 0.0;
-            _count = 0;
         }
 
-        private QuantileNode(final double start_, final double end_, final QuantileNode parent_, final QuantileNode leftChild_, final double xSum_, final double x2Sum_, final double ySum_, final double y2Sum_,
-                final double count_,
-                final double xMax_, final double xMin_)
+        private QuantileNode(final double start_, final double end_, final QuantileNode parent_, final double xMax_, final double xMin_)
         {
-            QuantApprox.this._bucketCount++;
-            _start = start_;
-            _end = end_;
-
-            _parent = parent_;
-            _leftChild = leftChild_;
-            _rightChild = null;
-            _xSum = xSum_;
-            _ySum = ySum_;
-            _x2Sum = x2Sum_;
-            _y2Sum = y2Sum_;
-            _count = count_;
+            this(start_, end_, parent_);
 
             _xMin = xMin_;
             _xMax = xMax_;
-            _height = 1 + calculateHeight(_leftChild);
-        }
-
-        public double getCount()
-        {
-            return _count;
         }
 
         public double getMinX()
@@ -329,74 +308,11 @@ public final class QuantApprox implements Iterable<QuantileNode>
             return _xMax;
         }
 
-        public double getEX()
-        {
-            return (_xSum / _count);
-        }
-
-        public double getEY()
-        {
-            return _ySum / _count;
-        }
-
-        public double getVarX()
-        {
-            final double eX2 = _x2Sum / _count;
-            final double eX = _xSum / _count;
-
-            final double yVariance = (eX2 - (eX * eX)) / _count;
-
-            if (yVariance < 0.0)
-            {
-                //This is totally possible, primarily due to our approximations. 
-                return 0.0;
-            }
-
-            return yVariance;
-        }
-
-        public double getVarY()
-        {
-            final double eY2 = _y2Sum / _count;
-            final double eY = _ySum / _count;
-
-            final double yVariance = (eY2 - (eY * eY)) / _count;
-
-            if (yVariance < 0.0)
-            {
-                //This is totally possible, primarily due to our approximations. 
-                return 0.0;
-            }
-
-            return yVariance;
-        }
-
-        public double getDevY()
-        {
-            final double yVariance = getVarY();
-            final double yDev = Math.sqrt(yVariance);
-            return yDev;
-        }
-
-        public double getDevX()
-        {
-            final double xVariance = (_x2Sum - _xSum) / _count;
-
-            if (xVariance < 0.0)
-            {
-                //This is totally possible, primarily due to our approximations. 
-                return 0.0;
-            }
-
-            final double xDev = Math.sqrt(xVariance);
-            return xDev;
-        }
-
         private void addObservation(final double x_, final double y_)
         {
             //OK, this observation belongs to us....
             //First, see if we need to split. 
-            final boolean splitProposed = (_count >= _loadFactor) && (_bucketCount < _maxBuckets);
+            final boolean splitProposed = (this.getCount() >= _loadFactor) && (_bucketCount < _maxBuckets);
 
             //N.B: We may have point masses, whereby some of the buckets can't be split. 
             //We can always identify those as the ones with zero variance, so don't try to split those or we will get empty buckets. 
@@ -405,33 +321,29 @@ public final class QuantApprox implements Iterable<QuantileNode>
             {
                 //Do the split here. 
                 //First, just make a new left child, this will involve some approximation. 
-                final double eX = _xSum / _count;
-                final double eX2 = _x2Sum / _count;
-                final double varX = eX2 - (eX * eX);
-
-                //Let's approximate what the sums might look like. 
-                //Ideally, we would try to make the variance match, using similar logic. For now, let's not bother. 
-                final double leftX = _count * ((_xMin + eX) * 0.5);
-                final double leftX2 = _count * (((_xMin * _xMin) + eX2) * 0.5);
-                final double rightX = _count * ((eX + _xMax) * 0.5);
-                final double rightX2 = _count * ((eX2 + (_xMax * _xMax)) * 0.5);
-
-                final double newY = _ySum * 0.5;
-                final double newY2 = _y2Sum * 0.5;
-                final double newCount = _count * 0.5;
-
-                final int thisBalance = this.calculateBalanceFactor();
+                final double eX = this.getMeanX();
+//                final double eX2 = _x2Sum / _count;
+//                final double varX = eX2 - (eX * eX);
+//
+//                //Let's approximate what the sums might look like. 
+//                //Ideally, we would try to make the variance match, using similar logic. For now, let's not bother. 
+//                final double leftX = _count * ((_xMin + eX) * 0.5);
+//                final double leftX2 = _count * (((_xMin * _xMin) + eX2) * 0.5);
+//                final double rightX = _count * ((eX + _xMax) * 0.5);
+//                final double rightX2 = _count * ((eX2 + (_xMax * _xMax)) * 0.5);
+//
+//                final double newY = _ySum * 0.5;
+//                final double newY2 = _y2Sum * 0.5;
+//                final double newCount = _count * 0.5;
+//
+//                final int thisBalance = this.calculateBalanceFactor();
 
                 //LOG.info("Exising balance factor: " + thisBalance);
-                final QuantileNode newNode = new QuantileNode(_start, eX, this, null, 0.0, 0.0, 0.0, 0.0, 0.0, eX, _xMin);
+                final QuantileNode newNode = new QuantileNode(_start, eX, this, eX, _xMin);
 
                 _start = eX;
                 _xMin = eX;
-                _xSum = 0.0;
-                _x2Sum = 0.0;
-                _ySum = 0.0;
-                _y2Sum = 0.0;
-                _count = 0.0;
+                this.reset();
 
                 final QuantileNode rebalanced;
 
@@ -482,11 +394,7 @@ public final class QuantApprox implements Iterable<QuantileNode>
                 return;
             }
 
-            _xSum += x_;
-            _x2Sum += (x_ * x_);
-            _ySum += y_;
-            _y2Sum += (y_ * y_);
-            _count += 1.0;
+            this.update(x_, y_);
             _xMax = Math.max(_xMax, x_);
             _xMin = Math.min(_xMin, x_);
         }

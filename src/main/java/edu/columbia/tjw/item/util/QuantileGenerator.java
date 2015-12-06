@@ -87,8 +87,8 @@ public final class QuantileGenerator
                 //let's check out the variance info. 
                 for (final QuantileNode next : _approx)
                 {
-                    eX[index] = next.getEX();
-                    eY[index] = next.getEY();
+                    eX[index] = next.getMeanX();
+                    eY[index] = next.getMeanY();
                     varY[index] = next.getVarY();
                     index++;
                 }
@@ -127,6 +127,36 @@ public final class QuantileGenerator
 
         _varTestPassed = passes;
         _curve = new InterpolatedCurve(_eX, _eY, true, false);
+    }
+
+    /**
+     * Gets the overall mean of the values of X.
+     *
+     * @return
+     */
+    public double getMeanX()
+    {
+        return _approx.getMeanX();
+    }
+
+    /**
+     * Gets the overall mean of the values of Y.
+     *
+     * @return
+     */
+    public double getMeanY()
+    {
+        return _approx.getMeanY();
+    }
+
+    /**
+     * Gets the overall std. dev. of the mean of X.
+     *
+     * @return
+     */
+    public double getStdDevX()
+    {
+        return _approx.getStdDevX();
     }
 
     public boolean getVarTestPassed()
