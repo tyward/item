@@ -34,6 +34,7 @@ import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MultiLogistic;
+import edu.columbia.tjw.item.util.QuantileStatistics;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 import java.util.Arrays;
 import java.util.List;
@@ -56,8 +57,9 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final ItemSettings _settings;
     private final ItemModel<S, R, T> _model;
     private final ParamFittingGrid<S, R, T> _grid;
+    private final ItemQuantileGenerator<S, R> _quantGenerator;
     private final RectangularDoubleArray _powerScores;
-    
+
     //N.B: These are ordinals, not offsets.
     private final int[] _actualOutcomes;
     private final MultivariateOptimizer _optimizer;
@@ -131,6 +133,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 _powerScores.set(i, w, next);
             }
         }
+
+        _quantGenerator = new ItemQuantileGenerator<>(_grid, _powerScores, _model.getStatus());
     }
 
     @Override
@@ -138,6 +142,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     {
         final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, _model, toStatus_, _settings, _intercept);
         //LOG.info("\n\nFinding best: " + generator_ + " " + field_ + " " + toStatus_);
+
+        final QuantileStatistics stats = _quantGenerator.generateStatistics(field_, toStatus_);
 
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(generator, field_, this._model.getParams().getStatus(), toStatus_, _powerScores, _actualOutcomes,
                 _grid, _model, _indexList, _settings);

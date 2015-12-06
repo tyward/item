@@ -28,7 +28,7 @@ import edu.columbia.tjw.item.data.InterpolatedCurve;
  *
  * @author tyler
  */
-public final class QuantileGenerator
+public final class QuantileStatistics
 {
     private static final int BLOCK_SIZE = 10 * 1000;
     private static final double SIGMA_LIMIT = 3;
@@ -41,12 +41,12 @@ public final class QuantileGenerator
     private final boolean _varTestPassed;
     private final InterpolatedCurve _curve;
 
-    public QuantileGenerator(final ItemRegressorReader xReader_, final ItemRegressorReader yReader_)
+    public QuantileStatistics(final ItemRegressorReader xReader_, final ItemRegressorReader yReader_)
     {
         this(xReader_, yReader_, QuantApprox.DEFAULT_BUCKETS);
     }
 
-    public QuantileGenerator(final ItemRegressorReader xReader_, final ItemRegressorReader yReader_, final int bucketCount_)
+    public QuantileStatistics(final ItemRegressorReader xReader_, final ItemRegressorReader yReader_, final int bucketCount_)
     {
         _approx = new QuantApprox(bucketCount_, QuantApprox.DEFAULT_LOAD);
 
