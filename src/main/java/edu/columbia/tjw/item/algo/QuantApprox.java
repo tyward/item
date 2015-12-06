@@ -38,7 +38,8 @@ import java.util.logging.Logger;
  * Then we are going to compute the approximate average and std. Dev of y over
  * each bucket.
  *
- * The goal is to construct an easy characterization of a distribution, which can then be used for computations. 
+ * The goal is to construct an easy characterization of a distribution, which
+ * can then be used for computations.
  *
  *
  * @author tyler
@@ -89,6 +90,7 @@ public final class QuantApprox implements Iterable<QuantileNode>
 
             final double[] eX = new double[bucketCount];
             final double[] eY = new double[bucketCount];
+            final double[] eY2 = new double[bucketCount];
             final double[] actStart = new double[bucketCount];
             final int blockSize = sampleSize / bucketCount;
 
@@ -97,16 +99,25 @@ public final class QuantApprox implements Iterable<QuantileNode>
                 final int offset = i / blockSize;
                 eX[offset] += allX[i];
                 eY[offset] += allY[i];
+                eY2[offset] += allY[i] * allY[i];
                 actStart[offset] = allX[blockSize * offset];
             }
 
-            System.out.println("index, approxMin, approxEX, approxEY, approxDevY, approxCount, eX, eY, actStart");
+            for (int i = 0; i < bucketCount; i++)
+            {
+                eX[i] /= blockSize;
+                eY[i] /= blockSize;
+                eY2[i] /= blockSize;
+                actStart[i] /= blockSize;
+            }
+
+            System.out.println("index, approxMin, approxEX, approxEY, approxDevY, approxCount, eX, eY, actStart, actDev");
 
             for (final QuantileNode next : approx)
             {
 
                 System.out.println(index + ", " + next.getMinX() + ", " + next.getEX() + ", " + next.getEY() + ", " + next.getDevY() + ", " + next.getCount() + ", "
-                        + (eX[index] / blockSize) + ", " + (eY[index] / blockSize) + ", " + (actStart[index] / blockSize));
+                        + eX[index] + ", " + eY[index] + ", " + actStart[index] + ", " + (eY2[index] - (eY[index] * eY[index])));
                 index++;
             }
 
@@ -328,9 +339,12 @@ public final class QuantApprox implements Iterable<QuantileNode>
             return _ySum / _count;
         }
 
-        public double getDevY()
+        public double getVarX()
         {
-            final double yVariance = (_y2Sum - _ySum) / _count;
+            final double eX2 = _x2Sum / _count;
+            final double eX = _xSum / _count;
+
+            final double yVariance = (eX2 - (eX * eX)) / _count;
 
             if (yVariance < 0.0)
             {
@@ -338,6 +352,28 @@ public final class QuantApprox implements Iterable<QuantileNode>
                 return 0.0;
             }
 
+            return yVariance;
+        }
+
+        public double getVarY()
+        {
+            final double eY2 = _y2Sum / _count;
+            final double eY = _ySum / _count;
+
+            final double yVariance = (eY2 - (eY * eY)) / _count;
+
+            if (yVariance < 0.0)
+            {
+                //This is totally possible, primarily due to our approximations. 
+                return 0.0;
+            }
+
+            return yVariance;
+        }
+
+        public double getDevY()
+        {
+            final double yVariance = getVarY();
             final double yDev = Math.sqrt(yVariance);
             return yDev;
         }
@@ -360,12 +396,18 @@ public final class QuantApprox implements Iterable<QuantileNode>
         {
             //OK, this observation belongs to us....
             //First, see if we need to split. 
-            if (_count >= _loadFactor && _bucketCount < _maxBuckets)
+            final boolean splitProposed = (_count >= _loadFactor) && (_bucketCount < _maxBuckets);
+
+            //N.B: We may have point masses, whereby some of the buckets can't be split. 
+            //We can always identify those as the ones with zero variance, so don't try to split those or we will get empty buckets. 
+            //It is possible (but not likely) to have empty buckets anyway, but we shouldn't make a point of having lots of them...
+            if (splitProposed && this.getVarX() > 0.0)
             {
                 //Do the split here. 
                 //First, just make a new left child, this will involve some approximation. 
                 final double eX = _xSum / _count;
                 final double eX2 = _x2Sum / _count;
+                final double varX = eX2 - (eX * eX);
 
                 //Let's approximate what the sums might look like. 
                 //Ideally, we would try to make the variance match, using similar logic. For now, let's not bother. 
