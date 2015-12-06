@@ -27,7 +27,6 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.util.random.RandomTool;
 import java.util.List;
 
 /**
@@ -118,6 +117,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         return beta;
     }
 
+    @Override
     public final double[] getStartingParams(final double regressorMean_, final double regressorStdDev_, final double startingBeta_)
     {
         final double[] output = new double[this._paramCount];
