@@ -95,6 +95,8 @@ public final class QuantileStatistics
 
                 passes = true;
 
+                final double globalMeanY = _approx.getMeanY();
+
                 for (int w = 1; w < _approx.size(); w++)
                 {
                     final double ya = eY[w - 1];
@@ -109,8 +111,17 @@ public final class QuantileStatistics
                     //i.e. we pulled in enough data that we can distinguish between these buckets. 
                     if (d2 < (limit2 * va) || d2 < (limit2 * vb))
                     {
-                        passes = false;
-                        break;
+                        final double dMean = (ya - globalMeanY);
+                        final double dm2 = dMean * dMean;
+
+                        //They are allowed by either being different from neighboring buckets, or different 
+                        //from the mean. Essentially, we don't penalize buckets for being in a flat tail, provided
+                        //that tail is not right at the mean (in which case, we really don't know much...). 
+                        if (dm2 < (limit2 * va))
+                        {
+                            passes = false;
+                            break;
+                        }
                     }
                 }
 

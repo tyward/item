@@ -168,8 +168,15 @@ public final class QuantApprox extends DistStats2D implements Iterable<QuantileN
 
     public void addObservation(final double x_, final double y_, final boolean skipInvalid_)
     {
-        if (!skipInvalid_ && !isValidObservation(x_, y_))
+        final boolean isValid = isValidObservation(x_, y_);
+
+        if (!isValid)
         {
+            if (skipInvalid_)
+            {
+                return;
+            }
+
             throw new IllegalArgumentException("X and Y both need to be well defined numbers.");
         }
 

@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.QuantileStatistics;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
+import java.util.List;
 
 /**
  *
@@ -60,12 +61,21 @@ public final class ItemQuantileGenerator<S extends ItemStatus<S>, R extends Item
     private final class InnerResponseReader<S extends ItemStatus<S>> implements ItemRegressorReader
     {
         //private final double[] _workspace;
-        private final int _toStatusOrdinal;
+        private final int[] _toStatusOrdinals;
 
         public InnerResponseReader(final S toStatus_)
         {
             //_workspace = new double[_powerScores.getColumns()];
-            _toStatusOrdinal = toStatus_.ordinal();
+            //_toStatusOrdinal = toStatus_.ordinal();
+
+            final List<S> indi = toStatus_.getIndistinguishable();
+            _toStatusOrdinals = new int[indi.size()];
+
+            for (int i = 0; i < indi.size(); i++)
+            {
+                _toStatusOrdinals[i] = indi.get(i).ordinal();
+            }
+
         }
 
         @Override
@@ -76,16 +86,22 @@ public final class ItemQuantileGenerator<S extends ItemStatus<S>, R extends Item
 //                _workspace[k] = _powerScores.get(index_, k);
 //            }
 
+            if (!_grid.hasNextStatus(index_))
+            {
+                return Double.NaN;
+            }
+
             final int statusIndex = _grid.getNextStatus(index_);
 
-            if (statusIndex == _toStatusOrdinal)
+            for (int i = 0; i < _toStatusOrdinals.length; i++)
             {
-                return 1.0;
+                if (_toStatusOrdinals[i] == statusIndex)
+                {
+                    return 1.0;
+                }
             }
-            else
-            {
-                return 0.0;
-            }
+
+            return 0.0;
 
             //final int offset = _likelihood.ordinalToOffset(statusIndex);
             //final double logLikelihood = _likelihood.logLikelihood(_workspace, offset);
