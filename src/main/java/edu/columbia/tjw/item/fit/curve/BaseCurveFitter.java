@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
@@ -139,10 +140,11 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, _model, toStatus_, _settings, _intercept);
         //LOG.info("\n\nFinding best: " + generator_ + " " + field_ + " " + toStatus_);
 
-        final ItemQuantileDistribution<S, R> quantGenerator = new ItemQuantileDistribution<>(_grid, _powerScores, _model.getStatus(), field_, toStatus_);
+        final ItemQuantileDistribution<S, R> quantGenerator = new ItemQuantileDistribution<>(_grid, _powerScores, _model.getStatus(), field_, toStatus_, _indexList);
+        final QuantileDistribution dist = quantGenerator.getAdjusted();
 
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(generator, field_, this._model.getParams().getStatus(), toStatus_, _powerScores, _actualOutcomes,
-                _grid, _model, _indexList, _settings);
+                _grid, _model, _indexList, _settings, dist);
 
         final int dimension = generator.paramCount();
 

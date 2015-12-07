@@ -22,6 +22,7 @@ package edu.columbia.tjw.item.util;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.algo.QuantApprox;
 import edu.columbia.tjw.item.algo.QuantApprox.QuantileNode;
+import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.data.InterpolatedCurve;
 
 /**
@@ -34,13 +35,17 @@ public final class QuantileStatistics
     private static final double SIGMA_LIMIT = 3;
     private static final double RELATIVE_ERROR_THRESHOLD = 100.0;
 
-    private final QuantApprox _approx;
-
-    private final double[] _eX;
-    private final double[] _eY;
-    private final double[] _varY;
+    //private final QuantApprox _approx;
+//    private final double[] _eX;
+//    private final double[] _eY;
+//    private final double[] _varY;
     private final boolean _varTestPassed;
-    private final InterpolatedCurve _curve;
+//    private final InterpolatedCurve _curve;
+//    private final double _meanX;
+//    private final double _meanY;
+//    private final double _devX;
+
+    private final QuantileDistribution _dist;
 
     public QuantileStatistics(final ItemRegressorReader xReader_, final ItemRegressorReader yReader_)
     {
@@ -49,7 +54,7 @@ public final class QuantileStatistics
 
     public QuantileStatistics(final ItemRegressorReader xReader_, final ItemRegressorReader yReader_, final int bucketCount_)
     {
-        _approx = new QuantApprox(bucketCount_, QuantApprox.DEFAULT_LOAD);
+        final QuantApprox approx = new QuantApprox(bucketCount_, QuantApprox.DEFAULT_LOAD);
 
         final int size = xReader_.size();
 
@@ -71,12 +76,12 @@ public final class QuantileStatistics
             final double x = xReader_.asDouble(i);
             final double y = yReader_.asDouble(i);
 
-            _approx.addObservation(x, y, true);
+            approx.addObservation(x, y, true);
 
             if (0 == (i + 1) % BLOCK_SIZE)
             {
                 int index = 0;
-                final int approxSize = _approx.size();
+                final int approxSize = approx.size();
 
                 if (eX.length != approxSize)
                 {
@@ -86,7 +91,7 @@ public final class QuantileStatistics
                 }
 
                 //let's check out the variance info. 
-                for (final QuantileNode next : _approx)
+                for (final QuantileNode next : approx)
                 {
                     eX[index] = next.getMeanX();
                     eY[index] = next.getMeanY();
@@ -96,9 +101,9 @@ public final class QuantileStatistics
 
                 passes = true;
 
-                final double globalMeanY = _approx.getMeanY();
+                final double globalMeanY = approx.getMeanY();
 
-                for (int w = 1; w < _approx.size(); w++)
+                for (int w = 1; w < approx.size(); w++)
                 {
                     final double ya = eY[w - 1];
                     final double yb = eY[w];
@@ -139,67 +144,18 @@ public final class QuantileStatistics
             }
         }
 
-        _eX = eX;
-        _eY = eY;
-        _varY = varY;
+        _dist = approx.getDistribution();
 
         _varTestPassed = passes;
-        _curve = new InterpolatedCurve(_eX, _eY, true, false);
     }
 
-    /**
-     * Gets the overall mean of the values of X.
-     *
-     * @return
-     */
-    public double getMeanX()
+    public QuantileDistribution getDistribution()
     {
-        return _approx.getMeanX();
-    }
-
-    /**
-     * Gets the overall mean of the values of Y.
-     *
-     * @return
-     */
-    public double getMeanY()
-    {
-        return _approx.getMeanY();
-    }
-
-    /**
-     * Gets the overall std. dev. of the mean of X.
-     *
-     * @return
-     */
-    public double getStdDevX()
-    {
-        return _approx.getStdDevX();
+        return _dist;
     }
 
     public boolean getVarTestPassed()
     {
         return _varTestPassed;
     }
-
-    public InterpolatedCurve getQuantileCurve()
-    {
-        return _curve;
-    }
-
-    public int size()
-    {
-        return _eX.length;
-    }
-
-    public double getVarY(final int index_)
-    {
-        return _varY[index_];
-    }
-
-    public double getStdDevY(final int index_)
-    {
-        return Math.sqrt(getVarY(index_));
-    }
-
 }

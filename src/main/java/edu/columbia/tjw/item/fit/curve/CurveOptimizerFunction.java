@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 import edu.columbia.tjw.item.util.LogLikelihood;
@@ -72,7 +73,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     //private final MultivariateDifferentiableFunction _diff;
     public CurveOptimizerFunction(final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_,
             final RectangularDoubleArray powerScores_, final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_,
-            final ItemModel<S, R, T> model_, final int[] indexList_, final ItemSettings settings_)
+            final ItemModel<S, R, T> model_, final int[] indexList_, final ItemSettings settings_, final QuantileDistribution dist_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
@@ -129,6 +130,10 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         }
 
         _stdDev = Math.sqrt(eX2 - (eX * eX));
+
+        final double meanDiff = dist_.getMeanX() - eX;
+        final double devDiff = dist_.getMeanDevX() - _stdDev;
+
     }
 
     public double getCentrality()

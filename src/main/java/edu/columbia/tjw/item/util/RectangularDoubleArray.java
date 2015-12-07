@@ -93,6 +93,10 @@ public class RectangularDoubleArray
         {
             throw new ArrayIndexOutOfBoundsException("Column too large: " + column_);
         }
+        if (row_ > _rows)
+        {
+            throw new ArrayIndexOutOfBoundsException("Row too large: " + row_);
+        }
 
         final int index = (row_ * _columns) + column_;
         return index;

@@ -22,7 +22,7 @@ package edu.columbia.tjw.item.fit.curve;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.data.InterpolatedCurve;
+import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.MultiLogistic;
@@ -41,28 +41,39 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
 {
     private final LogLikelihood<S> _likelihood;
 
-    private final double[] _powerScoreAdjustments;
+    private final QuantileDistribution _orig;
+    private final QuantileDistribution _adjusted;
 
-    public ItemQuantileDistribution(final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_, final S fromStatus_, R field_, S toStatus_)
+    public ItemQuantileDistribution(final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_, final S fromStatus_, R field_, S toStatus_, final int[] indexList_)
     {
         _likelihood = new LogLikelihood<>(fromStatus_);
 
         final ItemRegressorReader reader = grid_.getRegressorReader(field_);
-        final ItemRegressorReader yReader = new InnerResponseReader<>(toStatus_, grid_, powerScores_, _likelihood);
+        final ItemRegressorReader wrapped = new WrappedRegressorReader(reader, indexList_);
+        final ItemRegressorReader yReader = new InnerResponseReader<>(toStatus_, grid_, powerScores_, _likelihood, indexList_);
 
-        final QuantileStatistics stats = new QuantileStatistics(reader, yReader);
-        final int size = stats.size();
+        final QuantileStatistics stats = new QuantileStatistics(wrapped, yReader);
+        _orig = stats.getDistribution();
 
-        final InterpolatedCurve quantileCurve = stats.getQuantileCurve();
+        final int size = _orig.size();
 
-        final double[] adjustments = new double[size];
+        double[] adjY = new double[size];
+        double[] eX = new double[size];
+        double[] devX = new double[size];
+        double[] devAdjY = new double[size];
+        long[] bucketCounts = new long[size];
+
         int pointer = 0;
 
         for (int i = 0; i < size; i++)
         {
             //We want next / exp(adjustment) = 1.0
-            final double next = quantileCurve.getY(i);
+            final double next = _orig.getMeanY(i);
+            final double nextDev = _orig.getDevY(i);
             final double adjustment = Math.log(next);
+
+            //The operating theory here is that dev is small relative to the adjustment, so we can approximate this...
+            final double adjDev = Math.log(nextDev + next) - adjustment;
 
             //If it so happens that the adjustment is way too low (this transition didn't happen in this bucket at all...)
             //Then we will fill it instead with nearby values. 
@@ -71,16 +82,61 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
                 continue;
             }
 
-            adjustments[pointer++] = adjustment;
+            adjY[pointer] = adjustment;
+            devAdjY[pointer] = adjDev;
+
+            eX[pointer] = _orig.getMeanX(i);
+            devX[pointer] = _orig.getDevX(i);
+
+            bucketCounts[pointer] = _orig.getCount(i);
+
+            pointer++;
         }
 
-        if (pointer < adjustments.length)
+        if (pointer < adjY.length)
         {
-            _powerScoreAdjustments = Arrays.copyOf(adjustments, pointer);
+            adjY = Arrays.copyOf(adjY, pointer);
+            devAdjY = Arrays.copyOf(devAdjY, pointer);
+            eX = Arrays.copyOf(eX, pointer);
+            devX = Arrays.copyOf(devX, pointer);
+            bucketCounts = Arrays.copyOf(bucketCounts, pointer);
         }
-        else
+
+        _adjusted = new QuantileDistribution(eX, adjY, devX, devAdjY, bucketCounts, false);
+    }
+
+    public QuantileDistribution getOrig()
+    {
+        return _orig;
+    }
+
+    public QuantileDistribution getAdjusted()
+    {
+        return _adjusted;
+    }
+
+    private static final class WrappedRegressorReader implements ItemRegressorReader
+    {
+        private final ItemRegressorReader _underlying;
+        private final int[] _indexMap;
+
+        public WrappedRegressorReader(final ItemRegressorReader underlying_, final int[] indexMap_)
         {
-            _powerScoreAdjustments = adjustments;
+            _indexMap = indexMap_;
+            _underlying = underlying_;
+        }
+
+        @Override
+        public double asDouble(int index_)
+        {
+            final int mapped = _indexMap[index_];
+            return _underlying.asDouble(mapped);
+        }
+
+        @Override
+        public int size()
+        {
+            return _indexMap.length;
         }
 
     }
@@ -92,8 +148,9 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
         private final RectangularDoubleArray _powerScores;
         private final ParamFittingGrid<S, R, ?> _grid;
         private final LogLikelihood<S> _likelihood;
+        private final int[] _indexList;
 
-        public InnerResponseReader(final S toStatus_, final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_, final LogLikelihood<S> likelihood_)
+        public InnerResponseReader(final S toStatus_, final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_, final LogLikelihood<S> likelihood_, final int[] indexList_)
         {
             _grid = grid_;
             _powerScores = powerScores_;
@@ -110,22 +167,25 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
                 _toStatusOrdinals[i] = indi.get(i).ordinal();
             }
 
+            _indexList = indexList_;
         }
 
         @Override
         public double asDouble(int index_)
         {
+            final int mapped = _indexList[index_];
+
+            if (!_grid.hasNextStatus(mapped))
+            {
+                throw new IllegalArgumentException("Impossible.");
+            }
+
             for (int k = 0; k < _workspace.length; k++)
             {
                 _workspace[k] = _powerScores.get(index_, k);
             }
 
-            if (!_grid.hasNextStatus(index_))
-            {
-                return Double.NaN;
-            }
-
-            final int statusIndex = _grid.getNextStatus(index_);
+            final int statusIndex = _grid.getNextStatus(mapped);
             //final int offset = _likelihood.ordinalToOffset(statusIndex);
             MultiLogistic.multiLogisticFunction(_workspace, _workspace);
 
@@ -159,7 +219,7 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
         @Override
         public int size()
         {
-            return _grid.size();
+            return _indexList.length;
         }
 
     }

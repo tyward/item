@@ -153,6 +153,11 @@ public final class QuantApprox extends DistStats2D implements Iterable<QuantileN
         _observationCount = 0;
     }
 
+    public QuantileDistribution getDistribution()
+    {
+        return new QuantileDistribution(this);
+    }
+
     public boolean isValidObservation(final double x_, final double y_)
     {
         final boolean xInvalid = Double.isNaN(x_) || Double.isInfinite(x_);
