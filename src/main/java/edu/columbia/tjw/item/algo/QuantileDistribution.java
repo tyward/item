@@ -41,7 +41,6 @@ public final class QuantileDistribution implements Serializable
     private final double _meanX;
     private final double _meanY;
     private final double _meanDevX;
-    private final double _meanDevY;
 
     public QuantileDistribution(final double[] eX_, final double[] eY_, final double[] devX_, final double[] devY_, final long[] count_, final boolean doCopy_)
     {
@@ -55,7 +54,8 @@ public final class QuantileDistribution implements Serializable
         double sumX = 0.0;
         double sumY = 0.0;
         double varX = 0.0;
-        double varY = 0.0;
+        double sumX2 = 0.0;
+
         long count = 0;
 
         if (doCopy_)
@@ -78,22 +78,27 @@ public final class QuantileDistribution implements Serializable
         for (int i = 0; i < size; i++)
         {
             final long bucketCount = _count[i];
-            final double termX = _eX[i] * bucketCount;
-            final double termY = _eY[i] * bucketCount;
+            final double eXTerm = _eX[i];
+            final double eYTerm = _eY[i];
+
+            final double termX = eXTerm * bucketCount;
+            final double termY = eYTerm * bucketCount;
+            final double termX2 = bucketCount * eXTerm * eXTerm;
             final double bucketVarX = _devX[i] * _devX[i] * bucketCount;
-            final double bucketVarY = _devY[i] * _devY[i] * bucketCount;
 
             sumX += termX;
+            sumX2 += termX2;
             sumY += termY;
             varX += bucketVarX;
-            varY += bucketVarY;
+
             count += bucketCount;
         }
 
         _meanX = sumX / count;
         _meanY = sumY / count;
-        _meanDevX = Math.sqrt(varX) / count;
-        _meanDevY = Math.sqrt(varY) / count;
+
+        _meanDevX = Math.sqrt(DistMath.computeMeanVariance(sumX, sumX2, count));
+
         _totalCount = count;
     }
 
@@ -129,7 +134,6 @@ public final class QuantileDistribution implements Serializable
         _meanX = approx_.getMeanX();
         _meanY = approx_.getMeanY();
         _meanDevX = approx_.getStdDevX();
-        _meanDevY = approx_.getStdDevY();
     }
 
     public double getMeanX()
@@ -142,14 +146,14 @@ public final class QuantileDistribution implements Serializable
         return _meanY;
     }
 
+    public double getDevX()
+    {
+        return _meanDevX * Math.sqrt(_totalCount);
+    }
+
     public double getMeanDevX()
     {
         return _meanDevX;
-    }
-
-    public double getMeanDevY()
-    {
-        return _meanDevY;
     }
 
     public long getTotalCount()

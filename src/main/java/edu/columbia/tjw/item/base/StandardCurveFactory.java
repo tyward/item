@@ -67,6 +67,9 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
     {
         params_[0] = mean_;
 
+        final double distDev = dist_.getDevX();
+        
+        
         switch (type_)
         {
             case LOGISTIC:
