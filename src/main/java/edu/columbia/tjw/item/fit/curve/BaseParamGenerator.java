@@ -127,17 +127,6 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         return output;
     }
 
-//    @Override
-//    public final int getInterceptParamNumber()
-//    {
-//        return _tranParamCount;
-//    }
-//
-//    @Override
-//    public final int getBetaParamNumber()
-//    {
-//        return _tranParamCount + 1;
-//    }
     @Override
     public final int translateParamNumber(final int input_)
     {

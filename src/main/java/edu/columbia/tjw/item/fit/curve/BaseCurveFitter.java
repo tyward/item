@@ -157,22 +157,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double startingLL = res.getMean();
 
-//        final double mean = func.getCentrality();
-//        final double stdDev = func.getStdDev();
-
-        //If we assume the curve increases propensity, then intercept should be negative,
-        //otherwise, flip. Let's pick randomly so we don't always get stuck on one side of zero.
-//        final double scaleValue;
-//
-//        if (_settings.isRandomScale())
-//        {
-//            scaleValue = _settings.getRandom().nextDouble() - 0.5;
-//        }
-//        else
-//        {
-//            scaleValue = 1.0;
-//        }
-
         final double[] starting = generator.getStartingParams(dist);
 
         for (int i = 0; i < dimension; i++)
