@@ -49,8 +49,6 @@ public interface ItemCurveFactory<V extends ItemCurveType<V>>
      *
      * @param curveType_
      * @param dist_
-     * @param mean_
-     * @param stdDev_
      * @param rand_
      * @return
      */
