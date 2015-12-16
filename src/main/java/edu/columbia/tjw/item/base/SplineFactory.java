@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.base;
 
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
+import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
@@ -54,7 +55,7 @@ public class SplineFactory implements ItemCurveFactory<SplineCurveType>
     }
 
     @Override
-    public void fillStartingParameters(final SplineCurveType type_, double mean_, double stdDev_, double[] params_)
+    public void fillStartingParameters(final SplineCurveType type_, final QuantileDistribution dist_, double mean_, double stdDev_, double[] params_)
     {
         params_[0] = mean_;
 

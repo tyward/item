@@ -27,6 +27,7 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.QuantileDistribution;
 import java.util.List;
 
 /**
@@ -118,10 +119,10 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     }
 
     @Override
-    public final double[] getStartingParams(final double regressorMean_, final double regressorStdDev_, final double startingBeta_)
+    public final double[] getStartingParams(final QuantileDistribution dist_, final double regressorMean_, final double regressorStdDev_, final double startingBeta_)
     {
         final double[] output = new double[this._paramCount];
-        fillStartingParams(regressorMean_, regressorStdDev_, output);
+        fillStartingParams(dist_, regressorMean_, regressorStdDev_, output);
 
         output[getInterceptParamNumber()] = -0.5 * startingBeta_;
         output[getBetaParamNumber()] = startingBeta_;
@@ -146,9 +147,9 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         return input_;
     }
 
-    public final void fillStartingParams(final double regressorMean_, final double regressorStdDev_, final double[] params_)
+    public final void fillStartingParams(final QuantileDistribution dist_, final double regressorMean_, final double regressorStdDev_, final double[] params_)
     {
-        _factory.fillStartingParameters(_type, regressorMean_, regressorStdDev_, params_);
+        _factory.fillStartingParameters(_type, dist_, regressorMean_, regressorStdDev_, params_);
     }
 
     @Override

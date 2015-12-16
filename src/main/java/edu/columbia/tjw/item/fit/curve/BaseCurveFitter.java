@@ -173,7 +173,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
             scaleValue = 1.0;
         }
 
-        final double[] starting = generator.getStartingParams(mean, stdDev, scaleValue);
+        final double[] starting = generator.getStartingParams(dist, mean, stdDev, scaleValue);
 
         for (int i = 0; i < dimension; i++)
         {
@@ -185,7 +185,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         if (_settings.isTwoSidedBeta())
         {
             LOG.info("Trying alternate scale calculation.");
-            final double[] starting2 = generator.getStartingParams(mean, stdDev, -scaleValue);
+            final double[] starting2 = generator.getStartingParams(dist, mean, stdDev, -scaleValue);
 
             for (int i = 0; i < dimension; i++)
             {

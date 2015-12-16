@@ -23,7 +23,6 @@ import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.algo.QuantApprox;
 import edu.columbia.tjw.item.algo.QuantApprox.QuantileNode;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
-import edu.columbia.tjw.item.data.InterpolatedCurve;
 
 /**
  *

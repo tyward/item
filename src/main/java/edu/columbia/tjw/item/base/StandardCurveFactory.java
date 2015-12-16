@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.base;
 
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
+import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.MathFunctions;
 import org.apache.commons.math3.util.FastMath;
@@ -62,7 +63,7 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
     }
 
     @Override
-    public void fillStartingParameters(final StandardCurveType type_, double mean_, double stdDev_, double[] params_)
+    public void fillStartingParameters(final StandardCurveType type_, final QuantileDistribution dist_, double mean_, double stdDev_, double[] params_)
     {
         params_[0] = mean_;
 
