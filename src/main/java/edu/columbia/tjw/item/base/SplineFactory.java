@@ -21,8 +21,10 @@ package edu.columbia.tjw.item.base;
 
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
+import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.EnumFamily;
+import java.util.Random;
 
 /**
  *
@@ -41,35 +43,48 @@ public class SplineFactory implements ItemCurveFactory<SplineCurveType>
     }
 
     @Override
-    public ItemCurve<SplineCurveType> generateCurve(SplineCurveType type_, double[] params_)
+    public ItemCurve<SplineCurveType> generateCurve(final ItemCurveParams<SplineCurveType> params_)
     {
-        switch (type_)
-        {
-            case STEP:
-                return new StepSpline(params_[0], params_[1]);
-            case BASIS:
-                return new BasisSpline(params_[0], params_[1]);
-            default:
-                throw new RuntimeException("Impossible, unknown type: " + type_);
-        }
+        throw new UnsupportedOperationException("Not supported.");
+
+//        switch (type_)
+//        {
+//            case STEP:
+//                return new StepSpline(params_[0], params_[1]);
+//            case BASIS:
+//                return new BasisSpline(params_[0], params_[1]);
+//            default:
+//                throw new RuntimeException("Impossible, unknown type: " + type_);
+//        }
     }
 
     @Override
-    public void fillStartingParameters(final SplineCurveType type_, final QuantileDistribution dist_, double mean_, double stdDev_, double[] params_)
+    public ItemCurveParams<SplineCurveType> generateStartingParameters(final SplineCurveType type_, final QuantileDistribution dist_, final Random rand_)
     {
-        params_[0] = mean_;
-
-        switch (type_)
-        {
-            case STEP:
-                params_[1] = Math.sqrt(1.0 / (stdDev_ + 1.0e-10));
-                break;
-            case BASIS:
-                params_[1] = stdDev_;
-                break;
-            default:
-                throw new RuntimeException("Impossible.");
-        }
+        throw new UnsupportedOperationException("Not supported.");
+//
+//        final double[] curveParams = new double[2]; //== type_.getParamCount();
+//        curveParams[0] = mean_;
+//
+//        switch (type_)
+//        {
+//            case STEP:
+//                curveParams[1] = Math.sqrt(1.0 / (stdDev_ + 1.0e-10));
+//                break;
+//            case BASIS:
+//                curveParams[1] = stdDev_;
+//                break;
+//            default:
+//                throw new RuntimeException("Impossible.");
+//        }
+//
+//        final double beta = 0.0;
+//        final double intercept = 0.0;
+//
+//        final ItemCurveParams<SplineCurveType> output = new ItemCurveParams<>(type_, intercept, beta, curveParams);
+//
+//        throw new UnsupportedOperationException("Not supported.");
+//        //return output;
     }
 
     @Override

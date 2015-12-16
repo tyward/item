@@ -43,13 +43,9 @@ public interface ParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
 
     public double getBeta(final double[] params_);
 
-    public double[] getStartingParams(final QuantileDistribution dist_, final double regressorMean_, final double regressorStdDev_, final double startingBeta_);
+    public double[] getStartingParams(final QuantileDistribution dist_);
 
     public int paramCount();
-
-    public int getInterceptParamNumber();
-
-    public int getBetaParamNumber();
 
     /**
      * Translates from the parameter number (as known by the underlying

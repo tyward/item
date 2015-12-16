@@ -21,9 +21,11 @@ package edu.columbia.tjw.item.base;
 
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
+import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.MathFunctions;
+import java.util.Random;
 import org.apache.commons.math3.util.FastMath;
 
 /**
@@ -49,38 +51,98 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
     }
 
     @Override
-    public ItemCurve<StandardCurveType> generateCurve(StandardCurveType type_, double[] params_)
+    public ItemCurve<StandardCurveType> generateCurve(final ItemCurveParams<StandardCurveType> params_)
     {
-        switch (type_)
+        final double centralityVal = params_.getCurveParams(0);
+        final double slopeParam = params_.getCurveParams(1);
+        final StandardCurveType curveType = params_.getType();
+
+        switch (curveType)
         {
             case LOGISTIC:
-                return new LogisticCurve(params_[0], params_[1]);
+                return new LogisticCurve(centralityVal, slopeParam);
             case GAUSSIAN:
-                return new GaussianCurve(params_[0], params_[1]);
+                return new GaussianCurve(centralityVal, slopeParam);
             default:
-                throw new RuntimeException("Impossible, unknown type: " + type_);
+                throw new RuntimeException("Impossible, unknown type: " + curveType);
         }
     }
 
     @Override
-    public void fillStartingParameters(final StandardCurveType type_, final QuantileDistribution dist_, double mean_, double stdDev_, double[] params_)
+    public ItemCurveParams<StandardCurveType> generateStartingParameters(final StandardCurveType type_, final QuantileDistribution dist_, final Random rand_)
     {
-        params_[0] = mean_;
+        final double[] curveParams = new double[2]; //== type_.getParamCount();
+
+        //First, choose the mean uniformly....
+        final int size = dist_.size();
+        final double meanSelector = rand_.nextDouble();
+        final double invCount = 1.0 / dist_.getTotalCount();
+        double runningSum = 0.0;
+        double xVal = 0.0;
+        int xIndex = 0;
+
+        for (int i = 0; i < size; i++)
+        {
+            final long bucketCount = dist_.getCount(i);
+            final double frac = bucketCount * invCount;
+            xVal = dist_.getMeanX(i);
+            xIndex = i;
+
+            runningSum += frac;
+
+            if (runningSum > meanSelector)
+            {
+                break;
+            }
+        }
+
+        curveParams[0] = xVal;
 
         final double distDev = dist_.getDevX();
-        
-        
+        final double slopeParam;
+        final double betaGuess;
+
         switch (type_)
         {
             case LOGISTIC:
-                params_[1] = Math.sqrt(1.0 / (stdDev_ + 1.0e-10));
+                slopeParam = Math.sqrt(1.0 / (distDev + 1.0e-10));
+
+                double xCorrelation = 0.0;
+                double xVar = 0.0;
+                final double meanY = dist_.getMeanY();
+                final double meanX = dist_.getMeanX();
+
+                for (int i = 0; i < size; i++)
+                {
+                    final double yDev = dist_.getMeanY(i) - meanY;
+                    final double xDev = dist_.getMeanX(i) - meanX;
+                    final double corr = yDev * xDev * dist_.getCount(i);
+                    xCorrelation += corr;
+                }
+
+                final double xDev = dist_.getDevX();
+                final double yDev = dist_.getDevY();
+                final double obsCount = dist_.getTotalCount();
+
+                //Between -1.0 and 1.0, a reasonable guess for beta...
+                betaGuess = xCorrelation / (obsCount * xDev * yDev);
+
                 break;
             case GAUSSIAN:
-                params_[1] = stdDev_;
+                slopeParam = distDev;
+                betaGuess = dist_.getMeanY(xIndex) - dist_.getMeanY();
                 break;
             default:
                 throw new RuntimeException("Impossible.");
         }
+
+        curveParams[1] = slopeParam;
+
+        final double intercept = -0.5 * betaGuess;
+
+        final ItemCurveParams<StandardCurveType> output = new ItemCurveParams<>(type_, intercept, betaGuess, curveParams);
+        return output;
+
     }
 
     @Override

@@ -41,6 +41,7 @@ public final class QuantileDistribution implements Serializable
     private final double _meanX;
     private final double _meanY;
     private final double _meanDevX;
+    private final double _meanDevY;
 
     public QuantileDistribution(final double[] eX_, final double[] eY_, final double[] devX_, final double[] devY_, final long[] count_, final boolean doCopy_)
     {
@@ -53,8 +54,8 @@ public final class QuantileDistribution implements Serializable
 
         double sumX = 0.0;
         double sumY = 0.0;
-        double varX = 0.0;
         double sumX2 = 0.0;
+        double sumY2 = 0.0;
 
         long count = 0;
 
@@ -84,12 +85,13 @@ public final class QuantileDistribution implements Serializable
             final double termX = eXTerm * bucketCount;
             final double termY = eYTerm * bucketCount;
             final double termX2 = bucketCount * eXTerm * eXTerm;
+            final double termY2 = bucketCount * eYTerm * eYTerm;
             final double bucketVarX = _devX[i] * _devX[i] * bucketCount;
 
             sumX += termX;
             sumX2 += termX2;
             sumY += termY;
-            varX += bucketVarX;
+            sumY2 += termY2;
 
             count += bucketCount;
         }
@@ -98,6 +100,7 @@ public final class QuantileDistribution implements Serializable
         _meanY = sumY / count;
 
         _meanDevX = Math.sqrt(DistMath.computeMeanVariance(sumX, sumX2, count));
+        _meanDevY = Math.sqrt(DistMath.computeMeanVariance(sumY, sumY2, count));
 
         _totalCount = count;
     }
@@ -134,6 +137,7 @@ public final class QuantileDistribution implements Serializable
         _meanX = approx_.getMeanX();
         _meanY = approx_.getMeanY();
         _meanDevX = approx_.getStdDevX();
+        _meanDevY = approx_.getStdDevY();
     }
 
     public double getMeanX()
@@ -151,9 +155,19 @@ public final class QuantileDistribution implements Serializable
         return _meanDevX * Math.sqrt(_totalCount);
     }
 
+    public double getDevY()
+    {
+        return _meanDevY * Math.sqrt(_totalCount);
+    }
+
     public double getMeanDevX()
     {
         return _meanDevX;
+    }
+
+    public double getMeanDevY()
+    {
+        return _meanDevY;
     }
 
     public long getTotalCount()

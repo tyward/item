@@ -20,13 +20,13 @@
 package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.ItemCurve;
+import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 import edu.columbia.tjw.item.util.LogLikelihood;
@@ -36,7 +36,6 @@ import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
 import edu.columbia.tjw.item.optimize.MultivariateGradient;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
-import edu.columbia.tjw.item.util.random.RandomTool;
 import java.util.List;
 
 /**
@@ -62,6 +61,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final ItemModel<S, R, T> _model;
     private final RectangularDoubleArray _powerScores;
     private final int[] _actualOffsets;
+    private final T _curveType;
 
     private ItemCurve<?> _trans;
     private double _interceptAdjustment;
@@ -71,12 +71,11 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final ItemSettings _settings;
 
     //private final MultivariateDifferentiableFunction _diff;
-    public CurveOptimizerFunction(final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_,
-            final RectangularDoubleArray powerScores_, final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_,
-            final ItemModel<S, R, T> model_, final int[] indexList_, final ItemSettings settings_, final QuantileDistribution dist_)
+    public CurveOptimizerFunction(final T curveType_, final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_, final RectangularDoubleArray powerScores_, final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final ItemModel<S, R, T> model_, final int[] indexList_, final ItemSettings settings_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
+        _curveType = curveType_;
         _settings = settings_;
         _likelihood = new LogLikelihood<>(fromStatus_);
         _powerScores = powerScores_;
@@ -119,31 +118,9 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         eX = eX / _size;
         eX2 = eX2 / _size;
 
-        if (_settings.isRandomCentrality())
-        {
-            final int index = RandomTool.nextInt(_size, _settings.getRandom());
-            _centrality = _regressor[index];
-        }
-        else
-        {
-            _centrality = eX;
-        }
-
+        //These can be dropped, keeping temporarily for debugging purposes.
+        _centrality = eX;
         _stdDev = Math.sqrt(eX2 - (eX * eX));
-
-        final double meanDiff = dist_.getMeanX() - eX;
-        final double devDiff = dist_.getMeanDevX() - _stdDev;
-
-    }
-
-    public double getCentrality()
-    {
-        return _centrality;
-    }
-
-    public double getStdDev()
-    {
-        return _stdDev;
     }
 
     @Override
@@ -247,8 +224,8 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         final double[] output = new double[reachableCount];
         //final double[] actual = new double[reachableCount];
 
-        final int interceptIndex = _generator.getInterceptParamNumber();
-        final int betaIndex = _generator.getBetaParamNumber();
+        final int interceptIndex = ItemCurveParams.getInterceptParamNumber(_curveType);
+        final int betaIndex = ItemCurveParams.getBetaParamNumber(_curveType);
 
         for (int i = start_; i < end_; i++)
         {

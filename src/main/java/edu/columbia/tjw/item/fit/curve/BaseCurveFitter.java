@@ -143,8 +143,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final ItemQuantileDistribution<S, R> quantGenerator = new ItemQuantileDistribution<>(_grid, _powerScores, _model.getStatus(), field_, toStatus_, _indexList);
         final QuantileDistribution dist = quantGenerator.getAdjusted();
 
-        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(generator, field_, this._model.getParams().getStatus(), toStatus_, _powerScores, _actualOutcomes,
-                _grid, _model, _indexList, _settings, dist);
+        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(curveType_, generator, field_, this._model.getParams().getStatus(), toStatus_, _powerScores, _actualOutcomes,
+                _grid, _model, _indexList, _settings);
 
         final int dimension = generator.paramCount();
 
@@ -157,23 +157,23 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double startingLL = res.getMean();
 
-        final double mean = func.getCentrality();
-        final double stdDev = func.getStdDev();
+//        final double mean = func.getCentrality();
+//        final double stdDev = func.getStdDev();
 
         //If we assume the curve increases propensity, then intercept should be negative,
         //otherwise, flip. Let's pick randomly so we don't always get stuck on one side of zero.
-        final double scaleValue;
+//        final double scaleValue;
+//
+//        if (_settings.isRandomScale())
+//        {
+//            scaleValue = _settings.getRandom().nextDouble() - 0.5;
+//        }
+//        else
+//        {
+//            scaleValue = 1.0;
+//        }
 
-        if (_settings.isRandomScale())
-        {
-            scaleValue = _settings.getRandom().nextDouble() - 0.5;
-        }
-        else
-        {
-            scaleValue = 1.0;
-        }
-
-        final double[] starting = generator.getStartingParams(dist, mean, stdDev, scaleValue);
+        final double[] starting = generator.getStartingParams(dist);
 
         for (int i = 0; i < dimension; i++)
         {
@@ -181,25 +181,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
 
         OptimizationResult<MultivariatePoint> result = _optimizer.optimize(func, startingPoint);
-
-        if (_settings.isTwoSidedBeta())
-        {
-            LOG.info("Trying alternate scale calculation.");
-            final double[] starting2 = generator.getStartingParams(dist, mean, stdDev, -scaleValue);
-
-            for (int i = 0; i < dimension; i++)
-            {
-                startingPoint.setElement(i, starting2[i]);
-            }
-
-            OptimizationResult<MultivariatePoint> result2 = _optimizer.optimize(func, startingPoint);
-
-            if (result2.minValue() < result.minValue())
-            {
-                LOG.info("Alternate scale calc is better, using it.");
-                result = result2;
-            }
-        }
 
         final MultivariatePoint best = result.getOptimum();
         final double[] bestVal = best.getElements();
@@ -210,7 +191,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final FitResult<S, R, T> output = new FitResult<S, R, T>(toStatus_, best, generator, field_, trans, bestLL, startingLL, result.dataElementCount());
 
-        LOG.info("\nFound Curve: " + generator + " " + field_ + " " + toStatus_);
+        LOG.info("\nFound Curve: " + curveType_ + " " + field_ + " " + toStatus_);
         LOG.info("Best point: " + best);
         LOG.info("LL change: " + startingLL + " -> " + bestLL + ": " + (startingLL - bestLL));
         LOG.info("AIC diff: " + output.calculateAicDifference());

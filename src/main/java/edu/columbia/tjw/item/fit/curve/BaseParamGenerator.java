@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
+import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
@@ -107,55 +108,47 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     @Override
     public final double getInterceptAdjustment(final double[] params_)
     {
-        final double interceptAdjustment = params_[getInterceptParamNumber()];
+        final double interceptAdjustment = params_[ItemCurveParams.getInterceptParamNumber(_type)];
         return interceptAdjustment;
     }
 
     @Override
     public final double getBeta(final double[] params_)
     {
-        final double beta = params_[getBetaParamNumber()];
+        final double beta = params_[ItemCurveParams.getBetaParamNumber(_type)];
         return beta;
     }
 
     @Override
-    public final double[] getStartingParams(final QuantileDistribution dist_, final double regressorMean_, final double regressorStdDev_, final double startingBeta_)
+    public final double[] getStartingParams(final QuantileDistribution dist_)
     {
-        final double[] output = new double[this._paramCount];
-        fillStartingParams(dist_, regressorMean_, regressorStdDev_, output);
-
-        output[getInterceptParamNumber()] = -0.5 * startingBeta_;
-        output[getBetaParamNumber()] = startingBeta_;
+        final ItemCurveParams<T> params = _factory.generateStartingParameters(_type, dist_, _settings.getRandom());
+        final double[] output = params.generatePoint();
         return output;
     }
 
-    @Override
-    public final int getInterceptParamNumber()
-    {
-        return _tranParamCount;
-    }
-
-    @Override
-    public final int getBetaParamNumber()
-    {
-        return _tranParamCount + 1;
-    }
-
+//    @Override
+//    public final int getInterceptParamNumber()
+//    {
+//        return _tranParamCount;
+//    }
+//
+//    @Override
+//    public final int getBetaParamNumber()
+//    {
+//        return _tranParamCount + 1;
+//    }
     @Override
     public final int translateParamNumber(final int input_)
     {
         return input_;
     }
 
-    public final void fillStartingParams(final QuantileDistribution dist_, final double regressorMean_, final double regressorStdDev_, final double[] params_)
-    {
-        _factory.fillStartingParameters(_type, dist_, regressorMean_, regressorStdDev_, params_);
-    }
-
     @Override
     public final ItemCurve<T> generateTransformation(double[] params_)
     {
-        final ItemCurve<T> curve = _factory.generateCurve(_type, params_);
+        final ItemCurveParams<T> params = new ItemCurveParams<>(_type, params_);
+        final ItemCurve<T> curve = _factory.generateCurve(params);
         return curve;
     }
 
