@@ -38,18 +38,41 @@ import java.util.TreeSet;
 public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 {
     private static final long serialVersionUID = 2720474101494526203L;
+
+    private static final Map<Class, EnumFamily> FAMILY_MAP = new HashMap<>();
+
     private final V[] _members;
     private final SortedSet<V> _memberSet;
     private final Map<String, V> _nameMap;
     private final Class<? extends V> _componentClass;
 
+    @SuppressWarnings("unchecked")
+    public synchronized static <V extends EnumMember<V>> EnumFamily<V> getFamilyFromClass(final Class<V> familyClass_, final boolean throwOnMissing_)
+    {
+        final EnumFamily<V> result = (EnumFamily<V>) FAMILY_MAP.get(familyClass_);
+
+        if (null == result && throwOnMissing_)
+        {
+            throw new IllegalArgumentException("No family for class: " + familyClass_);
+        }
+
+        return result;
+    }
+
+    public EnumFamily(final V[] values_)
+    {
+        this(values_, true);
+    }
+
     /**
      * Initialize a new enum family, should pass it enum.values().
      *
      * @param values_ The output of enum.values() should be given here.
+     * @param distinctFamily_ True if this class should only have one associated
+     * EnumFamily.
      */
     @SuppressWarnings("unchecked")
-    public EnumFamily(final V[] values_)
+    public EnumFamily(final V[] values_, final boolean distinctFamily_)
     {
         if (values_.length < 1)
         {
@@ -79,10 +102,24 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 
         //we actually know that this cast is valid, provided values is actually of type V. 
         _componentClass = (Class<? extends V>) _members[0].getClass();
+
+        if (distinctFamily_)
+        {
+            synchronized (EnumFamily.class)
+            {
+                if (FAMILY_MAP.containsKey(_componentClass))
+                {
+                    throw new IllegalArgumentException("Attempt to redefine an enum family.");
+                }
+
+                FAMILY_MAP.put(_componentClass, this);
+            }
+        }
     }
 
     /**
-     * Returns the class of the component members of this family. 
+     * Returns the class of the component members of this family.
+     *
      * @return The class of the members of this family.
      */
     public Class<? extends V> getComponentType()

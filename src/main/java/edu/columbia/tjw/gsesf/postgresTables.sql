@@ -40,7 +40,7 @@ CREATE TABLE sfLoanMonth (
     reportingDate DATE NOT NULL,
     balance DOUBLE PRECISION NOT NULL,
     status SMALLINT NOT NULL,
-    age SMALLINT NOT NULL,
+    age CHAR(1) NOT NULL,
     isPrepaid BOOLEAN NOT NULL,
     isDefaulted BOOLEAN NOT NULL,
     isModified BOOLEAN NOT NULL,
