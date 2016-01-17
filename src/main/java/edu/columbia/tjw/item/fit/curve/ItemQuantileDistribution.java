@@ -70,17 +70,22 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
             //We want next / exp(adjustment) = 1.0
             final double next = _orig.getMeanY(i);
             final double nextDev = _orig.getDevY(i);
-            final double adjustment = Math.log(next);
-
-            //The operating theory here is that dev is small relative to the adjustment, so we can approximate this...
-            final double adjDev = Math.log(nextDev + next) - adjustment;
-
-            //If it so happens that the adjustment is way too low (this transition didn't happen in this bucket at all...)
-            //Then we will fill it instead with nearby values. 
-            if (adjustment < -50)
+            final long nextCount = _orig.getCount(i);
+            
+            if(nextCount < 1)
             {
                 continue;
             }
+            
+            final double nextMin = 0.5 / nextCount; //We can't justify a probability smaller than this given our observation count. 
+            final double nextMax = 1.0 - nextMin;
+            final double boundedNext = Math.max(nextMin, Math.min(nextMax, next));
+            
+            
+            final double adjustment = Math.log(boundedNext);
+
+            //The operating theory here is that dev is small relative to the adjustment, so we can approximate this...
+            final double adjDev = Math.log(nextDev + boundedNext) - adjustment;
 
             adjY[pointer] = adjustment;
             devAdjY[pointer] = adjDev;
