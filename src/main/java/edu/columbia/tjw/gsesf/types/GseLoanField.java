@@ -67,7 +67,9 @@ public enum GseLoanField implements EnumMember<GseLoanField>
     MI_RECOVERY(GseType.DOUBLE),
     NET_SALES_PROCEEDS(GseType.DOUBLE),
     NON_MI_RECOVERY(GseType.DOUBLE),
-    EXPENSES(GseType.DOUBLE);
+    EXPENSES(GseType.DOUBLE),
+    AGE(GseType.INT),
+    IS_MODIFIED(GseType.BOOLEAN);
 
     public static final EnumFamily<GseLoanField> FAMILY = new EnumFamily<>(values());
 

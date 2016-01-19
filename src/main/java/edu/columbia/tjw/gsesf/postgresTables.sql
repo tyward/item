@@ -76,19 +76,39 @@ CREATE TABLE sfLoan (
 );
 
 
+
+
+
 CREATE TABLE sfLoanMonth (
+    sfSourceId INT NOT NULL,
     sfLoanId BIGINT NOT NULL,
     reportingDate DATE NOT NULL,
     balance DOUBLE PRECISION NOT NULL,
-    status SMALLINT NOT NULL,
-    age CHAR(1) NOT NULL,
+    status VARCHAR(3) NOT NULL,
+    age SMALLINT NOT NULL,
     isPrepaid BOOLEAN NOT NULL,
     isDefaulted BOOLEAN NOT NULL,
     isModified BOOLEAN NOT NULL,
     FOREIGN KEY (sfLoanId) REFERENCES sfLoan (sfLoanId),
-    PRIMARY KEY (sfLoanId, reportingDate),
-    UNIQUE(reportingDate, sfLoanId)
+    PRIMARY KEY (sfSourceId, sfLoanId, reportingDate),
+    UNIQUE(sfSourceId, reportingDate, sfLoanId)
     );
+
+CREATE TABLE sfLoanMonthStaging (
+    sfSourceId INT NOT NULL,
+    sourceLoanId CHAR(20) NOT NULL,
+    reportingDate DATE NOT NULL,
+    balance DOUBLE PRECISION NOT NULL,
+    status VARCHAR(3) NOT NULL,
+    age SMALLINT NOT NULL,
+    isPrepaid BOOLEAN NOT NULL,
+    isDefaulted BOOLEAN NOT NULL,
+    isModified BOOLEAN NOT NULL,
+    PRIMARY KEY (sfSourceId, sourceLoanId, reportingDate),
+    UNIQUE(sfSourceId,reportingDate,  sourceLoanId)
+    );
+
+
 
 
 CREATE TABLE sfLoanLiquidation (

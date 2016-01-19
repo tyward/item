@@ -31,7 +31,6 @@ import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.SQLType;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -57,6 +56,30 @@ public final class FreddieLoad
             + " ltv, initrate, channel,  penalty, productType, propertyState, propertyType, zipCode, sourceLoanId, purpose, origTerm, numBorrowers, sfSellerId, "
             + " sfServicerId) "
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    private static final String TIME_INSERT = "INSERT INTO sfLoanMonthStaging (sfSourceId, sourceLoanId, reportingdate, balance, status, age, isprepaid, isdefaulted, ismodified) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    private static final GseLoanField[] TIME_FIELDS = new GseLoanField[]
+    {
+        GseLoanField.LOAN_SEQUENCE_NUMBER,
+        GseLoanField.FACTOR_DATE,
+        GseLoanField.UPB,
+        GseLoanField.STATUS,
+        GseLoanField.AGE,
+        null,
+        null,
+        GseLoanField.IS_MODIFIED,
+        GseLoanField.ZERO_BAL_CODE,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    };
 
     private static final GseLoanField[] BASE_FIELDS = new GseLoanField[]
     {
@@ -91,6 +114,7 @@ public final class FreddieLoad
     private final DataSource _dataSource;
     private final SqlTableBackedEnumFamily _servicer;
     private final SqlTableBackedEnumFamily _seller;
+    //private final SqlTableBackedEnumFamily _loanIds;
     private final DateTimeFormatter _format;
 
     public FreddieLoad(final File dataDir_, final DataSource source_) throws SQLException
@@ -180,7 +204,7 @@ public final class FreddieLoad
 
         try (final InputStream baseStream = zf.getInputStream(baseEntry))
         {
-            loadBaseEntry(baseStream, conn_);
+            //loadBaseEntry(baseStream, conn_);
         }
 
         try (final InputStream timeStream = zf.getInputStream(timeEntry))
@@ -368,7 +392,118 @@ public final class FreddieLoad
 
     private void loadTimeEntry(final InputStream stream_, final Connection conn_) throws IOException, SQLException
     {
-        LOG.info("Loading time file.");
+        LOG.info("Loading base file.");
+
+        try (final BufferedReader reader = new BufferedReader(new InputStreamReader(stream_)))
+        {
+            try (final PreparedStatement stat = conn_.prepareStatement(TIME_INSERT))
+            {
+                String line = reader.readLine();
+
+                int lineCount = 0;
+
+                while (null != line)
+                {
+                    lineCount++;
+                    final String[] values = line.split("\\|");
+
+//                    if (values.length != TIME_FIELDS.length)
+//                    {
+//                        throw new IOException("Malformed line.");
+//                    }
+                    //We know a-priori that the freddie source ID is 1. 
+                    stat.setInt(1, 1);
+
+                    for (int i = 0; i < TIME_FIELDS.length; i++)
+                    {
+                        if (i >= values.length)
+                        {
+                            continue;
+                        }
+
+                        final String val = values[i];
+                        final GseLoanField next = TIME_FIELDS[i];
+
+                        if (null == next)
+                        {
+                            //This is a field we don't care about, skip it. 
+                            continue;
+                        }
+
+                        String trimmed = val.trim();
+
+                        if (trimmed.isEmpty())
+                        {
+                            trimmed = null;
+                        }
+
+                        switch (next)
+                        {
+                            case LOAN_SEQUENCE_NUMBER:
+                            case FACTOR_DATE:
+
+                            case STATUS:
+                            case AGE:
+                                setParam(stat, trimmed, next, i + 2);
+                                break;
+                            case UPB:
+                                if (null == trimmed)
+                                {
+                                    stat.setDouble(i + 2, 0.0);
+                                }
+                                else
+                                {
+                                    setParam(stat, trimmed, next, i + 2);
+                                }
+                                break;
+                            case IS_MODIFIED:
+                                if (null == trimmed)
+                                {
+                                    stat.setBoolean(9, false);
+                                }
+                                else
+                                {
+                                    setParam(stat, trimmed, next, 9);
+                                }
+
+                                break;
+                            case ZERO_BAL_CODE:
+                            {
+                                final boolean prepaid = "01".equals(trimmed);
+                                final boolean defaulted = "03".equals(trimmed) || "09".equals(trimmed) || "09".equals(trimmed);
+
+                                stat.setBoolean(7, prepaid);
+                                stat.setBoolean(8, defaulted);
+
+                                break;
+                            }
+                            default:
+                                throw new IOException("Processing error.");
+                        }
+
+                    }
+
+                    stat.addBatch();
+
+                    if (lineCount % BLOCK_SIZE == 0)
+                    {
+                        LOG.info("Executing batch: " + lineCount);
+                        stat.executeBatch();
+                    }
+
+                    line = reader.readLine();
+                }
+
+                stat.executeBatch();
+
+            }
+
+        }
+
+        conn_.commit();
+
+        //Now transfer the whole batch of data over the the loanMonth table...
+        System.out.println("Boing.");
 
     }
 
