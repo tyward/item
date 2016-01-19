@@ -20,6 +20,8 @@
 package edu.columbia.tjw.gsesf;
 
 import edu.columbia.tjw.gsesf.types.GseLoanField;
+import edu.columbia.tjw.gsesf.types.GseType;
+import edu.columbia.tjw.gsesf.types.SqlTableBackedEnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.io.BufferedReader;
 import java.io.File;
@@ -29,6 +31,11 @@ import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.SQLType;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.logging.Logger;
@@ -49,7 +56,7 @@ public final class FreddieLoad
     private static final String BASE_INSERT = "INSERT INTO sfLoan (sfSourceId, fico, firstPaymentDate, firstTimeHomebuyer, maturityDate, msa, miPercent, numUnits, occupancy,cltv, dti, upb, "
             + " ltv, initrate, channel,  penalty, productType, propertyState, propertyType, zipCode, sourceLoanId, purpose, origTerm, numBorrowers, sfSellerId, "
             + " sfServicerId) "
-            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final GseLoanField[] BASE_FIELDS = new GseLoanField[]
     {
@@ -82,11 +89,22 @@ public final class FreddieLoad
 
     private final File _dataDir;
     private final DataSource _dataSource;
+    private final SqlTableBackedEnumFamily _servicer;
+    private final SqlTableBackedEnumFamily _seller;
+    private final DateTimeFormatter _format;
 
-    public FreddieLoad(final File dataDir_, final DataSource source_)
+    public FreddieLoad(final File dataDir_, final DataSource source_) throws SQLException
     {
         _dataDir = dataDir_;
         _dataSource = source_;
+
+        try (final Connection conn = source_.getConnection())
+        {
+            _servicer = new SqlTableBackedEnumFamily(conn, "sfServicer", "sfServicerId", "servicerName");
+            _seller = new SqlTableBackedEnumFamily(conn, "sfSeller", "sfSellerId", "sellerName");
+        }
+
+        _format = DateTimeFormatter.ofPattern("yyyyMM");
     }
 
     public void doLoad() throws SQLException, IOException
@@ -238,7 +256,13 @@ public final class FreddieLoad
                                 setParam(stat, trimmed, next, i + 2);
                                 break;
                             case SELLER_NAME:
+                                final int sellerInt = _seller.getMemberByName(trimmed, conn_).getId();
+                                stat.setInt(i + 2, sellerInt);
+                                break;
                             case SERVICER_NAME:
+                                final int servicerInt = _servicer.getMemberByName(trimmed, conn_).getId();
+                                stat.setInt(i + 2, servicerInt);
+                                break;
                             default:
                                 throw new IOException("Processing error.");
                         }
@@ -262,10 +286,83 @@ public final class FreddieLoad
 
         }
 
+        conn_.commit();
     }
 
-    private void setParam(final PreparedStatement stat_, final String input_, final GseLoanField field_, final int paramNumber_)
+    private void setParam(final PreparedStatement stat_, final String input_, final GseLoanField field_, final int paramNumber_) throws SQLException
     {
+        final GseType type = field_.getType();
+
+        switch (type)
+        {
+            case DOUBLE:
+            {
+                if (null == input_)
+                {
+                    stat_.setNull(paramNumber_, java.sql.Types.DOUBLE);
+                }
+                else
+                {
+                    final double val = Double.parseDouble(input_);
+                    stat_.setDouble(paramNumber_, val);
+                }
+
+                break;
+            }
+            case INT:
+            {
+                if (null == input_)
+                {
+                    stat_.setNull(paramNumber_, java.sql.Types.INTEGER);
+                }
+                else
+                {
+                    final int val = Integer.parseInt(input_);
+                    stat_.setInt(paramNumber_, val);
+                }
+
+                break;
+            }
+            case STRING:
+            {
+                stat_.setString(paramNumber_, input_);
+                break;
+            }
+            case BOOLEAN:
+            {
+                if (null == input_)
+                {
+                    stat_.setNull(paramNumber_, java.sql.Types.BOOLEAN);
+                }
+                else
+                {
+                    final boolean val = "Y".equals(input_);
+                    stat_.setBoolean(paramNumber_, val);
+                }
+
+                break;
+            }
+            case DATE:
+            {
+                if (null == input_)
+                {
+                    stat_.setNull(paramNumber_, java.sql.Types.DATE);
+                }
+                else
+                {
+                    final String expanded = input_ + "01";
+                    final LocalDate date = LocalDate.from(DateTimeFormatter.BASIC_ISO_DATE.parse(expanded));
+                    final Instant inst = date.atStartOfDay(ZoneId.systemDefault()).toInstant();
+                    final long ms = inst.toEpochMilli();
+                    final java.sql.Date sqlDate = new java.sql.Date(ms);
+                    stat_.setDate(paramNumber_, sqlDate);
+                }
+
+                break;
+            }
+            default:
+                throw new IllegalArgumentException("Unknown type: " + type);
+        }
 
     }
 

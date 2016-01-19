@@ -78,6 +78,11 @@ public enum GseLoanField implements EnumMember<GseLoanField>
         _type = type_;
     }
 
+    public GseType getType()
+    {
+        return _type;
+    }
+
     @Override
     public EnumFamily<GseLoanField> getFamily()
     {
