@@ -22,7 +22,9 @@ package edu.columbia.tjw.gsesf;
 import edu.columbia.tjw.gsesf.types.GseLoanField;
 import edu.columbia.tjw.gsesf.types.GseType;
 import edu.columbia.tjw.gsesf.types.SqlTableBackedEnumFamily;
+import edu.columbia.tjw.item.util.ByteTool;
 import edu.columbia.tjw.item.util.LogUtil;
+import edu.columbia.tjw.item.util.random.RandomTool;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -57,8 +59,16 @@ public final class FreddieLoad
             + " sfServicerId) "
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    private static final String TIME_INSERT = "INSERT INTO sfLoanMonthStaging (sfSourceId, sourceLoanId, reportingdate, balance, status, age, isprepaid, isdefaulted, ismodified) "
-            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private static final String TIME_INSERT = "INSERT INTO sfLoanMonthStaging (sfStagingId, sfSourceId, sourceLoanId, reportingdate, balance, status, age, isprepaid, isdefaulted, ismodified) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    private static final String STAGING_TRANSFER = "INSERT INTO sfLoanMonth (sfSourceId, sfLoanId, reportingdate, balance, status, age, isprepaid, isdefaulted, ismodified) \n"
+            + "SELECT o.sfSourceId, o.sfLoanId, s.reportingdate, s.balance, s.status, s.age, s.isprepaid, s.isdefaulted, s.ismodified\n"
+            + "FROM sfLoanMonthStaging s \n"
+            + "INNER JOIN sfLoan o ON s.sfSourceId = s.sfSourceId AND o.sourceLoanId = s.sourceLoanId\n"
+            + "WHERE s.stagingId = ?";
+
+    private static final String STAGING_CLEAR = "DELETE FROM sfLoanMonthStaging WHERE stagingId = ?";
 
     private static final GseLoanField[] TIME_FIELDS = new GseLoanField[]
     {
@@ -204,7 +214,7 @@ public final class FreddieLoad
 
         try (final InputStream baseStream = zf.getInputStream(baseEntry))
         {
-            //loadBaseEntry(baseStream, conn_);
+            loadBaseEntry(baseStream, conn_);
         }
 
         try (final InputStream timeStream = zf.getInputStream(timeEntry))
@@ -394,6 +404,8 @@ public final class FreddieLoad
     {
         LOG.info("Loading base file.");
 
+        final String stagingId = ByteTool.bytesToHex(RandomTool.getStrong(16));
+
         try (final BufferedReader reader = new BufferedReader(new InputStreamReader(stream_)))
         {
             try (final PreparedStatement stat = conn_.prepareStatement(TIME_INSERT))
@@ -407,12 +419,9 @@ public final class FreddieLoad
                     lineCount++;
                     final String[] values = line.split("\\|");
 
-//                    if (values.length != TIME_FIELDS.length)
-//                    {
-//                        throw new IOException("Malformed line.");
-//                    }
                     //We know a-priori that the freddie source ID is 1. 
-                    stat.setInt(1, 1);
+                    stat.setString(1, stagingId);
+                    stat.setInt(2, 1);
 
                     for (int i = 0; i < TIME_FIELDS.length; i++)
                     {
@@ -441,29 +450,28 @@ public final class FreddieLoad
                         {
                             case LOAN_SEQUENCE_NUMBER:
                             case FACTOR_DATE:
-
                             case STATUS:
                             case AGE:
-                                setParam(stat, trimmed, next, i + 2);
+                                setParam(stat, trimmed, next, i + 3);
                                 break;
                             case UPB:
                                 if (null == trimmed)
                                 {
-                                    stat.setDouble(i + 2, 0.0);
+                                    stat.setDouble(i + 3, 0.0);
                                 }
                                 else
                                 {
-                                    setParam(stat, trimmed, next, i + 2);
+                                    setParam(stat, trimmed, next, i + 3);
                                 }
                                 break;
                             case IS_MODIFIED:
                                 if (null == trimmed)
                                 {
-                                    stat.setBoolean(9, false);
+                                    stat.setBoolean(10, false);
                                 }
                                 else
                                 {
-                                    setParam(stat, trimmed, next, 9);
+                                    setParam(stat, trimmed, next, 10);
                                 }
 
                                 break;
@@ -472,8 +480,8 @@ public final class FreddieLoad
                                 final boolean prepaid = "01".equals(trimmed);
                                 final boolean defaulted = "03".equals(trimmed) || "09".equals(trimmed) || "09".equals(trimmed);
 
-                                stat.setBoolean(7, prepaid);
-                                stat.setBoolean(8, defaulted);
+                                stat.setBoolean(8, prepaid);
+                                stat.setBoolean(9, defaulted);
 
                                 break;
                             }
@@ -502,9 +510,21 @@ public final class FreddieLoad
 
         conn_.commit();
 
-        //Now transfer the whole batch of data over the the loanMonth table...
-        System.out.println("Boing.");
+        try (final PreparedStatement stat = conn_.prepareStatement(STAGING_TRANSFER))
+        {
+            LOG.info("Transferring results out of staging table.");
+            stat.setString(1, stagingId);
+            stat.executeUpdate();
+        }
 
+        try (final PreparedStatement stat = conn_.prepareStatement(STAGING_CLEAR))
+        {
+            LOG.info("Clearing staging table.");
+            stat.setString(1, stagingId);
+            stat.executeUpdate();
+        }
+
+        LOG.info("Completed loading time data.");
     }
 
 }

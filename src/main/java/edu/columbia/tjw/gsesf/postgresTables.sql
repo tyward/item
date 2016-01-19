@@ -1,6 +1,7 @@
 
 DROP TABLE sfLoanLiquidation;
 DROP TABLE sfLoanMonth;
+DROP TABLE sfLoanMonthStaging;
 DROP TABLE sfLoan;
 DROP TABLE sfFileLoad;
 DROP TABLE sfServicer;
@@ -40,9 +41,9 @@ CREATE TABLE sfFileLoad (
 
 
 CREATE TABLE sfLoan (
-    sfLoanId BIGSERIAL PRIMARY KEY,
-    sourceLoanId CHAR(20) NOT NULL,
     sfSourceId INT NOT NULL,
+    sfLoanId BIGSERIAL NOT NULL,
+    sourceLoanId CHAR(20) NOT NULL,
     fico INTEGER,
     firstPaymentDate DATE,
     maturityDate DATE, 
@@ -68,14 +69,13 @@ CREATE TABLE sfLoan (
     sfSellerId INTEGER,
     sfServicerId INTEGER,
     zip INTEGER,
+    PRIMARY KEY (sfSourceId, sfLoanId),
     FOREIGN KEY (sfSellerId) REFERENCES sfSeller (sfSellerId),
     FOREIGN KEY (sfServicerId) REFERENCES sfServicer (sfServicerId),
     FOREIGN KEY (sfSourceId) REFERENCES sfSource (sfSourceId),
     UNIQUE(sourceLoanId, sfSourceId),
     UNIQUE(sfSourceId, sourceLoanId)
 );
-
-
 
 
 
@@ -89,12 +89,13 @@ CREATE TABLE sfLoanMonth (
     isPrepaid BOOLEAN NOT NULL,
     isDefaulted BOOLEAN NOT NULL,
     isModified BOOLEAN NOT NULL,
-    FOREIGN KEY (sfLoanId) REFERENCES sfLoan (sfLoanId),
+    FOREIGN KEY (sfSourceId, sfLoanId) REFERENCES sfLoan (sfSourceId, sfLoanId),
     PRIMARY KEY (sfSourceId, sfLoanId, reportingDate),
     UNIQUE(sfSourceId, reportingDate, sfLoanId)
     );
 
 CREATE TABLE sfLoanMonthStaging (
+    stagingId CHAR(32) NOT NULL,
     sfSourceId INT NOT NULL,
     sourceLoanId CHAR(20) NOT NULL,
     reportingDate DATE NOT NULL,
@@ -104,14 +105,14 @@ CREATE TABLE sfLoanMonthStaging (
     isPrepaid BOOLEAN NOT NULL,
     isDefaulted BOOLEAN NOT NULL,
     isModified BOOLEAN NOT NULL,
-    PRIMARY KEY (sfSourceId, sourceLoanId, reportingDate),
-    UNIQUE(sfSourceId,reportingDate,  sourceLoanId)
+    PRIMARY KEY (stagingId, sfSourceId, sourceLoanId, reportingDate)
     );
 
 
 
 
 CREATE TABLE sfLoanLiquidation (
+    sfSourceId INT NOT NULL,
     sfLoanId BIGINT NOT NULL,
     reportingDate DATE NOT NULL,
     fclCosts DOUBLE PRECISION,
@@ -123,8 +124,7 @@ CREATE TABLE sfLoanLiquidation (
     creditEnhancementProceeds DOUBLE PRECISION, 
     repurchaseProceeds DOUBLE PRECISION,
     otherFclProceeds DOUBLE PRECISION, 
-    FOREIGN KEY (sfLoanId) REFERENCES sfLoan (sfLoanId),
+    FOREIGN KEY (sfSourceId, sfLoanId) REFERENCES sfLoan (sfSourceId, sfLoanId),
     PRIMARY KEY (sfLoanId, reportingDate),
     UNIQUE(reportingDate, sfLoanId)
     );
-
