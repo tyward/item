@@ -25,6 +25,8 @@ import edu.columbia.tjw.gsesf.types.SqlTableBackedEnumFamily;
 import edu.columbia.tjw.item.util.ByteTool;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.random.RandomTool;
+import edu.columbia.tjw.item.util.thread.GeneralTask;
+import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -37,8 +39,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -52,7 +57,7 @@ public final class FreddieLoad
 {
     private static final Logger LOG = LogUtil.getLogger(FreddieLoad.class);
 
-    private final int BLOCK_SIZE = 10000;
+    private static final int BLOCK_SIZE = 10000;
 
     private static final String BASE_INSERT = "INSERT INTO sfLoan (sfSourceId, fico, firstPaymentDate, firstTimeHomebuyer, maturityDate, msa, miPercent, numUnits, occupancy,cltv, dti, upb, "
             + " ltv, initrate, channel,  penalty, productType, propertyState, propertyType, zipCode, sourceLoanId, purpose, origTerm, numBorrowers, sfSellerId, "
@@ -69,6 +74,8 @@ public final class FreddieLoad
             + "WHERE s.stagingId = ?";
 
     private static final String STAGING_CLEAR = "DELETE FROM sfLoanMonthStaging WHERE stagingId = ?";
+
+    private static final String FILE_MARK = "INSERT INTO sfFileLoad (fileName, fileEntry, loadDate) VALUES(?, ?, ?)";
 
     private static final GseLoanField[] TIME_FIELDS = new GseLoanField[]
     {
@@ -125,7 +132,9 @@ public final class FreddieLoad
     private final SqlTableBackedEnumFamily _servicer;
     private final SqlTableBackedEnumFamily _seller;
     //private final SqlTableBackedEnumFamily _loanIds;
-    private final DateTimeFormatter _format;
+    //private final DateTimeFormatter _format;
+
+    private final List<TimeLoader> _loaders;
 
     public FreddieLoad(final File dataDir_, final DataSource source_) throws SQLException
     {
@@ -138,7 +147,8 @@ public final class FreddieLoad
             _seller = new SqlTableBackedEnumFamily(conn, "sfSeller", "sfSellerId", "sellerName");
         }
 
-        _format = DateTimeFormatter.ofPattern("yyyyMM");
+        //_format = DateTimeFormatter.ofPattern("yyyyMM");
+        _loaders = new ArrayList<>();
     }
 
     public void doLoad() throws SQLException, IOException
@@ -165,6 +175,20 @@ public final class FreddieLoad
                 loadFile(next, conn);
             }
         }
+
+        for (final TimeLoader loader : _loaders)
+        {
+            try
+            {
+                loader.waitForCompletion();
+            }
+            catch (final Exception e)
+            {
+                LOG.log(Level.WARNING, "Exception loading file.", e);
+            }
+        }
+
+        LOG.info("Done.");
     }
 
     public void loadFile(final File input_, final Connection conn_) throws SQLException, IOException
@@ -214,15 +238,70 @@ public final class FreddieLoad
 
         try (final InputStream baseStream = zf.getInputStream(baseEntry))
         {
+            markFile(conn_, zf, baseEntry);
             loadBaseEntry(baseStream, conn_);
         }
 
-        try (final InputStream timeStream = zf.getInputStream(timeEntry))
-        {
-            loadTimeEntry(timeStream, conn_);
-        }
+        final TimeLoader tl = new TimeLoader(zf, timeEntry, _dataSource);
+        _loaders.add(tl);
+
+        GeneralThreadPool.singleton().execute(tl);
 
         LOG.info("Finished file.");
+    }
+
+    private static void markFile(final Connection conn_, final ZipFile zf_, final ZipEntry entry_) throws SQLException
+    {
+        try (final PreparedStatement stat = conn_.prepareStatement(FILE_MARK))
+        {
+            final String fn = zf_.getName();
+            final String entryName = entry_.getName();
+            final java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
+
+            stat.setString(1, fn);
+            stat.setString(2, entryName);
+            stat.setDate(3, date);
+
+            stat.executeUpdate();
+        }
+
+        conn_.commit();
+    }
+
+    private static final class TimeLoader extends GeneralTask<TimeLoader>
+    {
+        private final ZipFile _zf;
+        private final ZipEntry _entry;
+        private final DataSource _source;
+        boolean _complete = false;
+
+        public TimeLoader(final ZipFile zf_, final ZipEntry timeEntry_, final DataSource dataSource_)
+        {
+            _zf = zf_;
+            _entry = timeEntry_;
+            _source = dataSource_;
+        }
+
+        @Override
+        protected TimeLoader subRun()
+        {
+            try (final Connection conn = _source.getConnection())
+            {
+                try (final InputStream timeStream = _zf.getInputStream(_entry))
+                {
+                    loadTimeEntry(timeStream, conn);
+                }
+
+                markFile(conn, _zf, _entry);
+            }
+            catch (final Exception e)
+            {
+                LOG.log(Level.WARNING, "Exception caught.", e);
+                throw new RuntimeException(e);
+            }
+
+            return this;
+        }
     }
 
     private void loadBaseEntry(final InputStream stream_, final Connection conn_) throws IOException, SQLException
@@ -323,7 +402,7 @@ public final class FreddieLoad
         conn_.commit();
     }
 
-    private void setParam(final PreparedStatement stat_, final String input_, final GseLoanField field_, final int paramNumber_) throws SQLException
+    private static void setParam(final PreparedStatement stat_, final String input_, final GseLoanField field_, final int paramNumber_) throws SQLException
     {
         final GseType type = field_.getType();
 
@@ -400,7 +479,7 @@ public final class FreddieLoad
 
     }
 
-    private void loadTimeEntry(final InputStream stream_, final Connection conn_) throws IOException, SQLException
+    private static void loadTimeEntry(final InputStream stream_, final Connection conn_) throws IOException, SQLException
     {
         LOG.info("Loading base file.");
 
@@ -523,6 +602,8 @@ public final class FreddieLoad
             stat.setString(1, stagingId);
             stat.executeUpdate();
         }
+
+        conn_.commit();
 
         LOG.info("Completed loading time data.");
     }

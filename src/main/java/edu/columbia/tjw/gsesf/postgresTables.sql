@@ -33,8 +33,9 @@ CREATE TABLE sfServicer (
 CREATE TABLE sfFileLoad (
     sfFileLoadId BIGSERIAL PRIMARY KEY,
     fileName VARCHAR(255) NOT NULL,
-    reportingDate DATE NOT NULL,
-    UNIQUE (fileName, reportingDate)
+    fileEntry VARCHAR(255) NOT NULL,
+    loadDate DATE NOT NULL,
+    UNIQUE (fileName, fileEntry, loadDate)
     );
 
 

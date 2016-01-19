@@ -31,6 +31,9 @@ import java.util.concurrent.TimeUnit;
 public class GeneralThreadPool extends ThreadPoolExecutor
 {
     private static final int NUM_PROCESSORS = Runtime.getRuntime().availableProcessors();
+    private static final int MAX_THREADS = 32;
+    private static final int BASE_SIZE = Math.min(NUM_PROCESSORS, MAX_THREADS);
+    private static final int MAX_SIZE = Math.min(2 * NUM_PROCESSORS, MAX_THREADS);
     private static final GeneralThreadPool SINGLETON = new GeneralThreadPool();
 
     public static GeneralThreadPool singleton()
@@ -40,7 +43,7 @@ public class GeneralThreadPool extends ThreadPoolExecutor
 
     private GeneralThreadPool()
     {
-        super(NUM_PROCESSORS, 2 * NUM_PROCESSORS, 500, TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>());
+        super(BASE_SIZE, MAX_SIZE, 500, TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>());
 
         this.setThreadFactory(new GeneralFactory());
 
