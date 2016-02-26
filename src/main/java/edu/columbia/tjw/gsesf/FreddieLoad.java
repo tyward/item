@@ -64,7 +64,7 @@ public final class FreddieLoad
             + " sfServicerId) "
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    private static final String TIME_INSERT = "INSERT INTO sfLoanMonthStaging (sfStagingId, sfSourceId, sourceLoanId, reportingdate, balance, status, age, isprepaid, isdefaulted, ismodified) "
+    private static final String TIME_INSERT = "INSERT INTO sfLoanMonthStaging (stagingId, sfSourceId, sourceLoanId, reportingdate, balance, status, age, isprepaid, isdefaulted, ismodified) "
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String STAGING_TRANSFER = "INSERT INTO sfLoanMonth (sfSourceId, sfLoanId, reportingdate, balance, status, age, isprepaid, isdefaulted, ismodified) \n"
