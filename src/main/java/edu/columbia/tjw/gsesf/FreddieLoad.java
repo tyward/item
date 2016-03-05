@@ -26,7 +26,6 @@ import edu.columbia.tjw.item.util.ByteTool;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.random.RandomTool;
 import edu.columbia.tjw.item.util.thread.GeneralTask;
-import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -34,7 +33,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -76,6 +77,8 @@ public final class FreddieLoad
     private static final String STAGING_CLEAR = "DELETE FROM sfLoanMonthStaging WHERE stagingId = ?";
 
     private static final String FILE_MARK = "INSERT INTO sfFileLoad (fileName, fileEntry, loadDate) VALUES(?, ?, ?)";
+
+    private static final String FILE_CHECK = "SELECT sffileloadid FROM sfFileLoad o WHERE o.fileName = ? AND o.fileEntry = ?";
 
     private static final GseLoanField[] TIME_FIELDS = new GseLoanField[]
     {
@@ -155,25 +158,22 @@ public final class FreddieLoad
     {
         final File[] fileList = _dataDir.listFiles();
 
-        try (final Connection conn = _dataSource.getConnection())
+        LOG.info("Examining directory: " + _dataDir.getAbsolutePath());
+        LOG.info("Files found: " + fileList.length);
+
+        for (final File next : fileList)
         {
-            LOG.info("Examining directory: " + _dataDir.getAbsolutePath());
-            LOG.info("Files found: " + fileList.length);
+            LOG.info("Examining file: " + next.getAbsolutePath());
 
-            for (final File next : fileList)
+            final String fileName = next.getName();
+
+            if (!fileName.endsWith(".zip") || fileName.startsWith("."))
             {
-                LOG.info("Examining file: " + next.getAbsolutePath());
-
-                final String fileName = next.getName();
-
-                if (!fileName.endsWith(".zip") || fileName.startsWith("."))
-                {
-                    LOG.info("Not a zip file, skipping.");
-                    continue;
-                }
-
-                loadFile(next, conn);
+                LOG.info("Not a zip file, skipping.");
+                continue;
             }
+
+            loadFile(next);
         }
 
         for (final TimeLoader loader : _loaders)
@@ -191,62 +191,12 @@ public final class FreddieLoad
         LOG.info("Done.");
     }
 
-    public void loadFile(final File input_, final Connection conn_) throws SQLException, IOException
+    public void loadFile(final File input_) throws SQLException, IOException
     {
-        final ZipFile zf = new ZipFile(input_);
-
-        final Enumeration<? extends ZipEntry> entries = zf.entries();
-
-        LOG.info("Got zip entries.");
-
-        ZipEntry baseEntry = null;
-        ZipEntry timeEntry = null;
-
-        for (final ZipEntry entry : Collections.list(entries))
-        {
-            final String entryName = entry.getName();
-            LOG.info("Found an entry: " + entryName);
-
-            if (entryName.contains("_time_"))
-            {
-                if (null == timeEntry)
-                {
-                    timeEntry = entry;
-                }
-                else
-                {
-                    throw new IOException("Two time files in one zip file: " + entryName);
-                }
-            }
-            else
-            {
-                if (null == baseEntry)
-                {
-                    baseEntry = entry;
-                }
-                else
-                {
-                    throw new IOException("Two base files in one zip file: " + entryName);
-                }
-            }
-        }
-
-        if (null == baseEntry || null == timeEntry)
-        {
-            throw new IOException("Missing one of the expected entries.");
-        }
-
-        try (final InputStream baseStream = zf.getInputStream(baseEntry))
-        {
-            markFile(conn_, zf, baseEntry);
-            loadBaseEntry(baseStream, conn_);
-        }
-
-        final TimeLoader tl = new TimeLoader(zf, timeEntry, _dataSource);
+        final TimeLoader tl = new TimeLoader(input_, _dataSource);
         _loaders.add(tl);
 
-        GeneralThreadPool.singleton().execute(tl);
-
+        //GeneralThreadPool.singleton().execute(tl);
         LOG.info("Finished file.");
     }
 
@@ -256,29 +206,89 @@ public final class FreddieLoad
         {
             final String fn = zf_.getName();
             final String entryName = entry_.getName();
-            final java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
+            final long time = System.currentTimeMillis();
 
             stat.setString(1, fn);
             stat.setString(2, entryName);
-            stat.setDate(3, date);
+            stat.setTimestamp(3, new Timestamp(time));
 
             stat.executeUpdate();
         }
 
-        conn_.commit();
+        //conn_.commit();
     }
 
-    private static final class TimeLoader extends GeneralTask<TimeLoader>
+    private static boolean fileLoaded(final Connection conn_, final ZipFile zf_, final ZipEntry entry_) throws SQLException
+    {
+        try (final PreparedStatement stat = conn_.prepareStatement(FILE_CHECK))
+        {
+            final String fn = zf_.getName();
+            final String entryName = entry_.getName();
+
+            stat.setString(1, fn);
+            stat.setString(2, entryName);
+
+            try (final ResultSet res = stat.executeQuery())
+            {
+                final boolean hasResult = res.next();
+                return hasResult;
+            }
+        }
+
+    }
+
+    private final class TimeLoader extends GeneralTask<TimeLoader>
     {
         private final ZipFile _zf;
         private final ZipEntry _entry;
+        private final ZipEntry _baseEntry;
         private final DataSource _source;
         boolean _complete = false;
 
-        public TimeLoader(final ZipFile zf_, final ZipEntry timeEntry_, final DataSource dataSource_)
+        public TimeLoader(final File input_, final DataSource dataSource_) throws IOException
         {
-            _zf = zf_;
-            _entry = timeEntry_;
+            final ZipFile zf = new ZipFile(input_);
+            final Enumeration<? extends ZipEntry> entries = zf.entries();
+
+            LOG.info("Got zip entries.");
+
+            ZipEntry baseEntry = null;
+            ZipEntry timeEntry = null;
+
+            for (final ZipEntry entry : Collections.list(entries))
+            {
+                final String entryName = entry.getName();
+                LOG.info("Found an entry: " + entryName);
+
+                if (entryName.contains("_time_"))
+                {
+                    if (null == timeEntry)
+                    {
+                        timeEntry = entry;
+                    }
+                    else
+                    {
+                        throw new IOException("Two time files in one zip file: " + entryName);
+                    }
+                }
+                else if (null == baseEntry)
+                {
+                    baseEntry = entry;
+                }
+                else
+                {
+                    throw new IOException("Two base files in one zip file: " + entryName);
+                }
+            }
+
+            if (null == baseEntry || null == timeEntry)
+            {
+                throw new IOException("Missing one of the expected entries.");
+            }
+
+            _zf = zf;
+            _entry = timeEntry;
+            _baseEntry = baseEntry;
             _source = dataSource_;
         }
 
@@ -287,12 +297,52 @@ public final class FreddieLoad
         {
             try (final Connection conn = _source.getConnection())
             {
-                try (final InputStream timeStream = _zf.getInputStream(_entry))
+                if (!fileLoaded(conn, _zf, _baseEntry))
                 {
-                    loadTimeEntry(timeStream, conn);
+                    LOG.info("Loading entry: " + _baseEntry.getName());
+
+                    try (final InputStream baseStream = _zf.getInputStream(_baseEntry))
+                    {
+                        loadBaseEntry(baseStream, conn);
+                        markFile(conn, _zf, _baseEntry);
+                        conn.commit();
+                        LOG.info("Done loading entry: " + _baseEntry.getName());
+                    }
+                    catch (final Exception e)
+                    {
+                        LOG.log(Level.WARNING, "Exception caught, entry not loaded: " + _baseEntry.getName(), e);
+                    }
+                }
+                else
+                {
+                    LOG.info("Entry already loaded: " + _baseEntry.getName());
                 }
 
-                markFile(conn, _zf, _entry);
+                final String entryName = _entry.getName();
+
+                if (!fileLoaded(conn, _zf, _entry))
+                {
+                    LOG.info("Loading entry: " + entryName);
+
+                    try (final InputStream timeStream = _zf.getInputStream(_entry))
+                    {
+                        loadTimeEntry(timeStream, conn);
+                        markFile(conn, _zf, _entry);
+
+                        LOG.info("Committing time entry: " + entryName);
+                        conn.commit();
+                        LOG.info("Time entry complete: " + entryName);
+                    }
+                    catch (final Exception e)
+                    {
+                        LOG.log(Level.WARNING, "Exception caught, entry not loaded: " + entryName, e);
+                    }
+                }
+                else
+                {
+                    LOG.info("Entry already loaded: " + entryName);
+                }
+
             }
             catch (final Exception e)
             {
@@ -603,8 +653,7 @@ public final class FreddieLoad
             stat.executeUpdate();
         }
 
-        conn_.commit();
-
+        //conn_.commit();
         LOG.info("Completed loading time data.");
     }
 
