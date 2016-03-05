@@ -41,6 +41,11 @@ public class GeneralThreadPool extends ThreadPoolExecutor
         return SINGLETON;
     }
 
+    public GeneralThreadPool(final int maxSize_)
+    {
+        super(Math.max(1, maxSize_ / 2), maxSize_, 500, TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>());
+    }
+
     private GeneralThreadPool()
     {
         super(BASE_SIZE, MAX_SIZE, 500, TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>());

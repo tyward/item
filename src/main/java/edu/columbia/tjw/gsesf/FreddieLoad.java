@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.util.ByteTool;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.random.RandomTool;
 import edu.columbia.tjw.item.util.thread.GeneralTask;
+import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -196,7 +197,7 @@ public final class FreddieLoad
         final TimeLoader tl = new TimeLoader(input_, _dataSource);
         _loaders.add(tl);
 
-        //GeneralThreadPool.singleton().execute(tl);
+        GeneralThreadPool.singleton().execute(tl);
         LOG.info("Finished file.");
     }
 
