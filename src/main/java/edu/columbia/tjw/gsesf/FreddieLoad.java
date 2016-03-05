@@ -197,8 +197,8 @@ public final class FreddieLoad
         final TimeLoader tl = new TimeLoader(input_, _dataSource);
         _loaders.add(tl);
 
-        GeneralThreadPool.singleton().execute(tl);
-        LOG.info("Finished file.");
+        //GeneralThreadPool.singleton().execute(tl);
+        //LOG.info("Finished file.");
     }
 
     private static void markFile(final Connection conn_, final ZipFile zf_, final ZipEntry entry_) throws SQLException
