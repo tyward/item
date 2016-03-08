@@ -34,8 +34,9 @@ CREATE TABLE sfFileLoad (
     sfFileLoadId BIGSERIAL PRIMARY KEY,
     fileName VARCHAR(255) NOT NULL,
     fileEntry VARCHAR(255) NOT NULL,
-    loadDate DATE NOT NULL,
-    UNIQUE (fileName, fileEntry, loadDate)
+    loadDate TIMESTAMP NOT NULL DEFAULT clock_timestamp(),
+    loadComplete TIMESTAMP,
+    UNIQUE (fileName, fileEntry)
     );
 
 
@@ -44,6 +45,7 @@ CREATE TABLE sfFileLoad (
 CREATE TABLE sfLoan (
     sfSourceId INT NOT NULL,
     sfLoanId BIGSERIAL NOT NULL,
+    sfFileLoadId BIGSERIAL NOT NULL,
     sourceLoanId CHAR(20) NOT NULL,
     fico INTEGER,
     firstPaymentDate DATE,
@@ -69,13 +71,14 @@ CREATE TABLE sfLoan (
     penalty BOOLEAN,
     sfSellerId INTEGER,
     sfServicerId INTEGER,
-    zip INTEGER,
     PRIMARY KEY (sfSourceId, sfLoanId),
+    FOREIGN KEY (sfFileLoadId) REFERENCES sfFileLoad (sfFileLoadId),
     FOREIGN KEY (sfSellerId) REFERENCES sfSeller (sfSellerId),
     FOREIGN KEY (sfServicerId) REFERENCES sfServicer (sfServicerId),
     FOREIGN KEY (sfSourceId) REFERENCES sfSource (sfSourceId),
     UNIQUE(sourceLoanId, sfSourceId),
-    UNIQUE(sfSourceId, sourceLoanId)
+    UNIQUE(sfSourceId, sourceLoanId),
+    UNIQUE(sfFileLoadId, sourceLoanId)
 );
 
 
@@ -83,6 +86,7 @@ CREATE TABLE sfLoan (
 CREATE TABLE sfLoanMonth (
     sfSourceId INT NOT NULL,
     sfLoanId BIGINT NOT NULL,
+    sfFileLoadId BIGSERIAL NOT NULL,
     reportingDate DATE NOT NULL,
     balance DOUBLE PRECISION NOT NULL,
     status VARCHAR(3) NOT NULL,
@@ -91,8 +95,10 @@ CREATE TABLE sfLoanMonth (
     isDefaulted BOOLEAN NOT NULL,
     isModified BOOLEAN NOT NULL,
     FOREIGN KEY (sfSourceId, sfLoanId) REFERENCES sfLoan (sfSourceId, sfLoanId),
+    FOREIGN KEY (sfFileLoadId) REFERENCES sfFileLoad (sfFileLoadId),
     PRIMARY KEY (sfSourceId, sfLoanId, reportingDate),
-    UNIQUE(sfSourceId, reportingDate, sfLoanId)
+    UNIQUE(sfSourceId, reportingDate, sfLoanId),
+    UNIQUE(sfFileLoadId, reportingDate, sfLoanId)
     );
 
 CREATE TABLE sfLoanMonthStaging (
@@ -119,7 +125,7 @@ CREATE TABLE sfLoanLiquidation (
     fclCosts DOUBLE PRECISION,
     propertyCosts DOUBLE PRECISION,
     recoveryCosts DOUBLE PRECISION, 
-    miscCOsts DOUBLE PRECISION,
+    miscCosts DOUBLE PRECISION,
     taxes DOUBLE PRECISION,
     netSaleProceeds DOUBLE PRECISION, 
     creditEnhancementProceeds DOUBLE PRECISION, 

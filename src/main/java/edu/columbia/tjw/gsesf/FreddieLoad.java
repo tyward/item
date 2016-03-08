@@ -61,23 +61,25 @@ public final class FreddieLoad
 
     private static final int BLOCK_SIZE = 10000;
 
-    private static final String BASE_INSERT = "INSERT INTO sfLoan (sfSourceId, fico, firstPaymentDate, firstTimeHomebuyer, maturityDate, msa, miPercent, numUnits, occupancy,cltv, dti, upb, "
+    private static final String BASE_INSERT = "INSERT INTO sfLoan (sfSourceId, sfFileLoadId, fico, firstPaymentDate, firstTimeHomebuyer, maturityDate, msa, miPercent, numUnits, occupancy,cltv, dti, upb, "
             + " ltv, initrate, channel,  penalty, productType, propertyState, propertyType, zipCode, sourceLoanId, purpose, origTerm, numBorrowers, sfSellerId, "
             + " sfServicerId) "
-            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private static final String TIME_INSERT = "INSERT INTO sfLoanMonthStaging (stagingId, sfSourceId, sourceLoanId, reportingdate, balance, status, age, isprepaid, isdefaulted, ismodified) "
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    private static final String STAGING_TRANSFER = "INSERT INTO sfLoanMonth (sfSourceId, sfLoanId, reportingdate, balance, status, age, isprepaid, isdefaulted, ismodified) \n"
-            + "SELECT o.sfSourceId, o.sfLoanId, s.reportingdate, s.balance, s.status, s.age, s.isprepaid, s.isdefaulted, s.ismodified\n"
+    private static final String STAGING_TRANSFER = "INSERT INTO sfLoanMonth (sfSourceId, sfLoanId, sfFileLoadId, reportingdate, balance, status, age, isprepaid, isdefaulted, ismodified) \n"
+            + "SELECT o.sfSourceId, o.sfLoanId, ?, s.reportingdate, s.balance, s.status, s.age, s.isprepaid, s.isdefaulted, s.ismodified\n"
             + "FROM sfLoanMonthStaging s \n"
             + "INNER JOIN sfLoan o ON s.sfSourceId = s.sfSourceId AND o.sourceLoanId = s.sourceLoanId\n"
             + "WHERE s.stagingId = ?";
 
     private static final String STAGING_CLEAR = "DELETE FROM sfLoanMonthStaging WHERE stagingId = ?";
 
-    private static final String FILE_MARK = "INSERT INTO sfFileLoad (fileName, fileEntry, loadDate) VALUES(?, ?, ?)";
+    private static final String FILE_MARK = "INSERT INTO sfFileLoad (fileName, fileEntry) VALUES(?, ?)";
+
+    private static final String FILE_COMPLETE = "UPDATE sfFileLoad SET loadComplete = clock_timestamp() WHERE sfFileLoadId = ?";
 
     private static final String FILE_CHECK = "SELECT sffileloadid FROM sfFileLoad o WHERE o.fileName = ? AND o.fileEntry = ?";
 
@@ -201,25 +203,40 @@ public final class FreddieLoad
         //LOG.info("Finished file.");
     }
 
+    private static void markComplete(final Connection conn_, final long loadId_) throws SQLException
+    {
+        try (final PreparedStatement stat = conn_.prepareStatement(FILE_COMPLETE))
+        {
+            stat.setLong(1, loadId_);
+            stat.executeUpdate();
+        }
+
+        conn_.commit();
+    }
+
     private static void markFile(final Connection conn_, final ZipFile zf_, final ZipEntry entry_) throws SQLException
     {
         try (final PreparedStatement stat = conn_.prepareStatement(FILE_MARK))
         {
             final String fn = zf_.getName();
             final String entryName = entry_.getName();
-            final long time = System.currentTimeMillis();
 
             stat.setString(1, fn);
             stat.setString(2, entryName);
-            stat.setTimestamp(3, new Timestamp(time));
 
             stat.executeUpdate();
         }
 
-        //conn_.commit();
+        conn_.commit();
     }
 
-    private static boolean fileLoaded(final Connection conn_, final ZipFile zf_, final ZipEntry entry_) throws SQLException
+    private static boolean isLoaded(final Connection conn_, final ZipFile zf_, final ZipEntry entry_) throws SQLException
+    {
+        final long loadId = getLoadId(conn_, zf_, entry_, false);
+        return loadId >= 0;
+    }
+
+    private static long getLoadId(final Connection conn_, final ZipFile zf_, final ZipEntry entry_, final boolean genId_) throws SQLException
     {
         try (final PreparedStatement stat = conn_.prepareStatement(FILE_CHECK))
         {
@@ -231,11 +248,20 @@ public final class FreddieLoad
 
             try (final ResultSet res = stat.executeQuery())
             {
-                final boolean hasResult = res.next();
-                return hasResult;
+                if (res.next())
+                {
+                    return res.getLong(1);
+                }
             }
         }
 
+        if (!genId_)
+        {
+            return -1;
+        }
+
+        markFile(conn_, zf_, entry_);
+        return getLoadId(conn_, zf_, entry_, false);
     }
 
     private final class TimeLoader extends GeneralTask<TimeLoader>
@@ -298,15 +324,15 @@ public final class FreddieLoad
         {
             try (final Connection conn = _source.getConnection())
             {
-                if (!fileLoaded(conn, _zf, _baseEntry))
+                if (!isLoaded(conn, _zf, _baseEntry))
                 {
                     LOG.info("Loading entry: " + _baseEntry.getName());
+                    final long loadId = getLoadId(conn, _zf, _baseEntry, true);
 
                     try (final InputStream baseStream = _zf.getInputStream(_baseEntry))
                     {
-                        loadBaseEntry(baseStream, conn);
-                        markFile(conn, _zf, _baseEntry);
-                        conn.commit();
+                        loadBaseEntry(baseStream, conn, loadId);
+                        markComplete(conn, loadId);
                         LOG.info("Done loading entry: " + _baseEntry.getName());
                     }
                     catch (final Exception e)
@@ -321,17 +347,17 @@ public final class FreddieLoad
 
                 final String entryName = _entry.getName();
 
-                if (!fileLoaded(conn, _zf, _entry))
+                if (!isLoaded(conn, _zf, _entry))
                 {
                     LOG.info("Loading entry: " + entryName);
+                    final long timeEntryId = getLoadId(conn, _zf, _entry, true);
 
                     try (final InputStream timeStream = _zf.getInputStream(_entry))
                     {
-                        loadTimeEntry(timeStream, conn);
-                        markFile(conn, _zf, _entry);
+                        loadTimeEntry(timeStream, conn, timeEntryId);
 
                         LOG.info("Committing time entry: " + entryName);
-                        conn.commit();
+                        markComplete(conn, timeEntryId);
                         LOG.info("Time entry complete: " + entryName);
                     }
                     catch (final Exception e)
@@ -355,7 +381,7 @@ public final class FreddieLoad
         }
     }
 
-    private void loadBaseEntry(final InputStream stream_, final Connection conn_) throws IOException, SQLException
+    private void loadBaseEntry(final InputStream stream_, final Connection conn_, final long loadId_) throws IOException, SQLException
     {
         LOG.info("Loading base file.");
 
@@ -379,6 +405,8 @@ public final class FreddieLoad
 
                     //We know a-priori that the freddie source ID is 1. 
                     stat.setInt(1, 1);
+                    stat.setLong(2, loadId_);
+                    final int offset = 3;
 
                     for (int i = 0; i < BASE_FIELDS.length; i++)
                     {
@@ -391,6 +419,8 @@ public final class FreddieLoad
                         {
                             trimmed = null;
                         }
+
+                        final int index = i + offset;
 
                         switch (next)
                         {
@@ -417,15 +447,15 @@ public final class FreddieLoad
                             case LOAN_PURPOSE:
                             case ORIG_TERM:
                             case NUM_BORROWERS:
-                                setParam(stat, trimmed, next, i + 2);
+                                setParam(stat, trimmed, next, index);
                                 break;
                             case SELLER_NAME:
                                 final int sellerInt = _seller.getMemberByName(trimmed, conn_).getId();
-                                stat.setInt(i + 2, sellerInt);
+                                stat.setInt(index, sellerInt);
                                 break;
                             case SERVICER_NAME:
                                 final int servicerInt = _servicer.getMemberByName(trimmed, conn_).getId();
-                                stat.setInt(i + 2, servicerInt);
+                                stat.setInt(index, servicerInt);
                                 break;
                             default:
                                 throw new IOException("Processing error.");
@@ -530,9 +560,9 @@ public final class FreddieLoad
 
     }
 
-    private static void loadTimeEntry(final InputStream stream_, final Connection conn_) throws IOException, SQLException
+    private static void loadTimeEntry(final InputStream stream_, final Connection conn_, final long fileLoadId_) throws IOException, SQLException
     {
-        LOG.info("Loading base file.");
+        LOG.info("Loading time file.");
 
         final String stagingId = ByteTool.bytesToHex(RandomTool.getStrong(16));
 
@@ -643,9 +673,12 @@ public final class FreddieLoad
         try (final PreparedStatement stat = conn_.prepareStatement(STAGING_TRANSFER))
         {
             LOG.info("Transferring results out of staging table.");
-            stat.setString(1, stagingId);
+            stat.setLong(1, fileLoadId_);
+            stat.setString(2, stagingId);
             stat.executeUpdate();
         }
+
+        conn_.commit();
 
         try (final PreparedStatement stat = conn_.prepareStatement(STAGING_CLEAR))
         {
@@ -654,7 +687,7 @@ public final class FreddieLoad
             stat.executeUpdate();
         }
 
-        //conn_.commit();
+        conn_.commit();
         LOG.info("Completed loading time data.");
     }
 
