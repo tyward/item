@@ -657,13 +657,14 @@ public final class FreddieLoad
                     {
                         LOG.info("Executing batch: " + lineCount);
                         stat.executeBatch();
+                        conn_.commit();
                     }
 
                     line = reader.readLine();
                 }
 
                 stat.executeBatch();
-
+                conn_.commit();
             }
 
         }
