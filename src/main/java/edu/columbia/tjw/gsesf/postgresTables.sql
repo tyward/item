@@ -101,6 +101,8 @@ CREATE TABLE sfLoanMonth (
     UNIQUE(sfFileLoadId, reportingDate, sfLoanId)
     );
 
+CREATE INDEX idx_sfLoanMonthFileLoad ON sfLoanMonth (sfFileLoadId);
+
 CREATE TABLE sfLoanMonthStaging (
     stagingId CHAR(32) NOT NULL,
     sfSourceId INT NOT NULL,
