@@ -28,7 +28,7 @@ import java.util.Random;
  *
  * Some general settings that control how curves are constructed and fit.
  *
- * Generally, don't change these unless you know what you're doing. 
+ * Generally, don't change these unless you know what you're doing.
  *
  *
  * @author tyler
@@ -43,6 +43,8 @@ public final class ItemSettings implements Serializable
     private final Random _rand;
     private final boolean _randomShuffle;
     private final boolean _useThreading;
+    private final boolean _approximateDerivatives;
+
     private final double _aicCutoff;
 
     private final int _blockSize;
@@ -75,6 +77,7 @@ public final class ItemSettings implements Serializable
         _blockSize = blockSize_;
         _threadBlockSize = threadBlockSize_;
         _useThreading = useThreading_;
+        _approximateDerivatives = false;
     }
 
     public boolean getUseThreading()
