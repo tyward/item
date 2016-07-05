@@ -22,25 +22,28 @@ package edu.columbia.tjw.item.util;
 import java.util.Arrays;
 
 /**
- * This class is designed to tightly pack the given input array using modular
- * arithmetic.
+ * Tightly pack the given input array using modular arithmetic.
  *
- * This should allow us to pack the given ints into a small array (not much
- * larger than input_.length), while having the property that each int can be
- * looked up efficiently.
+ * Given an array R containing N integers, can we compute A and B such that the
+ * operation Q = ((x-A) mod B) will produce the integers [0, N) when given the
+ * original contents of R. I believe this is always possible, but the code
+ * checks this assumption.
  *
- * Given some set of integers i, can I create a small array such that a simple
- * operation (e.g. mod and addition) can produce a unique index into that array
- * for every integer in the input. I need not be able to detect the usage of
- * integers not in the input. I need not use every element of the smaller array
- * either.
+ * When this is possible, then the values of R can be packed into a new array Y
+ * indexed by Q, and in this way the operation can also be checked. If given an
+ * integer x not in R, the index Q will be computed, but Y[Q] != x, and an
+ * exception is thrown.
+ *
+ * Combined with an array of type T, this can function as a Map<int, T>, but at
+ * only a tiny fraction of the cost.
  *
  * @author tyler
  */
-public class ModularTightPacking
+public final class ModularTightPacking
 {
     private final int _modulus;
     private final int _min;
+    private final int[] _packedArray;
 
     public ModularTightPacking(final int[] input_)
     {
@@ -87,6 +90,16 @@ public class ModularTightPacking
         }
 
         _modulus = modulus;
+
+        _packedArray = new int[arraySize];
+
+        for (int i = 0; i < arraySize; i++)
+        {
+            final int val = workspace[i];
+            final int index = computeIndex(val, false);
+            _packedArray[index] = val;
+        }
+
     }
 
     private static boolean testPacking(final int modulus_, final int[] workspace_)
@@ -113,10 +126,41 @@ public class ModularTightPacking
         return _modulus;
     }
 
+    /**
+     * Computes the index Q corresponding to an element of R. If the given
+     * input_ is not an element of R, returns -1.
+     *
+     * @param input_ The element of R to convert to an index Q
+     * @return Q if input_ is an element of R, otherwise -1
+     */
     public int computeIndex(final int input_)
     {
-        final int output = (input_ - _min) % _modulus;
-        return output;
+        return computeIndex(input_, true);
+    }
+
+    /**
+     * Returns the index Q extracted from input_.
+     *
+     * @param input_ The input to convert.
+     * @param withCheck_ True if this operation should check for invalid
+     * lookups.
+     * @return Q if input_ is an element of R, otherwise undefined.
+     */
+    private int computeIndex(final int input_, final boolean withCheck_)
+    {
+        final int index = (input_ - _min) % _modulus;
+
+        if (withCheck_)
+        {
+            final int checkVal = _packedArray[index];
+
+            if (checkVal != input_)
+            {
+                return -1;
+            }
+        }
+
+        return index;
     }
 
 }
