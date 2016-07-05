@@ -20,70 +20,69 @@
 package edu.columbia.tjw.gsesf.types;
 
 import edu.columbia.tjw.item.util.EnumFamily;
-import edu.columbia.tjw.item.util.EnumMember;
 
 /**
  *
  * @author tyler
  */
-public enum GseLoanField implements EnumMember<GseLoanField>
+public enum GseLoanField implements TypedField<GseLoanField>
 {
-    CREDIT_SCORE(GseType.INT),
-    FIRST_PAYMENT_DATE(GseType.DATE),
-    FIRST_TIME_BUYER(GseType.BOOLEAN),
-    MATURITY_DATE(GseType.DATE),
-    MSA(GseType.INT),
-    MI_PERCENT(GseType.DOUBLE),
-    UNIT_COUNT(GseType.INT),
-    OCCUPANCY_STATUS(GseType.STRING),
-    ORIG_CLTV(GseType.DOUBLE),
-    ORIG_DTI(GseType.DOUBLE),
-    ORIG_UPB(GseType.DOUBLE),
-    ORIG_LTV(GseType.DOUBLE),
-    ORIG_INTRATE(GseType.DOUBLE),
-    CHANNEL(GseType.STRING),
-    PREPAYMENT_PENALTY(GseType.BOOLEAN),
-    PRODUCT_TYPE(GseType.STRING),
-    PROPERTY_STATE(GseType.STRING),
-    PROPERTY_TYPE(GseType.STRING),
-    POSTAL_CODE(GseType.INT),
-    LOAN_SEQUENCE_NUMBER(GseType.STRING),
-    LOAN_PURPOSE(GseType.STRING),
-    ORIG_TERM(GseType.INT),
-    NUM_BORROWERS(GseType.INT),
-    SELLER_NAME(GseType.STRING),
-    SERVICER_NAME(GseType.STRING),
-    FACTOR_DATE(GseType.DATE),
-    UPB(GseType.DOUBLE),
-    STATUS(GseType.STRING),
-    REM_TERM(GseType.INT),
-    REPURCHASE_FLAG(GseType.BOOLEAN),
-    MOD_FLAG(GseType.BOOLEAN),
-    ZERO_BAL_CODE(GseType.INT),
-    ZERO_BAL_DATE(GseType.INT),
-    INTRATE(GseType.DOUBLE),
-    CURR_DEFERRED_UPB(GseType.DOUBLE),
-    PAID_THROUGH_DATE(GseType.DATE),
-    MI_RECOVERY(GseType.DOUBLE),
-    NET_SALES_PROCEEDS(GseType.DOUBLE),
-    NON_MI_RECOVERY(GseType.DOUBLE),
-    EXPENSES(GseType.DOUBLE),
-    AGE(GseType.INT),
-    IS_MODIFIED(GseType.BOOLEAN),
-    SOURCE_NAME(GseType.STRING),
-    IS_PREPAID(GseType.BOOLEAN),
-    IS_DEFAULTED(GseType.BOOLEAN);
+    CREDIT_SCORE(RawDataType.INT),
+    FIRST_PAYMENT_DATE(RawDataType.DATE),
+    FIRST_TIME_BUYER(RawDataType.BOOLEAN),
+    MATURITY_DATE(RawDataType.DATE),
+    MSA(RawDataType.INT),
+    MI_PERCENT(RawDataType.DOUBLE),
+    UNIT_COUNT(RawDataType.INT),
+    OCCUPANCY_STATUS(RawDataType.STRING),
+    ORIG_CLTV(RawDataType.DOUBLE),
+    ORIG_DTI(RawDataType.DOUBLE),
+    ORIG_UPB(RawDataType.DOUBLE),
+    ORIG_LTV(RawDataType.DOUBLE),
+    ORIG_INTRATE(RawDataType.DOUBLE),
+    CHANNEL(RawDataType.STRING),
+    PREPAYMENT_PENALTY(RawDataType.BOOLEAN),
+    PRODUCT_TYPE(RawDataType.STRING),
+    PROPERTY_STATE(RawDataType.STRING),
+    PROPERTY_TYPE(RawDataType.STRING),
+    POSTAL_CODE(RawDataType.INT),
+    LOAN_SEQUENCE_NUMBER(RawDataType.STRING),
+    LOAN_PURPOSE(RawDataType.STRING),
+    ORIG_TERM(RawDataType.INT),
+    NUM_BORROWERS(RawDataType.INT),
+    SELLER_NAME(RawDataType.STRING),
+    SERVICER_NAME(RawDataType.STRING),
+    FACTOR_DATE(RawDataType.DATE),
+    UPB(RawDataType.DOUBLE),
+    STATUS(RawDataType.STRING),
+    REM_TERM(RawDataType.INT),
+    REPURCHASE_FLAG(RawDataType.BOOLEAN),
+    MOD_FLAG(RawDataType.BOOLEAN),
+    ZERO_BAL_CODE(RawDataType.INT),
+    ZERO_BAL_DATE(RawDataType.INT),
+    INTRATE(RawDataType.DOUBLE),
+    CURR_DEFERRED_UPB(RawDataType.DOUBLE),
+    PAID_THROUGH_DATE(RawDataType.DATE),
+    MI_RECOVERY(RawDataType.DOUBLE),
+    NET_SALES_PROCEEDS(RawDataType.DOUBLE),
+    NON_MI_RECOVERY(RawDataType.DOUBLE),
+    EXPENSES(RawDataType.DOUBLE),
+    AGE(RawDataType.INT),
+    IS_MODIFIED(RawDataType.BOOLEAN),
+    SOURCE_NAME(RawDataType.STRING),
+    IS_PREPAID(RawDataType.BOOLEAN),
+    IS_DEFAULTED(RawDataType.BOOLEAN);
 
     public static final EnumFamily<GseLoanField> FAMILY = new EnumFamily<>(values());
 
-    private final GseType _type;
+    private final RawDataType _type;
 
-    private GseLoanField(final GseType type_)
+    private GseLoanField(final RawDataType type_)
     {
         _type = type_;
     }
 
-    public GseType getType()
+    public RawDataType getType()
     {
         return _type;
     }

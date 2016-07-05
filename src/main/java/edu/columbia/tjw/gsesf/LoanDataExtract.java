@@ -20,8 +20,11 @@
 package edu.columbia.tjw.gsesf;
 
 import edu.columbia.tjw.gsesf.types.GseLoanField;
+import edu.columbia.tjw.item.data.ItemStatusGrid;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -31,7 +34,7 @@ import javax.sql.DataSource;
  *
  * @author tyler
  */
-public final class LoanDataExtract
+public final class LoanDataExtract implements AutoCloseable
 {
     private static final String SQL_STRING = "SELECT s.sfsourceName, o.sfSourceId, o.sfLoanId, m.reportingdate, o.fico, o.firstPaymentDate, o.maturityDate, o.msa, o.mipercent, o.numunits, o.cltv, "
             + " o.dti, o.upb, \n"
@@ -81,11 +84,16 @@ public final class LoanDataExtract
         FIELDS = Collections.unmodifiableList(rawList);
     }
 
-    private final DataSource _source;
+    private final Connection _conn;
+    private final Statement _stat;
+    private final ResultSet _res;
+    private boolean _isClosed = false;
 
-    private LoanDataExtract(final DataSource source_)
+    private LoanDataExtract(final DataSource source_) throws SQLException
     {
-        _source = source_;
+        _conn = source_.getConnection();
+        _stat = _conn.createStatement();
+        _res = _stat.executeQuery(SQL_STRING);
     }
 
     /**
@@ -98,13 +106,53 @@ public final class LoanDataExtract
      *
      * @param loanCount_ The total number of loans to extract.
      * @param strideSize_ The number of loans between extracted loans.
+     * @param startingStatus_
      * @throws SQLException
      */
-    public void extractData(final int loanCount_, final int strideSize_) throws SQLException
+    public void extractData(final int loanCount_, final int strideSize_, final LoanStatus startingStatus_) throws SQLException
     {
-        try (final Connection conn = _source.getConnection())
-        {
 
+    }
+
+    public RawDataTable<GseLoanField> extractBlock(final int blockSize_)
+    {
+        if (this.isClosed())
+        {
+            throw new IllegalStateException("This connection is closed.");
+        }
+
+        throw new UnsupportedOperationException("Not supported.");
+    }
+
+    public boolean isClosed()
+    {
+        return _isClosed;
+    }
+
+    @Override
+    public void close() throws Exception
+    {
+        if (_isClosed)
+        {
+            return;
+        }
+
+        _isClosed = true;
+
+        try
+        {
+            _res.close();
+        }
+        finally
+        {
+            try
+            {
+                _stat.close();
+            }
+            finally
+            {
+                _conn.close();
+            }
         }
 
     }

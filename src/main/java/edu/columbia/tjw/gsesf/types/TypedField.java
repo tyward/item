@@ -19,40 +19,16 @@
  */
 package edu.columbia.tjw.gsesf.types;
 
-import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.EnumMember;
-import java.util.Date;
 
 /**
  *
  * @author tyler
+ * @param <T>
  */
-public enum GseType implements EnumMember<GseType>
+public interface TypedField<T extends TypedField<T>> extends EnumMember<T>
 {
-    DOUBLE(Double.class),
-    INT(Integer.class),
-    STRING(String.class),
-    BOOLEAN(Boolean.class),
-    DATE(Date.class);
 
-    public static final EnumFamily<GseType> FAMILY = new EnumFamily<>(values());
-
-    private final Class<?> _underlyingClass;
-
-    private GseType(final Class<?> underlyingClass_)
-    {
-        _underlyingClass = underlyingClass_;
-    }
-
-    public Class<?> getUnderlyingClass()
-    {
-        return _underlyingClass;
-    }
-
-    @Override
-    public EnumFamily<GseType> getFamily()
-    {
-        return FAMILY;
-    }
+    public RawDataType getType();
 
 }

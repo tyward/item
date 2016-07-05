@@ -20,7 +20,7 @@
 package edu.columbia.tjw.gsesf;
 
 import edu.columbia.tjw.gsesf.types.GseLoanField;
-import edu.columbia.tjw.gsesf.types.GseType;
+import edu.columbia.tjw.gsesf.types.RawDataType;
 import edu.columbia.tjw.gsesf.types.SqlTableBackedEnumFamily;
 import edu.columbia.tjw.item.util.ByteTool;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -483,7 +483,7 @@ public final class FreddieLoad
 
     private static void setParam(final PreparedStatement stat_, final String input_, final GseLoanField field_, final int paramNumber_) throws SQLException
     {
-        final GseType type = field_.getType();
+        final RawDataType type = field_.getType();
 
         switch (type)
         {
