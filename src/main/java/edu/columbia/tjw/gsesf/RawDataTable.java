@@ -67,8 +67,8 @@ public final class RawDataTable<T extends TypedField<T>>
         _booleanFields = new boolean[familySize][];
         _dateFields = new LocalDate[familySize][];
 
-        _stringDeduplicator = new InstancePool();
-        _dateDeduplicator = new InstancePool();
+        _stringDeduplicator = new InstancePool<>();
+        _dateDeduplicator = new InstancePool<>();
 
         for (final T next : family_.getMembers())
         {
