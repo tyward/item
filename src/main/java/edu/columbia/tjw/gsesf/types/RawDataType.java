@@ -21,7 +21,7 @@ package edu.columbia.tjw.gsesf.types;
 
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.EnumMember;
-import java.util.Date;
+import java.time.LocalDate;
 
 /**
  *
@@ -33,7 +33,7 @@ public enum RawDataType implements EnumMember<RawDataType>
     INT(Integer.class),
     STRING(String.class),
     BOOLEAN(Boolean.class),
-    DATE(Date.class);
+    DATE(LocalDate.class);
 
     public static final EnumFamily<RawDataType> FAMILY = new EnumFamily<>(values());
 

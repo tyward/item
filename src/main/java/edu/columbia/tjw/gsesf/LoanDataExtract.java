@@ -20,13 +20,16 @@
 package edu.columbia.tjw.gsesf;
 
 import edu.columbia.tjw.gsesf.types.GseLoanField;
-import edu.columbia.tjw.item.data.ItemStatusGrid;
+import edu.columbia.tjw.gsesf.types.RawDataType;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import javax.sql.DataSource;
 
@@ -43,8 +46,9 @@ public final class LoanDataExtract implements AutoCloseable
             + " FROM sfLoan o\n"
             + " INNER JOIN sfLoanMonth m ON m.sfsourceId = o.sfsourceId AND m.sfLoanId = o.sfLoanId\n"
             + " INNER JOIN sfSource s ON s.sfSourceId = o.sfSourceId\n"
-            + " ORDER BY z.sfsourceId, z.sfLoanId, z.reportingDate";
+            + " ORDER BY o.sfsourceId, o.sfLoanId, m.reportingDate";
 
+    private static final int BLOCK_SIZE = 10 * 1000;
     private static final List<GseLoanField> FIELDS;
 
     static
@@ -86,18 +90,19 @@ public final class LoanDataExtract implements AutoCloseable
 
     private final Connection _conn;
     private final Statement _stat;
-    private final ResultSet _res;
     private boolean _isClosed = false;
 
-    private LoanDataExtract(final DataSource source_) throws SQLException
+    public LoanDataExtract(final DataSource source_, final int maxRows_) throws SQLException
     {
         _conn = source_.getConnection();
         _stat = _conn.createStatement();
-        _res = _stat.executeQuery(SQL_STRING);
+
+        _stat.setFetchSize(BLOCK_SIZE);
+        _stat.setMaxRows(maxRows_);
     }
 
     /**
-     * Extract data from the DB. We will take ever strideSize_'th loan, up to
+     * Extract data from the DB. We will take every strideSize_'th loan, up to
      * loanCount_ loans total. For each loan, extract all the data, and return
      * the dataset.
      *
@@ -111,17 +116,102 @@ public final class LoanDataExtract implements AutoCloseable
      */
     public void extractData(final int loanCount_, final int strideSize_, final LoanStatus startingStatus_) throws SQLException
     {
+        _stat.setFetchSize(loanCount_);
+
+        try (final ResultSet res = _stat.executeQuery(SQL_STRING))
+        {
+            final RawDataTable<GseLoanField> raw = extractBlock(1000, res);
+
+            System.out.println("Ping.");
+        }
 
     }
 
-    public RawDataTable<GseLoanField> extractBlock(final int blockSize_)
+    /**
+     * Some points to note. We will actually extract whole blocks from the DB,
+     * and then discard what we don't need afterwards. There are a few reasons
+     * for this.
+     *
+     * 1) We need to limit this to individual loans, which means grouping loans
+     * together and then dropping some of them. Not quite so easy to do in SQL.
+     *
+     * 2) We need to limit this to specific starting status, also, not easy to
+     * do on the DB, because now which rows get dropped depends on other row
+     * values.
+     *
+     * @param blockSize_
+     * @param res_
+     * @return
+     * @throws SQLException
+     */
+    private RawDataTable<GseLoanField> extractBlock(final int blockSize_, final ResultSet res_) throws SQLException
     {
         if (this.isClosed())
         {
             throw new IllegalStateException("This connection is closed.");
         }
 
-        throw new UnsupportedOperationException("Not supported.");
+        final RawDataTable<GseLoanField> raw = new RawDataTable<>(GseLoanField.FAMILY, blockSize_);
+
+        while (res_.next())
+        {
+            if (!raw.appendRow())
+            {
+                throw new IllegalStateException("Cannot expand RawDataTable.");
+            }
+
+            for (int i = 0; i < FIELDS.size(); i++)
+            {
+                final GseLoanField next = FIELDS.get(i);
+
+                if (null == next)
+                {
+                    //Nothing of interest here, skip to next one.
+                    continue;
+                }
+
+                final RawDataType type = next.getType();
+
+                switch (type)
+                {
+                    case DOUBLE:
+                    {
+                        final double val = res_.getDouble(1 + i);
+                        raw.setDouble(next, val);
+                        break;
+                    }
+                    case INT:
+                    {
+                        final int val = res_.getInt(1 + i);
+                        raw.setInt(next, val);
+                        break;
+                    }
+                    case STRING:
+                    {
+                        final String val = res_.getString(1 + i);
+                        raw.setString(next, val);
+                        break;
+                    }
+                    case BOOLEAN:
+                    {
+                        final boolean val = res_.getBoolean(1 + i);
+                        raw.setBoolean(next, val);
+                        break;
+                    }
+                    case DATE:
+                    {
+                        final Date val = res_.getDate(1 + i);
+                        final LocalDate localDate = val.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                        raw.setDate(next, localDate);
+                        break;
+                    }
+                    default:
+                        throw new UnsupportedOperationException("Unsupported.");
+                }
+            }
+        }
+
+        return raw;
     }
 
     public boolean isClosed()
@@ -141,20 +231,12 @@ public final class LoanDataExtract implements AutoCloseable
 
         try
         {
-            _res.close();
+            _stat.close();
         }
         finally
         {
-            try
-            {
-                _stat.close();
-            }
-            finally
-            {
-                _conn.close();
-            }
+            _conn.close();
         }
-
     }
 
 }

@@ -91,11 +91,11 @@ public final class ModularTightPacking
 
         _modulus = modulus;
 
-        _packedArray = new int[arraySize];
+        _packedArray = new int[modulus];
 
         for (int i = 0; i < arraySize; i++)
         {
-            final int val = workspace[i];
+            final int val = input_[i];
             final int index = computeIndex(val, false);
             _packedArray[index] = val;
         }
