@@ -78,6 +78,8 @@ public final class RecordWriter<T extends TypedField<T>>
         }
 
         _recordCount++;
+
+        //_oOutput.write(record_.hashCode());
         _oOutput.writeObject(record_);
 
         if ((_recordCount % FLUSH_SIZE) == 0)
@@ -104,7 +106,10 @@ public final class RecordWriter<T extends TypedField<T>>
     public void flush() throws IOException
     {
         _oOutput.flush();
-        System.gc();
+
+        //This prevents our state from building up too much. 
+        _oOutput.reset();
+        //System.gc();
         LOG.info("Flushing records: " + _recordCount);
     }
 
