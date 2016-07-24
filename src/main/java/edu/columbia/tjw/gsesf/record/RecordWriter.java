@@ -21,6 +21,7 @@ package edu.columbia.tjw.gsesf.record;
 
 import edu.columbia.tjw.gsesf.types.TypedField;
 import edu.columbia.tjw.item.util.LogUtil;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -49,15 +50,11 @@ public final class RecordWriter<T extends TypedField<T>>
     {
         _header = header_;
 
-        final OutputStream wrapped;
+        OutputStream wrapped = new BufferedOutputStream(output_);
 
         if (zip_)
         {
-            wrapped = new GZIPOutputStream(output_, GZIP_BUFFER_SIZE);
-        }
-        else
-        {
-            wrapped = output_;
+            wrapped = new GZIPOutputStream(wrapped, GZIP_BUFFER_SIZE, true);
         }
 
         _oOutput = new ObjectOutputStream(wrapped);
@@ -107,6 +104,7 @@ public final class RecordWriter<T extends TypedField<T>>
     public void flush() throws IOException
     {
         _oOutput.flush();
+        System.gc();
         LOG.info("Flushing records: " + _recordCount);
     }
 

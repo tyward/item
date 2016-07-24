@@ -191,4 +191,14 @@ public final class RecordHeader<T extends TypedField<T>> implements Serializable
         return output;
     }
 
+    @SuppressWarnings("unchecked")
+    public <W extends TypedField<W>> RecordHeader<W> castAsType(final Class<? extends W> clazz_)
+    {
+        if (clazz_.equals(_family.getComponentType()))
+        {
+            return (RecordHeader<W>) this;
+        }
+
+        throw new ClassCastException("Invalid cast.");
+    }
 }

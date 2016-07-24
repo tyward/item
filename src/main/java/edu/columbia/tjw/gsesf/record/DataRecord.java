@@ -122,6 +122,17 @@ public final class DataRecord<T extends TypedField<T>> implements Serializable
         return _header;
     }
 
+    @SuppressWarnings("unchecked")
+    public <W extends TypedField<W>> DataRecord<W> castAsType(final Class<? extends W> clazz_)
+    {
+        if (clazz_.equals(_header.getFamily().getComponentType()))
+        {
+            return (DataRecord<W>) this;
+        }
+
+        throw new ClassCastException("Invalid cast.");
+    }
+
     public static final class RecordBuilder<T extends TypedField<T>>
     {
         private final RecordHeader<T> _header;
