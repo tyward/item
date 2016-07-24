@@ -90,7 +90,15 @@ public final class FreddieRecordReader<T extends TypedField<T>> extends StringRe
 
     private static <T extends TypedField<T>> void setEntry(final String val_, final T header_, final DataRecord.RecordBuilder<T> builder_)
     {
-        if (null == val_ || val_.isEmpty())
+        if (null == val_)
+        {
+            builder_.setNull(header_);
+            return;
+        }
+
+        final String trimmed = val_.trim();
+
+        if (trimmed.isEmpty())
         {
             builder_.setNull(header_);
             return;
@@ -98,40 +106,47 @@ public final class FreddieRecordReader<T extends TypedField<T>> extends StringRe
 
         final RawDataType type = header_.getType();
 
-        switch (type)
+        try
         {
-            case DOUBLE:
+            switch (type)
             {
-                final double val = Double.parseDouble(val_);
-                builder_.setDouble(header_, val);
-                break;
+                case DOUBLE:
+                {
+                    final double val = Double.parseDouble(trimmed);
+                    builder_.setDouble(header_, val);
+                    break;
+                }
+                case INT:
+                {
+                    final int val = Integer.parseInt(trimmed);
+                    builder_.setInt(header_, val);
+                    break;
+                }
+                case STRING:
+                {
+                    builder_.setString(header_, trimmed);
+                    break;
+                }
+                case BOOLEAN:
+                {
+                    final boolean val = "Y".equals(trimmed);
+                    builder_.setBoolean(header_, val);
+                    break;
+                }
+                case DATE:
+                {
+                    final String expanded = trimmed + "01";
+                    final LocalDate date = LocalDate.from(DateTimeFormatter.BASIC_ISO_DATE.parse(expanded));
+                    builder_.setDate(header_, date);
+                    break;
+                }
+                default:
+                    throw new IllegalArgumentException("Unknown type: " + type);
             }
-            case INT:
-            {
-                final int val = Integer.parseInt(val_);
-                builder_.setInt(header_, val);
-                break;
-            }
-            case STRING:
-            {
-                builder_.setString(header_, val_);
-                break;
-            }
-            case BOOLEAN:
-            {
-                final boolean val = "Y".equals(val_);
-                builder_.setBoolean(header_, val);
-                break;
-            }
-            case DATE:
-            {
-                final String expanded = val_ + "01";
-                final LocalDate date = LocalDate.from(DateTimeFormatter.BASIC_ISO_DATE.parse(expanded));
-                builder_.setDate(header_, date);
-                break;
-            }
-            default:
-                throw new IllegalArgumentException("Unknown type: " + type);
+        }
+        catch (final Exception e)
+        {
+            throw new RuntimeException(e);
         }
     }
 

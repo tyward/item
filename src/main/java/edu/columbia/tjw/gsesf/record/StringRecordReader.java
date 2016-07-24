@@ -20,11 +20,13 @@
 package edu.columbia.tjw.gsesf.record;
 
 import edu.columbia.tjw.gsesf.types.TypedField;
+import edu.columbia.tjw.item.util.LogUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Iterator;
+import java.util.logging.Logger;
 
 /**
  *
@@ -33,6 +35,7 @@ import java.util.Iterator;
  */
 public abstract class StringRecordReader<T extends TypedField<T>> implements Iterable<DataRecord<T>>
 {
+    private static final Logger LOG = LogUtil.getLogger(StringRecordReader.class);
     private final RecordHeader<T> _header;
 
     protected StringRecordReader(final RecordHeader<T> header_)
@@ -59,11 +62,13 @@ public abstract class StringRecordReader<T extends TypedField<T>> implements Ite
     {
         private final BufferedReader _reader;
         private DataRecord<T> _next;
+        private int _count;
 
         public InnerIterator(final InputStream stream_) throws IOException
         {
             _reader = new BufferedReader(new InputStreamReader(stream_));
             _next = attemptRead();
+            _count = 0;
         }
 
         @Override
@@ -97,6 +102,11 @@ public abstract class StringRecordReader<T extends TypedField<T>> implements Ite
 
         private DataRecord<T> attemptRead() throws IOException
         {
+            if ((_count++ % 1000) == 0)
+            {
+                LOG.info("Reading record: " + _count);
+            }
+
             final String line = _reader.readLine();
 
             if (null == line)

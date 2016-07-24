@@ -283,7 +283,7 @@ public final class DataRecord<T extends TypedField<T>> implements Serializable
             _isSet[ordinal] = true;
 
             final RawDataType type = field_.getType();
-            final int subIndex = _header.computeSubFieldsIndex(field_);
+            _totalCounter++;
 
             switch (type)
             {
