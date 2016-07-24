@@ -135,11 +135,11 @@ public final class DataRecord<T extends TypedField<T>> implements Serializable
         private final double[] _doubles;
         private final LocalDate[] _dates;
 
-        private int _stringCounter;
-        private int _booleanCounter;
-        private int _intCounter;
-        private int _doubleCounter;
-        private int _dateCounter;
+//        private int _stringCounter;
+//        private int _booleanCounter;
+//        private int _intCounter;
+//        private int _doubleCounter;
+//        private int _dateCounter;
         private int _totalCounter;
 
         public RecordBuilder(final RecordHeader<T> header_)
@@ -161,11 +161,11 @@ public final class DataRecord<T extends TypedField<T>> implements Serializable
         public void clear()
         {
             Arrays.fill(_isSet, false);
-            _stringCounter = 0;
-            _booleanCounter = 0;
-            _intCounter = 0;
-            _doubleCounter = 0;
-            _dateCounter = 0;
+//            _stringCounter = 0;
+//            _booleanCounter = 0;
+//            _intCounter = 0;
+//            _doubleCounter = 0;
+//            _dateCounter = 0;
             _totalCounter = 0;
         }
 
@@ -282,29 +282,29 @@ public final class DataRecord<T extends TypedField<T>> implements Serializable
             final int ordinal = field_.ordinal();
             _isSet[ordinal] = true;
 
-            final RawDataType type = field_.getType();
+//            final RawDataType type = field_.getType();
             _totalCounter++;
-
-            switch (type)
-            {
-                case STRING:
-                    _stringCounter++;
-                    break;
-                case BOOLEAN:
-                    _booleanCounter++;
-                    break;
-                case INT:
-                    _intCounter++;
-                    break;
-                case DOUBLE:
-                    _doubleCounter++;
-                    break;
-                case DATE:
-                    _dateCounter++;
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unknown type.");
-            }
+//
+//            switch (type)
+//            {
+//                case STRING:
+//                    _stringCounter++;
+//                    break;
+//                case BOOLEAN:
+//                    _booleanCounter++;
+//                    break;
+//                case INT:
+//                    _intCounter++;
+//                    break;
+//                case DOUBLE:
+//                    _doubleCounter++;
+//                    break;
+//                case DATE:
+//                    _dateCounter++;
+//                    break;
+//                default:
+//                    throw new IllegalArgumentException("Unknown type.");
+//            }
 
         }
 

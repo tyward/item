@@ -56,7 +56,7 @@ public final class FreddieRecordReader<T extends TypedField<T>> extends StringRe
 
     public FreddieRecordReader(T[] recordHeaders_, EnumFamily<T> family_, final ZipFile zf_, final ZipEntry entry_)
     {
-        super(extractRecordHeader(recordHeaders_, family_));
+        super(extractRecordHeader(recordHeaders_, family_), entry_.getName());
         _recordHeaders = recordHeaders_.clone();
 
         _zf = zf_;

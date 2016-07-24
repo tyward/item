@@ -36,11 +36,16 @@ import java.util.logging.Logger;
 public abstract class StringRecordReader<T extends TypedField<T>> implements RecordReader<T>
 {
     private static final Logger LOG = LogUtil.getLogger(StringRecordReader.class);
-    private final RecordHeader<T> _header;
 
-    protected StringRecordReader(final RecordHeader<T> header_)
+    private static final int BLOCK_SIZE = 10 * 1000;
+
+    private final RecordHeader<T> _header;
+    private final String _label;
+
+    protected StringRecordReader(final RecordHeader<T> header_, final String label_)
     {
         _header = header_;
+        _label = label_;
     }
 
     @Override
@@ -104,9 +109,9 @@ public abstract class StringRecordReader<T extends TypedField<T>> implements Rec
         {
             _count++;
 
-            if ((_count % (10 * 1000)) == 0)
+            if ((_count % BLOCK_SIZE) == 0)
             {
-                LOG.info("Reading record: " + _count);
+                LOG.info("Reading record[" + _label + "]: " + _count);
             }
 
             final String line = _reader.readLine();

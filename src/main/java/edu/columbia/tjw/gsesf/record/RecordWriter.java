@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.logging.Logger;
+import java.util.zip.GZIPOutputStream;
 
 /**
  *
@@ -34,16 +35,32 @@ import java.util.logging.Logger;
 public final class RecordWriter<T extends TypedField<T>>
 {
     private static final Logger LOG = LogUtil.getLogger(RecordWriter.class);
+
+    private static final int FLUSH_SIZE = 100 * 1000;
+    private static final int GZIP_BUFFER_SIZE = 4 * 1024;
+
     private final RecordHeader<T> _header;
     private final ObjectOutputStream _oOutput;
     private boolean _isClosed;
 
     private int _recordCount;
 
-    public RecordWriter(final RecordHeader<T> header_, final OutputStream output_) throws IOException
+    public RecordWriter(final RecordHeader<T> header_, final OutputStream output_, final boolean zip_) throws IOException
     {
         _header = header_;
-        _oOutput = new ObjectOutputStream(output_);
+
+        final OutputStream wrapped;
+
+        if (zip_)
+        {
+            wrapped = new GZIPOutputStream(output_, GZIP_BUFFER_SIZE);
+        }
+        else
+        {
+            wrapped = output_;
+        }
+
+        _oOutput = new ObjectOutputStream(wrapped);
         _oOutput.writeObject(_header);
         _isClosed = false;
         _recordCount = 0;
@@ -66,7 +83,7 @@ public final class RecordWriter<T extends TypedField<T>>
         _recordCount++;
         _oOutput.writeObject(record_);
 
-        if ((_recordCount % (100 * 1000)) == 0)
+        if ((_recordCount % FLUSH_SIZE) == 0)
         {
             //Periodically, flush so we don't use too much memory...
             this.flush();

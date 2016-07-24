@@ -191,27 +191,27 @@ public final class FreddieRecordGenerator
 
         LOG.info("Starting base output.");
 
-        final File baseOutput = new File(_outputDir, outName_ + "_base.dat");
+        final File baseOutput = new File(_outputDir, outName_ + "_base.dat.gz");
 
         if (baseOutput.exists())
         {
             throw new IOException("Unwilling to overwrite existing file: " + baseOutput.getCanonicalPath());
         }
 
-        final RecordWriter<GseLoanField> baseWriter = new RecordWriter<>(baseReader.getHeader(), new FileOutputStream(baseOutput));
+        final RecordWriter<GseLoanField> baseWriter = new RecordWriter<>(baseReader.getHeader(), new FileOutputStream(baseOutput), true);
         baseWriter.writeAllRecords(baseReader);
         baseWriter.close();
 
         LOG.info("Base output complete. ");
 
-        final File timeOutput = new File(_outputDir, outName_ + "_time.dat");
+        final File timeOutput = new File(_outputDir, outName_ + "_time.dat.gz");
 
         if (timeOutput.exists())
         {
             throw new IOException("Unwilling to overwrite existing file: " + timeOutput.getCanonicalPath());
         }
 
-        final RecordWriter<GseLoanField> timeWriter = new RecordWriter<>(timeReader.getHeader(), new FileOutputStream(timeOutput));
+        final RecordWriter<GseLoanField> timeWriter = new RecordWriter<>(timeReader.getHeader(), new FileOutputStream(timeOutput), true);
         timeWriter.writeAllRecords(timeReader);
         timeWriter.close();
 
