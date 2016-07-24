@@ -47,16 +47,19 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
     private final Class<? extends V> _componentClass;
 
     @SuppressWarnings("unchecked")
-    public synchronized static <V extends EnumMember<V>> EnumFamily<V> getFamilyFromClass(final Class<V> familyClass_, final boolean throwOnMissing_)
+    public static <V extends EnumMember<V>> EnumFamily<V> getFamilyFromClass(final Class<V> familyClass_, final boolean throwOnMissing_)
     {
-        final EnumFamily<V> result = (EnumFamily<V>) FAMILY_MAP.get(familyClass_);
-
-        if (null == result && throwOnMissing_)
+        synchronized (FAMILY_MAP)
         {
-            throw new IllegalArgumentException("No family for class: " + familyClass_);
-        }
+            final EnumFamily<V> result = (EnumFamily<V>) FAMILY_MAP.get(familyClass_);
 
-        return result;
+            if (null == result && throwOnMissing_)
+            {
+                throw new IllegalArgumentException("No family for class: " + familyClass_);
+            }
+
+            return result;
+        }
     }
 
     public EnumFamily(final V[] values_)
@@ -78,9 +81,16 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
         {
             throw new IllegalArgumentException("Values must have positive length.");
         }
+        for (final V value : values_)
+        {
+            if (null == value)
+            {
+                throw new NullPointerException("Enum members cannot be null.");
+            }
+        }
 
-        _members = values_;
-        _memberSet = Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(values_)));
+        _members = values_.clone();
+        _memberSet = Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(_members)));
 
         if (_members.length != _memberSet.size())
         {
@@ -105,7 +115,7 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 
         if (distinctFamily_)
         {
-            synchronized (EnumFamily.class)
+            synchronized (FAMILY_MAP)
             {
                 if (FAMILY_MAP.containsKey(_componentClass))
                 {
@@ -174,4 +184,21 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
         //Enforce the singleton condition.
         return this._members[0].getFamily();
     }
+
+    /**
+     * Generates a new array of the type of the enum members with the given
+     * size.
+     *
+     * All elements are initially set to null.
+     *
+     * @param size_ The size of the returned array.
+     * @return A new empty array of type V with size size_
+     */
+    public V[] generateTypedArray(final int size_)
+    {
+        final V[] output = Arrays.copyOf(_members, size_);
+        Arrays.fill(output, null);
+        return output;
+    }
+
 }
