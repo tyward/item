@@ -21,8 +21,9 @@ package edu.columbia.tjw.gsesf.record;
 
 import edu.columbia.tjw.gsesf.types.GseLoanField;
 import edu.columbia.tjw.item.util.LogUtil;
+import edu.columbia.tjw.item.util.thread.GeneralTask;
+import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,6 +41,8 @@ import java.util.zip.ZipFile;
 public final class FreddieRecordGenerator
 {
     private static final Logger LOG = LogUtil.getLogger(FreddieRecordGenerator.class);
+
+    private static final boolean USE_THREADING = true;
 
     private static final GseLoanField[] TIME_FIELDS = new GseLoanField[]
     {
@@ -132,8 +135,10 @@ public final class FreddieRecordGenerator
         return _zipFiles;
     }
 
-    public void loadAll() throws IOException
+    public List<FileLoader> generateLoaderTasks()
     {
+        final List<FileLoader> loaders = new ArrayList<>(_zipFiles.size());
+
         for (final File next : _zipFiles)
         {
             final String fileName = next.getName();
@@ -142,7 +147,57 @@ public final class FreddieRecordGenerator
             final String[] f2 = root.split("\\.");
             final String fnBase = f2[0];
 
-            loadFile(next, fnBase);
+            final FileLoader nextLoader = new FileLoader(next, fnBase);
+            loaders.add(nextLoader);
+        }
+
+        return loaders;
+    }
+
+    public void loadAll() throws IOException
+    {
+        final List<FileLoader> loaders = generateLoaderTasks();
+
+        if (USE_THREADING)
+        {
+            final GeneralThreadPool pool = GeneralThreadPool.singleton(); //new GeneralThreadPool(4);
+
+            for (final FileLoader loader : loaders)
+            {
+                pool.execute(loader);
+            }
+        }
+
+        for (final FileLoader loader : loaders)
+        {
+            try
+            {
+                final File completed = loader.waitForCompletion();
+                LOG.info("File completed: " + completed);
+            }
+            catch (final Exception e)
+            {
+                LOG.log(Level.WARNING, "Exception loading file.", e);
+            }
+        }
+    }
+
+    public final class FileLoader extends GeneralTask<File>
+    {
+        private final File _zipFile;
+        private final String _outName;
+
+        private FileLoader(final File zipFile_, final String outName_)
+        {
+            _zipFile = zipFile_;
+            _outName = outName_;
+        }
+
+        @Override
+        protected File subRun() throws IOException
+        {
+            loadFile(_zipFile, _outName);
+            return _zipFile;
         }
     }
 
@@ -192,47 +247,29 @@ public final class FreddieRecordGenerator
         final File baseOutput = new File(_outputDir, outName_ + "_base.dat.gz");
         processEntry(BASE_FIELDS, zf, baseEntry, baseOutput);
 
-//        if (!baseOutput.exists())
-//        {
-//            try
-//            {
-//                LOG.info("Processing file: " + baseOutput.getName());
-//                final FreddieRecordReader<GseLoanField> baseReader = new FreddieRecordReader<>(BASE_FIELDS, GseLoanField.FAMILY, zf, baseEntry);
-//                final RecordWriter<GseLoanField> baseWriter = new RecordWriter<>(baseReader.getHeader(), baseOutput, true);
-//                baseWriter.writeAllRecords(baseReader);
-//                baseWriter.close();
-//                LOG.info("File complete: " + baseOutput.getName());
-//            }
-//            catch (final Exception e)
-//            {
-//                final File baseRename = new File(_outputDir, outName_ + "_base.dat.gz_ad");
-//                baseOutput.renameTo(baseRename);
-//                LOG.log(Level.WARNING, "Exception while processing file: " + baseOutput.getName(), e);
-//            }
-//        }
         final File timeOutput = new File(_outputDir, outName_ + "_time.dat.gz");
         processEntry(TIME_FIELDS, zf, timeEntry, timeOutput);
-//
-//        if (!timeOutput.exists())
-//        {
-//            try
-//            {
-//                LOG.info("Processing file: " + baseOutput.getName());
-//                final FreddieRecordReader<GseLoanField> timeReader = new FreddieRecordReader<>(TIME_FIELDS, GseLoanField.FAMILY, zf, timeEntry);
-//                final RecordWriter<GseLoanField> timeWriter = new RecordWriter<>(timeReader.getHeader(), timeOutput, true);
-//                timeWriter.writeAllRecords(timeReader);
-//                timeWriter.close();
-//                LOG.info("File complete: " + timeOutput.getName());
-//            }
-//            catch (final Exception e)
-//            {
-//                final File baseRename = new File(_outputDir, outName_ + "_base.dat.gz_ad");
-//                baseOutput.renameTo(baseRename);
-//                LOG.log(Level.WARNING, "Exception while processing file: " + baseOutput.getName(), e);
-//            }
-//        }
+
+        //processCombined()
     }
 
+//    private void processCombined(final ZipFile zf_, final ZipEntry baseEntry_, final ZipEntry timeEntry_, final File outputFile_)
+//    {
+//        final String fileName = outputFile_.getName();
+//
+//        if (outputFile_.exists())
+//        {
+//            LOG.info("File already exists, skipping: " + fileName);
+//            return;
+//        }
+//
+//        final FreddieRecordReader<GseLoanField> baseReader = new FreddieRecordReader<>(BASE_FIELDS, GseLoanField.FAMILY, zf_, baseEntry_);
+//        final FreddieRecordReader<GseLoanField> timeReader = new FreddieRecordReader<>(TIME_FIELDS, GseLoanField.FAMILY, zf_, timeEntry_);
+//
+//        final Iterator<DataRecord<GseLoanField>> baseIterator = baseReader.iterator();
+//        final Iterator<DataRecord<GseLoanField>> timeIterator = timeReader.iterator();
+//
+//    }
     private void processEntry(final GseLoanField[] fields_, final ZipFile zf_, final ZipEntry entry_, final File outputFile_)
     {
         final String fileName = outputFile_.getName();
@@ -246,9 +283,9 @@ public final class FreddieRecordGenerator
         try
         {
             LOG.info("Processing file: " + fileName);
-            final FreddieRecordReader<GseLoanField> timeReader = new FreddieRecordReader<>(fields_, GseLoanField.FAMILY, zf_, entry_);
-            final RecordWriter<GseLoanField> timeWriter = new RecordWriter<>(timeReader.getHeader(), outputFile_, true);
-            timeWriter.writeAllRecords(timeReader);
+            final FreddieRecordReader<GseLoanField> recordReader = new FreddieRecordReader<>(fields_, GseLoanField.FAMILY, zf_, entry_);
+            final RecordWriter<GseLoanField> timeWriter = new RecordWriter<>(recordReader.getHeader(), outputFile_, true);
+            timeWriter.writeAllRecords(recordReader);
             timeWriter.close();
             LOG.info("File complete: " + fileName);
         }
