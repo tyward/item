@@ -26,6 +26,12 @@ import java.time.LocalDate;
 import java.util.Arrays;
 
 /**
+ * A compact record for recording arbitrary typed fields.
+ *
+ * This record has a strong distinction between null and not null, even for
+ * primitive types. It also packs efficiently for serialization purposes, but
+ * still allows fast lookups. The relevant indexing logic is in the record
+ * header, so it won't need to be duplicated excessively.
  *
  * @author tyler
  * @param <T>
@@ -35,9 +41,9 @@ public final class DataRecord<T extends TypedField<T>> implements Serializable
     //private static final Logger LOG = LogUtil.getLogger(DataRecord.class);
     private static final long serialVersionUID = 4265058948289559289L;
 
-    private static final int INT_NULL = Integer.MIN_VALUE;
-    private static final double DOUBLE_NULL = Double.NaN;
-    private static final boolean BOOLEAN_NULL = false;
+    public static final int INT_NULL = Integer.MIN_VALUE;
+    public static final double DOUBLE_NULL = Double.NaN;
+    public static final boolean BOOLEAN_NULL = false;
 
     private final RecordHeader<T> _header;
     private final boolean[] _isNull;
