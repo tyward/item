@@ -19,7 +19,6 @@
  */
 package edu.columbia.tjw.item.util;
 
-import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.WeakHashMap;
 

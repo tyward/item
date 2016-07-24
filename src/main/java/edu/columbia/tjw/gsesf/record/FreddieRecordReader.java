@@ -27,6 +27,7 @@ import static edu.columbia.tjw.gsesf.types.RawDataType.INT;
 import static edu.columbia.tjw.gsesf.types.RawDataType.STRING;
 import edu.columbia.tjw.gsesf.types.TypedField;
 import edu.columbia.tjw.item.util.EnumFamily;
+import edu.columbia.tjw.item.util.InstancePool;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
@@ -48,6 +49,11 @@ public final class FreddieRecordReader<T extends TypedField<T>> extends StringRe
     private final ZipEntry _entry;
     private final DataRecord.RecordBuilder<T> _builder;
 
+    //Take some basic efforts to deduplicate some of this data. Will make the files much smaller. 
+    private final InstancePool<String> _stringPool;
+    private final InstancePool<LocalDate> _datePool;
+    private int _recordCount;
+
     public FreddieRecordReader(T[] recordHeaders_, EnumFamily<T> family_, final ZipFile zf_, final ZipEntry entry_)
     {
         super(extractRecordHeader(recordHeaders_, family_));
@@ -55,7 +61,10 @@ public final class FreddieRecordReader<T extends TypedField<T>> extends StringRe
 
         _zf = zf_;
         _entry = entry_;
-        _builder = new DataRecord.RecordBuilder<>(this.geHeader());
+        _builder = new DataRecord.RecordBuilder<>(this.getHeader());
+
+        _stringPool = new InstancePool<>();
+        _datePool = new InstancePool<>();
     }
 
     @Override
@@ -66,11 +75,22 @@ public final class FreddieRecordReader<T extends TypedField<T>> extends StringRe
     }
 
     @Override
-    public DataRecord<T> generateRecord(final String line_)
+    public synchronized DataRecord<T> generateRecord(final String line_)
     {
+        _recordCount++;
+
+        if ((_recordCount % 100 * 1000) == 0)
+        {
+            //Periodically, clear out the instance pools. We want to dedupe, but
+            //for things that don't have much duplication, we can't just accumulate them forever.
+            _stringPool.clear();
+            _datePool.clear();
+        }
+
         final String[] values = line_.split("\\|");
 
-        if (values.length != _recordHeaders.length)
+        //they truncate lines after the last non-null element....
+        if (values.length > _recordHeaders.length)
         {
             throw new IllegalArgumentException("Malformed line.");
         }
@@ -80,6 +100,20 @@ public final class FreddieRecordReader<T extends TypedField<T>> extends StringRe
         for (int i = 0; i < _recordHeaders.length; i++)
         {
             final T header = _recordHeaders[i];
+
+            if (null == header)
+            {
+                //This is a field we don't care about, so just skip it. 
+                continue;
+            }
+
+            if (i >= values.length)
+            {
+                //Truncated line, the rest of it is null.
+                setEntry(null, header, _builder);
+                continue;
+            }
+
             final String strVal = values[i];
             setEntry(strVal, header, _builder);
         }
@@ -88,7 +122,7 @@ public final class FreddieRecordReader<T extends TypedField<T>> extends StringRe
         return output;
     }
 
-    private static <T extends TypedField<T>> void setEntry(final String val_, final T header_, final DataRecord.RecordBuilder<T> builder_)
+    private void setEntry(final String val_, final T header_, final DataRecord.RecordBuilder<T> builder_)
     {
         if (null == val_)
         {
@@ -124,7 +158,8 @@ public final class FreddieRecordReader<T extends TypedField<T>> extends StringRe
                 }
                 case STRING:
                 {
-                    builder_.setString(header_, trimmed);
+                    final String dedupe = _stringPool.makeCanonical(trimmed);
+                    builder_.setString(header_, dedupe);
                     break;
                 }
                 case BOOLEAN:
@@ -137,7 +172,8 @@ public final class FreddieRecordReader<T extends TypedField<T>> extends StringRe
                 {
                     final String expanded = trimmed + "01";
                     final LocalDate date = LocalDate.from(DateTimeFormatter.BASIC_ISO_DATE.parse(expanded));
-                    builder_.setDate(header_, date);
+                    final LocalDate dedupe = _datePool.makeCanonical(date);
+                    builder_.setDate(header_, dedupe);
                     break;
                 }
                 default:

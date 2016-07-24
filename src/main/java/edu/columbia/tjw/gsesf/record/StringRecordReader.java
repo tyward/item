@@ -33,7 +33,7 @@ import java.util.logging.Logger;
  * @author tyler
  * @param <T>
  */
-public abstract class StringRecordReader<T extends TypedField<T>> implements Iterable<DataRecord<T>>
+public abstract class StringRecordReader<T extends TypedField<T>> implements RecordReader<T>
 {
     private static final Logger LOG = LogUtil.getLogger(StringRecordReader.class);
     private final RecordHeader<T> _header;
@@ -62,7 +62,7 @@ public abstract class StringRecordReader<T extends TypedField<T>> implements Ite
     {
         private final BufferedReader _reader;
         private DataRecord<T> _next;
-        private int _count;
+        private long _count;
 
         public InnerIterator(final InputStream stream_) throws IOException
         {
@@ -102,7 +102,9 @@ public abstract class StringRecordReader<T extends TypedField<T>> implements Ite
 
         private DataRecord<T> attemptRead() throws IOException
         {
-            if ((_count++ % 1000) == 0)
+            _count++;
+
+            if ((_count % (10 * 1000)) == 0)
             {
                 LOG.info("Reading record: " + _count);
             }
@@ -120,7 +122,8 @@ public abstract class StringRecordReader<T extends TypedField<T>> implements Ite
         }
     }
 
-    public final RecordHeader<T> geHeader()
+    @Override
+    public final RecordHeader<T> getHeader()
     {
         return _header;
     }

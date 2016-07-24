@@ -20,9 +20,11 @@
 package edu.columbia.tjw.gsesf.record;
 
 import edu.columbia.tjw.gsesf.types.TypedField;
+import edu.columbia.tjw.item.util.LogUtil;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.util.logging.Logger;
 
 /**
  *
@@ -31,9 +33,12 @@ import java.io.OutputStream;
  */
 public final class RecordWriter<T extends TypedField<T>>
 {
+    private static final Logger LOG = LogUtil.getLogger(RecordWriter.class);
     private final RecordHeader<T> _header;
     private final ObjectOutputStream _oOutput;
     private boolean _isClosed;
+
+    private int _recordCount;
 
     public RecordWriter(final RecordHeader<T> header_, final OutputStream output_) throws IOException
     {
@@ -41,6 +46,7 @@ public final class RecordWriter<T extends TypedField<T>>
         _oOutput = new ObjectOutputStream(output_);
         _oOutput.writeObject(_header);
         _isClosed = false;
+        _recordCount = 0;
     }
 
     public void writeRecord(final DataRecord<T> record_) throws IOException
@@ -57,7 +63,15 @@ public final class RecordWriter<T extends TypedField<T>>
             throw new IllegalArgumentException("Header objects must match exactly (ensures that we don't write duplicate headers to the stream).");
         }
 
+        _recordCount++;
         _oOutput.writeObject(record_);
+
+        if ((_recordCount % (100 * 1000)) == 0)
+        {
+            //Periodically, flush so we don't use too much memory...
+            this.flush();
+        }
+
     }
 
     public void writeAllRecords(final Iterable<DataRecord<T>> recIterable_) throws IOException
@@ -73,6 +87,12 @@ public final class RecordWriter<T extends TypedField<T>>
         return _isClosed;
     }
 
+    public void flush() throws IOException
+    {
+        _oOutput.flush();
+        LOG.info("Flushing records: " + _recordCount);
+    }
+
     public void close() throws IOException
     {
         if (isClosed())
@@ -84,7 +104,7 @@ public final class RecordWriter<T extends TypedField<T>>
 
         try
         {
-            _oOutput.flush();
+            this.flush();
         }
         finally
         {

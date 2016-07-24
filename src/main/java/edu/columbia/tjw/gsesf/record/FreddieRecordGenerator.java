@@ -198,7 +198,7 @@ public final class FreddieRecordGenerator
             throw new IOException("Unwilling to overwrite existing file: " + baseOutput.getCanonicalPath());
         }
 
-        final RecordWriter<GseLoanField> baseWriter = new RecordWriter<>(baseReader.geHeader(), new FileOutputStream(baseOutput));
+        final RecordWriter<GseLoanField> baseWriter = new RecordWriter<>(baseReader.getHeader(), new FileOutputStream(baseOutput));
         baseWriter.writeAllRecords(baseReader);
         baseWriter.close();
 
@@ -211,7 +211,7 @@ public final class FreddieRecordGenerator
             throw new IOException("Unwilling to overwrite existing file: " + timeOutput.getCanonicalPath());
         }
 
-        final RecordWriter<GseLoanField> timeWriter = new RecordWriter<>(timeReader.geHeader(), new FileOutputStream(timeOutput));
+        final RecordWriter<GseLoanField> timeWriter = new RecordWriter<>(timeReader.getHeader(), new FileOutputStream(timeOutput));
         timeWriter.writeAllRecords(timeReader);
         timeWriter.close();
 
