@@ -22,6 +22,8 @@ package edu.columbia.tjw.gsesf.record;
 import edu.columbia.tjw.gsesf.types.TypedField;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -42,15 +44,18 @@ public final class RecordWriter<T extends TypedField<T>>
 
     private final RecordHeader<T> _header;
     private final ObjectOutputStream _oOutput;
+    private final File _outputFile;
     private boolean _isClosed;
 
     private int _recordCount;
 
-    public RecordWriter(final RecordHeader<T> header_, final OutputStream output_, final boolean zip_) throws IOException
+    public RecordWriter(final RecordHeader<T> header_, final File outputFile_, final boolean zip_) throws IOException
     {
+        _outputFile = outputFile_;
         _header = header_;
 
-        OutputStream wrapped = new BufferedOutputStream(output_);
+        final FileOutputStream fStream = new FileOutputStream(outputFile_);
+        OutputStream wrapped = new BufferedOutputStream(fStream);
 
         if (zip_)
         {
@@ -109,8 +114,7 @@ public final class RecordWriter<T extends TypedField<T>>
 
         //This prevents our state from building up too much. 
         _oOutput.reset();
-        //System.gc();
-        LOG.info("Flushing records: " + _recordCount);
+        LOG.info("Flushing records[" + _outputFile.getName() + "]: " + _recordCount);
     }
 
     public void close() throws IOException

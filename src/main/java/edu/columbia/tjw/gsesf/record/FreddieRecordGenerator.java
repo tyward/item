@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -186,36 +187,78 @@ public final class FreddieRecordGenerator
             throw new IOException("Missing one of the expected entries.");
         }
 
-        final FreddieRecordReader<GseLoanField> baseReader = new FreddieRecordReader<>(BASE_FIELDS, GseLoanField.FAMILY, zf, baseEntry);
-        final FreddieRecordReader<GseLoanField> timeReader = new FreddieRecordReader<>(TIME_FIELDS, GseLoanField.FAMILY, zf, timeEntry);
-
         LOG.info("Starting base output.");
 
         final File baseOutput = new File(_outputDir, outName_ + "_base.dat.gz");
+        processEntry(BASE_FIELDS, zf, baseEntry, baseOutput);
 
-        if (baseOutput.exists())
-        {
-            throw new IOException("Unwilling to overwrite existing file: " + baseOutput.getCanonicalPath());
-        }
-
-        final RecordWriter<GseLoanField> baseWriter = new RecordWriter<>(baseReader.getHeader(), new FileOutputStream(baseOutput), true);
-        baseWriter.writeAllRecords(baseReader);
-        baseWriter.close();
-
-        LOG.info("Base output complete. ");
-
+//        if (!baseOutput.exists())
+//        {
+//            try
+//            {
+//                LOG.info("Processing file: " + baseOutput.getName());
+//                final FreddieRecordReader<GseLoanField> baseReader = new FreddieRecordReader<>(BASE_FIELDS, GseLoanField.FAMILY, zf, baseEntry);
+//                final RecordWriter<GseLoanField> baseWriter = new RecordWriter<>(baseReader.getHeader(), baseOutput, true);
+//                baseWriter.writeAllRecords(baseReader);
+//                baseWriter.close();
+//                LOG.info("File complete: " + baseOutput.getName());
+//            }
+//            catch (final Exception e)
+//            {
+//                final File baseRename = new File(_outputDir, outName_ + "_base.dat.gz_ad");
+//                baseOutput.renameTo(baseRename);
+//                LOG.log(Level.WARNING, "Exception while processing file: " + baseOutput.getName(), e);
+//            }
+//        }
         final File timeOutput = new File(_outputDir, outName_ + "_time.dat.gz");
+        processEntry(TIME_FIELDS, zf, timeEntry, timeOutput);
+//
+//        if (!timeOutput.exists())
+//        {
+//            try
+//            {
+//                LOG.info("Processing file: " + baseOutput.getName());
+//                final FreddieRecordReader<GseLoanField> timeReader = new FreddieRecordReader<>(TIME_FIELDS, GseLoanField.FAMILY, zf, timeEntry);
+//                final RecordWriter<GseLoanField> timeWriter = new RecordWriter<>(timeReader.getHeader(), timeOutput, true);
+//                timeWriter.writeAllRecords(timeReader);
+//                timeWriter.close();
+//                LOG.info("File complete: " + timeOutput.getName());
+//            }
+//            catch (final Exception e)
+//            {
+//                final File baseRename = new File(_outputDir, outName_ + "_base.dat.gz_ad");
+//                baseOutput.renameTo(baseRename);
+//                LOG.log(Level.WARNING, "Exception while processing file: " + baseOutput.getName(), e);
+//            }
+//        }
+    }
 
-        if (timeOutput.exists())
+    private void processEntry(final GseLoanField[] fields_, final ZipFile zf_, final ZipEntry entry_, final File outputFile_)
+    {
+        final String fileName = outputFile_.getName();
+
+        if (outputFile_.exists())
         {
-            throw new IOException("Unwilling to overwrite existing file: " + timeOutput.getCanonicalPath());
+            LOG.info("File already exists, skipping: " + fileName);
+            return;
         }
 
-        final RecordWriter<GseLoanField> timeWriter = new RecordWriter<>(timeReader.getHeader(), new FileOutputStream(timeOutput), true);
-        timeWriter.writeAllRecords(timeReader);
-        timeWriter.close();
+        try
+        {
+            LOG.info("Processing file: " + fileName);
+            final FreddieRecordReader<GseLoanField> timeReader = new FreddieRecordReader<>(fields_, GseLoanField.FAMILY, zf_, entry_);
+            final RecordWriter<GseLoanField> timeWriter = new RecordWriter<>(timeReader.getHeader(), outputFile_, true);
+            timeWriter.writeAllRecords(timeReader);
+            timeWriter.close();
+            LOG.info("File complete: " + fileName);
+        }
+        catch (final Exception e)
+        {
+            final File baseRename = new File(_outputDir, fileName + "_bad");
+            outputFile_.renameTo(baseRename);
+            LOG.log(Level.WARNING, "Exception while processing file: " + fileName, e);
+        }
 
-        LOG.info("Time output complete.");
     }
 
 }
