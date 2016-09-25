@@ -1,7 +1,6 @@
 
 DROP TABLE sfLoanLiquidation;
 DROP TABLE sfLoanMonth;
-DROP TABLE sfLoanMonthStaging;
 DROP TABLE sfLoan;
 DROP TABLE sfFileLoad;
 DROP TABLE sfServicer;
@@ -69,8 +68,8 @@ CREATE TABLE sfLoan (
     numBorrowers INTEGER,
     firstTimeHomebuyer BOOLEAN,
     penalty BOOLEAN,
-    sfSellerId INTEGER,
-    sfServicerId INTEGER,
+    sfSellerId BIGINT,
+    sfServicerId BIGINT,
     PRIMARY KEY (sfSourceId, sfLoanId, sfLoanChecksum),
     FOREIGN KEY (sfFileLoadId) REFERENCES sfFileLoad (sfFileLoadId),
     FOREIGN KEY (sfSellerId) REFERENCES sfSeller (sfSellerId),

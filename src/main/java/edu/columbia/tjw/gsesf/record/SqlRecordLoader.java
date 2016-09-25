@@ -51,14 +51,14 @@ public class SqlRecordLoader
 {
     private static final int BLOCK_SIZE = 10 * 1000;
 
-    private static final String INSERT_STATEMENT = "INSERT INTO sfLoan (sfSourceId, sfLoanId, sfFileLoadId, checksum, fico, firstPaymentDate, firstTimeHomebuyer, maturityDate, msa, miPercent, numUnits, occupancy,cltv, dti, upb, "
+    private static final String INSERT_STATEMENT = "INSERT INTO sfLoan (sfSourceId, sfLoanId, sfFileLoadId, sfLoanChecksum, fico, firstPaymentDate, firstTimeHomebuyer, maturityDate, msa, miPercent, numUnits, occupancy,cltv, dti, upb, "
             + " ltv, initrate, channel,  penalty, productType, propertyState, propertyType, zipCode, sourceLoanId, purpose, origTerm, numBorrowers, sfSellerId, "
             + " sfServicerId) "
-            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (sfSourceId, sfLoanId, sfLoanChecksum) DO NOTHING;";
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?) ON CONFLICT (sfSourceId, sfLoanId, sfLoanChecksum) DO NOTHING;";
 
     private static final String BASE_RECONCILE = "UPDATE sfLoan SET sfRecordEnd = ("
-            + "SELECT MIN(sfRecordStart) FROM sfLoan t2 WHERE t2.sfSourceId = testtable.sfSourceId AND t2.sfLoanId = testtable.sfLoanId AND t2.sfRecordStart > testtable.sfRecordStart"
-            + ") WHERE endtime IS NULL";
+            + "SELECT MIN(sfRecordStart) FROM sfLoan t2 WHERE t2.sfSourceId = sfLoan.sfSourceId AND t2.sfLoanId = sfLoan.sfLoanId AND t2.sfRecordStart > sfLoan.sfRecordStart"
+            + ") WHERE sfRecordEnd IS NULL";
 
     private static final String FILE_CHECK = "SELECT sffileloadid FROM sfFileLoad o WHERE o.fileName = ? AND o.fileEntry = ?";
 
@@ -168,24 +168,24 @@ public class SqlRecordLoader
         return getLoadId(file_name_, type_, false);
     }
 
-    public void reconcileDatesBase() throws SQLException
+    private void reconcileDatesBase() throws SQLException
     {
-        flushBase();
-
-        try (final Statement stat = _conn.createStatement())
-        {
-            stat.executeUpdate(BASE_RECONCILE);
-            stat.close();
-        }
-
-        _conn.commit();
+//        flushBase();
+//
+//        try (final Statement stat = _conn.createStatement())
+//        {
+//            stat.executeUpdate(BASE_RECONCILE);
+//            stat.close();
+//        }
+//
+//        _conn.commit();
     }
 
-    public int flushBase() throws SQLException
+    private void flushBase() throws SQLException
     {
-        final int output = _baseInsert.executeUpdate();
+        _baseInsert.executeBatch();
         _conn.commit();
-        return output;
+
     }
 
     public void loadBaseFile(final File inputFile_, final boolean isZip_) throws IOException, SQLException
@@ -193,23 +193,31 @@ public class SqlRecordLoader
         final RawRecordReader<GseLoanField> reader = new RawRecordReader<>(inputFile_, GseLoanField.FAMILY, isZip_);
 
         long count = 0;
+        long sub_count = 0;
 
         final long loadId = getLoadId(inputFile_.getName(), "base", true);
 
         for (final DataRecord<GseLoanField> next : reader)
         {
+            loadDataRecord(next, loadId);
+            sub_count++;
             count++;
 
             if (count % BLOCK_SIZE == 0)
             {
                 flushBase();
+                sub_count = 0;
             }
 
-            loadDataRecord(next, loadId);
         }
 
+        if (sub_count > 0)
+        {
+            flushBase();
+        }
+
+        reconcileDatesBase();
         markComplete(loadId);
-        flushBase();
     }
 
     private void loadDataRecord(final DataRecord<GseLoanField> record_, final long fileLoadId_) throws SQLException
