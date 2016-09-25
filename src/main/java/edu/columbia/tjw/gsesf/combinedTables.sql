@@ -1,27 +1,3 @@
-/*
- * Copyright 2014 Tyler Ward.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * 
- * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
- * This is provided as an example to help in the understanding of the ITEM model system.
- *//**
- * Author:  tyler
- * Created: Sep 25, 2016
- */
-
-
 
 DROP TABLE sfLoanLiquidation;
 DROP TABLE sfLoanMonth;
@@ -43,13 +19,13 @@ INSERT INTO sfSource (sfSourceId, sfSourceName) VALUES (1, 'Freddie Mac');
 
 
 CREATE TABLE sfSeller (
-    sfSellerId SERIAL PRIMARY KEY,
+    sfSellerId BIGINT PRIMARY KEY,
     sellerName VARCHAR(64) NOT NULL,
     UNIQUE(sellerName)
 );
 
 CREATE TABLE sfServicer (
-    sfServicerId SERIAL PRIMARY KEY,
+    sfServicerId BIGINT PRIMARY KEY,
     servicerName VARCHAR(64) NOT NULL,
     UNIQUE(servicerName)
 );
@@ -65,8 +41,11 @@ CREATE TABLE sfFileLoad (
 
 CREATE TABLE sfLoan (
     sfSourceId INT NOT NULL,
-    sfLoanId BIGSERIAL NOT NULL,
-    sfFileLoadId BIGSERIAL NOT NULL,
+    sfLoanId BIGINT NOT NULL,
+    sfLoanChecksum BIGINT NOT NULL,
+    sfRecordStart TIMESTAMP NOT NULL DEFAULT NOW(),
+    sfRecordEnd TIMESTAMP CHECK (sfRecordEnd IS NULL OR sfRecordEnd > sfRecordStart),
+    sfFileLoadId BIGINT NOT NULL,
     sourceLoanId CHAR(20) NOT NULL,
     fico INTEGER,
     firstPaymentDate DATE,
@@ -92,14 +71,12 @@ CREATE TABLE sfLoan (
     penalty BOOLEAN,
     sfSellerId INTEGER,
     sfServicerId INTEGER,
-    PRIMARY KEY (sfSourceId, sfLoanId),
+    PRIMARY KEY (sfSourceId, sfLoanId, sfLoanChecksum),
     FOREIGN KEY (sfFileLoadId) REFERENCES sfFileLoad (sfFileLoadId),
     FOREIGN KEY (sfSellerId) REFERENCES sfSeller (sfSellerId),
     FOREIGN KEY (sfServicerId) REFERENCES sfServicer (sfServicerId),
     FOREIGN KEY (sfSourceId) REFERENCES sfSource (sfSourceId),
-    UNIQUE(sourceLoanId, sfSourceId),
-    UNIQUE(sfSourceId, sourceLoanId),
-    UNIQUE(sfFileLoadId, sourceLoanId)
+    UNIQUE(sourceLoanId, sfSourceId, sfLoanChecksum, sfRecordStart)
 );
 
 
@@ -107,6 +84,10 @@ CREATE TABLE sfLoan (
 CREATE TABLE sfLoanMonth (
     sfSourceId INT NOT NULL,
     sfLoanId BIGINT NOT NULL,
+    sfLoanChecksum BIGINT NOT NULL,
+    sfLoanMonthChecksum BIGINT NOT NULL,
+    sfRecordStart TIMESTAMP NOT NULL DEFAULT NOW(),
+    sfRecordEnd TIMESTAMP CHECK (sfRecordEnd IS NULL OR sfRecordEnd > sfRecordStart),
     sfFileLoadId BIGSERIAL NOT NULL,
     reportingDate DATE NOT NULL,
     balance DOUBLE PRECISION NOT NULL,
@@ -115,35 +96,21 @@ CREATE TABLE sfLoanMonth (
     isPrepaid BOOLEAN NOT NULL,
     isDefaulted BOOLEAN NOT NULL,
     isModified BOOLEAN NOT NULL,
-    FOREIGN KEY (sfSourceId, sfLoanId) REFERENCES sfLoan (sfSourceId, sfLoanId),
+    FOREIGN KEY (sfSourceId, sfLoanId, sfLoanChecksum) REFERENCES sfLoan (sfSourceId, sfLoanId, sfLoanChecksum),
     FOREIGN KEY (sfFileLoadId) REFERENCES sfFileLoad (sfFileLoadId),
-    PRIMARY KEY (sfSourceId, sfLoanId, reportingDate),
-    UNIQUE(sfSourceId, reportingDate, sfLoanId),
-    UNIQUE(sfFileLoadId, reportingDate, sfLoanId)
+    PRIMARY KEY (sfSourceId, sfLoanId, reportingDate, sfLoanMonthChecksum),
+    UNIQUE(sfSourceId, sfLoanId, reportingDate, sfLoanMonthChecksum, sfRecordStart)
     );
-
-CREATE INDEX idx_sfLoanMonthFileLoad ON sfLoanMonth (sfFileLoadId);
-
-CREATE TABLE sfLoanMonthStaging (
-    stagingId CHAR(32) NOT NULL,
-    sfSourceId INT NOT NULL,
-    sourceLoanId CHAR(20) NOT NULL,
-    reportingDate DATE NOT NULL,
-    balance DOUBLE PRECISION NOT NULL,
-    status VARCHAR(3) NOT NULL,
-    age SMALLINT NOT NULL,
-    isPrepaid BOOLEAN NOT NULL,
-    isDefaulted BOOLEAN NOT NULL,
-    isModified BOOLEAN NOT NULL,
-    PRIMARY KEY (stagingId, sfSourceId, sourceLoanId, reportingDate)
-    );
-
 
 
 
 CREATE TABLE sfLoanLiquidation (
     sfSourceId INT NOT NULL,
     sfLoanId BIGINT NOT NULL,
+    sfLoanChecksum BIGINT NOT NULL,
+    sfLoanLiquidationChecksum BIGINT NOT NULL,
+    sfRecordStart TIMESTAMP NOT NULL DEFAULT NOW(),
+    sfRecordEnd TIMESTAMP CHECK (sfRecordEnd IS NULL OR sfRecordEnd > sfRecordStart),
     reportingDate DATE NOT NULL,
     fclCosts DOUBLE PRECISION,
     propertyCosts DOUBLE PRECISION,
@@ -154,8 +121,7 @@ CREATE TABLE sfLoanLiquidation (
     creditEnhancementProceeds DOUBLE PRECISION, 
     repurchaseProceeds DOUBLE PRECISION,
     otherFclProceeds DOUBLE PRECISION, 
-    FOREIGN KEY (sfSourceId, sfLoanId) REFERENCES sfLoan (sfSourceId, sfLoanId),
+    FOREIGN KEY (sfSourceId, sfLoanId, sfLoanChecksum) REFERENCES sfLoan (sfSourceId, sfLoanId, sfLoanChecksum),
     PRIMARY KEY (sfLoanId, reportingDate),
-    UNIQUE(reportingDate, sfLoanId)
+    UNIQUE(sfSourceId, sfLoanId, sfLoanLiquidationChecksum, sfRecordStart)
     );
-
