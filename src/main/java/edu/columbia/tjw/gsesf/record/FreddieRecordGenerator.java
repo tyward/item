@@ -249,27 +249,8 @@ public final class FreddieRecordGenerator
 
         final File timeOutput = new File(_outputDir, outName_ + "_time.dat.gz");
         processEntry(TIME_FIELDS, zf, timeEntry, timeOutput);
-
-        //processCombined()
     }
 
-//    private void processCombined(final ZipFile zf_, final ZipEntry baseEntry_, final ZipEntry timeEntry_, final File outputFile_)
-//    {
-//        final String fileName = outputFile_.getName();
-//
-//        if (outputFile_.exists())
-//        {
-//            LOG.info("File already exists, skipping: " + fileName);
-//            return;
-//        }
-//
-//        final FreddieRecordReader<GseLoanField> baseReader = new FreddieRecordReader<>(BASE_FIELDS, GseLoanField.FAMILY, zf_, baseEntry_);
-//        final FreddieRecordReader<GseLoanField> timeReader = new FreddieRecordReader<>(TIME_FIELDS, GseLoanField.FAMILY, zf_, timeEntry_);
-//
-//        final Iterator<DataRecord<GseLoanField>> baseIterator = baseReader.iterator();
-//        final Iterator<DataRecord<GseLoanField>> timeIterator = timeReader.iterator();
-//
-//    }
     private void processEntry(final GseLoanField[] fields_, final ZipFile zf_, final ZipEntry entry_, final File outputFile_)
     {
         final String fileName = outputFile_.getName();
