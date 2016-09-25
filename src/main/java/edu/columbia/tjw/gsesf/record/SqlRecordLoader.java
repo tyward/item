@@ -24,8 +24,11 @@ import edu.columbia.tjw.gsesf.types.HashTableBackedEnumFamily;
 import edu.columbia.tjw.gsesf.types.LoanVendor;
 import edu.columbia.tjw.gsesf.types.RawDataType;
 import edu.columbia.tjw.item.util.HashTool;
+import java.io.File;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Instant;
@@ -34,6 +37,8 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import javax.sql.DataSource;
 
 /**
@@ -44,6 +49,8 @@ import javax.sql.DataSource;
  */
 public class SqlRecordLoader
 {
+    private static final int BLOCK_SIZE = 10 * 1000;
+
     private static final String INSERT_STATEMENT = "INSERT INTO sfLoan (sfSourceId, sfLoanId, sfFileLoadId, checksum, fico, firstPaymentDate, firstTimeHomebuyer, maturityDate, msa, miPercent, numUnits, occupancy,cltv, dti, upb, "
             + " ltv, initrate, channel,  penalty, productType, propertyState, propertyType, zipCode, sourceLoanId, purpose, origTerm, numBorrowers, sfSellerId, "
             + " sfServicerId) "
@@ -52,6 +59,12 @@ public class SqlRecordLoader
     private static final String BASE_RECONCILE = "UPDATE sfLoan SET sfRecordEnd = ("
             + "SELECT MIN(sfRecordStart) FROM sfLoan t2 WHERE t2.sfSourceId = testtable.sfSourceId AND t2.sfLoanId = testtable.sfLoanId AND t2.sfRecordStart > testtable.sfRecordStart"
             + ") WHERE endtime IS NULL";
+
+    private static final String FILE_CHECK = "SELECT sffileloadid FROM sfFileLoad o WHERE o.fileName = ? AND o.fileEntry = ?";
+
+    private static final String FILE_MARK = "INSERT INTO sfFileLoad (fileName, fileEntry) VALUES(?, ?)";
+
+    private static final String FILE_COMPLETE = "UPDATE sfFileLoad SET loadComplete = clock_timestamp() WHERE sfFileLoadId = ?";
 
     private static final List<GseLoanField> BASE_FIELDS = Collections.unmodifiableList(Arrays.asList(new GseLoanField[]
     {
@@ -103,6 +116,58 @@ public class SqlRecordLoader
         _seller = new HashTableBackedEnumFamily(_conn, "sfSeller", "sfSellerId", "sellerName");
     }
 
+    private void markComplete(final long loadId_) throws SQLException
+    {
+        //Make sure to flush all outstanding data...
+        _conn.commit();
+
+        try (final PreparedStatement stat = _conn.prepareStatement(FILE_COMPLETE))
+        {
+            stat.setLong(1, loadId_);
+            stat.executeUpdate();
+        }
+
+        _conn.commit();
+    }
+
+    private void markFile(final String file_name_, final String type_) throws SQLException
+    {
+        try (final PreparedStatement stat = _conn.prepareStatement(FILE_MARK))
+        {
+            stat.setString(1, file_name_);
+            stat.setString(2, type_);
+
+            stat.executeUpdate();
+        }
+
+        _conn.commit();
+    }
+
+    private long getLoadId(final String file_name_, final String type_, final boolean genId_) throws SQLException
+    {
+        try (final PreparedStatement stat = _conn.prepareStatement(FILE_CHECK))
+        {
+            stat.setString(1, file_name_);
+            stat.setString(2, type_);
+
+            try (final ResultSet res = stat.executeQuery())
+            {
+                if (res.next())
+                {
+                    return res.getLong(1);
+                }
+            }
+        }
+
+        if (!genId_)
+        {
+            return -1;
+        }
+
+        markFile(file_name_, type_);
+        return getLoadId(file_name_, type_, false);
+    }
+
     public void reconcileDatesBase() throws SQLException
     {
         flushBase();
@@ -123,7 +188,31 @@ public class SqlRecordLoader
         return output;
     }
 
-    public void loadDataRecord(final DataRecord<GseLoanField> record_, final long fileLoadId_) throws SQLException
+    public void loadBaseFile(final File inputFile_, final boolean isZip_) throws IOException, SQLException
+    {
+        final RawRecordReader<GseLoanField> reader = new RawRecordReader<>(inputFile_, GseLoanField.FAMILY, isZip_);
+
+        long count = 0;
+
+        final long loadId = getLoadId(inputFile_.getName(), "base", true);
+
+        for (final DataRecord<GseLoanField> next : reader)
+        {
+            count++;
+
+            if (count % BLOCK_SIZE == 0)
+            {
+                flushBase();
+            }
+
+            loadDataRecord(next, loadId);
+        }
+
+        markComplete(loadId);
+        flushBase();
+    }
+
+    private void loadDataRecord(final DataRecord<GseLoanField> record_, final long fileLoadId_) throws SQLException
     {
         _baseInsert.setInt(1, _vendor.getId());
 
