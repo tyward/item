@@ -20,13 +20,17 @@
 package edu.columbia.tjw.gsesf.record;
 
 import edu.columbia.tjw.gsesf.types.GseLoanField;
+import edu.columbia.tjw.gsesf.types.HashTableBackedEnumFamily;
 import edu.columbia.tjw.gsesf.types.LoanVendor;
+import edu.columbia.tjw.gsesf.types.RawDataType;
 import edu.columbia.tjw.item.util.HashTool;
-import java.io.IOException;
-import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -40,14 +44,14 @@ import javax.sql.DataSource;
  */
 public class SqlRecordLoader
 {
-    private static final int BLOCK_SIZE = 10000;
-
     private static final String INSERT_STATEMENT = "INSERT INTO sfLoan (sfSourceId, sfLoanId, sfFileLoadId, checksum, fico, firstPaymentDate, firstTimeHomebuyer, maturityDate, msa, miPercent, numUnits, occupancy,cltv, dti, upb, "
             + " ltv, initrate, channel,  penalty, productType, propertyState, propertyType, zipCode, sourceLoanId, purpose, origTerm, numBorrowers, sfSellerId, "
             + " sfServicerId) "
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (sfSourceId, sfLoanId, sfLoanChecksum) DO NOTHING;";
 
-    private static final String DATE_RECONCILE = "";
+    private static final String BASE_RECONCILE = "UPDATE sfLoan SET sfRecordEnd = ("
+            + "SELECT MIN(sfRecordStart) FROM sfLoan t2 WHERE t2.sfSourceId = testtable.sfSourceId AND t2.sfLoanId = testtable.sfLoanId AND t2.sfRecordStart > testtable.sfRecordStart"
+            + ") WHERE endtime IS NULL";
 
     private static final List<GseLoanField> BASE_FIELDS = Collections.unmodifiableList(Arrays.asList(new GseLoanField[]
     {
@@ -84,41 +88,9 @@ public class SqlRecordLoader
     private final PreparedStatement _baseInsert;
     private final LoanVendor _vendor;
     private final long _vendorHash;
+    private final HashTableBackedEnumFamily _servicer;
+    private final HashTableBackedEnumFamily _seller;
 
-//    public static void doTest(final DataSource source_) throws SQLException
-//    {
-//        final String insert = "INSERT INTO testTable (id, id2, checkSum) VALUES (?, ?, ?) ON CONFLICT DO NOTHING";
-//
-//        final Connection conn = source_.getConnection();
-//        final PreparedStatement stat = conn.prepareStatement(insert);
-//
-//        stat.setInt(1, 1);
-//        stat.setInt(2, 2);
-//        stat.setInt(3, 3);
-//        stat.execute();
-//
-//        System.out.println("Executed first.");
-//
-//        stat.setInt(1, 1);
-//        stat.setInt(2, 2);
-//        stat.setInt(3, 4);
-//        stat.execute();
-//
-//        System.out.println("Executed both.");
-//
-//        conn.commit();
-//
-//    }
-//    private void reconcileDate(final String tableName_)
-//    {
-//
-//        final String sql = "UPDATE " + tableName_ + " SET endtime = ("
-//                + "SELECT MIN(starttime) "
-//                + "FROM testTable t2 "
-//                + "WHERE t2.id = testtable.id AND t2.id2 = testtable.id2 AND t2.starttime > testtable.starttime"
-//                + ") WHERE endtime IS NULL";
-//
-//    }
     public SqlRecordLoader(final DataSource source_, final LoanVendor vendor_) throws SQLException
     {
         _dataSource = source_;
@@ -127,6 +99,28 @@ public class SqlRecordLoader
         _baseInsert = _conn.prepareStatement(INSERT_STATEMENT);
         _hasher = new HashTool();
         _vendorHash = _hasher.stringToLong(_vendor.getName());
+        _servicer = new HashTableBackedEnumFamily(_conn, "sfServicer", "sfServicerId", "servicerName");
+        _seller = new HashTableBackedEnumFamily(_conn, "sfSeller", "sfSellerId", "sellerName");
+    }
+
+    public void reconcileDatesBase() throws SQLException
+    {
+        flushBase();
+
+        try (final Statement stat = _conn.createStatement())
+        {
+            stat.executeUpdate(BASE_RECONCILE);
+            stat.close();
+        }
+
+        _conn.commit();
+    }
+
+    public int flushBase() throws SQLException
+    {
+        final int output = _baseInsert.executeUpdate();
+        _conn.commit();
+        return output;
     }
 
     public void loadDataRecord(final DataRecord<GseLoanField> record_, final long fileLoadId_) throws SQLException
@@ -145,54 +139,117 @@ public class SqlRecordLoader
 
         final int offset = 5; //where do the data fields start...
 
-//        for (int w = 0; w < BASE_FIELDS.size(); w++)
-//        {
-//
-//            //final String val = values[i];
-//            final GseLoanField next = BASE_FIELDS.get(w);
-//
-//            switch (next)
-//            {
-//                case CREDIT_SCORE:
-//                case FIRST_PAYMENT_DATE:
-//                case FIRST_TIME_BUYER:
-//                case MATURITY_DATE:
-//                case MSA:
-//                case MI_PERCENT:
-//                case UNIT_COUNT:
-//                case OCCUPANCY_STATUS:
-//                case ORIG_CLTV:
-//                case ORIG_DTI:
-//                case ORIG_UPB:
-//                case ORIG_LTV:
-//                case ORIG_INTRATE:
-//                case CHANNEL:
-//                case PREPAYMENT_PENALTY:
-//                case PRODUCT_TYPE:
-//                case PROPERTY_STATE:
-//                case PROPERTY_TYPE:
-//                case POSTAL_CODE:
-//                case LOAN_SEQUENCE_NUMBER:
-//                case LOAN_PURPOSE:
-//                case ORIG_TERM:
-//                case NUM_BORROWERS:
-//                    setParam(stat, trimmed, next, index);
-//                    break;
-//                case SELLER_NAME:
-//                    final int sellerInt = _seller.getMemberByName(trimmed, conn_).getId();
-//                    stat.setInt(index, sellerInt);
-//                    break;
-//                case SERVICER_NAME:
-//                    final int servicerInt = _servicer.getMemberByName(trimmed, conn_).getId();
-//                    stat.setInt(index, servicerInt);
-//                    break;
-//                default:
-//                    throw new IOException("Processing error.");
-//            }
-//
-//        }
-//
-//        _stat.addBatch();
+        for (int w = 0; w < BASE_FIELDS.size(); w++)
+        {
+            final GseLoanField next = BASE_FIELDS.get(w);
+            final int index = offset + w;
+
+            switch (next)
+            {
+                case CREDIT_SCORE:
+                case MSA:
+                case UNIT_COUNT:
+                case POSTAL_CODE:
+                case ORIG_TERM:
+                case NUM_BORROWERS:
+                case FIRST_PAYMENT_DATE:
+                case MATURITY_DATE:
+                case FIRST_TIME_BUYER:
+                case PREPAYMENT_PENALTY:
+                case MI_PERCENT:
+                case ORIG_CLTV:
+                case ORIG_DTI:
+                case ORIG_UPB:
+                case ORIG_LTV:
+                case ORIG_INTRATE:
+                case OCCUPANCY_STATUS:
+                case CHANNEL:
+                case PRODUCT_TYPE:
+                case PROPERTY_STATE:
+                case PROPERTY_TYPE:
+                case LOAN_SEQUENCE_NUMBER:
+                case LOAN_PURPOSE:
+                {
+                    incorporateData(next, record_, index);
+                    break;
+                }
+                case SELLER_NAME:
+                {
+                    final String seller_name = record_.getString(next);
+                    final long seller_hash = _seller.generateMemberId(seller_name);
+                    _hasher.updateLong(seller_hash);
+                    _baseInsert.setLong(index, seller_hash);
+                    break;
+                }
+                case SERVICER_NAME:
+                {
+                    final String name = record_.getString(next);
+                    final long hash = _servicer.generateMemberId(name);
+                    _hasher.updateLong(hash);
+                    _baseInsert.setLong(index, hash);
+                    break;
+                }
+                default:
+                    throw new SQLException("Processing error.");
+            }
+        }
+
+        //Now fill in the checksum.
+        final long checksum = _hasher.doHashLong();
+        _baseInsert.setLong(4, checksum);
+
+        _baseInsert.addBatch();
+    }
+
+    private void incorporateData(final GseLoanField next_, final DataRecord<GseLoanField> record_, final int index_) throws SQLException
+    {
+        final RawDataType type = next_.getType();
+
+        switch (type)
+        {
+            case DOUBLE:
+            {
+                final double val = record_.getDouble(next_);
+                _hasher.updateDouble(val);
+                _baseInsert.setDouble(index_, val);
+                break;
+            }
+            case STRING:
+            {
+                final String val = record_.getString(next_);
+                _hasher.updateString(val);
+                _baseInsert.setString(index_, val);
+                break;
+            }
+            case BOOLEAN:
+            {
+                final boolean val = record_.getBoolean(next_);
+                _hasher.updateBoolean(val);
+                _baseInsert.setBoolean(index_, val);
+                break;
+            }
+            case INT:
+            {
+                final int val = record_.getInt(next_);
+                _hasher.updateLong(val);
+                _baseInsert.setInt(index_, val);
+                break;
+            }
+            case DATE:
+            {
+                final LocalDate date = record_.getDate(next_);
+                final Instant inst = date.atStartOfDay(ZoneId.systemDefault()).toInstant();
+                final long ms = inst.toEpochMilli();
+
+                _hasher.updateLong(ms);
+
+                final java.sql.Date sqlDate = new java.sql.Date(ms);
+                _baseInsert.setDate(index_, sqlDate);
+                break;
+            }
+            default:
+                throw new SQLException("Unknown type name: " + type);
+        }
     }
 
 }

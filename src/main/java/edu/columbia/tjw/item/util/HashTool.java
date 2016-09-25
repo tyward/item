@@ -52,6 +52,25 @@ public final class HashTool
         _hash.update(vals);
     }
 
+    public void updateBoolean(final boolean input_)
+    {
+        if (input_)
+        {
+            updateLong(1);
+        }
+        else
+        {
+            updateLong(0);
+        }
+    }
+
+    public void updateDouble(final double input_)
+    {
+        final long lform = Double.doubleToLongBits(input_);
+        final byte[] vals = ByteTool.longToBytes(lform);
+        _hash.update(vals);
+    }
+
     public byte[] doHash()
     {
         final byte[] output = _hash.digest();
@@ -68,10 +87,8 @@ public final class HashTool
 
     public long stringToLong(final String input_)
     {
-        final byte[] hash = this.hashBytes(input_.getBytes());
-
-        //This is a strong hash, no need for mixing, just truncate.
-        final long output = ByteTool.bytesToLong(hash, 0);
+        this.updateString(input_);
+        final long output = this.doHashLong();
         return output;
     }
 
