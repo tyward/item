@@ -75,7 +75,7 @@ CREATE TABLE sfLoan (
     FOREIGN KEY (sfSellerId) REFERENCES sfSeller (sfSellerId),
     FOREIGN KEY (sfServicerId) REFERENCES sfServicer (sfServicerId),
     FOREIGN KEY (sfSourceId) REFERENCES sfSource (sfSourceId),
-    UNIQUE(sourceLoanId, sfSourceId, sfLoanChecksum, sfRecordStart)
+    UNIQUE(sourceLoanId, sfSourceId, sfRecordStart)
 );
 
 
@@ -83,7 +83,7 @@ CREATE TABLE sfLoan (
 CREATE TABLE sfLoanMonth (
     sfSourceId INT NOT NULL,
     sfLoanId BIGINT NOT NULL,
-    sfLoanChecksum BIGINT NOT NULL,
+    sfLoanChecksum BIGINT,
     sfLoanMonthChecksum BIGINT NOT NULL,
     sfRecordStart TIMESTAMP NOT NULL DEFAULT NOW(),
     sfRecordEnd TIMESTAMP CHECK (sfRecordEnd IS NULL OR sfRecordEnd > sfRecordStart),
