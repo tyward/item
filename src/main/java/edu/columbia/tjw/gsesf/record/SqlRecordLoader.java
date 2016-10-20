@@ -24,6 +24,7 @@ import edu.columbia.tjw.gsesf.types.HashTableBackedEnumFamily;
 import edu.columbia.tjw.gsesf.types.LoanVendor;
 import edu.columbia.tjw.gsesf.types.RawDataType;
 import edu.columbia.tjw.item.util.HashTool;
+import edu.columbia.tjw.item.util.ListTool;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
@@ -33,8 +34,6 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import javax.sql.DataSource;
 
@@ -53,6 +52,23 @@ public class SqlRecordLoader
             + " sfServicerId) "
             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?) ON CONFLICT (sfSourceId, sfLoanId, sfLoanChecksum) DO NOTHING;";
 
+    private static final String TIME_INSERT = "INSERT INTO sfLoanMonth ( "
+            + " sfSourceId,"
+            + " sfLoanId,"
+            + " sfLoanChecksum,"
+            + " sfLoanMonthChecksum,"
+            + " sfRecordStart,"
+            + " sfRecordEnd,"
+            + " sfFileLoadId,"
+            + " reportingDate,"
+            + " balance,"
+            + " status,"
+            + " age,"
+            + " isPrepaid,"
+            + " isDefaulted,"
+            + " isModified) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?) ON CONFLICT (sfSourceId, sfLoanId, sfLoanChecksum) DO NOTHING;";
+
     private static final String BASE_RECONCILE = "UPDATE sfLoan SET sfRecordEnd = ("
             + "SELECT MIN(sfRecordStart) FROM sfLoan t2 WHERE t2.sfSourceId = sfLoan.sfSourceId AND t2.sfLoanId = sfLoan.sfLoanId AND t2.sfRecordStart > sfLoan.sfRecordStart"
             + ") WHERE sfRecordEnd IS NULL";
@@ -63,34 +79,41 @@ public class SqlRecordLoader
 
     private static final String FILE_COMPLETE = "UPDATE sfFileLoad SET loadComplete = clock_timestamp() WHERE sfFileLoadId = ?";
 
-    private static final List<GseLoanField> BASE_FIELDS = Collections.unmodifiableList(Arrays.asList(new GseLoanField[]
-    {
-        GseLoanField.CREDIT_SCORE,
-        GseLoanField.FIRST_PAYMENT_DATE,
-        GseLoanField.FIRST_TIME_BUYER, //
-        GseLoanField.MATURITY_DATE,
-        GseLoanField.MSA,
-        GseLoanField.MI_PERCENT,
-        GseLoanField.UNIT_COUNT,
-        GseLoanField.OCCUPANCY_STATUS,
-        GseLoanField.ORIG_CLTV,
-        GseLoanField.ORIG_DTI,
-        GseLoanField.ORIG_UPB,
-        GseLoanField.ORIG_LTV,
-        GseLoanField.ORIG_INTRATE,
-        GseLoanField.CHANNEL,
-        GseLoanField.PREPAYMENT_PENALTY,
-        GseLoanField.PRODUCT_TYPE,
-        GseLoanField.PROPERTY_STATE,
-        GseLoanField.PROPERTY_TYPE,
-        GseLoanField.POSTAL_CODE,
-        GseLoanField.LOAN_SEQUENCE_NUMBER,
-        GseLoanField.LOAN_PURPOSE,
-        GseLoanField.ORIG_TERM,
-        GseLoanField.NUM_BORROWERS,
-        GseLoanField.SELLER_NAME,
-        GseLoanField.SERVICER_NAME
-    }));
+    private static final List<GseLoanField> BASE_FIELDS = ListTool.listify(GseLoanField.class,
+            GseLoanField.CREDIT_SCORE,
+            GseLoanField.FIRST_PAYMENT_DATE,
+            GseLoanField.FIRST_TIME_BUYER,
+            GseLoanField.MATURITY_DATE,
+            GseLoanField.MSA,
+            GseLoanField.MI_PERCENT,
+            GseLoanField.UNIT_COUNT,
+            GseLoanField.OCCUPANCY_STATUS,
+            GseLoanField.ORIG_CLTV,
+            GseLoanField.ORIG_DTI,
+            GseLoanField.ORIG_UPB,
+            GseLoanField.ORIG_LTV,
+            GseLoanField.ORIG_INTRATE,
+            GseLoanField.CHANNEL,
+            GseLoanField.PREPAYMENT_PENALTY,
+            GseLoanField.PRODUCT_TYPE,
+            GseLoanField.PROPERTY_STATE,
+            GseLoanField.PROPERTY_TYPE,
+            GseLoanField.POSTAL_CODE,
+            GseLoanField.LOAN_SEQUENCE_NUMBER,
+            GseLoanField.LOAN_PURPOSE,
+            GseLoanField.ORIG_TERM,
+            GseLoanField.NUM_BORROWERS,
+            GseLoanField.SELLER_NAME,
+            GseLoanField.SERVICER_NAME);
+
+    private static final List<GseLoanField> TIME_FIELDS = ListTool.listify(GseLoanField.class,
+            GseLoanField.LOAN_SEQUENCE_NUMBER,
+            GseLoanField.FACTOR_DATE,
+            GseLoanField.UPB,
+            GseLoanField.STATUS,
+            GseLoanField.AGE,
+            GseLoanField.IS_MODIFIED,
+            GseLoanField.ZERO_BAL_CODE);
 
     private final HashTool _hasher;
     private final DataSource _dataSource;
@@ -185,14 +208,14 @@ public class SqlRecordLoader
 
     }
 
-    public void loadBaseFile(final File inputFile_, final boolean isZip_) throws IOException, SQLException
+    public void loadTimeFile(final File inputFile_, final boolean isZip_) throws IOException, SQLException
     {
         final RawRecordReader<GseLoanField> reader = new RawRecordReader<>(inputFile_, GseLoanField.FAMILY, isZip_);
 
         long count = 0;
         long sub_count = 0;
 
-        final long loadId = getLoadId(inputFile_.getName(), "base", true);
+        final long loadId = getLoadId(inputFile_.getName(), "time", true);
 
         for (final DataRecord<GseLoanField> next : reader)
         {
@@ -215,6 +238,42 @@ public class SqlRecordLoader
 
         reconcileDatesBase();
         markComplete(loadId);
+    }
+
+    public void loadBaseFile(final File inputFile_, final boolean isZip_) throws IOException, SQLException
+    {
+        final RawRecordReader<GseLoanField> reader = new RawRecordReader<>(inputFile_, GseLoanField.FAMILY, isZip_);
+
+        long count = 0;
+        long sub_count = 0;
+
+        final long loadId = getLoadId(inputFile_.getName(), "base", true);
+
+        for (final DataRecord<GseLoanField> next : reader)
+        {
+            loadDataRecord(next, loadId);
+            sub_count++;
+            count++;
+
+            if (count % BLOCK_SIZE == 0)
+            {
+                flushBase();
+                sub_count = 0;
+            }
+        }
+
+        if (sub_count > 0)
+        {
+            flushBase();
+        }
+
+        reconcileDatesBase();
+        markComplete(loadId);
+    }
+
+    private void loadTimeRecord(final DataRecord<GseLoanField> record_, final long fileLoadId_) throws SQLException
+    {
+
     }
 
     private void loadDataRecord(final DataRecord<GseLoanField> record_, final long fileLoadId_) throws SQLException

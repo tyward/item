@@ -112,9 +112,10 @@ public final class LoanDataExtract implements AutoCloseable
      * @param loanCount_ The total number of loans to extract.
      * @param strideSize_ The number of loans between extracted loans.
      * @param startingStatus_
+     * @return 
      * @throws SQLException
      */
-    public void extractData(final int loanCount_, final int strideSize_, final LoanStatus startingStatus_) throws SQLException
+    public RawDataTable<GseLoanField> extractData(final int loanCount_, final int strideSize_, final LoanStatus startingStatus_) throws SQLException
     {
         _stat.setFetchSize(loanCount_);
 
@@ -123,8 +124,9 @@ public final class LoanDataExtract implements AutoCloseable
             final RawDataTable<GseLoanField> raw = extractBlock(1000, res);
 
             System.out.println("Ping.");
+            
+            return raw;
         }
-
     }
 
     /**
