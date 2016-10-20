@@ -136,5 +136,5 @@ public abstract class GeneralTask<V> implements Runnable
         }
     }
 
-    protected abstract V subRun();
+    protected abstract V subRun() throws Exception;
 }
