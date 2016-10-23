@@ -35,9 +35,9 @@ import java.util.TreeSet;
 /**
  *
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T>
+ * @param <S> The status type for this param grid
+ * @param <R> The regressor type for this param grid
+ * @param <T> The curve type for this param grid
  */
 public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements ItemGrid<R>
 {
@@ -89,8 +89,9 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
      * Note that the results will be transformed (according to the curves from
      * getTransformation)
      *
-     * @param index_
-     * @param output_
+     * @param index_ The row index of the regressors
+     * @param output_ The array of regressors, ordered as per the transformation
+     * set.
      */
     public void getRegressors(final int index_, final double[] output_)
     {

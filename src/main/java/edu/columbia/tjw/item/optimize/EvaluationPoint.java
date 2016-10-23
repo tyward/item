@@ -22,6 +22,7 @@ package edu.columbia.tjw.item.optimize;
 /**
  *
  * @author tyler
+ * @param <V> The type of this EvaluationPoint
  */
 public interface EvaluationPoint<V extends EvaluationPoint<V>>
         extends Cloneable
@@ -30,8 +31,8 @@ public interface EvaluationPoint<V extends EvaluationPoint<V>>
     /**
      * Returns the scalar that when used to scalar multiply input_, produces the projection of this onto input.
      * 
-     * @param input_
-     * @return 
+     * @param input_ The point upon which this point should be projected
+     * @return The scalar projection of this onto input_
      */
     public double project(final V input_);
     

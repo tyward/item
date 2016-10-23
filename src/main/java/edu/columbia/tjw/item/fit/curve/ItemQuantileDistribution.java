@@ -34,8 +34,8 @@ import java.util.List;
 /**
  *
  * @author tyler
- * @param <S>
- * @param <R>
+ * @param <S> The status type for this quantile distribution
+ * @param <R> The regressor type for this quantile distritbution
  */
 public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends ItemRegressor<R>>
 {

@@ -42,9 +42,9 @@ import java.util.logging.Logger;
 /**
  *
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T>
+ * @param <S> The status type for this fitter
+ * @param <R> The regressor type for this fitter
+ * @param <T> The curve type for this fitter
  */
 public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {

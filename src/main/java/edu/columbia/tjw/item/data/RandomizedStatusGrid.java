@@ -29,8 +29,8 @@ import edu.columbia.tjw.item.util.random.RandomTool;
 /**
  *
  * @author tyler
- * @param <S>
- * @param <R>
+ * @param <S> The status type for this grid
+ * @param <R> The regressor type for this grid
  */
 public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemStatusGrid<S, R>
 {

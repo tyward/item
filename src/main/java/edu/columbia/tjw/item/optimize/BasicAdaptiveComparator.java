@@ -25,8 +25,8 @@ import java.util.logging.Logger;
 /**
  *
  * @author tyler
- * @param <V>
- * @param <F>
+ * @param <V> The type of points on which this can be evaluated
+ * @param <F> The type of optimization function which will be called
  */
 public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>> implements AdaptiveComparator<V, F>
 {
@@ -100,7 +100,7 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
                 function_.value(b_, bCount, end, bResult_);
                 bCount = bResult_.getHighRow();
             }
-            
+
             zScore = _comp.computeZScore();
         }
 
@@ -115,6 +115,7 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
         return output;
     }
 
+    @Override
     public double getSigmaTarget()
     {
         return this._stdDevThreshold;

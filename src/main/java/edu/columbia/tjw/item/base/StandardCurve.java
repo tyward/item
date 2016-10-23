@@ -26,10 +26,11 @@ import edu.columbia.tjw.item.util.HashUtil;
 /**
  *
  * @author tyler
- * @param <V>
+ * @param <V> The type of this family of curves
  */
 public abstract class StandardCurve<V extends ItemCurveType<V>> implements ItemCurve<V>
 {
+    private static final long serialVersionUID = 1056495046007095245L;
     private final V _type;
 
     public StandardCurve(final V type_)

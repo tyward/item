@@ -26,7 +26,7 @@ import java.util.WeakHashMap;
  * A pool made for deduplication of objects.
  *
  * @author tyler
- * @param <T>
+ * @param <T> The type of object to be cached
  */
 public final class WeakInstancePool<T>
 {

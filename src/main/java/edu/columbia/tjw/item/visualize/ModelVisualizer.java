@@ -34,9 +34,9 @@ import java.util.Map;
 /**
  *
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T>
+ * @param <S> The status family for this visualizer
+ * @param <R> The regressor family for this visualizer
+ * @param <T> The curve family for this visualizer
  */
 public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
@@ -78,13 +78,15 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * The result is two arrays, the regressor values and transition
      * probabilities.
      *
-     * @param to_
-     * @param regressor_
-     * @param regValues_
-     * @param regMin_
-     * @param regMax_
-     * @param steps_
-     * @return
+     * @param to_ The status transition to target
+     * @param regressor_ The regressor to target
+     * @param regValues_ Values to use for all regressors (except possibly
+     * regressor_)
+     * @param regMin_ The starting value for regressor_
+     * @param regMax_ The ending value for regressor_
+     * @param steps_ The number of steps to use
+     * @return An interpolated curve over regressor_ on [regMin_, regMax_] of
+     * transition probabilities for an element with regValues_
      */
     public InterpolatedCurve graph(final S to_, final R regressor_, final Map<R, Double> regValues_, final double regMin_, final double regMax_, final int steps_)
     {

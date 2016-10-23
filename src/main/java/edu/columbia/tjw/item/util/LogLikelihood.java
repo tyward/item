@@ -26,7 +26,7 @@ import java.util.List;
 /**
  *
  * @author tyler
- * @param <S>
+ * @param <S> The status type on which to apply this function
  */
 public final class LogLikelihood<S extends ItemStatus<S>>
 {
@@ -92,8 +92,13 @@ public final class LogLikelihood<S extends ItemStatus<S>>
     /**
      * Computes the ordinal corresponding to the given offset.
      *
-     * @param offset_
-     * @return
+     * Not every status can transition to every other status. The available
+     * transitions are packed tightly, omitting any impossible transitions.
+     * Therefore, an offset into the output array won't necessarily be the
+     * ordinal of the status represented. This function performs that mapping.
+     *
+     * @param offset_ The offset
+     * @return The ordinal corresponding to the offset
      */
     public final int offsetToOrdinal(final int offset_)
     {
@@ -105,8 +110,8 @@ public final class LogLikelihood<S extends ItemStatus<S>>
      *
      * Returns -1 if this ordinal is not reachable from this state.
      *
-     * @param ordinal_
-     * @return
+     * @param ordinal_ the ordinal
+     * @return The offset
      */
     public final int ordinalToOffset(final int ordinal_)
     {
@@ -115,13 +120,12 @@ public final class LogLikelihood<S extends ItemStatus<S>>
 
     public final double logLikelihood(final double[] computed_, final int actualTransitionOffset_)
     {
-        if(actualTransitionOffset_ < 0)
+        if (actualTransitionOffset_ < 0)
         {
             //N.B: The data included a forbidden transition, we need to ignore that data point.
             return 0.0;
         }
-        
-        
+
         double computed = 0.0;
         final int[] indistinguishable = _indistinguishableMap[actualTransitionOffset_];
 

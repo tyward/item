@@ -29,9 +29,9 @@ import edu.columbia.tjw.item.algo.QuantileDistribution;
 /**
  *
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T>
+ * @param <S> The status type for this param generator
+ * @param <R> The regressor type for this param generator
+ * @param <T> The curve type for this param generator
  */
 public interface ParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
@@ -52,8 +52,8 @@ public interface ParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
      * transformation) to the parameter number corresponding in the params
      * passed to this generator.
      *
-     * @param input_
-     * @return
+     * @param input_ The param number to translate
+     * @return The translated param number
      */
     public int translateParamNumber(final int input_);
 
