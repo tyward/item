@@ -114,7 +114,6 @@ public final class RecordHeader<T extends TypedField<T>> implements Serializable
      * Returns -1 if no such index, throws NullPointerException if field_ is
      * null.
      *
-     * @see computeAllFieldsIndex(T)
      *
      * @param field_ The field to look up.
      * @return index such that getEntry(field_.getType(), index_) ==

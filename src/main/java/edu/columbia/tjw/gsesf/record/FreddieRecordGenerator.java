@@ -194,7 +194,7 @@ public final class FreddieRecordGenerator
         }
 
         @Override
-        protected File subRun() throws IOException
+        protected File subRun() throws Exception
         {
             loadFile(_zipFile, _outName);
             return _zipFile;
