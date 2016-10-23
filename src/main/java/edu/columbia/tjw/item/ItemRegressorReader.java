@@ -40,7 +40,7 @@ public interface ItemRegressorReader
     
     /**
      * Returns the number of elements in this array.
-     * @return 
+     * @return The number of elements in this reader
      */
     public int size();
     

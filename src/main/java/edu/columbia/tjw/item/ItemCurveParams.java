@@ -22,7 +22,7 @@ package edu.columbia.tjw.item;
 /**
  *
  * @author tyler
- * @param <T>
+ * @param <T> The curve type defined by these params
  */
 public final class ItemCurveParams<T extends ItemCurveType<T>>
 {

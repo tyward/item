@@ -34,9 +34,9 @@ import java.util.List;
 /**
  *
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T>
+ * @param <S> The status type for this generator
+ * @param <R> The regressor type for this generator
+ * @param <T> The curve type for this generator
  */
 public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         implements ParamGenerator<S, R, T>

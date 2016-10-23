@@ -35,8 +35,10 @@ public final class MultiLogistic
      * It is safe to pass in the same array for powerScores_ and output_, if you
      * don't mind it being overwritten.
      *
-     * @param powerScores_
-     * @param output_
+     * @param powerScores_ An array of power scores
+     * @param output_ The power scores converted into probabilities
+     * @return The normalizing factor for these power scores (essentially, the
+     * sum of their exponentials)
      */
     public static double multiLogisticFunction(final double[] powerScores_, final double[] output_)
     {
@@ -119,7 +121,7 @@ public final class MultiLogistic
         {
             output_[i] = (output_[i] - normalizedTerm) * workspace_[i];
         }
-        
+
         //Done, output holds the results.
     }
 
@@ -129,8 +131,9 @@ public final class MultiLogistic
      *
      *
      * @param baseCase_ Which power score will be set to zero.
-     * @param probabilities_
-     * @param output_
+     * @param probabilities_ An array of probabilities
+     * @param output_ The corresponding power scores, with output_[baseCase_] =
+     * 0.0
      */
     public static void multiLogitFunction(final int baseCase_, final double[] probabilities_, final double[] output_)
     {

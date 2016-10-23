@@ -34,8 +34,8 @@ import java.util.Arrays;
  * integer x not in R, the index Q will be computed, but Y[Q] != x, and an
  * exception is thrown.
  *
- * Combined with an array of type T, this can function as a Map<int, T>, but at
- * only a tiny fraction of the cost.
+ * Combined with an array of type T, this can function as a Map&lt;int, T&gt;,
+ * but at only a tiny fraction of the cost.
  *
  * @author tyler
  */

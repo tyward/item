@@ -24,22 +24,23 @@ import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
- * 
+ *
  * @author tyler
- * @param <R> 
+ * @param <R> The type of the regressor represented by this grid
  */
 public interface ItemGrid<R extends ItemRegressor<R>>
 {
 
     /**
      * Gets the reader for the given field
-     * @param field_
-     * @return 
+     *
+     * @param field_ The regressor to fetch
+     * @return A reader used to get data from this column
      */
     public ItemRegressorReader getRegressorReader(final R field_);
-    
+
     public int size();
-    
+
     public EnumFamily<R> getRegressorFamily();
 
 }
