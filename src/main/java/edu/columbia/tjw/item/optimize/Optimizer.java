@@ -22,14 +22,14 @@ package edu.columbia.tjw.item.optimize;
 /**
  *
  * @author tyler
- * @param <V>
- * @param <F>
+ * @param <V> The type of points over which this can optimize
+ * @param <F> The type of function this can optimize
  */
 public abstract class Optimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>>
 {
     private static final double DEFAULT_XTOL = 1.0e-6;
     private static final double DEFAULT_YTOL = 1.0e-6;
-    
+
     private final double _stdDevThreshold = 5.0;
     private final double _xTol;
     private final double _yTol;
@@ -84,9 +84,10 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
      * Figure out how far apart these two results could realistically be,
      * without attempting additional calculations.
      *
-     * @param aResult_
-     * @param bResult_
-     * @return
+     * @param aResult_ The first result
+     * @param bResult_ The second result
+     * @return True if aResult_.getMean() is within tolerance of
+     * bResult_.getMean()
      */
     protected boolean checkYTolerance(final EvaluationResult aResult_, final EvaluationResult bResult_)
     {

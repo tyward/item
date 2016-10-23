@@ -57,7 +57,7 @@ public final class EvaluationResult
     /**
      * Return the variance of the mean.
      *
-     * @return
+     * @return The variance of the mean
      */
     public double getVariance()
     {

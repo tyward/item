@@ -219,9 +219,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     /**
      * Creates a new set of parameters with an additional beta.
      *
-     * @param field_
-     * @param trans_
-     * @return
+     * @param field_ The regressor on which the new curve is defined
+     * @param trans_ The curve that is being added (defined on field_)
+     * @return A new set of parameters, with the given curve added and its beta
+     * set to zero.
      */
     public ItemParameters<S, R, T> addBeta(final R field_, final ItemCurve<T> trans_)
     {
@@ -302,12 +303,12 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     }
 
     /**
-     * The list of all (not necessarily unique) regressors underlying this model's
-     * inputs. 
-     * 
-     * A regressor may appear many times if it is transformed by several curves. 
-     * 
-     * @return 
+     * The list of all (not necessarily unique) regressors underlying this
+     * model's inputs.
+     *
+     * A regressor may appear many times if it is transformed by several curves.
+     *
+     * @return THe list of all regressors used in these parameters
      */
     public List<R> getRegressorList()
     {

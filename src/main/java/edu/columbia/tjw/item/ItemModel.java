@@ -55,7 +55,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     /**
      * Create a new item model from its parameters.
      *
-     * @param params_
+     * @param params_ The parameters that define this model
      */
     public ItemModel(final ItemParameters<S, R, T> params_)
     {
@@ -102,9 +102,9 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * N.B: This is NOT threadsafe! Generate a new model for each thread, there
      * is some internal workspace associated that can't be shared.
      *
-     * @param grid_
-     * @param index_
-     * @return
+     * @param grid_ The grid holding the data
+     * @param index_ The row of the grid on which to apply the model
+     * @return The log likelihood of the data point represented by this row
      */
     public final double logLikelihood(final ParamFittingGrid<S, R, T> grid_, final int index_)
     {
@@ -276,10 +276,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * N.B: This is NOT threadsafe. It contains some use of internal state that
      * cannot be shared. Clone the model as needed.
      *
-     * @param grid_
-     * @param index_
-     * @param output_
-     * @return
+     * @param grid_ The grid holding the data
+     * @param index_ The row in the grid representing this data point
+     * @param output_ The array to hold the output transition probabilities
+     * @return The number of probabilities written into output_
      */
     public int transitionProbability(final ItemParamGrid<S, R, T> grid_, final int index_, final double[] output_)
     {
@@ -333,7 +333,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * any thread, and you are guaranteed to get a viable model within that
      * thread.
      *
-     * @return
+     * @return A clone of this model
      */
     @Override
     public final synchronized ItemModel<S, R, T> clone()

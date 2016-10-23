@@ -57,7 +57,7 @@ public class DistStats2D implements Serializable
      * Actually computes the variance of the mean of X, not the variance of X
      * itself.
      *
-     * @return
+     * @return The variance of the mean of X
      */
     public final double getVarX()
     {
@@ -73,7 +73,7 @@ public class DistStats2D implements Serializable
      * Actually computes the variance of the mean of Y, not the variance of Y
      * itself.
      *
-     * @return
+     * @return The variance of the mean of Y
      */
     public final double getVarY()
     {
@@ -111,7 +111,7 @@ public class DistStats2D implements Serializable
     }
 
     public void update(final double x_, final double y_)
-    {
+    { 
         final double x2 = x_ * x_;
         final double y2 = y_ * y_;
 

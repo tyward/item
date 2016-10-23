@@ -32,16 +32,16 @@ public interface ItemCurve<V extends ItemCurveType<V>> extends Serializable
     /**
      * Applies this curve to x.
      *
-     * @param x_
-     * @return
+     * @param x_ The value to be transformed
+     * @return f(x), the transformed result.
      */
     public double transform(final double x_);
 
     /**
      * Gets the specified parameter of this curve.
      *
-     * @param index_
-     * @return
+     * @param index_ The index of the desired parameter
+     * @return The parameter at index index_
      */
     public double getParam(final int index_);
 
@@ -49,16 +49,16 @@ public interface ItemCurve<V extends ItemCurveType<V>> extends Serializable
      * Computes the derivative of this curve with respect to the specified
      * parameter, at x_
      *
-     * @param index_
-     * @param x_
-     * @return
+     * @param index_ The index of the target parameter
+     * @param x_ The point at which df/dx(x) is desired
+     * @return THe derivative of f(x) at x with respect to parameter index_
      */
     public double derivative(int index_, double x_);
 
     /**
      * Gets the type of this curve.
      *
-     * @return
+     * @return The type of this curve
      */
     public V getCurveType();
 

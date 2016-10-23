@@ -25,8 +25,8 @@ import java.util.logging.Logger;
 /**
  *
  * @author tyler
- * @param <V>
- * @param <F>
+ * @param <V> The type of points over which this can optimize
+ * @param <F> The type of function this can optimize
  */
 public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>> extends Optimizer<V, F>
 {
@@ -110,10 +110,10 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
      * We then need only to compute a C that is known to be greater than b (we
      * may also adjust b).
      *
-     * @param f_
-     * @param bracket_
-     * @return
-     * @throws ConvergenceException
+     * @param f_ The function to bracket
+     * @param bracket_ The initial guess for the bracket, with f(a) > f(b)
+     * @return A new bracket [a, b, c] with f(a) > f(b) and f(c) > f(b)
+     * @throws ConvergenceException If no such bracket can be constructed
      */
     private Bracket<V> completeBracket(final F f_, final Bracket<V> bracket_) throws ConvergenceException
     {
@@ -124,7 +124,6 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
         final V b = bracket_.getB().clone();
         final V c = bracket_.getC().clone();
         final V ac = bracket_.getDirection().clone();
-        final V ca = bracket_.getNegDirection().clone();
 
         final double initMag = ac.getMagnitude();
 

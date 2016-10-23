@@ -36,8 +36,8 @@ public interface ItemCurveFactory<V extends ItemCurveType<V>>
      * Generates the curve of the correct type by reading the first N parameters
      * from params_.
      *
-     * @param params_
-     * @return
+     * @param params_ Params describing the curve to be generated
+     * @return The curve specified by the params
      */
     public ItemCurve<V> generateCurve(final ItemCurveParams<V> params_);
 
@@ -47,10 +47,10 @@ public interface ItemCurveFactory<V extends ItemCurveType<V>>
      *
      *
      *
-     * @param curveType_
-     * @param dist_
-     * @param rand_
-     * @return
+     * @param curveType_ The type of curve to be parameterized
+     * @param dist_ The approximate quantiles for this curve
+     * @param rand_ A random number generator
+     * @return A reasonable set of parameters for this curve
      */
     public ItemCurveParams<V> generateStartingParameters(final V curveType_, final QuantileDistribution dist_, final Random rand_);
 

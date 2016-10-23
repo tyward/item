@@ -29,13 +29,12 @@ public class RandomTool
 
     public static void main(final String[] args_)
     {
-        for(int i = 0; i < 100; i++)
+        for (int i = 0; i < 100; i++)
         {
             System.out.println(CORE.nextLong() + "L");
         }
     }
-    
-    
+
     private RandomTool()
     {
     }
@@ -47,8 +46,8 @@ public class RandomTool
 
     /**
      *
-     * @param max_
-     * @return
+     * @param max_ The max (exclusive) of the range
+     * @return An integer in the range [0, max_), uniformly distributed
      */
     public static int nextInt(final int max_)
     {
@@ -57,9 +56,11 @@ public class RandomTool
 
     /**
      *
-     * @param max_
-     * @param rand_
-     * @return
+     * Generates an integer in the range [0, max_)
+     *
+     * @param max_ The max (exclusive) of the range
+     * @param rand_ The PRNG used to generate these random numbers
+     * @return An integer in the range [0, max_), uniformly distributed
      */
     public static int nextInt(final int max_, final Random rand_)
     {
@@ -75,7 +76,8 @@ public class RandomTool
 
     /**
      *
-     * @param input_
+     *
+     * @param input_ The array to be shuffled
      */
     public static void shuffle(final int[] input_)
     {
@@ -84,8 +86,8 @@ public class RandomTool
 
     /**
      *
-     * @param input_
-     * @param rand_
+     * @param input_ The array to be shuffled
+     * @param rand_ The PRNG to use for the shuffle
      */
     public static void shuffle(final int[] input_, final Random rand_)
     {
@@ -112,12 +114,11 @@ public class RandomTool
         CORE.nextBytes(output);
         return output;
     }
-    
+
     public static Random getRandom()
     {
         return getRandom(PrngType.STANDARD);
     }
-    
 
     public static Random getRandom(final PrngType type_)
     {

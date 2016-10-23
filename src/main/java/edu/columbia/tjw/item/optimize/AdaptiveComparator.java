@@ -22,18 +22,20 @@ package edu.columbia.tjw.item.optimize;
 /**
  *
  * @author tyler
+ * @param <V> The type of points on which this can be evaluated
+ * @param <F> The type of optimization function which will be called
  */
 public interface AdaptiveComparator<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>>
 {
     /**
      * Return (aRes - bRes) as a zScore.
      *
-     * @param function_
-     * @param a_
-     * @param b_
-     * @param aResult_
-     * @param bResult_
-     * @return
+     * @param function_ The function to evaluate
+     * @param a_ Point a on which to evaluate the function
+     * @param b_ Point b on which to evaluate the function
+     * @param aResult_ The result of evaluating function_(a_)
+     * @param bResult_ THe result of evaluating function_(b_)
+     * @return The difference between these two points, as a z-score
      */
     public double compare(final F function_, final V a_, final V b_, final EvaluationResult aResult_, final EvaluationResult bResult_);
 

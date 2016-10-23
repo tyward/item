@@ -29,9 +29,9 @@ import edu.columbia.tjw.item.util.EnumFamily;
 /**
  * 
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T> 
+ * @param <S> The status type for this grid
+ * @param <R> The regressor type for this grid
+ * @param <T> The curve type for this grid
  */
 public class ParamFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends ItemParamGrid<S, R, T> implements ItemStatusGrid<S, R>
 {

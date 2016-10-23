@@ -105,12 +105,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      *
      * It is strongly recommended that all grid factories are wrapped before
      * use.
-     * 
-     * N.B: The wrapped grid may cache, so if the underlying regressors are changed,
-     * the resulting factory should be wrapped again. 
      *
-     * @param grid_
-     * @return
+     * N.B: The wrapped grid may cache, so if the underlying regressors are
+     * changed, the resulting factory should be wrapped again.
+     *
+     * @param grid_ The grid to randomize
+     * @return A randomized version of grid_
      */
     public ItemStatusGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_)
     {
@@ -164,19 +164,18 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         //final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(gridFactory_);
         //final ItemFittingGrid<S, R> grid = gridFactory_.prepareGrid(params_);
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
-        
-        
+
         return fitCoefficients(model, grid, filters_);
     }
 
     /**
      * Same as overloaded method, different parameters.
      *
-     * @param model_
-     * @param fittingGrid_
-     * @param filters_
-     * @return
-     * @throws ConvergenceException
+     * @param model_ The model to use as a starting point
+     * @param fittingGrid_ The grid of data used for fitting
+     * @param filters_ Any filters to apply
+     * @return An updated model with the beta values refit
+     * @throws ConvergenceException If no progress could be made
      */
     private ItemModel<S, R, T> fitCoefficients(final ItemModel<S, R, T> model_, final ParamFittingGrid<S, R, T> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
@@ -199,7 +198,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params_), _settings);
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
-
 
         final double startingLL = f1.computeLogLikelihood(params_, grid, filters_);
         double baseLL = startingLL;
@@ -280,7 +278,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         ItemModel<S, R, T> model = new ItemModel<>(params_);
 
         //final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(gridFactory_);
-
         for (int i = 0; i < curveCount_; i++)
         {
             final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(model.getParams(), grid_);
@@ -325,7 +322,5 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         return model;
     }
-
-
 
 }

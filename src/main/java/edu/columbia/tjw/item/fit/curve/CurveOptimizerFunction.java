@@ -41,9 +41,9 @@ import java.util.List;
 /**
  *
  * @author tyler
- * @param <S>
- * @param <R>
- * @param <T>
+ * @param <S> The status type for this optimizer function
+ * @param <R> The regressor type for this optimizer function
+ * @param <T> THe curve type for this optimizer function
  */
 public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction

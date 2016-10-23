@@ -24,7 +24,7 @@ import edu.columbia.tjw.item.util.EnumMember;
 /**
  *
  * @author tyler
- * @param <V>
+ * @param <V> The family of regressors this belongs to
  */
 public interface ItemRegressor<V extends ItemRegressor<V>> extends EnumMember<V>
 {
