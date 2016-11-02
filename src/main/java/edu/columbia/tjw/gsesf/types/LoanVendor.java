@@ -17,31 +17,36 @@
  * 
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
-package edu.columbia.tjw.gsesf;
-
-import edu.columbia.tjw.item.util.LogUtil;
-import java.io.File;
-import java.util.logging.Logger;
-import javax.sql.DataSource;
+package edu.columbia.tjw.gsesf.types;
 
 /**
+ * This matches what is written in the constants table...
  *
  * @author tyler
  */
-public class FannieLoad
+public enum LoanVendor
 {
-    private static final Logger LOG = LogUtil.getLogger(FannieLoad.class);
+    FANNIE("Fannie Mae", 0),
+    FREDDIE("Freddie Mac", 1);
 
-    public FannieLoad(final File dataDir_, final DataSource source_)
+    private final int _id;
+
+    private final String _name;
+
+    private LoanVendor(final String name_, final int id_)
     {
-
+        _name = name_;
+        _id = id_;
     }
-    
-    
-    
-    
-    
-    
-    
-    
+
+    public final int getId()
+    {
+        return _id;
+    }
+
+    public final String getName()
+    {
+        return _name;
+    }
+
 }

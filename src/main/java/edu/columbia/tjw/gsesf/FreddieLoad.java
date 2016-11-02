@@ -20,13 +20,12 @@
 package edu.columbia.tjw.gsesf;
 
 import edu.columbia.tjw.gsesf.types.GseLoanField;
-import edu.columbia.tjw.gsesf.types.GseType;
+import edu.columbia.tjw.gsesf.types.RawDataType;
 import edu.columbia.tjw.gsesf.types.SqlTableBackedEnumFamily;
 import edu.columbia.tjw.item.util.ByteTool;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.random.RandomTool;
 import edu.columbia.tjw.item.util.thread.GeneralTask;
-import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -36,7 +35,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -485,7 +483,7 @@ public final class FreddieLoad
 
     private static void setParam(final PreparedStatement stat_, final String input_, final GseLoanField field_, final int paramNumber_) throws SQLException
     {
-        final GseType type = field_.getType();
+        final RawDataType type = field_.getType();
 
         switch (type)
         {

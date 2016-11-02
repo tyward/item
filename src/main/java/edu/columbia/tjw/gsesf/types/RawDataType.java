@@ -21,25 +21,25 @@ package edu.columbia.tjw.gsesf.types;
 
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.EnumMember;
-import java.util.Date;
+import java.time.LocalDate;
 
 /**
  *
  * @author tyler
  */
-public enum GseType implements EnumMember<GseType>
+public enum RawDataType implements EnumMember<RawDataType>
 {
     DOUBLE(Double.class),
     INT(Integer.class),
     STRING(String.class),
     BOOLEAN(Boolean.class),
-    DATE(Date.class);
+    DATE(LocalDate.class);
 
-    public static final EnumFamily<GseType> FAMILY = new EnumFamily<>(values());
+    public static final EnumFamily<RawDataType> FAMILY = new EnumFamily<>(values());
 
     private final Class<?> _underlyingClass;
 
-    private GseType(final Class<?> underlyingClass_)
+    private RawDataType(final Class<?> underlyingClass_)
     {
         _underlyingClass = underlyingClass_;
     }
@@ -50,7 +50,7 @@ public enum GseType implements EnumMember<GseType>
     }
 
     @Override
-    public EnumFamily<GseType> getFamily()
+    public EnumFamily<RawDataType> getFamily()
     {
         return FAMILY;
     }

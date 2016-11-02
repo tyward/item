@@ -21,15 +21,24 @@ package edu.columbia.tjw.item.visualize;
 
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
+import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.QuantApprox;
+import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.data.InterpolatedCurve;
 import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.fit.ItemCalcGrid;
+import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  *
@@ -41,34 +50,203 @@ import java.util.Map;
 public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private final ItemModel<S, R, T> _model;
+    private final ParamFittingGrid<S, R, T> _grid;
+    private final EnumFamily<S> _statusFamily;
+    private final SortedSet<S> _reachable;
+    private final SortedSet<R> _regressors;
+    private final SortedMap<S, SortedMap<R, QuantileDistribution>> _distMap;
+    private final SortedMap<S, SortedMap<R, QuantileDistribution>> _modelMap;
 
-//    public static void main(final String[] args_)
-//    {
-//        try
-//        {
-//            if(args_.length != 1)
-//            {
-//                System.out.println("Usage: ModelVisualizer <modelParameterFile>");
-//            }
-//
-//            final File paramFile = new File(args_[0]);
-//            
-//            final ObjectInputStream oIn = new ObjectInputStream(new FileInputStream(paramFile));
-//            final ItemParameters<?, ?, ?> params = (ItemParameters<?, ?, ?>) oIn.readObject();
-//            
-//            
-//            
-//            
-//
-//        }
-//        catch (final Exception e)
-//        {
-//            e.printStackTrace();
-//        }
-//    }
-    public ModelVisualizer(final ItemModel<S, R, T> model_)
+    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final SortedSet<R> extraRegressors_)
     {
-        _model = model_;
+        this(params_, grid_, extraRegressors_, QuantApprox.DEFAULT_BUCKETS, QuantApprox.DEFAULT_LOAD);
+    }
+
+    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final SortedSet<R> extraRegressors_, final int approxBuckets_, final int approxLoad_)
+    {
+        if (approxBuckets_ < 10)
+        {
+            throw new IllegalArgumentException("Bucket count must be at least 10: " + approxBuckets_);
+        }
+
+        _model = new ItemModel<>(params_);
+        _grid = grid_;
+
+        _statusFamily = _grid.getStatusFamily();
+
+        final S from = params_.getStatus();
+
+        final TreeSet<R> basic = new TreeSet<>(params_.getRegressorList());
+        basic.addAll(extraRegressors_);
+
+        _regressors = Collections.unmodifiableSortedSet(basic);
+
+        if (from.getReachableCount() < 2)
+        {
+            //Terminal state, skip.
+            throw new IllegalArgumentException("Cannot visualize a terminal state.");
+        }
+
+        _reachable = Collections.unmodifiableSortedSet(new TreeSet<>(from.getReachable()));
+        final int fromOrdinal = from.ordinal();
+        final SortedMap<S, SortedMap<R, QuantileDistribution>> distMap = new TreeMap<>();
+        final SortedMap<S, SortedMap<R, QuantileDistribution>> modelMap = new TreeMap<>();
+
+        final double[] workspace = new double[_reachable.size()];
+
+        for (final S to : _reachable)
+        {
+            final SortedMap<R, QuantileDistribution> approximations = new TreeMap<>();
+            final SortedMap<R, QuantileDistribution> modelCalcs = new TreeMap<>();
+            final int toIndex = from.getReachable().indexOf(to);
+
+            for (final R reg : _regressors)
+            {
+                final QuantApprox approx = new QuantApprox(approxBuckets_, approxLoad_);
+                final QuantApprox modelApprox = new QuantApprox(approxBuckets_, approxLoad_);
+
+                final ItemRegressorReader reader = _grid.getRegressorReader(reg);
+
+                final int toOrdinal = to.ordinal();
+
+                for (int i = 0; i < _grid.size(); i++)
+                {
+                    if (fromOrdinal != _grid.getStatus(i))
+                    {
+                        continue;
+                    }
+                    if (!_grid.hasNextStatus(i))
+                    {
+                        continue;
+                    }
+
+                    final int trueToOrdinal = _grid.getNextStatus(i);
+                    final double prob;
+
+                    if (trueToOrdinal == toOrdinal)
+                    {
+                        prob = 1.0;
+                    }
+                    else
+                    {
+                        prob = 0.0;
+                    }
+
+                    final double x = reader.asDouble(i);
+                    approx.addObservation(x, prob, true);
+
+                    _model.transitionProbability(_grid, i, workspace);
+                    final double modelProb = workspace[toIndex];
+                    modelApprox.addObservation(x, modelProb);
+                }
+
+                approximations.put(reg, new QuantileDistribution(approx));
+                modelCalcs.put(reg, new QuantileDistribution(modelApprox));
+            }
+
+            distMap.put(to, Collections.unmodifiableSortedMap(approximations));
+            modelMap.put(to, Collections.unmodifiableSortedMap(modelCalcs));
+        }
+
+        _distMap = Collections.unmodifiableSortedMap(distMap);
+        _modelMap = Collections.unmodifiableSortedMap(modelMap);
+    }
+
+    public SortedSet<R> getRegressors()
+    {
+        return _regressors;
+    }
+
+    public S getFrom()
+    {
+        return _model.getStatus();
+    }
+
+    public SortedSet<S> getReachable()
+    {
+        return _reachable;
+    }
+
+    private static <S extends ItemStatus<S>, R extends ItemRegressor<R>>
+            QuantileDistribution extractDistribution(final S to_, final R reg_, SortedMap<S, SortedMap<R, QuantileDistribution>> map_)
+    {
+        if (!map_.containsKey(to_))
+        {
+            throw new IllegalArgumentException("Invalid to state.");
+        }
+
+        final SortedMap<R, QuantileDistribution> regMap = map_.get(to_);
+
+        if (!regMap.containsKey(reg_))
+        {
+            throw new IllegalArgumentException("Invalid to regressor.");
+        }
+
+        return regMap.get(reg_);
+    }
+
+    public QuantileDistribution getModelDistribution(final S to_, final R reg_)
+    {
+        return extractDistribution(to_, reg_, _modelMap);
+    }
+
+    public QuantileDistribution getActualDistribution(final S to_, final R reg_)
+    {
+        return extractDistribution(to_, reg_, _distMap);
+    }
+
+    public InterpolatedCurve graph(final S to_, final R regressor_, final CurveType type_)
+    {
+        return graph(to_, regressor_, type_, 0.05);
+    }
+
+    public InterpolatedCurve graph(final S to_, final R regressor_, final CurveType type_, final double alpha_)
+    {
+        switch (type_)
+        {
+            case THEORETICAL:
+            {
+                final Map<R, Double> regValues = new TreeMap<>();
+
+                for (final R reg : this.getRegressors())
+                {
+                    final QuantileDistribution regDist = getActualDistribution(to_, reg);
+
+                    //Maybe update to an alpha trimmed mean as well?
+                    final double mean = regDist.getMeanX();
+                    regValues.put(reg, mean);
+                }
+
+                final QuantileDistribution dist = getActualDistribution(to_, regressor_);
+                final QuantileDistribution reduced = dist.alphaTrim(alpha_);
+
+                final double regMin = reduced.getMeanX(0);
+                final double regMax = reduced.getMeanX(reduced.size() - 1);
+
+                final InterpolatedCurve curve = graph(to_, regressor_, regValues, regMin, regMax, reduced.size());
+                return curve;
+            }
+            case ACTUAL:
+            {
+                final QuantileDistribution dist = getActualDistribution(to_, regressor_);
+                final QuantileDistribution reduced = dist.alphaTrim(alpha_);
+                return reduced.getValueCurve(true);
+            }
+            case MODEL:
+            {
+                final QuantileDistribution dist = getModelDistribution(to_, regressor_);
+                final QuantileDistribution reduced = dist.alphaTrim(alpha_);
+                return reduced.getValueCurve(true);
+            }
+            case MASS:
+            {
+                final QuantileDistribution dist = getActualDistribution(to_, regressor_);
+                final QuantileDistribution reduced = dist.alphaTrim(alpha_);
+                return reduced.getCountCurve(true);
+            }
+            default:
+                throw new IllegalArgumentException("Unknown Curve Type.");
+        }
     }
 
     /**
@@ -90,14 +268,14 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
      */
     public InterpolatedCurve graph(final S to_, final R regressor_, final Map<R, Double> regValues_, final double regMin_, final double regMax_, final int steps_)
     {
-        if (regMin_ >= regMax_)
-        {
-            throw new IllegalArgumentException("Reg min must be greater than reg max.");
-        }
-        if (steps_ <= 0)
-        {
-            throw new IllegalArgumentException("Steps must be positive: " + steps_);
-        }
+//        if (regMin_ >= regMax_)
+//        {
+//            throw new IllegalArgumentException("Reg min must be greater than reg max.");
+//        }
+//        if (steps_ <= 0)
+//        {
+//            throw new IllegalArgumentException("Steps must be positive: " + steps_);
+//        }
 
         final double stepSize = (regMax_ - regMin_) / steps_;
 
@@ -224,6 +402,14 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
             return _size;
         }
 
+    }
+
+    public enum CurveType
+    {
+        THEORETICAL,
+        ACTUAL,
+        MODEL,
+        MASS
     }
 
 }
