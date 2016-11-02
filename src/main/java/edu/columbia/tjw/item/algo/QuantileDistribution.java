@@ -140,6 +140,52 @@ public final class QuantileDistribution implements Serializable
         _meanDevY = approx_.getStdDevY();
     }
 
+    public QuantileDistribution alphaTrim(final double alpha_)
+    {
+        if (alpha_ == 0)
+        {
+            return this;
+        }
+
+        if (alpha_ < 0 || alpha_ >= 0.5)
+        {
+            throw new IllegalArgumentException("Alpha (for trimming) must be in [0, 0.5]: " + alpha_);
+        }
+
+        final int steps = size();
+        final int first_step = ((int) alpha_ * steps) + 1;
+        final int last_step = steps - first_step;
+        final int remaining = last_step - first_step;
+
+        if (remaining < 1)
+        {
+            throw new IllegalArgumentException("Alpha would result in zero steps: " + alpha_);
+        }
+
+        if (remaining >= steps)
+        {
+            return this;
+        }
+
+        final double[] eX = new double[remaining];
+        final double[] eY = new double[remaining];
+        final double[] devX = new double[remaining];
+        final double[] devY = new double[remaining];
+        final long[] count = new long[remaining];
+
+        for (int i = 0; i < remaining; i++)
+        {
+            eX[i] = this.getMeanX(first_step + i);
+            eY[i] = this.getMeanY(first_step + i);
+            devX[i] = this.getDevX(first_step + i);
+            devY[i] = this.getDevY(first_step + i);
+            count[i] = this.getCount(first_step + i);
+        }
+
+        final QuantileDistribution reduced = new QuantileDistribution(eX, eY, devX, devY, count, false);
+        return reduced;
+    }
+
     public double getMeanX()
     {
         return _meanX;
