@@ -57,36 +57,12 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final SortedMap<S, SortedMap<R, QuantileDistribution>> _distMap;
     private final SortedMap<S, SortedMap<R, QuantileDistribution>> _modelMap;
 
-//    public static void main(final String[] args_)
-//    {
-//        try
-//        {
-//            if(args_.length != 1)
-//            {
-//                System.out.println("Usage: ModelVisualizer <modelParameterFile>");
-//            }
-//
-//            final File paramFile = new File(args_[0]);
-//            
-//            final ObjectInputStream oIn = new ObjectInputStream(new FileInputStream(paramFile));
-//            final ItemParameters<?, ?, ?> params = (ItemParameters<?, ?, ?>) oIn.readObject();
-//            
-//            
-//            
-//            
-//
-//        }
-//        catch (final Exception e)
-//        {
-//            e.printStackTrace();
-//        }
-//    }
-    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_)
+    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final SortedSet<R> extraRegressors_)
     {
-        this(params_, grid_, QuantApprox.DEFAULT_BUCKETS, QuantApprox.DEFAULT_LOAD);
+        this(params_, grid_, extraRegressors_, QuantApprox.DEFAULT_BUCKETS, QuantApprox.DEFAULT_LOAD);
     }
 
-    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final int approxBuckets_, final int approxLoad_)
+    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final SortedSet<R> extraRegressors_, final int approxBuckets_, final int approxLoad_)
     {
         if (approxBuckets_ < 10)
         {
@@ -99,7 +75,11 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _statusFamily = _grid.getStatusFamily();
 
         final S from = params_.getStatus();
-        _regressors = Collections.unmodifiableSortedSet(new TreeSet<>(params_.getRegressorList()));
+
+        final TreeSet<R> basic = new TreeSet<>(params_.getRegressorList());
+        basic.addAll(extraRegressors_);
+
+        _regressors = Collections.unmodifiableSortedSet(basic);
 
         if (from.getReachableCount() < 2)
         {
@@ -222,72 +202,51 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     public InterpolatedCurve graph(final S to_, final R regressor_, final CurveType type_, final double alpha_)
     {
-        if (alpha_ <= 0 || alpha_ >= 0.5)
-        {
-            throw new IllegalArgumentException("Alpha (for trimming) must be in [0, 0.5]: " + alpha_);
-        }
-
-        final QuantileDistribution dist = getActualDistribution(to_, regressor_);
-
-        final int steps = dist.size();
-        final int first_step = ((int) alpha_ * steps) + 1;
-        final int last_step = steps - first_step;
-        final int remaining = last_step - first_step;
-
-        if (remaining < 1)
-        {
-            throw new IllegalArgumentException("Alpha would result in zero steps: " + alpha_);
-        }
-
-        final Map<R, Double> regValues = new TreeMap<>();
-
-        for (final R reg : this.getRegressors())
-        {
-            final QuantileDistribution regDist = getActualDistribution(to_, reg);
-
-            //Maybe update to an alpha trimmed mean as well?
-            final double mean = regDist.getMeanX();
-            regValues.put(reg, mean);
-        }
-
-        final double regMin = dist.getMeanX(first_step);
-        final double regMax = dist.getMeanX(last_step);
-
-        if (type_ == CurveType.THEORETICAL)
-        {
-            final InterpolatedCurve curve = graph(to_, regressor_, regValues, regMin, regMax, remaining);
-            return curve;
-        }
-
-        final double stepSize = (regMax - regMin) / remaining;
-
         switch (type_)
         {
             case THEORETICAL:
             {
-                final InterpolatedCurve curve = graph(to_, regressor_, regValues, regMin, regMax, remaining);
+                final Map<R, Double> regValues = new TreeMap<>();
+
+                for (final R reg : this.getRegressors())
+                {
+                    final QuantileDistribution regDist = getActualDistribution(to_, reg);
+
+                    //Maybe update to an alpha trimmed mean as well?
+                    final double mean = regDist.getMeanX();
+                    regValues.put(reg, mean);
+                }
+
+                final QuantileDistribution dist = getActualDistribution(to_, regressor_);
+                final QuantileDistribution reduced = dist.alphaTrim(alpha_);
+
+                final double regMin = reduced.getMeanX(0);
+                final double regMax = reduced.getMeanX(reduced.size() - 1);
+
+                final InterpolatedCurve curve = graph(to_, regressor_, regValues, regMin, regMax, reduced.size());
                 return curve;
             }
             case ACTUAL:
             {
-                final double[] x = new double[remaining];
-                final double[] y = new double[remaining];
-
-                for (int i = 0; i < remaining; i++)
-                {
-                    x[i] = dist.getMeanX(first_step + i);
-                    y[i] = dist.getMeanY(first_step + i);
-
-                    final InterpolatedCurve output = new InterpolatedCurve(x, y, true, false);
-                    return output;
-                }
+                final QuantileDistribution dist = getActualDistribution(to_, regressor_);
+                final QuantileDistribution reduced = dist.alphaTrim(alpha_);
+                return reduced.getValueCurve(true);
             }
             case MODEL:
-
+            {
+                final QuantileDistribution dist = getModelDistribution(to_, regressor_);
+                final QuantileDistribution reduced = dist.alphaTrim(alpha_);
+                return reduced.getValueCurve(true);
+            }
+            case MASS:
+            {
+                final QuantileDistribution dist = getActualDistribution(to_, regressor_);
+                final QuantileDistribution reduced = dist.alphaTrim(alpha_);
+                return reduced.getCountCurve(true);
+            }
             default:
-                throw new IllegalArgumentException("Unknown curve type.");
+                throw new IllegalArgumentException("Unknown Curve Type.");
         }
-
     }
 
     /**

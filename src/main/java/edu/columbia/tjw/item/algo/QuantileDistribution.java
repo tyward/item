@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.algo;
 
 import edu.columbia.tjw.item.algo.QuantApprox.QuantileNode;
+import edu.columbia.tjw.item.data.InterpolatedCurve;
 import java.io.Serializable;
 
 /**
@@ -153,7 +154,7 @@ public final class QuantileDistribution implements Serializable
         }
 
         final int steps = size();
-        final int first_step = ((int) alpha_ * steps) + 1;
+        final int first_step = (int) (alpha_ * steps);
         final int last_step = steps - first_step;
         final int remaining = last_step - first_step;
 
@@ -184,6 +185,34 @@ public final class QuantileDistribution implements Serializable
 
         final QuantileDistribution reduced = new QuantileDistribution(eX, eY, devX, devY, count, false);
         return reduced;
+    }
+
+    public InterpolatedCurve getDevYCurve(final boolean linear_)
+    {
+        return new InterpolatedCurve(_eX, _devY, linear_, false);
+    }
+
+    public InterpolatedCurve getDevXCurve(final boolean linear_)
+    {
+        return new InterpolatedCurve(_eX, _devX, linear_, false);
+    }
+
+    public InterpolatedCurve getCountCurve(final boolean linear_)
+    {
+        final int size = this.size();
+        final double[] countDoubles = new double[size];
+
+        for (int i = 0; i < size; i++)
+        {
+            countDoubles[i] = (double) this.getCount(i);
+        }
+
+        return new InterpolatedCurve(_eX, countDoubles, linear_, false);
+    }
+
+    public InterpolatedCurve getValueCurve(final boolean linear_)
+    {
+        return new InterpolatedCurve(_eX, _eY, linear_, false);
     }
 
     public double getMeanX()
