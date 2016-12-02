@@ -22,6 +22,8 @@ package edu.columbia.tjw.item.algo;
 import edu.columbia.tjw.item.algo.QuantApprox.QuantileNode;
 import edu.columbia.tjw.item.data.InterpolatedCurve;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -108,7 +110,17 @@ public final class QuantileDistribution implements Serializable
 
     public QuantileDistribution(final QuantApprox approx_)
     {
-        final int approxSize = approx_.size();
+        final List<QuantileNode> nodes = new ArrayList<>(approx_.size());
+
+        for (final QuantileNode next : approx_)
+        {
+            if (next.getCount() > 0)
+            {
+                nodes.add(next);
+            }
+        }
+
+        final int approxSize = nodes.size();
 
         _eX = new double[approxSize];
         _devX = new double[approxSize];
@@ -121,7 +133,7 @@ public final class QuantileDistribution implements Serializable
 
         int pointer = 0;
 
-        for (final QuantileNode next : approx_)
+        for (final QuantileNode next : nodes)
         {
             _eX[pointer] = next.getMeanX();
             _devX[pointer] = next.getStdDevX();
