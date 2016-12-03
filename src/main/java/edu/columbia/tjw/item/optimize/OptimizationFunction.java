@@ -22,6 +22,7 @@ package edu.columbia.tjw.item.optimize;
 /**
  *
  * @author tyler
+ * @param <V>
  */
 public interface OptimizationFunction<V extends EvaluationPoint<V>>
 {

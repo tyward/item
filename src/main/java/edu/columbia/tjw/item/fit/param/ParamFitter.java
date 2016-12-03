@@ -155,7 +155,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         if (!result.converged())
         {
-            LOG.info("Warning: Result did not converge.");
+            LOG.info("Exhausted dataset before convergence, moving on.");
         }
 
         final MultivariatePoint optimumPoint = result.getOptimum();
