@@ -110,4 +110,8 @@ public final class ItemSettings implements Serializable
         return _rand;
     }
 
+    public boolean approximateDerivatives()
+    {
+        return _approximateDerivatives;
+    }
 }
