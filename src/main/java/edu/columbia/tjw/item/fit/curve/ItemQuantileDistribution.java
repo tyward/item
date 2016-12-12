@@ -35,7 +35,7 @@ import java.util.List;
  *
  * @author tyler
  * @param <S> The status type for this quantile distribution
- * @param <R> The regressor type for this quantile distritbution
+ * @param <R> The regressor type for this quantile distribution
  */
 public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends ItemRegressor<R>>
 {
@@ -81,8 +81,9 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
                 continue;
             }
 
+            //We are actually looking at something like E[actual / predicted]
             final double nextMin = 0.5 / nextCount; //We can't justify a probability smaller than this given our observation count. 
-            final double nextMax = 1.0 - nextMin;
+            final double nextMax = 1.0 / nextMin; //1.0 - nextMin;
             final double boundedNext = Math.max(nextMin, Math.min(nextMax, next));
 
             final double adjustment = Math.log(boundedNext);
@@ -209,7 +210,9 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
                 {
                     //We took this transition (or one indistinguishable from it). 
                     actValue = 1.0;
-                    break;
+
+                    //Don't break out, we need to sum up all the probability mass...
+                    //break;
                 }
             }
 
