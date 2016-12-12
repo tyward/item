@@ -105,6 +105,7 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
         switch (type_)
         {
             case LOGISTIC:
+                //TODO: Is this sqrt necessary?
                 slopeParam = Math.sqrt(1.0 / (distDev + 1.0e-10));
 
                 double xCorrelation = 0.0;

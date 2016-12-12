@@ -29,7 +29,21 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
+import edu.columbia.tjw.item.util.LogUtil;
+import java.util.Arrays;
+import org.apache.commons.math3.analysis.MultivariateFunction;
 import java.util.List;
+import java.util.logging.Logger;
+import org.apache.commons.math3.exception.TooManyEvaluationsException;
+import org.apache.commons.math3.optim.InitialGuess;
+import org.apache.commons.math3.optim.MaxEval;
+import org.apache.commons.math3.optim.MaxIter;
+import org.apache.commons.math3.optim.PointValuePair;
+import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
+import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer;
+import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunction;
+import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.PowellOptimizer;
+import org.apache.commons.math3.util.FastMath;
 
 /**
  *
@@ -41,6 +55,7 @@ import java.util.List;
 public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         implements ParamGenerator<S, R, T>
 {
+    private static final Logger LOG = LogUtil.getLogger(BaseParamGenerator.class);
     private final ItemSettings _settings;
     private final ItemCurveFactory<T> _factory;
     private final T _type;
@@ -67,6 +82,16 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         _toStatus = toStatus_;
 
         _settings = settings_;
+    }
+
+    public T getCurveType()
+    {
+        return _type;
+    }
+
+    public S getToStatus()
+    {
+        return _toStatus;
     }
 
     @Override
@@ -119,11 +144,49 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         return beta;
     }
 
+    public final double[] polishRegressors(final QuantileDistribution dist_, final double[] rawParams_)
+    {
+        final ItemCurveParams<T> params = _factory.generateStartingParameters(_type, dist_, _settings.getRandom());
+
+        //Should use an optimizer to improve the starting parameters.
+        final InnerFunction polishFunction = new InnerFunction(dist_, params);
+        final double start = polishFunction.value(rawParams_);
+
+        final MultivariateOptimizer optim = new PowellOptimizer(1.0e-3, 1.0e-3);
+
+        try
+        {
+            final PointValuePair result = optim.optimize(new ObjectiveFunction(polishFunction), GoalType.MINIMIZE, new InitialGuess(rawParams_), new MaxIter(100), new MaxEval(300));
+
+            final double end = result.getValue();
+            final double[] endPoint = result.getPointRef();
+
+            LOG.info("Polished starting point (" + start + " -> " + end + ")[" + optim.getIterations() + "]: " + Arrays.toString(rawParams_) + " -> " + Arrays.toString(endPoint));
+
+            if (end < start)
+            {
+                return endPoint;
+            }
+        }
+        catch (final TooManyEvaluationsException e)
+        {
+            LOG.info("Polish failed, too many evaluations.");
+        }
+
+        return rawParams_.clone();
+    }
+
     @Override
     public final double[] getStartingParams(final QuantileDistribution dist_)
     {
         final ItemCurveParams<T> params = _factory.generateStartingParameters(_type, dist_, _settings.getRandom());
         final double[] output = params.generatePoint();
+
+//        if (_settings.getPolishStartingParams())
+//        {
+//            return polishRegressors(dist_, output);
+//        }
+
         return output;
     }
 
@@ -139,6 +202,69 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         final ItemCurveParams<T> params = new ItemCurveParams<>(_type, params_);
         final ItemCurve<T> curve = _factory.generateCurve(params);
         return curve;
+    }
+
+    private final class InnerFunction implements MultivariateFunction
+    {
+        private final QuantileDistribution _dist;
+        private final ItemCurveParams<T> _params;
+
+        public InnerFunction(final QuantileDistribution dist_, final ItemCurveParams<T> params_)
+        {
+            _dist = dist_;
+            _params = params_;
+        }
+
+        @Override
+        public double value(double[] point)
+        {
+            final ItemCurveParams<T> params = new ItemCurveParams<>(_params.getType(), point);
+            final ItemCurve<T> curve = _factory.generateCurve(params);
+
+            final double totalCount = _dist.getTotalCount();
+
+            if (totalCount < 1)
+            {
+                //Should never happen.
+                return Double.NaN;
+            }
+
+            //System.out.println("mass, x, y, predicted, mse");
+            double residSum = 0.0;
+
+            for (int i = 0; i < _dist.size(); i++)
+            {
+                final double x = _dist.getMeanX(i);
+                final double y = _dist.getMeanY(i);
+                final double mass = _dist.getCount(i);
+                final double devY = _dist.getDevY(i);
+
+                // We think y ~ f(x), so let's do some calculations. 
+                final double raw = curve.transform(x);
+
+                final double beta = params.getBeta();
+                final double intercept = params.getIntercept();
+
+                final double predicted = intercept + (beta * raw);
+
+                //We can't say anything with more confidence than this.
+                final double minDev = 1.0 / mass;
+                final double adjDev = Math.max(devY, minDev);
+
+                //final double prob = FastMath.exp(y);
+                //This will not be a proper log likelihood calc, but instead will use weighted Least Squares, which is close to the same thing in this case. 
+                final double resid = (y - predicted);
+                final double mse = mass * ((resid * resid)); // + (adjDev * adjDev));
+                residSum += mse;
+                //System.out.println(mass + ", " + x + ", " + y + ", " + predicted + ", " + mse);
+            }
+
+            final double normalized = residSum / totalCount;
+            //System.out.println("Trying point[" + Arrays.toString(point) + "]: " + normalized);
+
+            return normalized;
+        }
+
     }
 
 }

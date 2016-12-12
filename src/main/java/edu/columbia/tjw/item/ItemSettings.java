@@ -44,6 +44,7 @@ public final class ItemSettings implements Serializable
     private final boolean _randomShuffle;
     private final boolean _useThreading;
     private final boolean _approximateDerivatives;
+    private final boolean _polishStartingParams;
 
     private final double _aicCutoff;
 
@@ -78,6 +79,12 @@ public final class ItemSettings implements Serializable
         _threadBlockSize = threadBlockSize_;
         _useThreading = useThreading_;
         _approximateDerivatives = false;
+        _polishStartingParams = true;
+    }
+
+    public boolean getPolishStartingParams()
+    {
+        return _polishStartingParams;
     }
 
     public boolean getUseThreading()
