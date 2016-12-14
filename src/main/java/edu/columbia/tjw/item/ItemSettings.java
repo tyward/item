@@ -53,10 +53,10 @@ public final class ItemSettings implements Serializable
 
     public ItemSettings()
     {
-        this(true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD), BLOCK_SIZE, THREAD_BLOCK_SIZE, true);
+        this(true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD), BLOCK_SIZE, THREAD_BLOCK_SIZE, true, true);
     }
 
-    public ItemSettings(final boolean randomShuffle_, final double aicCutoff_, final Random rand_, final int blockSize_, final int threadBlockSize_, final boolean useThreading_)
+    public ItemSettings(final boolean randomShuffle_, final double aicCutoff_, final Random rand_, final int blockSize_, final int threadBlockSize_, final boolean useThreading_, final boolean polishStartingParams_)
     {
         if (aicCutoff_ > 0.0)
         {
@@ -79,7 +79,7 @@ public final class ItemSettings implements Serializable
         _threadBlockSize = threadBlockSize_;
         _useThreading = useThreading_;
         _approximateDerivatives = false;
-        _polishStartingParams = true;
+        _polishStartingParams = polishStartingParams_;
     }
 
     public boolean getPolishStartingParams()

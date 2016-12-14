@@ -181,12 +181,6 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     {
         final ItemCurveParams<T> params = _factory.generateStartingParameters(_type, dist_, _settings.getRandom());
         final double[] output = params.generatePoint();
-
-//        if (_settings.getPolishStartingParams())
-//        {
-//            return polishRegressors(dist_, output);
-//        }
-
         return output;
     }
 
