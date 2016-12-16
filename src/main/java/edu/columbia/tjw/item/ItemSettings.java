@@ -38,6 +38,8 @@ public final class ItemSettings implements Serializable
     private static final double STANDARD_AIC_CUTOFF = -5.0;
     private static final int BLOCK_SIZE = 200 * 1000;
     private static final int THREAD_BLOCK_SIZE = 10 * 1000;
+    private static final int POLISH_MULTI_START_POINTS = 20;
+
     private static final long serialVersionUID = 6850856502170239624L;
 
     private final Random _rand;
@@ -45,6 +47,7 @@ public final class ItemSettings implements Serializable
     private final boolean _useThreading;
     private final boolean _approximateDerivatives;
     private final boolean _polishStartingParams;
+    private final int _polishMultStartPoints;
 
     private final double _aicCutoff;
 
@@ -80,6 +83,12 @@ public final class ItemSettings implements Serializable
         _useThreading = useThreading_;
         _approximateDerivatives = false;
         _polishStartingParams = polishStartingParams_;
+        _polishMultStartPoints = POLISH_MULTI_START_POINTS;
+    }
+
+    public int getPolishMultiStartPoints()
+    {
+        return _polishMultStartPoints;
     }
 
     public boolean getPolishStartingParams()

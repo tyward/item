@@ -37,7 +37,6 @@ import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 import java.util.Arrays;
-import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -136,6 +135,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     @Override
     protected FitResult<S, R, T> findBest(T curveType_, R field_, S toStatus_) throws ConvergenceException
     {
+        LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
+
         final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, _model, toStatus_, _settings, _intercept);
         //LOG.info("\n\nFinding best: " + generator_ + " " + field_ + " " + toStatus_);
 
@@ -164,7 +165,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         {
             try
             {
-                final double[] polished = generator.polishRegressors(dist, starting);
+                final double[] polished = generator.polishCurveParameters(dist, starting);
 
                 if (!Arrays.equals(starting, polished))
                 {
@@ -172,8 +173,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
                     final FitResult<S, R, T> output2 = generateFit(generator, func, field_, startingLL, polished);
 
-                    LOG.info("Fit comparison: " + output.getLogLikelihood() + " <> " + output2.getLogLikelihood());
-
+                    //LOG.info("Fit comparison: " + output.getLogLikelihood() + " <> " + output2.getLogLikelihood());
                     final double aic1 = output.calculateAicDifference();
                     final double aic2 = output2.calculateAicDifference();
                     final String resString;
@@ -191,7 +191,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
                         resString = "SAME";
                     }
 
-                    LOG.info("====>Polished params[" + aic1 + " <> " + aic2 + "]: " + resString);
+                    LOG.info("Polished params[" + aic1 + " <> " + aic2 + "]: " + resString);
 
                     if (aic1 > aic2)
                     {
@@ -233,11 +233,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final FitResult<S, R, T> output = new FitResult<S, R, T>(generator_.getToStatus(), best, generator_, field_, trans, bestLL, startingLL_, result.dataElementCount());
 
-        LOG.info("\nFound Curve: " + generator_.getCurveType() + " " + field_ + " " + generator_.getToStatus());
-        LOG.info("Best point: " + best);
-        LOG.info("LL change: " + startingLL_ + " -> " + bestLL + ": " + (startingLL_ - bestLL));
-        LOG.info("AIC diff: " + output.calculateAicDifference());
-        LOG.info("\n\n");
+        LOG.info("Found Curve[" + generator_.getCurveType() + ", " + field_ + ", " + generator_.getToStatus() + "][" + output.calculateAicDifference() + "]: " + Arrays.toString(bestVal));
+        LOG.info("LL change: " + startingLL_ + " -> " + bestLL + ": " + (startingLL_ - bestLL) + " \n\n");
 
         return output;
     }

@@ -33,17 +33,20 @@ import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Arrays;
 import org.apache.commons.math3.analysis.MultivariateFunction;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.Logger;
 import org.apache.commons.math3.exception.TooManyEvaluationsException;
+import org.apache.commons.math3.optim.BaseMultivariateOptimizer;
 import org.apache.commons.math3.optim.InitialGuess;
 import org.apache.commons.math3.optim.MaxEval;
 import org.apache.commons.math3.optim.MaxIter;
 import org.apache.commons.math3.optim.PointValuePair;
 import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
+import org.apache.commons.math3.optim.nonlinear.scalar.MultiStartMultivariateOptimizer;
 import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer;
 import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunction;
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.PowellOptimizer;
-import org.apache.commons.math3.util.FastMath;
+import org.apache.commons.math3.random.RandomVectorGenerator;
 
 /**
  *
@@ -144,24 +147,31 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         return beta;
     }
 
-    public final double[] polishRegressors(final QuantileDistribution dist_, final double[] rawParams_)
+    public final double[] polishCurveParameters(final QuantileDistribution dist_, final double[] rawParams_)
     {
         final ItemCurveParams<T> params = _factory.generateStartingParameters(_type, dist_, _settings.getRandom());
 
         //Should use an optimizer to improve the starting parameters.
         final InnerFunction polishFunction = new InnerFunction(dist_, params);
-        final double start = polishFunction.value(rawParams_);
 
-        final MultivariateOptimizer optim = new PowellOptimizer(1.0e-3, 1.0e-3);
+        final RandomVectorGenerator gen = new VectorGenerator(rawParams_, _settings.getRandom());
+
+        final int multiStarts = Math.max(1, _settings.getPolishMultiStartPoints());
+
+        final MultivariateOptimizer baseOptimizer = new PowellOptimizer(1.0e-3, 1.0e-3);
+        final BaseMultivariateOptimizer<PointValuePair> optim = new MultiStartMultivariateOptimizer(baseOptimizer, multiStarts, gen);
+
+        final InitialGuess guess = new InitialGuess(rawParams_);
+        final double start = polishFunction.value(rawParams_);
 
         try
         {
-            final PointValuePair result = optim.optimize(new ObjectiveFunction(polishFunction), GoalType.MINIMIZE, new InitialGuess(rawParams_), new MaxIter(100), new MaxEval(300));
+            final PointValuePair result = optim.optimize(new ObjectiveFunction(polishFunction), GoalType.MINIMIZE, guess, new MaxIter(multiStarts * 100), new MaxEval(multiStarts * 300));
 
             final double end = result.getValue();
             final double[] endPoint = result.getPointRef();
 
-            LOG.info("Polished starting point (" + start + " -> " + end + ")[" + optim.getIterations() + "]: " + Arrays.toString(rawParams_) + " -> " + Arrays.toString(endPoint));
+            LOG.info("Polish run completed (" + start + " -> " + end + ")[" + optim.getIterations() + "]: " + Arrays.toString(rawParams_) + " -> " + Arrays.toString(endPoint));
 
             if (end < start)
             {
@@ -196,6 +206,32 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         final ItemCurveParams<T> params = new ItemCurveParams<>(_type, params_);
         final ItemCurve<T> curve = _factory.generateCurve(params);
         return curve;
+    }
+
+    private final class VectorGenerator implements RandomVectorGenerator
+    {
+        private final Random _rand;
+        private final double[] _base;
+
+        public VectorGenerator(final double[] base_, final Random rand_)
+        {
+            _base = base_.clone();
+            _rand = rand_;
+        }
+
+        @Override
+        public double[] nextVector()
+        {
+            final double[] output = _base.clone();
+
+            for (int i = 0; i < output.length; i++)
+            {
+                output[i] = (_rand.nextDouble() - 0.5) * output[i];
+            }
+
+            return output;
+        }
+
     }
 
     private final class InnerFunction implements MultivariateFunction
