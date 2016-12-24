@@ -56,7 +56,7 @@ public final class ItemSettings implements Serializable
 
     public ItemSettings()
     {
-        this(true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD), BLOCK_SIZE, THREAD_BLOCK_SIZE, true, true);
+        this(true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD), BLOCK_SIZE, THREAD_BLOCK_SIZE, true, false);
     }
 
     public ItemSettings(final boolean randomShuffle_, final double aicCutoff_, final Random rand_, final int blockSize_, final int threadBlockSize_, final boolean useThreading_, final boolean polishStartingParams_)
