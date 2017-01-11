@@ -49,6 +49,19 @@ public final class ItemCurveParams<T extends ItemCurveType<T>>
         }
     }
 
+    public ItemCurveParams(final T type_, final double intercept_, final double beta_, final ItemCurve<T> curve_)
+    {
+        _type = type_;
+        _intercept = intercept_;
+        _beta = beta_;
+        _curveParams = new double[type_.getParamCount()];
+
+        for (int i = 0; i < _curveParams.length; i++)
+        {
+            _curveParams[i] = curve_.getParam(i);
+        }
+    }
+
     public ItemCurveParams(final T type_, final double intercept_, final double beta_, final double[] curveParams_)
     {
         if (curveParams_.length != type_.getParamCount())

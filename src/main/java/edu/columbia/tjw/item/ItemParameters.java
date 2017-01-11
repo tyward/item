@@ -21,6 +21,7 @@ package edu.columbia.tjw.item;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -35,13 +36,15 @@ import java.util.Set;
  */
 public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
 {
-    private static final long serialVersionUID = 21032932723181271L;
+    private static final long serialVersionUID = 321502161012435523L;
     private final S _status;
     private final int _selfIndex;
     private final double[][] _betas;
     private final List<R> _fields; //N.B: _fields are sorted, keep it that way.
     private final List<ItemCurve<T>> _trans;
     private final List<ParamFilter<S, R, T>> _filters;
+
+    private final int[] _mergePointer;
 
     public ItemParameters(final S status_, final List<R> fields_)
     {
@@ -65,11 +68,16 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         final List<ParamFilter<S, R, T>> filters = new ArrayList<>();
-        filters.add(new SelfTransitionFilter<S, R, T>());
+        filters.add(new SelfTransitionFilter<>());
         _filters = Collections.unmodifiableList(filters);
+
+        _mergePointer = new int[1];
+
+        //We don't need to merge anything in for the intercept.
+        _mergePointer[0] = -1;
     }
 
-    private ItemParameters(final S status_, final double[][] betas_, final List<R> fields_, final List<? extends ItemCurve<T>> trans_, final List<ParamFilter<S, R, T>> filters_)
+    private ItemParameters(final S status_, final double[][] betas_, final List<R> fields_, final List<? extends ItemCurve<T>> trans_, final List<ParamFilter<S, R, T>> filters_, final int[] mergePointers_)
     {
         if (betas_.length != status_.getReachableCount())
         {
@@ -91,6 +99,11 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             }
         }
 
+        if (mergePointers_.length != regCount)
+        {
+            throw new IllegalArgumentException("Size mismatch.");
+        }
+
         _status = status_;
         _betas = betas_;
 
@@ -99,6 +112,21 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
         _selfIndex = _status.getReachable().indexOf(_status);
         _filters = Collections.unmodifiableList(new ArrayList<>(filters_));
+
+        _mergePointer = mergePointers_;
+    }
+
+    public boolean isFiltered(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_)
+    {
+        for (final ParamFilter<S, R, T> next : getFilters())
+        {
+            if (next.isFiltered(fromStatus_, toStatus_, field_, trans_))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public List<ParamFilter<S, R, T>> getFilters()
@@ -137,30 +165,27 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     private boolean compareTrans(final ItemCurve<?> trans1_, final ItemCurve<?> trans2_)
     {
-        if (trans1_ == trans2_)
-        {
-            return true;
-        }
-        if (null == trans1_)
-        {
-            return false;
-        }
-
-        return trans1_.equals(trans2_);
+        //We demand exact reference equality for this operation.
+        return (trans1_ == trans2_);
+//        if (trans1_ == trans2_)
+//        {
+//            return true;
+//        }
+//        if (null == trans1_)
+//        {
+//            return false;
+//        }
+//
+//        return trans1_.equals(trans2_);
     }
 
     public ItemParameters<S, R, T> dropRegressor(final R field_)
     {
         final int regCount = this.regressorCount();
         final boolean[] keep = new boolean[regCount];
-
         final List<R> regressorList = this.getRegressorList();
-        final List<ItemCurve<T>> tranList = this.getTransformationList();
-        final List<R> reducedReg = new ArrayList<>();
-        final List<ItemCurve<T>> reducedTran = new ArrayList<>();
 
-        int keepCount = 0;
-
+        outer:
         for (int i = 0; i < regCount; i++)
         {
             final R next = regressorList.get(i);
@@ -168,23 +193,74 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             if (field_.equals(next))
             {
                 keep[i] = false;
+                continue;
             }
-            else
+
+            //We will drop anything that depends (even indirectly) on the regressor.
+            int currPointer = i;
+
+            while (_mergePointer[currPointer] != -1)
             {
-                reducedReg.add(next);
-                reducedTran.add(tranList.get(i));
-                keep[i] = true;
+                currPointer = _mergePointer[currPointer];
+                final R curr = regressorList.get(currPointer);
+
+                if (field_.equals(curr))
+                {
+                    keep[i] = false;
+                    continue outer;
+                }
+            }
+
+            //Made it through, this is something we want to keep.
+            keep[i] = true;
+        }
+
+        return dropEntries(field_, keep);
+    }
+
+    public ItemParameters<S, R, T> dropIndex(final int index_)
+    {
+        final int regCount = this.regressorCount();
+        final boolean[] keep = new boolean[regCount];
+        Arrays.fill(keep, true);
+        keep[index_] = false;
+
+        return dropEntries(null, keep);
+    }
+
+    private ItemParameters<S, R, T> dropEntries(final R field_, final boolean[] keep_)
+    {
+        final int regCount = this.regressorCount();
+
+        if (keep_.length != regCount)
+        {
+            throw new IllegalArgumentException("Keep vector size mismatch.");
+        }
+
+        int keepCount = 0;
+        final List<R> regressorList = this.getRegressorList();
+        final List<ItemCurve<T>> tranList = this.getTransformationList();
+        final List<R> reducedReg = new ArrayList<>();
+        final List<ItemCurve<T>> reducedTran = new ArrayList<>();
+
+        for (int i = 0; i < regCount; i++)
+        {
+            if (keep_[i])
+            {
                 keepCount++;
+                reducedReg.add(regressorList.get(i));
+                reducedTran.add(tranList.get(i));
             }
         }
 
         final double[][] reducedBeta = new double[_betas.length][keepCount];
+        final int[] reducedMerge = new int[keepCount];
 
         int pointer = 0;
 
         for (int k = 0; k < regCount; k++)
         {
-            if (!keep[k])
+            if (!keep_[k])
             {
                 continue;
             }
@@ -194,6 +270,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                 reducedBeta[i][pointer] = _betas[i][k];
             }
 
+            reducedMerge[pointer] = _mergePointer[k];
             pointer++;
         }
 
@@ -205,14 +282,14 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         {
             final R related = filter.relatedRegressor();
 
-            if (!field_.equals(related))
+            //If the field is null, just keep everything.
+            if ((null == field_) || !field_.equals(related))
             {
                 reducedFilters.add(filter);
             }
         }
 
-        final ItemParameters<S, R, T> output = new ItemParameters<>(_status, reducedBeta, reducedReg, reducedTran, reducedFilters);
-
+        final ItemParameters<S, R, T> output = new ItemParameters<>(_status, reducedBeta, reducedReg, reducedTran, reducedFilters, reducedMerge);
         return output;
     }
 
@@ -226,6 +303,25 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
      */
     public ItemParameters<S, R, T> addBeta(final R field_, final ItemCurve<T> trans_)
     {
+        return addBeta(field_, trans_, -1);
+    }
+
+    /**
+     * Creates a new set of parameters with an additional beta.
+     *
+     * @param field_ The regressor on which the new curve is defined
+     * @param trans_ The curve that is being added (defined on field_)
+     * @param mergePointer_ Pointer to the curve to merge (or -1 if none)
+     * @return A new set of parameters, with the given curve added and its beta
+     * set to zero.
+     */
+    public ItemParameters<S, R, T> addBeta(final R field_, final ItemCurve<T> trans_, final int mergePointer_)
+    {
+        if (mergePointer_ < -1 || mergePointer_ >= _mergePointer.length)
+        {
+            throw new IllegalArgumentException("Invalid merge pointer.");
+        }
+
         final List<R> fields = new ArrayList<>(_fields);
         final List<ItemCurve<T>> trans = new ArrayList<>(_trans);
 
@@ -253,26 +349,34 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             beta[i] = this.resizeArray(beta[i], addedIndex);
         }
 
-        final ItemParameters<S, R, T> output = new ItemParameters<>(_status, beta, fields, trans, _filters);
+        final int[] mergePointers = this.resizeArray(_mergePointer, addedIndex, mergePointer_);
+
+        final ItemParameters<S, R, T> output = new ItemParameters<>(_status, beta, fields, trans, _filters, mergePointers);
         return output;
     }
 
     public ItemParameters<S, R, T> updateBetas(final double[][] betas_)
     {
-        return new ItemParameters<>(_status, betas_, _fields, _trans, _filters);
+        return new ItemParameters<>(_status, betas_, _fields, _trans, _filters, _mergePointer);
     }
 
     public ItemParameters<S, R, T> addFilters(final Collection<ParamFilter<S, R, T>> filters_)
     {
         final List<ParamFilter<S, R, T>> filters = new ArrayList<>(_filters);
         filters.addAll(filters_);
-        return new ItemParameters<>(_status, _betas, _fields, _trans, filters);
+        return new ItemParameters<>(_status, _betas, _fields, _trans, filters, _mergePointer);
     }
 
     public ItemParameters<S, R, T> addFilter(final ParamFilter<S, R, T> filter_)
     {
         final Set<ParamFilter<S, R, T>> set = Collections.singleton(filter_);
         return this.addFilters(set);
+    }
+
+    public int toStatusIndex(final S toStatus_)
+    {
+        final int index = _status.getReachable().indexOf(toStatus_);
+        return index;
     }
 
     public double getBeta(final int statusIndex_, final int regIndex_)
@@ -349,8 +453,29 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return output;
     }
 
+    private int[] resizeArray(final int[] input_, final int insertionPoint_, final int insertionValue_)
+    {
+        final int[] output = new int[input_.length + 1];
+
+        for (int i = 0; i < insertionPoint_; i++)
+        {
+            output[i] = input_[i];
+        }
+
+        output[insertionPoint_] = insertionValue_;
+
+        for (int i = insertionPoint_; i < input_.length; i++)
+        {
+            output[i + 1] = input_[i];
+        }
+
+        return output;
+    }
+
     private final class SelfTransitionFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements ParamFilter<S, R, T>
     {
+        private static final long serialVersionUID = 3355948289866022590L;
+
         public SelfTransitionFilter()
         {
         }

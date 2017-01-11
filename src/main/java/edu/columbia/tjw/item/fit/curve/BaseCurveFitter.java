@@ -23,6 +23,7 @@ import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
+import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
@@ -63,6 +64,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final MultivariateOptimizer _optimizer;
     private final int[] _indexList;
     private final R _intercept;
+    private final S _fromStatus;
 
     public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ParamFittingGrid<S, R, T> grid_, final ItemSettings settings_, final R intercept_)
     {
@@ -85,8 +87,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         int count = 0;
 
         final int gridSize = _grid.size();
-        final S fromStatus = model_.getParams().getStatus();
-        final int fromStatusOrdinal = fromStatus.ordinal();
+        _fromStatus = model_.getParams().getStatus();
+        final int fromStatusOrdinal = _fromStatus.ordinal();
         final int[] indexList = new int[gridSize];
 
         for (int i = 0; i < gridSize; i++)
@@ -105,7 +107,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
             indexList[count++] = i;
         }
 
-        final int reachableCount = fromStatus.getReachableCount();
+        final int reachableCount = _fromStatus.getReachableCount();
         final double[] probabilities = new double[reachableCount];
 
         _indexList = Arrays.copyOf(indexList, count);
@@ -113,7 +115,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _actualOutcomes = new int[count];
 
         //final List<S> reachable = fromStatus.getReachable();
-        final int baseCase = fromStatus.getReachable().indexOf(fromStatus);
+        final int baseCase = _fromStatus.getReachable().indexOf(_fromStatus);
 
         for (int i = 0; i < count; i++)
         {
@@ -132,26 +134,41 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
+    private QuantileDistribution generateDistribution(R field_, S toStatus_)
+    {
+        final ItemQuantileDistribution<S, R> quantGenerator = new ItemQuantileDistribution<>(_grid, _powerScores, _fromStatus, field_, toStatus_, _indexList);
+        final QuantileDistribution dist = quantGenerator.getAdjusted();
+        return dist;
+    }
+
+    private BaseParamGenerator<S, R, T> buildGenerator(T curveType_, S toStatus_, final ItemModel<S, R, T> model_)
+    {
+        final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, model_, toStatus_, _settings, _intercept);
+        return generator;
+    }
+
+    private CurveOptimizerFunction<S, R, T> generateFunction(T curveType_, R field_, S toStatus_, final BaseParamGenerator<S, R, T> generator_, final ItemModel<S, R, T> model_)
+    {
+        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(curveType_, generator_, field_, _fromStatus, toStatus_, _powerScores, _actualOutcomes,
+                _grid, model_, _indexList, _settings);
+
+        return func;
+    }
+
     @Override
     protected FitResult<S, R, T> findBest(T curveType_, R field_, S toStatus_) throws ConvergenceException
     {
         LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
 
-        final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, _model, toStatus_, _settings, _intercept);
-        //LOG.info("\n\nFinding best: " + generator_ + " " + field_ + " " + toStatus_);
-
-        final ItemQuantileDistribution<S, R> quantGenerator = new ItemQuantileDistribution<>(_grid, _powerScores, _model.getStatus(), field_, toStatus_, _indexList);
-        final QuantileDistribution dist = quantGenerator.getAdjusted();
-
-        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(curveType_, generator, field_, this._model.getParams().getStatus(), toStatus_, _powerScores, _actualOutcomes,
-                _grid, _model, _indexList, _settings);
+        final QuantileDistribution dist = generateDistribution(field_, toStatus_);
+        final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType_, toStatus_, _model);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType_, field_, toStatus_, generator, _model);
 
         final int dimension = generator.paramCount();
 
         //Take advantage of the fact that this starts out as all zeros, and that all zeros
         //means no change....
         final MultivariatePoint startingPoint = new MultivariatePoint(dimension);
-
         final EvaluationResult res = func.generateResult();
         func.value(startingPoint, 0, func.numRows(), res);
 
@@ -231,12 +248,65 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double bestLL = result.minValue();
 
-        final FitResult<S, R, T> output = new FitResult<S, R, T>(generator_.getToStatus(), best, generator_, field_, trans, bestLL, startingLL_, result.dataElementCount());
+        final FitResult<S, R, T> output = new FitResult<>(generator_.getToStatus(), best, generator_, field_, trans, bestLL, startingLL_, result.dataElementCount());
 
         LOG.info("Found Curve[" + generator_.getCurveType() + ", " + field_ + ", " + generator_.getToStatus() + "][" + output.calculateAicDifference() + "]: " + Arrays.toString(bestVal));
         LOG.info("LL change: " + startingLL_ + " -> " + bestLL + ": " + (startingLL_ - bestLL) + " \n\n");
 
         return output;
+    }
+
+    @Override
+    protected ItemModel<S, R, T> calibrateCurve(R field_, S toStatus_, ItemCurve<T> targetCurve_, final ItemModel<S, R, T> model_) throws ConvergenceException
+    {
+        final ItemParameters<S, R, T> params = model_.getParams();
+
+        if (params.isFiltered(_fromStatus, toStatus_, field_, targetCurve_))
+        {
+            return model_;
+        }
+
+        LOG.info("Calibrating curve: " + targetCurve_ + ", " + field_ + ", " + toStatus_);
+
+        final T curveType = targetCurve_.getCurveType();
+
+        //Changes are allowed...
+        final int index = params.getIndex(field_, targetCurve_);
+        final ItemParameters<S, R, T> reduced = params.dropIndex(index);
+        final ItemModel<S, R, T> model = new ItemModel<>(reduced);
+
+        final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType, toStatus_, model);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType, field_, toStatus_, generator, model);
+
+        final double[] starting = generator.generateParamVector(field_, targetCurve_);
+
+        //Take advantage of the fact that this starts out as all zeros, and that all zeros
+        //means no change....
+        final int dimension = generator.paramCount();
+        final MultivariatePoint startingPoint = new MultivariatePoint(dimension);
+        startingPoint.setElements(starting);
+
+        final EvaluationResult res = func.generateResult();
+        func.value(startingPoint, 0, func.numRows(), res);
+        final double startingLL = res.getMean();
+
+        final FitResult<S, R, T> result = generateFit(generator, func, field_, startingLL, starting);
+
+        LOG.info("LL improvement: " + startingLL + " -> " + result.getLogLikelihood());
+
+        final double aicDiff = result.calculateAicDifference();
+
+        LOG.info("AIC diff: " + aicDiff);
+
+        if (aicDiff > _settings.getAicCutoff())
+        {
+            //We demand that the AIC improvement is more than the bare minimum. 
+            //We want this curve to be good enough to support at least N+5 parameters.
+            LOG.info("AIC improvement is not large enough, keeping old curve.");
+            return model_;
+        }
+
+        return result.getModel();
     }
 
 }

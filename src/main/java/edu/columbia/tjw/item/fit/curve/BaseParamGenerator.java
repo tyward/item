@@ -97,6 +97,22 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         return _toStatus;
     }
 
+    public final double[] generateParamVector(final R field_, final ItemCurve<T> curve_)
+    {
+        final ItemParameters<S, R, T> params = _baseModel.getParams();
+        final int index = params.getIndex(field_, curve_);
+        final int statusIndex = params.toStatusIndex(_toStatus);
+        final double beta = params.getBeta(statusIndex, index);
+
+        //Start with no intercept adjustment, use existing intercept.
+        final double interceptAdjustment = 0.0;
+
+        final ItemCurveParams<T> curveParams = new ItemCurveParams<>(_type, interceptAdjustment, beta, curve_);
+
+        final double[] output = curveParams.generatePoint();
+        return output;
+    }
+
     @Override
     public final ItemModel<S, R, T> generatedModel(double[] params_, final R field_)
     {

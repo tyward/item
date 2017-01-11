@@ -296,6 +296,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             try
             {
                 model = fitter.generateCurve(curveFields_, filters_);
+
+                //If the expansion worked, try to update all curve betas...
+                final ParamFittingGrid<S, R, T> g2 = new ParamFittingGrid<>(model.getParams(), grid_);
+                final CurveFitter<S, R, T> f2 = new BaseCurveFitter<>(_factory, model, g2, _settings, _intercept);
+
+                model = f2.calibrateCurves();
             }
             catch (final ConvergenceException e)
             {
@@ -308,6 +314,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 LOG.info("Time marker: " + (System.currentTimeMillis() - start));
                 LOG.info("Heap used: " + Runtime.getRuntime().totalMemory() / (1024 * 1024));
             }
+
         }
 
         try

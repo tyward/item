@@ -66,6 +66,43 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         _settings = settings_;
     }
 
+    public final ItemModel<S, R, T> calibrateCurves()
+    {
+        LOG.info("Starting curve calibration sweep.");
+        final List<R> regList = _params.getRegressorList();
+        final List<S> statList = _params.getStatus().getReachable();
+
+        ItemModel<S, R, T> model = new ItemModel<>(_params);
+
+        //final List<T> item
+        for (int i = 0; i < regList.size(); i++)
+        {
+            final R reg = regList.get(i);
+            final ItemCurve<T> curve = _params.getTransformation(i);
+
+            if (null == curve)
+            {
+                continue;
+            }
+
+            for (final S status : statList)
+            {
+                try
+                {
+                    model = calibrateCurve(reg, status, curve, model);
+                }
+                catch (final ConvergenceException e)
+                {
+                    LOG.info("Trouble converging, moving on to next curve.");
+                    LOG.info(e.getMessage());
+                }
+            }
+        }
+
+        LOG.info("Finished curve calibration sweep.");
+        return model;
+    }
+
     public final ItemModel<S, R, T> generateCurve(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filter_) throws ConvergenceException
     {
         final FitResult<S, R, T> best = findBest(fields_, filter_);
@@ -159,6 +196,8 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
         return bestResult;
     }
+
+    protected abstract ItemModel<S, R, T> calibrateCurve(final R field_, final S toStatus_, final ItemCurve<T> targetCurve_, final ItemModel<S, R, T> model_) throws ConvergenceException;
 
     protected abstract FitResult<S, R, T> findBest(final T curveType_, final R field_, final S toStatus_) throws ConvergenceException;
 

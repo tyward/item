@@ -44,6 +44,7 @@ public final class ItemSettings implements Serializable
     private static final int BLOCK_SIZE = 200 * 1000;
     private static final int THREAD_BLOCK_SIZE = 10 * 1000;
     private static final int POLISH_MULTI_START_POINTS = 20;
+    private static final boolean ALLOW_INTERACTION_CURVES = true;
 
     private static final long serialVersionUID = 6850856502170239624L;
 
@@ -52,6 +53,7 @@ public final class ItemSettings implements Serializable
     private final boolean _useThreading;
     private final boolean _approximateDerivatives;
     private final boolean _polishStartingParams;
+    private final boolean _allowInteractionCurves;
     private final int _polishMultStartPoints;
 
     private final double _aicCutoff;
@@ -61,10 +63,11 @@ public final class ItemSettings implements Serializable
 
     public ItemSettings()
     {
-        this(true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD), BLOCK_SIZE, THREAD_BLOCK_SIZE, true, false);
+        this(true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD), BLOCK_SIZE, THREAD_BLOCK_SIZE, true, false, ALLOW_INTERACTION_CURVES);
     }
 
-    public ItemSettings(final boolean randomShuffle_, final double aicCutoff_, final Random rand_, final int blockSize_, final int threadBlockSize_, final boolean useThreading_, final boolean polishStartingParams_)
+    public ItemSettings(final boolean randomShuffle_, final double aicCutoff_, final Random rand_, final int blockSize_, final int threadBlockSize_, final boolean useThreading_,
+            final boolean polishStartingParams_, final boolean allowInteractionCurves_)
     {
         if (aicCutoff_ > 0.0)
         {
@@ -89,6 +92,7 @@ public final class ItemSettings implements Serializable
         _approximateDerivatives = false;
         _polishStartingParams = polishStartingParams_;
         _polishMultStartPoints = POLISH_MULTI_START_POINTS;
+        _allowInteractionCurves = allowInteractionCurves_;
     }
 
     public int getPolishMultiStartPoints()
@@ -96,9 +100,22 @@ public final class ItemSettings implements Serializable
         return _polishMultStartPoints;
     }
 
+    public ItemSettings withAllowInteractionCurves(final boolean allowInteractionCurves_)
+    {
+        //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(),
+                this.getPolishStartingParams(), this.getAllowInteractionCurves());
+    }
+
+    public boolean getAllowInteractionCurves()
+    {
+        return _allowInteractionCurves;
+    }
+
     public ItemSettings withPolishStartingParams(final boolean polishStartingParams_)
     {
-        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), polishStartingParams_);
+        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(),
+                polishStartingParams_, this.getAllowInteractionCurves());
     }
 
     public boolean getPolishStartingParams()
@@ -109,7 +126,8 @@ public final class ItemSettings implements Serializable
     public ItemSettings withUseThreading(final boolean useThreading_)
     {
         //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
-        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), useThreading_, this.getPolishStartingParams());
+        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), useThreading_,
+                this.getPolishStartingParams(), this.getAllowInteractionCurves());
     }
 
     public boolean getUseThreading()
@@ -120,7 +138,8 @@ public final class ItemSettings implements Serializable
     public ItemSettings withBlockSize(final int blockSize_)
     {
         //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
-        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), blockSize_, this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), blockSize_, this.getThreadBlockSize(), this.getUseThreading(),
+                this.getPolishStartingParams(), this.getAllowInteractionCurves());
     }
 
     public int getBlockSize()
@@ -131,7 +150,8 @@ public final class ItemSettings implements Serializable
     public ItemSettings withThreadBlockSize(final int threadBlockSize_)
     {
         //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
-        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), threadBlockSize_, this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), threadBlockSize_, this.getUseThreading(),
+                this.getPolishStartingParams(), this.getAllowInteractionCurves());
     }
 
     public int getThreadBlockSize()
@@ -142,7 +162,8 @@ public final class ItemSettings implements Serializable
     public ItemSettings withAicCutoff(final double cutoff_)
     {
         //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
-        return new ItemSettings(this.isRandomShuffle(), cutoff_, this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(this.isRandomShuffle(), cutoff_, this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(),
+                this.getPolishStartingParams(), this.getAllowInteractionCurves());
     }
 
     public double getAicCutoff()
@@ -153,7 +174,8 @@ public final class ItemSettings implements Serializable
     public ItemSettings withRandomShuffle(final boolean randomShuffle_)
     {
         //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
-        return new ItemSettings(randomShuffle_, this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(randomShuffle_, this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(),
+                this.getPolishStartingParams(), this.getAllowInteractionCurves());
     }
 
     public boolean isRandomShuffle()
@@ -164,7 +186,8 @@ public final class ItemSettings implements Serializable
     public ItemSettings withRandom(final Random random_)
     {
         //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
-        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), random_, this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), random_, this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(),
+                this.getPolishStartingParams(), this.getAllowInteractionCurves());
     }
 
     public Random getRandom()
