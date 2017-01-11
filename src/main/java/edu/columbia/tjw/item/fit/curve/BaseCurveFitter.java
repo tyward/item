@@ -248,6 +248,15 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double bestLL = result.minValue();
 
+        final EvaluationResult res = func_.generateResult();
+        func_.value(best, 0, func_.numRows(), res);
+
+        final double trueBestLL = res.getMean();
+
+        LOG.info("New LL: " + trueBestLL + " (+/- " + res.getStdDev() + "), estimate: " + bestLL + " difference Z-Score: " + ((bestLL - trueBestLL) / res.getStdDev()));
+
+        LOG.info("Improvement Z-score: " + ((startingLL_ - trueBestLL) / res.getStdDev()));
+
         final FitResult<S, R, T> output = new FitResult<>(generator_.getToStatus(), best, generator_, field_, trans, bestLL, startingLL_, result.dataElementCount());
 
         LOG.info("Found Curve[" + generator_.getCurveType() + ", " + field_ + ", " + generator_.getToStatus() + "][" + output.calculateAicDifference() + "]: " + Arrays.toString(bestVal));
@@ -270,6 +279,11 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final T curveType = targetCurve_.getCurveType();
 
+        final BaseParamGenerator<S, R, T> g1 = buildGenerator(curveType, toStatus_, model_);
+
+        //Extract from the original params, we will strike it out of the updated params.
+        final double[] starting = g1.generateParamVector(field_, targetCurve_);
+
         //Changes are allowed...
         final int index = params.getIndex(field_, targetCurve_);
         final ItemParameters<S, R, T> reduced = params.dropIndex(index);
@@ -277,8 +291,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType, toStatus_, model);
         final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType, field_, toStatus_, generator, model);
-
-        final double[] starting = generator.generateParamVector(field_, targetCurve_);
 
         //Take advantage of the fact that this starts out as all zeros, and that all zeros
         //means no change....
@@ -289,6 +301,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final EvaluationResult res = func.generateResult();
         func.value(startingPoint, 0, func.numRows(), res);
         final double startingLL = res.getMean();
+
+        LOG.info("Starting LL: " + startingLL + " (+/- " + res.getStdDev() + ")");
 
         final FitResult<S, R, T> result = generateFit(generator, func, field_, startingLL, starting);
 
@@ -306,7 +320,13 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
             return model_;
         }
 
-        return result.getModel();
+        ItemModel<S, R, T> outputModel = result.getModel();
+
+        //Potentially, we can accumulate filters here that are not needed, but for now just live with it.
+        final CurveFilter<S, R, T> filter = new CurveFilter<>(outputModel.getParams().getStatus(), toStatus_, field_, result.getTransformation());
+        outputModel = outputModel.updateParameters(outputModel.getParams().addFilter(filter));
+
+        return outputModel;
     }
 
 }

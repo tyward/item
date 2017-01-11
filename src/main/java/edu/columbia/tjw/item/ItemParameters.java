@@ -166,17 +166,17 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     private boolean compareTrans(final ItemCurve<?> trans1_, final ItemCurve<?> trans2_)
     {
         //We demand exact reference equality for this operation.
-        return (trans1_ == trans2_);
-//        if (trans1_ == trans2_)
-//        {
-//            return true;
-//        }
-//        if (null == trans1_)
-//        {
-//            return false;
-//        }
-//
-//        return trans1_.equals(trans2_);
+        //return (trans1_ == trans2_);
+        if (trans1_ == trans2_)
+        {
+            return true;
+        }
+        if (null == trans1_)
+        {
+            return false;
+        }
+
+        return trans1_.equals(trans2_);
     }
 
     public ItemParameters<S, R, T> dropRegressor(final R field_)

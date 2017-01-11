@@ -237,6 +237,11 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             _params = generator_.generatedModel(params, _field).getParams();
         }
 
+        public ItemCurve<T> getTransformation()
+        {
+            return _trans;
+        }
+
         public ItemModel<S, R, T> getModel()
         {
             return new ItemModel<>(_params);
