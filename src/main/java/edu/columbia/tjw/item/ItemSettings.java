@@ -30,6 +30,11 @@ import java.util.Random;
  *
  * Generally, don't change these unless you know what you're doing.
  *
+ * Also, all the members are final so that this thing is threadsafe. Use the
+ * with* methods if you need to get settings with non-default values.
+ *
+ * One word of warning, these will share a single Random, typically this will
+ * still be threadsafe, but not always. Be careful about that.
  *
  * @author tyler
  */
@@ -91,9 +96,20 @@ public final class ItemSettings implements Serializable
         return _polishMultStartPoints;
     }
 
+    public ItemSettings withPolishStartingParams(final boolean polishStartingParams_)
+    {
+        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), polishStartingParams_);
+    }
+
     public boolean getPolishStartingParams()
     {
         return _polishStartingParams;
+    }
+
+    public ItemSettings withUseThreading(final boolean useThreading_)
+    {
+        //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), useThreading_, this.getPolishStartingParams());
     }
 
     public boolean getUseThreading()
@@ -101,9 +117,21 @@ public final class ItemSettings implements Serializable
         return _useThreading;
     }
 
+    public ItemSettings withBlockSize(final int blockSize_)
+    {
+        //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), blockSize_, this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+    }
+
     public int getBlockSize()
     {
         return _blockSize;
+    }
+
+    public ItemSettings withThreadBlockSize(final int threadBlockSize_)
+    {
+        //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), threadBlockSize_, this.getUseThreading(), this.getPolishStartingParams());
     }
 
     public int getThreadBlockSize()
@@ -111,14 +139,32 @@ public final class ItemSettings implements Serializable
         return _threadBlockSize;
     }
 
+    public ItemSettings withAicCutoff(final double cutoff_)
+    {
+        //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(this.isRandomShuffle(), cutoff_, this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+    }
+
     public double getAicCutoff()
     {
         return _aicCutoff;
     }
 
+    public ItemSettings withRandomShuffle(final boolean randomShuffle_)
+    {
+        //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(randomShuffle_, this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+    }
+
     public boolean isRandomShuffle()
     {
         return _randomShuffle;
+    }
+
+    public ItemSettings withRandom(final Random random_)
+    {
+        //return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), this.getRandom(), this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
+        return new ItemSettings(this.isRandomShuffle(), this.getAicCutoff(), random_, this.getBlockSize(), this.getThreadBlockSize(), this.getUseThreading(), this.getPolishStartingParams());
     }
 
     public Random getRandom()
