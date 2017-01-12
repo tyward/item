@@ -32,7 +32,6 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.util.LogUtil;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -48,13 +47,11 @@ import java.util.logging.Logger;
 public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private static final Logger LOG = LogUtil.getLogger(CurveFitter.class);
-    private static final double AIC_CUTOFF = -5.0;
 
     private final EnumFamily<T> _family;
-    private final ItemParameters<S, R, T> _params;
     private final ItemSettings _settings;
 
-    public CurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemSettings settings_)
+    public CurveFitter(final ItemCurveFactory<T> factory_, final ItemSettings settings_)
     {
         if (null == settings_)
         {
@@ -62,23 +59,24 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         _family = factory_.getFamily();
-        _params = model_.getParams();
         _settings = settings_;
     }
 
     public final ItemModel<S, R, T> calibrateCurves()
     {
         LOG.info("Starting curve calibration sweep.");
-        final List<R> regList = _params.getRegressorList();
-        final List<S> statList = _params.getStatus().getReachable();
+        final ItemParameters<S, R, T> params = getParams();
 
-        ItemModel<S, R, T> model = new ItemModel<>(_params);
+        final List<R> regList = params.getRegressorList();
+        final List<S> statList = params.getStatus().getReachable();
+
+        ItemModel<S, R, T> model = new ItemModel<>(params);
 
         //final List<T> item
         for (int i = 0; i < regList.size(); i++)
         {
             final R reg = regList.get(i);
-            final ItemCurve<T> curve = _params.getTransformation(i);
+            final ItemCurve<T> curve = params.getTransformation(i);
 
             if (null == curve)
             {
@@ -89,7 +87,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             {
                 try
                 {
-                    model = calibrateCurve(reg, status, curve, model);
+                    model = calibrateCurve(reg, status, curve);
                 }
                 catch (final ConvergenceException e)
                 {
@@ -100,6 +98,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         LOG.info("Finished curve calibration sweep.");
+
         return model;
     }
 
@@ -140,29 +139,19 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
     private FitResult<S, R, T> findBest(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filters_)
     {
-        final S fromStatus = _params.getStatus();
+        final ItemParameters<S, R, T> params = getParams();
+        final S fromStatus = params.getStatus();
         FitResult<S, R, T> bestResult = null;
         double bestImprovement = 0.0;
-
-        final List<ParamFilter<S, R, T>> filters = new ArrayList<>();
-        filters.addAll(_params.getFilters());
-
-        if (null != filters_)
-        {
-            filters.addAll(filters_);
-        }
 
         for (final S toStatus : fromStatus.getReachable())
         {
             fieldLoop:
             for (final R field : fields_)
             {
-                for (final ParamFilter<S, R, T> filter : filters)
+                if (params.isFiltered(fromStatus, toStatus, field, null, filters_))
                 {
-                    if (filter.isFiltered(fromStatus, toStatus, field, null))
-                    {
-                        continue fieldLoop;
-                    }
+                    continue fieldLoop;
                 }
 
                 for (final T curveType : _family.getMembers())
@@ -197,7 +186,19 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         return bestResult;
     }
 
-    protected abstract ItemModel<S, R, T> calibrateCurve(final R field_, final S toStatus_, final ItemCurve<T> targetCurve_, final ItemModel<S, R, T> model_) throws ConvergenceException;
+    /**
+     * Calibrate the given curve, but also update the model underlying this
+     * fitter, if necessary.
+     *
+     * @param field_
+     * @param toStatus_
+     * @param targetCurve_
+     * @return
+     * @throws ConvergenceException
+     */
+    protected abstract ItemModel<S, R, T> calibrateCurve(final R field_, final S toStatus_, final ItemCurve<T> targetCurve_) throws ConvergenceException;
+
+    protected abstract ItemParameters<S, R, T> getParams();
 
     protected abstract FitResult<S, R, T> findBest(final T curveType_, final R field_, final S toStatus_) throws ConvergenceException;
 

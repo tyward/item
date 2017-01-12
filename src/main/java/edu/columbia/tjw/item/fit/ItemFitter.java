@@ -161,11 +161,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public ItemModel<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         ItemModel<S, R, T> model = new ItemModel<>(params_);
-        //final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(gridFactory_);
-        //final ItemFittingGrid<S, R> grid = gridFactory_.prepareGrid(params_);
-        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
-
-        return fitCoefficients(model, grid, filters_);
+        return fitCoefficients(model, grid_, filters_);
     }
 
     /**
@@ -177,11 +173,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return An updated model with the beta values refit
      * @throws ConvergenceException If no progress could be made
      */
-    private ItemModel<S, R, T> fitCoefficients(final ItemModel<S, R, T> model_, final ParamFittingGrid<S, R, T> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    private ItemModel<S, R, T> fitCoefficients(final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
+        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(model_.getParams(), fittingGrid_);
         final ParamFitter<S, R, T> fitter = new ParamFitter<>(model_, _settings);
 
-        final ItemModel<S, R, T> m2 = fitter.fit(fittingGrid_, filters_);
+        final ItemModel<S, R, T> m2 = fitter.fit(grid, filters_);
 
         if (null == m2)
         {
@@ -277,31 +274,40 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         final long start = System.currentTimeMillis();
         ItemModel<S, R, T> model = new ItemModel<>(params_);
 
-        //final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(gridFactory_);
         for (int i = 0; i < curveCount_; i++)
         {
-            final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(model.getParams(), grid_);
-
             try
             {
-                model = fitCoefficients(model, grid, filters_);
+                model = fitCoefficients(model, grid_, filters_);
             }
             catch (final ConvergenceException e)
             {
                 LOG.info("Unable to improve results in coefficient fit, moving on.");
             }
 
-            final CurveFitter<S, R, T> fitter = new BaseCurveFitter<>(_factory, model, grid, _settings, _intercept);
+            final CurveFitter<S, R, T> fitter = new BaseCurveFitter<>(_factory, model, grid_, _settings, _intercept);
 
             try
             {
                 model = fitter.generateCurve(curveFields_, filters_);
 
                 //If the expansion worked, try to update all curve betas...
-                final ParamFittingGrid<S, R, T> g2 = new ParamFittingGrid<>(model.getParams(), grid_);
-                final CurveFitter<S, R, T> f2 = new BaseCurveFitter<>(_factory, model, g2, _settings, _intercept);
+                final CurveFitter<S, R, T> f2 = new BaseCurveFitter<>(_factory, model, grid_, _settings, _intercept);
 
                 model = f2.calibrateCurves();
+//
+//                final ParamFitter<S, R, T> f3 = new ParamFitter<>(model, _settings);
+//
+//                final double paramLL = f3.computeLogLikelihood(model.getParams(), g2, null);
+//
+//                LOG.info("Generated Log Likelihood: " + paramLL);
+
+//                LOG.info("Regenerated Log Likelihood: " + paramLL + " -> " + endingLL);
+//
+//                if (Math.abs(paramLL - endingLL) > 0.0001)
+//                {
+//                    LOG.info("LL mismatch.");
+//                }
             }
             catch (final ConvergenceException e)
             {
@@ -319,8 +325,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         try
         {
-            final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(model.getParams(), grid_);
-            model = fitCoefficients(model, grid, filters_);
+            model = fitCoefficients(model, grid_, filters_);
         }
         catch (final ConvergenceException e)
         {

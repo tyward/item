@@ -28,7 +28,9 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
+import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
@@ -55,9 +57,13 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final ItemCurveFactory<T> _factory;
 
     private final ItemSettings _settings;
-    private final ItemModel<S, R, T> _model;
-    private final ParamFittingGrid<S, R, T> _grid;
+
+    private final ItemStatusGrid<S, R> _grid;
     private final RectangularDoubleArray _powerScores;
+
+    // Getting pretty messy, we can now reset our grids and models, recache the power scores, etc...
+    private ParamFittingGrid<S, R, T> _paramGrid;
+    private ItemModel<S, R, T> _model;
 
     //N.B: These are ordinals, not offsets.
     private final int[] _actualOutcomes;
@@ -66,9 +72,9 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final R _intercept;
     private final S _fromStatus;
 
-    public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ParamFittingGrid<S, R, T> grid_, final ItemSettings settings_, final R intercept_)
+    public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_, final R intercept_)
     {
-        super(factory_, model_, settings_);
+        super(factory_, settings_);
 
         if (null == intercept_)
         {
@@ -77,8 +83,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         _intercept = intercept_;
         _settings = settings_;
-
-        //_family = factory_.getFamily();
         _factory = factory_;
         _model = model_;
         _grid = grid_;
@@ -108,21 +112,59 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
 
         final int reachableCount = _fromStatus.getReachableCount();
-        final double[] probabilities = new double[reachableCount];
 
         _indexList = Arrays.copyOf(indexList, count);
         _powerScores = new RectangularDoubleArray(count, reachableCount);
         _actualOutcomes = new int[count];
 
-        //final List<S> reachable = fromStatus.getReachable();
-        final int baseCase = _fromStatus.getReachable().indexOf(_fromStatus);
-
         for (int i = 0; i < count; i++)
         {
             final int index = _indexList[i];
             _actualOutcomes[i] = _grid.getNextStatus(index);
+        }
 
-            model_.transitionProbability(_grid, index, probabilities);
+        regenPowerScores();
+    }
+
+    private QuantileDistribution generateDistribution(R field_, S toStatus_)
+    {
+        final ItemQuantileDistribution<S, R> quantGenerator = new ItemQuantileDistribution<>(getParamGrid(), _powerScores, _fromStatus, field_, toStatus_, _indexList);
+        final QuantileDistribution dist = quantGenerator.getAdjusted();
+        return dist;
+    }
+
+    private void setModel(final ItemModel<S, R, T> model_)
+    {
+        _model = model_;
+        _paramGrid = null;
+        regenPowerScores();
+    }
+
+    private synchronized ParamFittingGrid<S, R, T> getParamGrid()
+    {
+        if (null == _paramGrid)
+        {
+            _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
+        }
+
+        return _paramGrid;
+    }
+
+    private synchronized void regenPowerScores()
+    {
+        final int reachableCount = _fromStatus.getReachableCount();
+        final double[] probabilities = new double[reachableCount];
+
+        final int baseCase = _fromStatus.getReachable().indexOf(_fromStatus);
+        final int count = _actualOutcomes.length;
+
+        final ParamFittingGrid<S, R, T> paramGrid = getParamGrid();
+
+        for (int i = 0; i < count; i++)
+        {
+            final int index = _indexList[i];
+
+            _model.transitionProbability(paramGrid, index, probabilities);
 
             MultiLogistic.multiLogitFunction(baseCase, probabilities, probabilities);
 
@@ -134,11 +176,9 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
-    private QuantileDistribution generateDistribution(R field_, S toStatus_)
+    public synchronized RectangularDoubleArray getPowerScores()
     {
-        final ItemQuantileDistribution<S, R> quantGenerator = new ItemQuantileDistribution<>(_grid, _powerScores, _fromStatus, field_, toStatus_, _indexList);
-        final QuantileDistribution dist = quantGenerator.getAdjusted();
-        return dist;
+        return _powerScores;
     }
 
     private BaseParamGenerator<S, R, T> buildGenerator(T curveType_, S toStatus_, final ItemModel<S, R, T> model_)
@@ -147,12 +187,19 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return generator;
     }
 
-    private CurveOptimizerFunction<S, R, T> generateFunction(T curveType_, R field_, S toStatus_, final BaseParamGenerator<S, R, T> generator_, final ItemModel<S, R, T> model_)
+    private CurveOptimizerFunction<S, R, T> generateFunction(T curveType_, R field_, S toStatus_, final BaseParamGenerator<S, R, T> generator_)
     {
-        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(curveType_, generator_, field_, _fromStatus, toStatus_, _powerScores, _actualOutcomes,
-                _grid, model_, _indexList, _settings);
+        final ParamFittingGrid<S, R, T> paramGrid = getParamGrid();
+        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(curveType_, generator_, field_, _fromStatus, toStatus_, this, _actualOutcomes,
+                paramGrid, _indexList, _settings);
 
         return func;
+    }
+
+    @Override
+    protected synchronized ItemParameters<S, R, T> getParams()
+    {
+        return _model.getParams();
     }
 
     @Override
@@ -162,7 +209,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final QuantileDistribution dist = generateDistribution(field_, toStatus_);
         final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType_, toStatus_, _model);
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType_, field_, toStatus_, generator, _model);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType_, field_, toStatus_, generator);
 
         final int dimension = generator.paramCount();
 
@@ -266,20 +313,20 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     }
 
     @Override
-    protected ItemModel<S, R, T> calibrateCurve(R field_, S toStatus_, ItemCurve<T> targetCurve_, final ItemModel<S, R, T> model_) throws ConvergenceException
+    protected ItemModel<S, R, T> calibrateCurve(R field_, S toStatus_, ItemCurve<T> targetCurve_) throws ConvergenceException
     {
-        final ItemParameters<S, R, T> params = model_.getParams();
+        final ItemParameters<S, R, T> params = _model.getParams();
 
         if (params.isFiltered(_fromStatus, toStatus_, field_, targetCurve_))
         {
-            return model_;
+            return _model;
         }
 
         LOG.info("Calibrating curve: " + targetCurve_ + ", " + field_ + ", " + toStatus_);
 
         final T curveType = targetCurve_.getCurveType();
 
-        final BaseParamGenerator<S, R, T> g1 = buildGenerator(curveType, toStatus_, model_);
+        final BaseParamGenerator<S, R, T> g1 = buildGenerator(curveType, toStatus_, _model);
 
         //Extract from the original params, we will strike it out of the updated params.
         final double[] starting = g1.generateParamVector(field_, targetCurve_);
@@ -290,7 +337,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final ItemModel<S, R, T> model = new ItemModel<>(reduced);
 
         final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType, toStatus_, model);
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType, field_, toStatus_, generator, model);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType, field_, toStatus_, generator);
 
         //Take advantage of the fact that this starts out as all zeros, and that all zeros
         //means no change....
@@ -306,6 +353,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final FitResult<S, R, T> result = generateFit(generator, func, field_, startingLL, starting);
 
+        final double endingLL = result.getLogLikelihood();
+
         LOG.info("LL improvement: " + startingLL + " -> " + result.getLogLikelihood());
 
         final double aicDiff = result.calculateAicDifference();
@@ -317,7 +366,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
             //We demand that the AIC improvement is more than the bare minimum. 
             //We want this curve to be good enough to support at least N+5 parameters.
             LOG.info("AIC improvement is not large enough, keeping old curve.");
-            return model_;
+            return _model;
         }
 
         ItemModel<S, R, T> outputModel = result.getModel();
@@ -325,6 +374,18 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         //Potentially, we can accumulate filters here that are not needed, but for now just live with it.
         final CurveFilter<S, R, T> filter = new CurveFilter<>(outputModel.getParams().getStatus(), toStatus_, field_, result.getTransformation());
         outputModel = outputModel.updateParameters(outputModel.getParams().addFilter(filter));
+
+        this.setModel(outputModel);
+
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(outputModel, _settings);
+        final double paramLL = fitter.computeLogLikelihood(outputModel.getParams(), new ParamFittingGrid<>(outputModel.getParams(), _grid), null);
+
+        LOG.info("Regenerated Log Likelihood: " + paramLL + " -> " + endingLL);
+
+        if (Math.abs(paramLL - endingLL) > 0.0001)
+        {
+            LOG.info("LL mismatch.");
+        }
 
         return outputModel;
     }

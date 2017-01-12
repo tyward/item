@@ -76,11 +76,6 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
         _transformations = _params.getTransformationList();
     }
 
-    public ItemParameters<S, R, T> getParams()
-    {
-        return _params;
-    }
-
     public abstract ItemGrid<R> getUnderlying();
 
     /**

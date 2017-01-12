@@ -116,14 +116,38 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _mergePointer = mergePointers_;
     }
 
-    public boolean isFiltered(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_)
+    private boolean checkFilter(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_, final Collection<ParamFilter<S, R, T>> filters_)
     {
-        for (final ParamFilter<S, R, T> next : getFilters())
+        if (null == filters_)
+        {
+            return false;
+        }
+
+        for (final ParamFilter<S, R, T> next : filters_)
         {
             if (next.isFiltered(fromStatus_, toStatus_, field_, trans_))
             {
                 return true;
             }
+        }
+
+        return false;
+    }
+
+    public boolean isFiltered(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_)
+    {
+        return isFiltered(fromStatus_, toStatus_, field_, trans_, null);
+    }
+
+    public boolean isFiltered(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_, final Collection<ParamFilter<S, R, T>> extraFilters_)
+    {
+        if (checkFilter(fromStatus_, toStatus_, field_, trans_, getFilters()))
+        {
+            return true;
+        }
+        if (checkFilter(fromStatus_, toStatus_, field_, trans_, extraFilters_))
+        {
+            return true;
         }
 
         return false;

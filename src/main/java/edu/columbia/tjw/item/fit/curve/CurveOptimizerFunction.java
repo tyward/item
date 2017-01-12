@@ -50,16 +50,15 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 {
     private final LogLikelihood<S> _likelihood;
     private final ParamGenerator<S, R, T> _generator;
-    private final R _field;
     private final double[] _regressor;
     private final int _size;
     private final double[] _workspace;
     private final int _toIndex;
-    private final double _centrality;
-    private final double _stdDev;
 
-    private final ItemModel<S, R, T> _model;
-    private final RectangularDoubleArray _powerScores;
+    private final BaseCurveFitter<S, R, T> _curveFitter;
+
+    private final S _status;
+    //private final ItemModel<S, R, T> _model;
     private final int[] _actualOffsets;
     private final T _curveType;
 
@@ -70,16 +69,17 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
     private final ItemSettings _settings;
 
-    //private final MultivariateDifferentiableFunction _diff;
-    public CurveOptimizerFunction(final T curveType_, final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_, final RectangularDoubleArray powerScores_, final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final ItemModel<S, R, T> model_, final int[] indexList_, final ItemSettings settings_)
+    public CurveOptimizerFunction(final T curveType_, final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_, final BaseCurveFitter<S, R, T> curveFitter_,
+            final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
+
+        _curveFitter = curveFitter_;
 
         _curveType = curveType_;
         _settings = settings_;
         _likelihood = new LogLikelihood<>(fromStatus_);
-        _powerScores = powerScores_;
-        _actualOffsets = new int[actualOrdinals_.length]; //actualOrdinals_.clone();
+        _actualOffsets = new int[actualOrdinals_.length];
 
         //Convert ordinals to offsets. 
         for (int i = 0; i < _actualOffsets.length; i++)
@@ -87,22 +87,14 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             _actualOffsets[i] = _likelihood.ordinalToOffset(actualOrdinals_[i]);
         }
 
-        _model = model_;
+        _status = fromStatus_;
         _generator = generator_;
-        _field = field_;
-        _size = _powerScores.getRows();
+        _size = _actualOffsets.length;
         _workspace = new double[_generator.paramCount()];
         _regressor = new double[_size];
         _toIndex = fromStatus_.getReachable().indexOf(toStatus_);
 
-        //final NumericGridReader<?> reader = grid_.getReader(_field);
-        //Take one random point as the mean for our optimization.
-        //final int meanSelector = (int) (_size * RandomTool.nextDouble());
-        //final double mean = reader.asDouble(indexList_[meanSelector], offsetList_[meanSelector]);
-        double eX = 0.0;
-        double eX2 = 0.0;
-
-        final ItemRegressorReader reader = grid_.getRegressorReader(_field);
+        final ItemRegressorReader reader = grid_.getRegressorReader(field_);
 
         for (int i = 0; i < _size; i++)
         {
@@ -110,17 +102,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             final double regressor = reader.asDouble(mapped);
 
             _regressor[i] = regressor;
-
-            eX += regressor;
-            eX2 += (regressor * regressor);
         }
-
-        eX = eX / _size;
-        eX2 = eX2 / _size;
-
-        //These can be dropped, keeping temporarily for debugging purposes.
-        _centrality = eX;
-        _stdDev = Math.sqrt(eX2 - (eX * eX));
     }
 
     @Override
@@ -167,7 +149,8 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             return;
         }
 
-        final int cols = _powerScores.getColumns();
+        final RectangularDoubleArray powerScores = _curveFitter.getPowerScores();
+        final int cols = powerScores.getColumns();
 
         final double[] computed = new double[cols];
         //final double[] actual = new double[cols];
@@ -176,7 +159,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         {
             for (int k = 0; k < cols; k++)
             {
-                computed[k] = _powerScores.get(i, k);
+                computed[k] = powerScores.get(i, k);
                 //actual[k] = _actualProbabilities.get(i, k);
             }
 
@@ -208,7 +191,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             return new MultivariateGradient(input_, der, null, 0.0);
         }
 
-        final List<S> reachable = _model.getParams().getStatus().getReachable();
+        final List<S> reachable = _status.getReachable();
         int count = 0;
         final int reachableCount = reachable.size();
 
@@ -227,11 +210,13 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         final int interceptIndex = ItemCurveParams.getInterceptParamNumber(_curveType);
         final int betaIndex = ItemCurveParams.getBetaParamNumber(_curveType);
 
+        final RectangularDoubleArray powerScores = _curveFitter.getPowerScores();
+
         for (int i = start_; i < end_; i++)
         {
             for (int w = 0; w < reachableCount; w++)
             {
-                scores[w] = _powerScores.get(i, w);
+                scores[w] = powerScores.get(i, w);
                 //actual[w] = _actualProbabilities.get(i, w);
             }
 
