@@ -289,19 +289,21 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             try
             {
+                //First, try to calibrate any existing curves to improve the fit. 
+                model = fitter.calibrateCurves();
+
+                //Now, try to add a new curve. 
                 model = fitter.generateCurve(curveFields_, filters_);
 
-                //If the expansion worked, try to update all curve betas...
-                final CurveFitter<S, R, T> f2 = new BaseCurveFitter<>(_factory, model, grid_, _settings, _intercept);
-
-                model = f2.calibrateCurves();
+//                //If the expansion worked, try to update all curve betas...
+//                final CurveFitter<S, R, T> f2 = new BaseCurveFitter<>(_factory, model, grid_, _settings, _intercept);
+//                model = f2.calibrateCurves();
 //
 //                final ParamFitter<S, R, T> f3 = new ParamFitter<>(model, _settings);
 //
 //                final double paramLL = f3.computeLogLikelihood(model.getParams(), g2, null);
 //
 //                LOG.info("Generated Log Likelihood: " + paramLL);
-
 //                LOG.info("Regenerated Log Likelihood: " + paramLL + " -> " + endingLL);
 //
 //                if (Math.abs(paramLL - endingLL) > 0.0001)

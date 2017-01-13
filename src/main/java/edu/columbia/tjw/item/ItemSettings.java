@@ -45,6 +45,7 @@ public final class ItemSettings implements Serializable
     private static final int THREAD_BLOCK_SIZE = 10 * 1000;
     private static final int POLISH_MULTI_START_POINTS = 20;
     private static final boolean ALLOW_INTERACTION_CURVES = true;
+    private static final double Z_SCORE_CUTOFF = 1.0;
 
     private static final long serialVersionUID = 6850856502170239624L;
 
@@ -57,6 +58,12 @@ public final class ItemSettings implements Serializable
     private final int _polishMultStartPoints;
 
     private final double _aicCutoff;
+
+    //The minimum Z-score such that we will consider two results different. 
+    // i.e. two points must differ by at least _zScoreCutoff std deviations to 
+    // be considered meaningfully different. Use a number between 1 - 5 here. 1.0 
+    // for minimal certainty, 5.0 for proof strong enough to be considered a scientific discovery... (less than 1 in a million to happen by chance)
+    private final double _zScoreCutoff;
 
     private final int _blockSize;
     private final int _threadBlockSize;
@@ -93,6 +100,8 @@ public final class ItemSettings implements Serializable
         _polishStartingParams = polishStartingParams_;
         _polishMultStartPoints = POLISH_MULTI_START_POINTS;
         _allowInteractionCurves = allowInteractionCurves_;
+
+        _zScoreCutoff = Z_SCORE_CUTOFF;
     }
 
     public int getPolishMultiStartPoints()
@@ -193,6 +202,11 @@ public final class ItemSettings implements Serializable
     public Random getRandom()
     {
         return _rand;
+    }
+
+    public double getZScoreCutoff()
+    {
+        return _zScoreCutoff;
     }
 
     public boolean approximateDerivatives()

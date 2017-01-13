@@ -58,9 +58,11 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final BaseCurveFitter<S, R, T> _curveFitter;
 
     private final S _status;
-    //private final ItemModel<S, R, T> _model;
     private final int[] _actualOffsets;
     private final T _curveType;
+
+    private final double _prevBeta;
+    private final ItemCurve<T> _prevCurve;
 
     private ItemCurve<?> _trans;
     private double _interceptAdjustment;
@@ -70,12 +72,14 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final ItemSettings _settings;
 
     public CurveOptimizerFunction(final T curveType_, final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_, final BaseCurveFitter<S, R, T> curveFitter_,
-            final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_)
+            final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_, final double prevBeta_, final ItemCurve<T> prevCurve_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
-        _curveFitter = curveFitter_;
+        _prevBeta = prevBeta_;
+        _prevCurve = prevCurve_;
 
+        _curveFitter = curveFitter_;
         _curveType = curveType_;
         _settings = settings_;
         _likelihood = new LogLikelihood<>(fromStatus_);
@@ -168,7 +172,22 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             final double transformed = _trans.transform(regressor);
             final double contribution = (_interceptAdjustment + (_beta * transformed));
 
-            computed[_toIndex] += contribution;
+            final double prevContribution;
+
+            if (null != _prevCurve)
+            {
+                prevContribution = _prevBeta * _prevCurve.transform(regressor);
+            }
+            else
+            {
+                prevContribution = 0.0;
+            }
+
+            //We are replacing one curve with another (if _prevCurve != null), so subtract off the 
+            // curve we previously had before adding this new one.
+            final double totalContribution = contribution - prevContribution;
+
+            computed[_toIndex] += totalContribution;
 
             //Converte these power scores into probabilities.
             MultiLogistic.multiLogisticFunction(computed, computed);

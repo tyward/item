@@ -187,11 +187,11 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return generator;
     }
 
-    private CurveOptimizerFunction<S, R, T> generateFunction(T curveType_, R field_, S toStatus_, final BaseParamGenerator<S, R, T> generator_)
+    private CurveOptimizerFunction<S, R, T> generateFunction(T curveType_, R field_, S toStatus_, final BaseParamGenerator<S, R, T> generator_, final double prevBeta_, final ItemCurve<T> prevCurve_)
     {
         final ParamFittingGrid<S, R, T> paramGrid = getParamGrid();
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(curveType_, generator_, field_, _fromStatus, toStatus_, this, _actualOutcomes,
-                paramGrid, _indexList, _settings);
+                paramGrid, _indexList, _settings, prevBeta_, prevCurve_);
 
         return func;
     }
@@ -209,7 +209,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final QuantileDistribution dist = generateDistribution(field_, toStatus_);
         final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType_, toStatus_, _model);
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType_, field_, toStatus_, generator);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType_, field_, toStatus_, generator, Double.NaN, null);
 
         final int dimension = generator.paramCount();
 
@@ -333,11 +333,13 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         //Changes are allowed...
         final int index = params.getIndex(field_, targetCurve_);
+        final int statusIndex = params.getStatus().getReachable().indexOf(toStatus_);
         final ItemParameters<S, R, T> reduced = params.dropIndex(index);
         final ItemModel<S, R, T> model = new ItemModel<>(reduced);
+        final double prevBeta = _model.getParams().getBeta(statusIndex, index);
 
         final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType, toStatus_, model);
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType, field_, toStatus_, generator);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType, field_, toStatus_, generator, prevBeta, targetCurve_);
 
         //Take advantage of the fact that this starts out as all zeros, and that all zeros
         //means no change....
@@ -355,8 +357,14 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double endingLL = result.getLogLikelihood();
 
-        LOG.info("LL improvement: " + startingLL + " -> " + result.getLogLikelihood());
+        LOG.info("LL improvement: " + startingLL + " -> " + endingLL);
 
+        final double llDev = res.getStdDev();
+
+        //This isn't the right notion of Z-score. We need the z-score of the difference, not of the point itself.
+//        final double zScore = (startingLL - endingLL) / llDev;
+//
+//        LOG.info("Curve calibration Z-Score: " + zScore);
         final double aicDiff = result.calculateAicDifference();
 
         LOG.info("AIC diff: " + aicDiff);
@@ -364,7 +372,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         if (aicDiff > _settings.getAicCutoff())
         {
             //We demand that the AIC improvement is more than the bare minimum. 
-            //We want this curve to be good enough to support at least N+5 parameters.
+            // Also, demand that the resulting diff is statistically significant.
             LOG.info("AIC improvement is not large enough, keeping old curve.");
             return _model;
         }
