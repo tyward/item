@@ -71,9 +71,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         filters.add(new SelfTransitionFilter<>());
         _filters = Collections.unmodifiableList(filters);
 
-        _mergePointer = new int[1];
-
         //We don't need to merge anything in for the intercept.
+        _mergePointer = new int[1];
         _mergePointer[0] = -1;
     }
 
