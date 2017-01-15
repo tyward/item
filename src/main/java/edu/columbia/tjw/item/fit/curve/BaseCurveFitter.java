@@ -30,7 +30,6 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
-import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
@@ -295,15 +294,12 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double bestLL = result.minValue();
 
-        final EvaluationResult res = func_.generateResult();
-        func_.value(best, 0, func_.numRows(), res);
-
-        final double trueBestLL = res.getMean();
-
-        LOG.info("New LL: " + trueBestLL + " (+/- " + res.getStdDev() + "), estimate: " + bestLL + " difference Z-Score: " + ((bestLL - trueBestLL) / res.getStdDev()));
-
-        LOG.info("Improvement Z-score: " + ((startingLL_ - trueBestLL) / res.getStdDev()));
-
+//        final EvaluationResult res = func_.generateResult();
+//        func_.value(best, 0, func_.numRows(), res);
+//
+//        final double trueBestLL = res.getMean();
+//        LOG.info("New LL: " + trueBestLL + " (+/- " + res.getStdDev() + "), estimate: " + bestLL + " difference Z-Score: " + ((bestLL - trueBestLL) / res.getStdDev()));
+//        LOG.info("Improvement Z-score: " + ((startingLL_ - trueBestLL) / res.getStdDev()));
         final FitResult<S, R, T> output = new FitResult<>(generator_.getToStatus(), best, generator_, field_, trans, bestLL, startingLL_, result.dataElementCount());
 
         LOG.info("Found Curve[" + generator_.getCurveType() + ", " + field_ + ", " + generator_.getToStatus() + "][" + output.calculateAicDifference() + "]: " + Arrays.toString(bestVal));
@@ -385,16 +381,15 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         this.setModel(outputModel);
 
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(outputModel, _settings);
-        final double paramLL = fitter.computeLogLikelihood(outputModel.getParams(), new ParamFittingGrid<>(outputModel.getParams(), _grid), null);
-
-        LOG.info("Regenerated Log Likelihood: " + paramLL + " -> " + endingLL);
-
-        if (Math.abs(paramLL - endingLL) > 0.0001)
-        {
-            LOG.info("LL mismatch.");
-        }
-
+//        final ParamFitter<S, R, T> fitter = new ParamFitter<>(outputModel, _settings);
+//        final double paramLL = fitter.computeLogLikelihood(outputModel.getParams(), new ParamFittingGrid<>(outputModel.getParams(), _grid), null);
+//
+//        LOG.info("Regenerated Log Likelihood: " + paramLL + " -> " + endingLL);
+//
+//        if (Math.abs(paramLL - endingLL) > 0.0001)
+//        {
+//            LOG.info("LL mismatch.");
+//        }
         return outputModel;
     }
 
