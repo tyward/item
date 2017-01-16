@@ -137,6 +137,32 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         return output;
     }
 
+//    private final FitResult<S, R, T> generateInteraction()
+//    {
+//        final ItemParameters<S, R, T> params = getParams();
+//        final S fromStatus = params.getStatus();
+//        FitResult<S, R, T> bestResult = null;
+//        double bestImprovement = 0.0;
+//
+//        //Here's how this works, we take each existing flag and curve, and 
+//        // interact it with all the others
+//        final List<R> regressors = params.getRegressorList();
+//
+//        for (final S toStatus : fromStatus.getReachable())
+//        {
+//
+//            for (int i = 0; i < regressors.size(); i++)
+//            {
+//
+//            }
+//
+//        }
+//
+//    }
+//    private final FitResult<S, R, T> generateOneInteraction(final int index_, final ItemCurve<T> curve_)
+//    {
+//
+//    }
     private FitResult<S, R, T> findBest(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filters_)
     {
         final ItemParameters<S, R, T> params = getParams();
@@ -154,30 +180,38 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
                     continue fieldLoop;
                 }
 
-                for (final T curveType : _family.getMembers())
+                if (_settings.getAllowInteractionCurves())
+//                {
+//                    //If we are allowing interaction curves, then attempt to fit one of those now..
+//
+//                }
+
                 {
-                    try
+                    for (final T curveType : _family.getMembers())
                     {
-                        final FitResult<S, R, T> res = findBest(curveType, field, toStatus);
-
-                        final double improvement = res.calculateAicDifference();
-
-                        if (improvement < bestImprovement)
+                        try
                         {
-                            LOG.info("New Best: " + res);
-                            bestImprovement = improvement;
-                            bestResult = res;
+                            final FitResult<S, R, T> res = findBest(curveType, field, toStatus);
+
+                            final double improvement = res.calculateAicDifference();
+
+                            if (improvement < bestImprovement)
+                            {
+                                LOG.info("New Best: " + res);
+                                bestImprovement = improvement;
+                                bestResult = res;
+                            }
                         }
-                    }
-                    catch (final ConvergenceException e)
-                    {
-                        LOG.info("Trouble converging, moving on to next curve.");
-                        LOG.info(e.getMessage());
-                    }
-                    catch (final IllegalArgumentException e)
-                    {
-                        LOG.info("Argument trouble (" + field + "), moving on to next curve.");
-                        LOG.info(e.getMessage());
+                        catch (final ConvergenceException e)
+                        {
+                            LOG.info("Trouble converging, moving on to next curve.");
+                            LOG.info(e.getMessage());
+                        }
+                        catch (final IllegalArgumentException e)
+                        {
+                            LOG.info("Argument trouble (" + field + "), moving on to next curve.");
+                            LOG.info(e.getMessage());
+                        }
                     }
                 }
             }

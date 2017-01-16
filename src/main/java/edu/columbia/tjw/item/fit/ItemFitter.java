@@ -94,7 +94,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             throw new IllegalArgumentException("Only one reachable state, no need for a model.");
         }
 
-        final ItemParameters<S, R, T> initial = new ItemParameters<>(status_, Collections.singletonList(_intercept));
+        final ItemParameters<S, R, T> initial = new ItemParameters<>(status_, Collections.singletonList(_intercept), _intercept);
         return initial;
     }
 
