@@ -190,7 +190,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     {
         final ParamFittingGrid<S, R, T> paramGrid = getParamGrid();
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(curveType_, generator_, field_, _fromStatus, toStatus_, this, _actualOutcomes,
-                paramGrid, _indexList, _settings, prevBeta_, prevCurve_);
+                paramGrid, _indexList, _settings, prevBeta_, prevCurve_, null);
 
         return func;
     }
@@ -380,16 +380,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         outputModel = outputModel.updateParameters(outputModel.getParams().addFilter(filter));
 
         this.setModel(outputModel);
-
-//        final ParamFitter<S, R, T> fitter = new ParamFitter<>(outputModel, _settings);
-//        final double paramLL = fitter.computeLogLikelihood(outputModel.getParams(), new ParamFittingGrid<>(outputModel.getParams(), _grid), null);
-//
-//        LOG.info("Regenerated Log Likelihood: " + paramLL + " -> " + endingLL);
-//
-//        if (Math.abs(paramLL - endingLL) > 0.0001)
-//        {
-//            LOG.info("LL mismatch.");
-//        }
         return outputModel;
     }
 

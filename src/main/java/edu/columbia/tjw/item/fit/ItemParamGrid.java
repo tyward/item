@@ -78,6 +78,25 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
 
     public abstract ItemGrid<R> getUnderlying();
 
+    public int getRegressorCount()
+    {
+        return _transformations.size();
+    }
+
+    /**
+     * A short hand function. First creates an array of the correct size, then
+     * calls getRegessors(index_, array)
+     *
+     * @param index_
+     * @return
+     */
+    public double[] getRegressors(final int index_)
+    {
+        final double[] regVector = new double[getRegressorCount()];
+        getRegressors(index_, regVector);
+        return regVector;
+    }
+
     /**
      * Get the regressors for this observation.
      *

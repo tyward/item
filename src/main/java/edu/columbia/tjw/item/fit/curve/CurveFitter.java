@@ -159,6 +159,13 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 //        }
 //
 //    }
+//    /**
+//     * Attempt to interact the given curve with the curve at index_
+//     *
+//     * @param index_
+//     * @param curve_
+//     * @return
+//     */
 //    private final FitResult<S, R, T> generateOneInteraction(final int index_, final ItemCurve<T> curve_)
 //    {
 //

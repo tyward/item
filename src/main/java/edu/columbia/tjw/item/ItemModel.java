@@ -49,6 +49,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final int _reachableSize;
 
     private final double[] _regWorkspace;
+    private final double[] _regWeightedWorkspace;
     private final double[] _probWorkspace;
     private final double[] _actualProbWorkspace;
 
@@ -78,6 +79,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             final int regCount = this.getRegressorCount();
 
             _regWorkspace = new double[regCount];
+            _regWeightedWorkspace = new double[regCount];
             _probWorkspace = new double[_reachableSize];
             _actualProbWorkspace = new double[_reachableSize];
         }
@@ -292,9 +294,51 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return _betas.length;
     }
 
+    /**
+     * Computes weighted regressors from unweighted. N.B: regressors_ cannot be
+     * equal to output_, they must be different arrays
+     *
+     * @param regressors_
+     * @param output_
+     */
+    public void computeWeighting(final double[] regressors_, final double[] output_)
+    {
+        if (regressors_.length != output_.length)
+        {
+            throw new IllegalArgumentException("Length mismatch: " + regressors_.length + " != " + output_.length);
+        }
+        if (regressors_ == output_)
+        {
+            throw new IllegalArgumentException("Parameters for computeWeighting cannot be the same array.");
+        }
+
+        for (int i = 0; i < regressors_.length; i++)
+        {
+            int mergePointer = _params.getMergePointer(i);
+            int moveCount = 0;
+
+            output_[i] = regressors_[i];
+
+            while (mergePointer != -1)
+            {
+                if (moveCount++ > regressors_.length)
+                {
+                    throw new IllegalStateException("Circular pointer references in Item Parameters.");
+                }
+
+                final double weight = regressors_[mergePointer];
+                output_[i] *= weight;
+
+                mergePointer = _params.getMergePointer(mergePointer);
+            }
+        }
+    }
+
     public void powerScores(final double[] regressors_, final double[] workspace_)
     {
-        final int inputSize = regressors_.length;
+        computeWeighting(regressors_, _regWeightedWorkspace);
+
+        final int inputSize = _regWeightedWorkspace.length;
         final int outputSize = _betas.length;
 
         for (int i = 0; i < outputSize; i++)
@@ -304,7 +348,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             for (int k = 0; k < inputSize; k++)
             {
-                sum += regressors_[k] * betaArray[k];
+                sum += _regWeightedWorkspace[k] * betaArray[k];
             }
 
             workspace_[i] = sum;

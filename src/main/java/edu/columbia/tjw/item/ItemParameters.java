@@ -191,6 +191,11 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return _filters;
     }
 
+    public int getMergePointer(final int index_)
+    {
+        return _mergePointer[index_];
+    }
+
     public int getIndex(final R field_, final ItemCurve<?> trans_)
     {
         final int fieldIndex = _fields.indexOf(field_);

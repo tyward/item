@@ -51,6 +51,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final LogLikelihood<S> _likelihood;
     private final ParamGenerator<S, R, T> _generator;
     private final double[] _regressor;
+    private final double[] _weight;
     private final int _size;
     private final double[] _workspace;
     private final int _toIndex;
@@ -72,7 +73,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final ItemSettings _settings;
 
     public CurveOptimizerFunction(final T curveType_, final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_, final BaseCurveFitter<S, R, T> curveFitter_,
-            final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_, final double prevBeta_, final ItemCurve<T> prevCurve_)
+            final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_, final double prevBeta_, final ItemCurve<T> prevCurve_, final int[] weightIndices_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
@@ -107,6 +108,35 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
             _regressor[i] = regressor;
         }
+
+        if (null != weightIndices_)
+        {
+            //We need to calculate a weight curve.
+            _weight = new double[_size];
+
+            //This is just to generate a vector of the correct size.
+            final double[] regVec = grid_.getRegressors(0);
+
+            for (int i = 0; i < _size; i++)
+            {
+                //These values have been run through the transformation curves, but not multiplied by beta.
+                grid_.getRegressors(i, regVec);
+
+                double weight = 0.0;
+
+                for (int z = 0; z < weightIndices_.length; z++)
+                {
+                    weight += regVec[z];
+                }
+
+                _weight[i] = weight;
+            }
+        }
+        else
+        {
+            _weight = null;
+        }
+
     }
 
     @Override
@@ -169,14 +199,26 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
             final int actualOffset = _actualOffsets[i];
             final double regressor = _regressor[i];
+
+            final double weight;
+
+            if (_weight == null)
+            {
+                weight = 1.0;
+            }
+            else
+            {
+                weight = _weight[i];
+            }
+
             final double transformed = _trans.transform(regressor);
-            final double contribution = (_interceptAdjustment + (_beta * transformed));
+            final double contribution = (_beta * weight * transformed);
 
             final double prevContribution;
 
             if (null != _prevCurve)
             {
-                prevContribution = _prevBeta * _prevCurve.transform(regressor);
+                prevContribution = _prevBeta * weight * _prevCurve.transform(regressor);
             }
             else
             {
@@ -185,7 +227,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
             //We are replacing one curve with another (if _prevCurve != null), so subtract off the 
             // curve we previously had before adding this new one.
-            final double totalContribution = contribution - prevContribution;
+            final double totalContribution = _interceptAdjustment + contribution - prevContribution;
 
             computed[_toIndex] += totalContribution;
 
