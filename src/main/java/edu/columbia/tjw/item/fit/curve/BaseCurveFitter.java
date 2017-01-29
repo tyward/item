@@ -309,33 +309,41 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     }
 
     @Override
-    protected ItemModel<S, R, T> calibrateCurve(R field_, S toStatus_, ItemCurve<T> targetCurve_) throws ConvergenceException
+    protected ItemModel<S, R, T> calibrateCurve(final int entryIndex_, final S toStatus_) throws ConvergenceException
     {
         final ItemParameters<S, R, T> params = _model.getParams();
 
-        if (params.isFiltered(_fromStatus, toStatus_, field_, targetCurve_))
+        final R field = params.getEntryRegressor(entryIndex_, 0);
+        final ItemCurve<T> targetCurve = params.getEntryCurve(entryIndex_, 0);
+
+        if (null == targetCurve)
+        {
+            throw new IllegalArgumentException("Invalid calibration entry.");
+        }
+
+        //final S toStatus = params.get
+        if (params.isFiltered(_fromStatus, toStatus_, field, targetCurve))
         {
             return _model;
         }
 
-        LOG.info("Calibrating curve: " + targetCurve_ + ", " + field_ + ", " + toStatus_);
+        LOG.info("Calibrating curve: " + targetCurve + ", " + field + ", " + toStatus_);
 
-        final T curveType = targetCurve_.getCurveType();
+        final T curveType = targetCurve.getCurveType();
 
         final BaseParamGenerator<S, R, T> g1 = buildGenerator(curveType, toStatus_, _model);
 
         //Extract from the original params, we will strike it out of the updated params.
-        final double[] starting = g1.generateParamVector(field_, targetCurve_);
+        final double[] starting = g1.generateParamVector(entryIndex_);
 
         //Changes are allowed...
-        final int index = params.getIndex(field_, targetCurve_);
         final int statusIndex = params.getStatus().getReachable().indexOf(toStatus_);
-        final ItemParameters<S, R, T> reduced = params.dropIndex(index);
+        final ItemParameters<S, R, T> reduced = params.dropIndex(entryIndex_);
         final ItemModel<S, R, T> model = new ItemModel<>(reduced);
-        final double prevBeta = _model.getParams().getBeta(statusIndex, index);
+        final double prevBeta = _model.getParams().getBeta(statusIndex, entryIndex_);
 
         final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType, toStatus_, model);
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType, field_, toStatus_, generator, prevBeta, targetCurve_);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType, field, toStatus_, generator, prevBeta, targetCurve);
 
         //Take advantage of the fact that this starts out as all zeros, and that all zeros
         //means no change....
@@ -349,7 +357,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         LOG.info("Starting LL: " + startingLL + " (+/- " + res.getStdDev() + ")");
 
-        final FitResult<S, R, T> result = generateFit(generator, func, field_, startingLL, starting);
+        final FitResult<S, R, T> result = generateFit(generator, func, field, startingLL, starting);
 
         final double endingLL = result.getLogLikelihood();
 
@@ -376,7 +384,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         ItemModel<S, R, T> outputModel = result.getModel();
 
         //Potentially, we can accumulate filters here that are not needed, but for now just live with it.
-        final CurveFilter<S, R, T> filter = new CurveFilter<>(outputModel.getParams().getStatus(), toStatus_, field_, result.getTransformation());
+        final CurveFilter<S, R, T> filter = new CurveFilter<>(outputModel.getParams().getStatus(), toStatus_, field, result.getTransformation());
         outputModel = outputModel.updateParameters(outputModel.getParams().addFilter(filter));
 
         this.setModel(outputModel);

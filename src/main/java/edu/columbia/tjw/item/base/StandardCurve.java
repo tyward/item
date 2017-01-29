@@ -45,6 +45,51 @@ public abstract class StandardCurve<V extends ItemCurveType<V>> implements ItemC
     }
 
     @Override
+    public final int compareTo(final ItemCurve<V> otherCurve_)
+    {
+        if (null == otherCurve_)
+        {
+            return 1;
+        }
+        if (this == otherCurve_)
+        {
+            return 0;
+        }
+
+        if (!(otherCurve_ instanceof StandardCurve))
+        {
+            //This is OK, since compareTo is final.
+            throw new IllegalArgumentException("Types not comparable.");
+        }
+
+        final StandardCurve<V> that = (StandardCurve<V>) otherCurve_;
+
+        final int typeCompare = this.getCurveType().compareTo(that.getCurveType());
+
+        if (typeCompare != 0)
+        {
+            return typeCompare;
+        }
+
+        final int size = this.getCurveType().getParamCount();
+
+        for (int i = 0; i < size; i++)
+        {
+            final Double d1 = this.getParam(i);
+            final Double d2 = that.getParam(i);
+
+            final int comp = Double.compare(d1, d2);
+
+            if (comp != 0)
+            {
+                return comp;
+            }
+        }
+
+        return 0;
+    }
+
+    @Override
     public final boolean equals(final Object other_)
     {
         if (null == other_)

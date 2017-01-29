@@ -39,16 +39,6 @@ public interface ParamFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 {
 
     /**
-     * The associated regressor for this filter, or null.
-     *
-     * Should be set only if this filter is to be dropped when the regressor is
-     * dropped. Typically the case for filters generated during curve drawing.
-     *
-     * @return The regressor this filter will filter on (or null, if none)
-     */
-    public R relatedRegressor();
-
-    /**
      * True if this item is to be ignored.
      *
      * Coefficients are described by the tuple (from, to, field, transformation)
@@ -57,7 +47,7 @@ public interface ParamFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * This filter allows some of these tuples to be ignored.
      *
      * @param fromStatus_ Status of the model in question
-     * @param toStatus_ Status of this transition 
+     * @param toStatus_ Status of this transition
      * @param field_ The regressor
      * @param trans_ The transformation to be applied, null if no
      * transformation.

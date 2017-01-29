@@ -74,7 +74,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final ParamFittingGrid<S, R, T> grid = grid_;
         final S from = params_.getStatus();
 
-        final TreeSet<R> basic = new TreeSet<>(params_.getRegressorList());
+        final TreeSet<R> basic = new TreeSet<>(params_.getUniqueRegressors());
         basic.addAll(extraRegressors_);
 
         _regressors = Collections.unmodifiableSortedSet(basic);

@@ -26,7 +26,8 @@ import java.io.Serializable;
  * @author tyler
  * @param <V> The type of the ITEM curve
  */
-public interface ItemCurve<V extends ItemCurveType<V>> extends Serializable
+public interface ItemCurve<V extends ItemCurveType<V>>
+        extends Serializable, Comparable<ItemCurve<V>>
 {
 
     /**

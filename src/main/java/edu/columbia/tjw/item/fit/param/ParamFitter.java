@@ -62,17 +62,8 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     public LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_)
     {
-        final ArrayList<ParamFilter<S, R, T>> filters = new ArrayList<>();
-
-        if (null != filters_)
-        {
-            filters.addAll(filters_);
-        }
-
-        filters.addAll(params_.getFilters());
-
         final int reachableCount = params_.getStatus().getReachableCount();
-        final int regressorCount = params_.regressorCount();
+        final int regressorCount = params_.getEntryCount();
 
         final S from = params_.getStatus();
 
@@ -89,28 +80,18 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             for (int k = 0; k < regressorCount; k++)
             {
-                final R field = params_.getRegressor(k);
-                final ItemCurve<T> trans = params_.getTransformation(k);
-                boolean isFiltered = false;
+                final R field = params_.getEntryRegressor(k, 0);
+                final ItemCurve<T> trans = params_.getEntryCurve(k, 0);
 
-                for (final ParamFilter<S, R, T> filter : filters)
+                if (params_.isFiltered(from, to, field, trans, filters_))
                 {
-                    final boolean filtered = filter.isFiltered(from, to, field, trans);
-
-                    if (filtered)
-                    {
-                        isFiltered = true;
-                        break;
-                    }
+                    continue;
                 }
 
-                if (!isFiltered)
-                {
-                    beta[pointer] = params_.getBeta(i, k);
-                    statusPointers[pointer] = i;
-                    regPointers[pointer] = k;
-                    pointer++;
-                }
+                beta[pointer] = params_.getBeta(i, k);
+                statusPointers[pointer] = i;
+                regPointers[pointer] = k;
+                pointer++;
             }
         }
 

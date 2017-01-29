@@ -27,10 +27,7 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 /**
  *
@@ -43,7 +40,6 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
 {
     private final ItemParameters<S, R, T> _params;
     private final int[] _regressorIndices;
-    private final List<ItemCurve<T>> _transformations;
     private final List<R> _uniqueRegressors;
     private final ItemRegressorReader[] _readers;
     private final int _uniqueCount;
@@ -52,18 +48,17 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
     {
         _params = params_;
 
-        final List<R> regressors = _params.getRegressorList();
-        final int regressorCount = regressors.size();
-        final SortedSet<R> uniqueRegressors = new TreeSet<>(regressors);
-        _uniqueRegressors = new ArrayList<>(uniqueRegressors);
+        final int entryCount = _params.getEntryCount();
+        _uniqueRegressors = _params.getUniqueRegressors();
+
         _uniqueCount = _uniqueRegressors.size();
 
-        _regressorIndices = new int[regressorCount];
+        _regressorIndices = new int[entryCount];
         _readers = new ItemRegressorReader[_uniqueCount];
 
-        for (int i = 0; i < regressorCount; i++)
+        for (int i = 0; i < entryCount; i++)
         {
-            final R next = regressors.get(i);
+            final R next = _params.getEntryRegressor(i, 0);
             _regressorIndices[i] = _uniqueRegressors.indexOf(next);
         }
 
@@ -72,16 +67,9 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
             final R next = _uniqueRegressors.get(i);
             _readers[i] = grid_.getRegressorReader(next);
         }
-
-        _transformations = _params.getTransformationList();
     }
 
     public abstract ItemGrid<R> getUnderlying();
-
-    public int getRegressorCount()
-    {
-        return _transformations.size();
-    }
 
     /**
      * A short hand function. First creates an array of the correct size, then
@@ -92,7 +80,8 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
      */
     public double[] getRegressors(final int index_)
     {
-        final double[] regVector = new double[getRegressorCount()];
+        final int entryCount = _params.getEntryCount();
+        final double[] regVector = new double[entryCount];
         getRegressors(index_, regVector);
         return regVector;
     }
@@ -109,27 +98,28 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
      */
     public void getRegressors(final int index_, final double[] output_)
     {
-        if (output_.length != _transformations.size())
+        final int entryCount = _params.getEntryCount();
+
+        if (output_.length != entryCount)
         {
-            throw new IllegalArgumentException("Size mismatch: " + output_.length + " != " + _transformations.size());
+            throw new IllegalArgumentException("Size mismatch: " + output_.length + " != " + entryCount);
         }
 
-        final int outputCount = _transformations.size();
         int pointer = 0;
 
         for (int i = 0; i < _uniqueCount; i++)
         {
             final double rawRegressor = _readers[i].asDouble(index_);
 
-            for (; (pointer < outputCount) && (_regressorIndices[pointer] == i); pointer++)
+            for (; (pointer < entryCount) && (_regressorIndices[pointer] == i); pointer++)
             {
                 output_[pointer] = rawRegressor;
             }
         }
 
-        for (int i = 0; i < outputCount; i++)
+        for (int i = 0; i < entryCount; i++)
         {
-            final ItemCurve<T> trans = _transformations.get(i);
+            final ItemCurve<T> trans = _params.getEntryCurve(i, 0);
 
             if (null == trans)
             {

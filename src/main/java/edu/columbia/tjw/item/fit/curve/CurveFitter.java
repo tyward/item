@@ -67,16 +67,14 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         LOG.info("Starting curve calibration sweep.");
         final ItemParameters<S, R, T> params = getParams();
 
-        final List<R> regList = params.getRegressorList();
+        final int entryCount = params.getEntryCount();
         final List<S> statList = params.getStatus().getReachable();
-
         ItemModel<S, R, T> model = new ItemModel<>(params);
 
         //final List<T> item
-        for (int i = 0; i < regList.size(); i++)
+        for (int i = 0; i < entryCount; i++)
         {
-            final R reg = regList.get(i);
-            final ItemCurve<T> curve = params.getTransformation(i);
+            final ItemCurve<T> curve = params.getEntryCurve(i, 0);
 
             if (null == curve)
             {
@@ -87,7 +85,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             {
                 try
                 {
-                    model = calibrateCurve(reg, status, curve);
+                    model = calibrateCurve(i, status);
                 }
                 catch (final ConvergenceException e)
                 {
@@ -231,13 +229,12 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
      * Calibrate the given curve, but also update the model underlying this
      * fitter, if necessary.
      *
-     * @param field_
-     * @param toStatus_
-     * @param targetCurve_
+     * @param entryIndex_ The index of the entry to calibrate.
      * @return
      * @throws ConvergenceException
      */
-    protected abstract ItemModel<S, R, T> calibrateCurve(final R field_, final S toStatus_, final ItemCurve<T> targetCurve_) throws ConvergenceException;
+    //protected abstract ItemModel<S, R, T> calibrateCurve(final R field_, final S toStatus_, final ItemCurve<T> targetCurve_) throws ConvergenceException;
+    protected abstract ItemModel<S, R, T> calibrateCurve(final int entryIndex_, final S toStatus_) throws ConvergenceException;
 
     protected abstract ItemParameters<S, R, T> getParams();
 

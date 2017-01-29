@@ -97,17 +97,19 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         return _toStatus;
     }
 
-    public final double[] generateParamVector(final R field_, final ItemCurve<T> curve_)
+    public final double[] generateParamVector(final int entryIndex_)
     {
         final ItemParameters<S, R, T> params = _baseModel.getParams();
-        final int index = params.getIndex(field_, curve_);
+        //final int index = params.getIndex(field_, curve_);
         final int statusIndex = params.toStatusIndex(_toStatus);
-        final double beta = params.getBeta(statusIndex, index);
+        final double beta = params.getBeta(statusIndex, entryIndex_);
 
         //Start with no intercept adjustment, use existing intercept.
         final double interceptAdjustment = 0.0;
 
-        final ItemCurveParams<T> curveParams = new ItemCurveParams<>(_type, interceptAdjustment, beta, curve_);
+        final ItemCurve<T> curve = params.getEntryCurve(entryIndex_, 0);
+
+        final ItemCurveParams<T> curveParams = new ItemCurveParams<>(_type, interceptAdjustment, beta, curve);
 
         final double[] output = curveParams.generatePoint();
         return output;
@@ -119,16 +121,16 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         //final int paramCount = paramCount();
 
         final ItemCurve<T> curve = generateTransformation(params_);
-
         final ItemParameters<S, R, T> orig = _baseModel.getParams();
-        final ItemParameters<S, R, T> updated = orig.addBeta(field_, curve);
+
+        final S status = orig.getStatus();
+        final List<S> reachable = status.getReachable();
+        final int toIndex = reachable.indexOf(_toStatus);
+
+        final ItemParameters<S, R, T> updated = orig.addBeta(field_, curve, toIndex);
 
         final int matchIndex = updated.getIndex(field_, curve);
         final int interceptIndex = updated.getIndex(_intercept, null);
-
-        final S status = updated.getStatus();
-        final List<S> reachable = status.getReachable();
-        final int toIndex = reachable.indexOf(_toStatus);
 
         final double interceptAdjustment = getInterceptAdjustment(params_);
         final double beta = getBeta(params_);

@@ -94,7 +94,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             throw new IllegalArgumentException("Only one reachable state, no need for a model.");
         }
 
-        final ItemParameters<S, R, T> initial = new ItemParameters<>(status_, Collections.singletonList(_intercept), _intercept);
+        final ItemParameters<S, R, T> initial = new ItemParameters<>(status_, _intercept);
         return initial;
     }
 
@@ -141,7 +141,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         for (final R field : coefficients_)
         {
-            params = params.addBeta(field, null);
+            params = params.addBeta(field, null, -1);
         }
 
         return fitCoefficients(params, grid_, filters_);
@@ -191,7 +191,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public ItemModel<S, R, T> runAnnealingPass(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Set<R> curveFields_,
             final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
-        final int regCount = params_.regressorCount();
+        final int regCount = params_.getEntryCount();
 
         final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params_), _settings);
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
@@ -205,7 +205,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             final ItemParameters<S, R, T> reduced = base.dropRegressor(regressor);
 
-            final int reducedCount = reduced.regressorCount();
+            final int reducedCount = reduced.getEntryCount();
 
             final int reduction = regCount - reducedCount;
 
