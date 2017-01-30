@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
@@ -75,7 +76,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _betas = new double[status_.getReachableCount()][1];
 
         _uniqueFields = Collections.unmodifiableList(Collections.singletonList(intercept_));
-        _trans = Collections.emptyList();
+        _trans = Collections.unmodifiableList(Collections.singletonList(null));
         _filters = Collections.unmodifiableList(Collections.singletonList(new UniqueBetaFilter()));
 
         _uniqueBeta = new int[1];
@@ -84,8 +85,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _fieldOffsets = new int[1][1];
         _fieldOffsets[0][0] = 0;
 
-        _transOffsets = new int[1][];
-        _transOffsets[0] = EMPTY;
+        _transOffsets = new int[1][1];
+        _transOffsets[0][0] = 0;
 
         _selfIndex = _status.getReachable().indexOf(_status);
     }
@@ -173,7 +174,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 //        _uniqueBeta = base_._uniqueBeta;
 
         final SortedSet<R> newFields = new TreeSet<>();
-        final SortedSet<ItemCurve<T>> newTrans = new TreeSet<>();
+
+        //Workaround for issues with nulls.
+        final Set<ItemCurve<T>> newTrans = new HashSet<>();
 
         newFields.addAll(base_._uniqueFields);
         newFields.addAll(regs_);
@@ -227,6 +230,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             throw new IllegalArgumentException("Invalid depth.");
         }
 
+        _fieldOffsets[endIndex] = new int[endDepth];
+        _transOffsets[endIndex] = new int[endDepth];
+
         for (int i = 0; i < endDepth; i++)
         {
             final R field = regs_.get(i);
@@ -279,7 +285,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _uniqueBeta = new int[newSize];
 
         final SortedSet<R> newFields = new TreeSet<>();
-        final SortedSet<ItemCurve<T>> newTrans = new TreeSet<>();
+        final Set<ItemCurve<T>> newTrans = new HashSet<>();
 
         int pointer = 0;
 
@@ -332,7 +338,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                 final R reg = base_.getEntryRegressor(i, w);
                 final ItemCurve<T> curve = base_.getEntryCurve(i, w);
 
-                final int rIndex = _trans.indexOf(reg);
+                final int rIndex = _uniqueFields.indexOf(reg);
                 final int cIndex = _trans.indexOf(curve);
 
                 if (rIndex < 0 || cIndex < 0)
@@ -600,6 +606,50 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     public S getStatus()
     {
         return _status;
+    }
+
+    @Override
+    public String toString()
+    {
+        final StringBuilder builder = new StringBuilder();
+        builder.append("ItemParameters[" + Integer.toHexString(System.identityHashCode(this)) + "][\n");
+
+        builder.append("\tEntries[" + this.getEntryCount() + "]: \n");
+
+        for (int i = 0; i < this.getEntryCount(); i++)
+        {
+            builder.append("\t\t Entry \n \t\t\tBeta: [");
+
+            for (int w = 0; w < _betas.length; w++)
+            {
+                if (w > 0)
+                {
+                    builder.append(", ");
+                }
+
+                builder.append(_betas[w][i]);
+            }
+
+            builder.append("]\n");
+
+            final int depth = this.getEntryDepth(i);
+
+            builder.append("\t\t Entry Definition[" + i + ", depth=" + depth + "]: \n");
+
+            for (int w = 0; w < this.getEntryDepth(i); w++)
+            {
+                final R reg = this.getEntryRegressor(i, w);
+                final ItemCurve<T> curve = this.getEntryCurve(i, w);
+
+                builder.append("\t\t\t[" + i + ", " + w + "]:" + reg + ":" + curve + "\n");
+            }
+
+            builder.append("\t\t\t Entry Beta Restricted: " + _uniqueBeta[i]);
+        }
+
+        builder.append("]\n\n");
+
+        return builder.toString();
     }
 
     private double[] resizeArray(final double[] input_, final int insertionPoint_)

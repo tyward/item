@@ -34,7 +34,6 @@ import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.logging.Logger;
@@ -120,6 +119,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     public ItemModel<S, R, T> fit(final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
+        LOG.info("Fitting Coefficients: " + _model.getParams());
 
         final LogisticModelFunction<S, R, T> function = generateFunction(_model.getParams(), grid_, filters_);
         final double[] beta = function.getBeta();
@@ -156,6 +156,9 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         final ItemParameters<S, R, T> updated = function.generateParams(beta);
         final ItemModel<S, R, T> output = _model.updateParameters(updated);
+
+        LOG.info("Updated Coefficients: " + output.getParams());
+
         return output;
     }
 

@@ -73,7 +73,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_, final R intercept_)
     {
-        super(factory_, settings_);
+        super(factory_, settings_, grid_);
 
         if (null == intercept_)
         {
@@ -190,7 +190,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     {
         final ParamFittingGrid<S, R, T> paramGrid = getParamGrid();
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(curveType_, generator_, field_, _fromStatus, toStatus_, this, _actualOutcomes,
-                paramGrid, _indexList, _settings, prevBeta_, prevCurve_, null);
+                paramGrid, _indexList, _settings, prevBeta_, prevCurve_);
 
         return func;
     }
@@ -201,6 +201,18 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return _model.getParams();
     }
 
+//    public double cleanTest(final MultivariatePoint point_, final T curveType_, final R field_, final S toStatus_)
+//    {
+//        final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType_, toStatus_, _model);
+//        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType_, field_, toStatus_, generator, Double.NaN, null);
+//
+//        final EvaluationResult res = func.generateResult();
+//        func.value(point_, 0, func.numRows(), res);
+//
+//        final double cleanLL = res.getMean();
+//
+//        return cleanLL;
+//    }
     @Override
     protected FitResult<S, R, T> findBest(T curveType_, R field_, S toStatus_) throws ConvergenceException
     {
@@ -303,7 +315,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final FitResult<S, R, T> output = new FitResult<>(generator_.getToStatus(), best, generator_, field_, trans, bestLL, startingLL_, result.dataElementCount());
 
         LOG.info("Found Curve[" + generator_.getCurveType() + ", " + field_ + ", " + generator_.getToStatus() + "][" + output.calculateAicDifference() + "]: " + Arrays.toString(bestVal));
-        LOG.info("LL change: " + startingLL_ + " -> " + bestLL + ": " + (startingLL_ - bestLL) + " \n\n");
+        LOG.info("LL change[0x" + Long.toHexString(System.identityHashCode(this)) + "L]: " + startingLL_ + " -> " + bestLL + ": " + (startingLL_ - bestLL) + " \n\n");
 
         return output;
     }

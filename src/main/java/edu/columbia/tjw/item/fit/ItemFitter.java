@@ -36,7 +36,6 @@ import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Set;
 import java.util.logging.Logger;
 

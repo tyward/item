@@ -33,7 +33,7 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
     private static final GeneralThreadPool POOL = GeneralThreadPool.singleton();
     private final int _blockSize;
     private final boolean _useThreading;
-
+    private final Object _prepLock = new Object();
 
     public ThreadedMultivariateFunction(final int blockSize_, final boolean useThreading_)
     {
@@ -63,7 +63,10 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
             throw new IllegalArgumentException("Start must be nonnegative.");
         }
 
-        prepare(input_);
+        synchronized (_prepLock)
+        {
+            prepare(input_);
+        }
 
         final int numRows = (end_ - start_);
         final int numTasks = 1 + (numRows / _blockSize);
@@ -132,9 +135,12 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
         return output;
     }
 
-    public final MultivariateGradient calculateDerivative(MultivariatePoint input_, EvaluationResult result_, double precision_)
+    public synchronized final MultivariateGradient calculateDerivative(MultivariatePoint input_, EvaluationResult result_, double precision_)
     {
-        this.prepare(input_);
+        synchronized (_prepLock)
+        {
+            this.prepare(input_);
+        }
 
         final int start = 0;
         final int end = this.numRows();
@@ -258,9 +264,16 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
         @Override
         protected MultivariateGradient subRun()
         {
+            final EvaluationResult res;
+
+            synchronized (_prepLock)
+            {
+                res = _result;
+            }
+
             synchronized (this)
             {
-                return ThreadedMultivariateFunction.this.evaluateDerivative(_start, _end, _input, _result);
+                return ThreadedMultivariateFunction.this.evaluateDerivative(_start, _end, _input, res);
             }
         }
 
@@ -286,14 +299,19 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
         @Override
         protected EvaluationResult subRun()
         {
-            final EvaluationResult result = new EvaluationResult(_evalCount);
+            final EvaluationResult res;
 
-            synchronized (result)
+            synchronized (_prepLock)
             {
-                ThreadedMultivariateFunction.this.evaluate(_start, _end, result);
+                res = new EvaluationResult(_evalCount);
             }
 
-            return result;
+            synchronized (res)
+            {
+                ThreadedMultivariateFunction.this.evaluate(_start, _end, res);
+            }
+
+            return res;
         }
 
     }

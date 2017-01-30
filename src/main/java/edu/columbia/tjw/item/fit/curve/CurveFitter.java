@@ -29,6 +29,7 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -50,8 +51,9 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
     private final EnumFamily<T> _family;
     private final ItemSettings _settings;
+    private final ItemStatusGrid<S, R> _grid;
 
-    public CurveFitter(final ItemCurveFactory<T> factory_, final ItemSettings settings_)
+    public CurveFitter(final ItemCurveFactory<T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_)
     {
         if (null == settings_)
         {
@@ -60,6 +62,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
         _family = factory_.getFamily();
         _settings = settings_;
+        _grid = grid_;
     }
 
     public final ItemModel<S, R, T> calibrateCurves()
@@ -130,44 +133,107 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         ItemModel<S, R, T> output = best.getModel();
-        final CurveFilter<S, R, T> filter = new CurveFilter<>(output.getParams().getStatus(), best._toState, best._field, best._trans);
-        output = output.updateParameters(output.getParams().addFilter(filter));
-        return output;
-    }
 
-//    private final FitResult<S, R, T> generateInteraction()
-//    {
-//        final ItemParameters<S, R, T> params = getParams();
-//        final S fromStatus = params.getStatus();
-//        FitResult<S, R, T> bestResult = null;
-//        double bestImprovement = 0.0;
+        LOG.info("Updated parameters: \n" + output.getParams().toString());
+
+        return output;
+
+//        final CurveFilter<S, R, T> filter = new CurveFilter<>(output.getParams().getStatus(), best._toState, best._field, best._trans);
+//        output = output.updateParameters(output.getParams().addFilter(filter));
 //
-//        //Here's how this works, we take each existing flag and curve, and 
-//        // interact it with all the others
-//        final List<R> regressors = params.getRegressorList();
+//        LOG.info("Returning parameters from generate curve: " + output.getParams());
 //
-//        for (final S toStatus : fromStatus.getReachable())
+//        //Testing, with param fitter.
+//        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(output.getParams(), _grid);
+//        final ParamFitter<S, R, T> fitter = new ParamFitter<>(output, _settings);
+//
+//        final ItemModel<S, R, T> m2 = fitter.fit(grid, null);
+//
+//        if (null == m2)
 //        {
-//
-//            for (int i = 0; i < regressors.size(); i++)
-//            {
-//
-//            }
-//
+//            throw new ConvergenceException("Unable to improve parameter fit.");
 //        }
 //
-//    }
-//    /**
-//     * Attempt to interact the given curve with the curve at index_
-//     *
-//     * @param index_
-//     * @param curve_
-//     * @return
-//     */
-//    private final FitResult<S, R, T> generateOneInteraction(final int index_, final ItemCurve<T> curve_)
-//    {
+//        final double llCurve = cleanTest(best._point, best._trans.getCurveType(), best._field, best._toState);
+//        final double llParam = fitter.computeLogLikelihood(output.getParams(), grid, filter_);
 //
-//    }
+//        final LogisticModelFunction<S, R, T> pFunction = fitter.generateFunction(output.getParams(), grid, filter_);
+//        final CurveOptimizerFunction<S, R, T> cFunction = generateFunction(best._trans.getCurveType(), best._field, best._toState,
+//                buildGenerator(best._trans.getCurveType(), best._toState, new ItemModel<>(getParams())), Double.NaN, null);
+//
+//        final double[] pStart = pFunction.getBeta();
+//        EvaluationResult pRes = pFunction.generateResult();
+//        final MultivariatePoint pPoint = new MultivariatePoint(pStart);
+//        final int pRows = pFunction.numRows();
+//
+//        pFunction.value(pPoint, 0, pRows, pRes);
+//        final double llParam2 = pRes.getMean();
+//
+//        final MultivariatePoint cStart = best._point;
+//
+//        EvaluationResult cRes = cFunction.generateResult();
+//        final int cRows = cFunction.numRows();
+//        cFunction.value(cStart, 0, cRows, cRes);
+//        final double llCurve2 = cRes.getMean();
+//
+//        cRes = cFunction.generateResult();
+//        pRes = pFunction.generateResult();
+//
+//        for (int i = 1; i < 1000; i++)
+//        {
+//            int testIndex = 1 + (i / 10);
+//            pFunction.value(pPoint, testIndex - 1, testIndex, pRes);
+//            cFunction.value(cStart, testIndex - 1, testIndex, cRes);
+//
+//            final double a = pRes.getMean();
+//            final double b = cRes.getMean();
+//            final double diff = (a - b);
+//
+//            LOG.info("Comparison: " + a + " =? " + b + " -> " + diff);
+//        }
+//
+//        return m2;
+        //return output;
+    }
+
+//    public abstract double cleanTest(final MultivariatePoint point_, final T curveType_, final R field_, final S toStatus_);
+//
+//    public abstract BaseParamGenerator<S, R, T> buildGenerator(T curveType_, S toStatus_, final ItemModel<S, R, T> model_);
+//
+//    public abstract CurveOptimizerFunction<S, R, T> generateFunction(T curveType_, R field_, S toStatus_, final BaseParamGenerator<S, R, T> generator_, final double prevBeta_, final ItemCurve<T> prevCurve_);
+//    private final FitResult<S, R, T> generateInteraction()
+    //    {
+    //        final ItemParameters<S, R, T> params = getParams();
+    //        final S fromStatus = params.getStatus();
+    //        FitResult<S, R, T> bestResult = null;
+    //        double bestImprovement = 0.0;
+    //
+    //        //Here's how this works, we take each existing flag and curve, and 
+    //        // interact it with all the others
+    //        final List<R> regressors = params.getRegressorList();
+    //
+    //        for (final S toStatus : fromStatus.getReachable())
+    //        {
+    //
+    //            for (int i = 0; i < regressors.size(); i++)
+    //            {
+    //
+    //            }
+    //
+    //        }
+    //
+    //    }
+    //    /**
+    //     * Attempt to interact the given curve with the curve at index_
+    //     *
+    //     * @param index_
+    //     * @param curve_
+    //     * @return
+    //     */
+    //    private final FitResult<S, R, T> generateOneInteraction(final int index_, final ItemCurve<T> curve_)
+    //    {
+    //
+    //    }
     private FitResult<S, R, T> findBest(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filters_)
     {
         final ItemParameters<S, R, T> params = getParams();
@@ -185,39 +251,37 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
                     continue fieldLoop;
                 }
 
-                if (_settings.getAllowInteractionCurves())
+                //if (_settings.getAllowInteractionCurves())
 //                {
 //                    //If we are allowing interaction curves, then attempt to fit one of those now..
 //
 //                }
-
+                for (final T curveType : _family.getMembers())
                 {
-                    for (final T curveType : _family.getMembers())
+                    try
                     {
-                        try
-                        {
-                            final FitResult<S, R, T> res = findBest(curveType, field, toStatus);
+                        final FitResult<S, R, T> res = findBest(curveType, field, toStatus);
 
-                            final double improvement = res.calculateAicDifference();
+                        final double improvement = res.calculateAicDifference();
 
-                            if (improvement < bestImprovement)
-                            {
-                                LOG.info("New Best: " + res);
-                                bestImprovement = improvement;
-                                bestResult = res;
-                            }
-                        }
-                        catch (final ConvergenceException e)
+                        if (improvement < bestImprovement)
                         {
-                            LOG.info("Trouble converging, moving on to next curve.");
-                            LOG.info(e.getMessage());
-                        }
-                        catch (final IllegalArgumentException e)
-                        {
-                            LOG.info("Argument trouble (" + field + "), moving on to next curve.");
-                            LOG.info(e.getMessage());
+                            LOG.info("New Best: " + res + " -> " + improvement + " vs. " + bestImprovement);
+                            bestImprovement = improvement;
+                            bestResult = res;
                         }
                     }
+                    catch (final ConvergenceException e)
+                    {
+                        LOG.info("Trouble converging, moving on to next curve.");
+                        LOG.info(e.getMessage());
+                    }
+                    catch (final IllegalArgumentException e)
+                    {
+                        LOG.info("Argument trouble (" + field + "), moving on to next curve.");
+                        LOG.info(e.getMessage());
+                    }
+
                 }
             }
         }
@@ -233,7 +297,6 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
      * @return
      * @throws ConvergenceException
      */
-    //protected abstract ItemModel<S, R, T> calibrateCurve(final R field_, final S toStatus_, final ItemCurve<T> targetCurve_) throws ConvergenceException;
     protected abstract ItemModel<S, R, T> calibrateCurve(final int entryIndex_, final S toStatus_) throws ConvergenceException;
 
     protected abstract ItemParameters<S, R, T> getParams();

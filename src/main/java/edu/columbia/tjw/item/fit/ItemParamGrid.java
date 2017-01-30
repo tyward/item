@@ -39,7 +39,7 @@ import java.util.List;
 public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements ItemGrid<R>
 {
     private final ItemParameters<S, R, T> _params;
-    private final int[] _regressorIndices;
+//    private final int[] _regressorIndices;
     private final List<R> _uniqueRegressors;
     private final ItemRegressorReader[] _readers;
     private final int _uniqueCount;
@@ -53,15 +53,14 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
 
         _uniqueCount = _uniqueRegressors.size();
 
-        _regressorIndices = new int[entryCount];
+//        _regressorIndices = new int[entryCount];
         _readers = new ItemRegressorReader[_uniqueCount];
 
-        for (int i = 0; i < entryCount; i++)
-        {
-            final R next = _params.getEntryRegressor(i, 0);
-            _regressorIndices[i] = _uniqueRegressors.indexOf(next);
-        }
-
+//        for (int i = 0; i < entryCount; i++)
+//        {
+//            final R next = _params.getEntryRegressor(i, 0);
+//            _regressorIndices[i] = _uniqueRegressors.indexOf(next);
+//        }
         for (int i = 0; i < _uniqueCount; i++)
         {
             final R next = _uniqueRegressors.get(i);
@@ -80,8 +79,7 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
      */
     public double[] getRegressors(final int index_)
     {
-        final int entryCount = _params.getEntryCount();
-        final double[] regVector = new double[entryCount];
+        final double[] regVector = new double[_readers.length];
         getRegressors(index_, regVector);
         return regVector;
     }
@@ -98,39 +96,41 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
      */
     public void getRegressors(final int index_, final double[] output_)
     {
-        final int entryCount = _params.getEntryCount();
-
-        if (output_.length != entryCount)
+        if (output_.length != _readers.length)
         {
-            throw new IllegalArgumentException("Size mismatch: " + output_.length + " != " + entryCount);
+            throw new IllegalArgumentException("Size mismatch: " + output_.length + " != " + _readers.length);
         }
 
-        int pointer = 0;
-
-        for (int i = 0; i < _uniqueCount; i++)
+        for (int i = 0; i < _readers.length; i++)
         {
-            final double rawRegressor = _readers[i].asDouble(index_);
-
-            for (; (pointer < entryCount) && (_regressorIndices[pointer] == i); pointer++)
-            {
-                output_[pointer] = rawRegressor;
-            }
+            output_[i] = _readers[i].asDouble(index_);
         }
 
-        for (int i = 0; i < entryCount; i++)
-        {
-            final ItemCurve<T> trans = _params.getEntryCurve(i, 0);
-
-            if (null == trans)
-            {
-                continue;
-            }
-
-            final double raw = output_[i];
-            final double transformed = trans.transform(raw);
-            output_[i] = transformed;
-        }
-
+//        int pointer = 0;
+//
+//        for (int i = 0; i < _uniqueCount; i++)
+//        {
+//            final double rawRegressor = _readers[i].asDouble(index_);
+//
+//            for (; (pointer < entryCount) && (_regressorIndices[pointer] == i); pointer++)
+//            {
+//                output_[pointer] = rawRegressor;
+//            }
+//        }
+//
+//        for (int i = 0; i < entryCount; i++)
+//        {
+//            final ItemCurve<T> trans = _params.getEntryCurve(i, 0);
+//
+//            if (null == trans)
+//            {
+//                continue;
+//            }
+//
+//            final double raw = output_[i];
+//            final double transformed = trans.transform(raw);
+//            output_[i] = transformed;
+//        }
     }
 
     @Override

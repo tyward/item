@@ -48,6 +48,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double[][] _betas;
     private final int _reachableSize;
 
+    private final double[] _rawRegWorkspace;
     private final double[] _regWorkspace;
     private final double[] _probWorkspace;
     private final double[] _actualProbWorkspace;
@@ -77,6 +78,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             final int entryCount = params_.getEntryCount();
 
+            _rawRegWorkspace = new double[params_.getUniqueRegressors().size()];
             _regWorkspace = new double[entryCount];
             _probWorkspace = new double[_reachableSize];
             _actualProbWorkspace = new double[_reachableSize];
@@ -125,6 +127,46 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double logLikelihood = _likelihood.logLikelihood(computed, mapped);
         return logLikelihood;
+    }
+
+    public void fillWorkspace(final double[] rawRegressors_, final double[] regWorkspace_)
+    {
+        if (rawRegressors_.length != _rawRegWorkspace.length)
+        {
+            throw new IllegalArgumentException("Length mismatch.");
+        }
+
+        final int numEntries = _params.getEntryCount();
+
+        if (regWorkspace_.length != numEntries)
+        {
+            throw new IllegalArgumentException("Length mismatch.");
+        }
+
+        for (int i = 0; i < numEntries; i++)
+        {
+            final int depth = _params.getEntryDepth(i);
+            double regSum = 0.0;
+
+            for (int w = 0; w < depth; w++)
+            {
+                final int regIndex = _params.getEntryRegressorOffset(i, w);
+                final double rawReg = rawRegressors_[regIndex];
+
+                final ItemCurve<T> curve = _params.getEntryCurve(i, w);
+
+                if (null == curve)
+                {
+                    regSum += rawReg;
+                }
+                else
+                {
+                    regSum += curve.transform(rawReg);
+                }
+            }
+
+            regWorkspace_[i] = regSum;
+        }
     }
 
     /**
@@ -208,6 +250,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final double[] computed = _probWorkspace;
         final double[] actual = _actualProbWorkspace;
         final double[] regressors = _regWorkspace;
+        final double[] rawReg = _rawRegWorkspace;
         final List<S> reachable = getParams().getStatus().getReachable();
         int count = 0;
 
@@ -225,7 +268,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             }
 
             transitionProbability(grid_, i, computed);
-            grid_.getRegressors(i, regressors);
+            grid_.getRegressors(i, rawReg);
+            this.fillWorkspace(rawReg, regressors);
 
             final int actualTransition = grid_.getNextStatus(i);
 
@@ -280,7 +324,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     {
         final double[] regressors = _regWorkspace;
 
-        grid_.getRegressors(index_, regressors);
+        grid_.getRegressors(index_, _rawRegWorkspace);
+        fillWorkspace(_rawRegWorkspace, regressors);
 
         multiLogisticFunction(regressors, output_);
 

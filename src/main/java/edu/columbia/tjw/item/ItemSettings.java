@@ -45,6 +45,8 @@ public final class ItemSettings implements Serializable
     private static final int THREAD_BLOCK_SIZE = 10 * 1000;
     private static final int POLISH_MULTI_START_POINTS = 20;
     private static final boolean ALLOW_INTERACTION_CURVES = true;
+    private static final boolean DEFAULT_USE_THREADING = true;
+    private static final boolean DEFAULT_POLISH_STARTING_PARAMS = false;
     private static final double Z_SCORE_CUTOFF = 1.0;
 
     private static final long serialVersionUID = 6850856502170239624L;
@@ -70,7 +72,7 @@ public final class ItemSettings implements Serializable
 
     public ItemSettings()
     {
-        this(true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD), BLOCK_SIZE, THREAD_BLOCK_SIZE, true, false, ALLOW_INTERACTION_CURVES);
+        this(true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD), BLOCK_SIZE, THREAD_BLOCK_SIZE, DEFAULT_USE_THREADING, DEFAULT_POLISH_STARTING_PARAMS, ALLOW_INTERACTION_CURVES);
     }
 
     public ItemSettings(final boolean randomShuffle_, final double aicCutoff_, final Random rand_, final int blockSize_, final int threadBlockSize_, final boolean useThreading_,
