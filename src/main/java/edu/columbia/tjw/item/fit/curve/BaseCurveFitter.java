@@ -201,18 +201,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return _model.getParams();
     }
 
-//    public double cleanTest(final MultivariatePoint point_, final T curveType_, final R field_, final S toStatus_)
-//    {
-//        final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType_, toStatus_, _model);
-//        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType_, field_, toStatus_, generator, Double.NaN, null);
-//
-//        final EvaluationResult res = func.generateResult();
-//        func.value(point_, 0, func.numRows(), res);
-//
-//        final double cleanLL = res.getMean();
-//
-//        return cleanLL;
-//    }
     @Override
     protected FitResult<S, R, T> findBest(T curveType_, R field_, S toStatus_) throws ConvergenceException
     {
@@ -306,12 +294,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double bestLL = result.minValue();
 
-//        final EvaluationResult res = func_.generateResult();
-//        func_.value(best, 0, func_.numRows(), res);
-//
-//        final double trueBestLL = res.getMean();
-//        LOG.info("New LL: " + trueBestLL + " (+/- " + res.getStdDev() + "), estimate: " + bestLL + " difference Z-Score: " + ((bestLL - trueBestLL) / res.getStdDev()));
-//        LOG.info("Improvement Z-score: " + ((startingLL_ - trueBestLL) / res.getStdDev()));
         final FitResult<S, R, T> output = new FitResult<>(generator_.getToStatus(), best, generator_, field_, trans, bestLL, startingLL_, result.dataElementCount());
 
         LOG.info("Found Curve[" + generator_.getCurveType() + ", " + field_ + ", " + generator_.getToStatus() + "][" + output.calculateAicDifference() + "]: " + Arrays.toString(bestVal));
@@ -394,10 +376,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
 
         ItemModel<S, R, T> outputModel = result.getModel();
-
-        //Potentially, we can accumulate filters here that are not needed, but for now just live with it.
-        final CurveFilter<S, R, T> filter = new CurveFilter<>(outputModel.getParams().getStatus(), toStatus_, field, result.getTransformation());
-        outputModel = outputModel.updateParameters(outputModel.getParams().addFilter(filter));
 
         this.setModel(outputModel);
         return outputModel;

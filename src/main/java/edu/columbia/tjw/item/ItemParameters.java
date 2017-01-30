@@ -47,6 +47,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     private final R _intercept;
     private final List<ItemCurve<T>> _trans;
     private final List<ParamFilter<S, R, T>> _filters;
+    private final UniqueBetaFilter _uniqFilter = new UniqueBetaFilter();
 
     private final List<R> _uniqueFields;
 
@@ -77,7 +78,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
         _uniqueFields = Collections.unmodifiableList(Collections.singletonList(intercept_));
         _trans = Collections.unmodifiableList(Collections.singletonList(null));
-        _filters = Collections.unmodifiableList(Collections.singletonList(new UniqueBetaFilter()));
+        _filters = Collections.unmodifiableList(Collections.emptyList());
 
         _uniqueBeta = new int[1];
         _uniqueBeta[0] = -1;
@@ -426,6 +427,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     public boolean isFiltered(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_, final Collection<ParamFilter<S, R, T>> extraFilters_)
     {
+        if (_uniqFilter.isFiltered(fromStatus_, toStatus_, field_, trans_))
+        {
+            return true;
+        }
         if (checkFilter(fromStatus_, toStatus_, field_, trans_, getFilters()))
         {
             return true;
@@ -634,7 +639,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
             final int depth = this.getEntryDepth(i);
 
-            builder.append("\t\t Entry Definition[" + i + ", depth=" + depth + "]: \n");
+            builder.append("\t\t\t Entry Definition[" + i + ", depth=" + depth + "]: \n");
 
             for (int w = 0; w < this.getEntryDepth(i); w++)
             {
@@ -644,7 +649,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                 builder.append("\t\t\t[" + i + ", " + w + "]:" + reg + ":" + curve + "\n");
             }
 
-            builder.append("\t\t\t Entry Beta Restricted: " + _uniqueBeta[i]);
+            builder.append("\t\t\t Entry Beta Restricted: " + _uniqueBeta[i] + "\n");
         }
 
         builder.append("]\n\n");
