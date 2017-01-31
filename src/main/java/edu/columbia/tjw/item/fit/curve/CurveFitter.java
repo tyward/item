@@ -115,8 +115,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         LOG.info("Best transformation: " + best.getCurve());
         LOG.info("Best Field: " + best.getRegressor());
         LOG.info("LL improvement: " + best._startingLogL + " -> " + best._logL + ": " + best._llImprovement);
-        LOG.info("Best to state: " + best._toState);
-        LOG.info("Best point: " + best._point);
+        LOG.info("Best to state: " + best.getToState());
 
         final double aicDiff = best.calculateAicDifference();
 
@@ -212,32 +211,22 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         private final double _logL;
         private final double _llImprovement;
         private final int _entryNumber;
-        private final MultivariatePoint _point;
-        private final S _toState;
         private final int _rowCount;
         private final ItemParameters<S, R, T> _params;
 
-        public FitResult(final S toState_, final MultivariatePoint point_, final ParamGenerator<S, R, T> generator_, final R field_,
-                final ItemCurve<T> trans_, final double logLikelihood_, final double startingLL_, final int rowCount_)
+        public FitResult(final ItemParameters<S, R, T> params_, final int entryNumber_, final double logLikelihood_, final double startingLL_, final int rowCount_)
         {
+            _params = params_;
             _logL = logLikelihood_;
-            _point = point_;
             _llImprovement = (startingLL_ - _logL);
             _startingLogL = startingLL_;
-            _toState = toState_;
+            _entryNumber = entryNumber_;
             _rowCount = rowCount_;
+        }
 
-            final double[] params = new double[generator_.paramCount()];
-
-            for (int i = 0; i < params.length; i++)
-            {
-                params[i] = _point.getElement(i);
-            }
-
-            _params = generator_.generatedModel(params, field_).getParams();
-
-            _entryNumber = _params.getIndex(field_, trans_);
-
+        public S getToState()
+        {
+            return _params.getEntryStatusRestrict(_entryNumber);
         }
 
         public R getRegressor()

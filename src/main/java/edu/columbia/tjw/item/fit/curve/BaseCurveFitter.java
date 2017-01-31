@@ -294,7 +294,17 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double bestLL = result.minValue();
 
-        final FitResult<S, R, T> output = new FitResult<>(generator_.getToStatus(), best, generator_, field_, trans, bestLL, startingLL_, result.dataElementCount());
+        final double[] params = new double[generator_.paramCount()];
+
+        for (int i = 0; i < params.length; i++)
+        {
+            params[i] = best.getElement(i);
+        }
+
+        ItemParameters<S, R, T> updated = generator_.generatedModel(params, field_).getParams();
+        final int entryNumber = updated.getIndex(field_, trans);
+
+        final FitResult<S, R, T> output = new FitResult<>(updated, entryNumber, bestLL, startingLL_, result.dataElementCount());
 
         LOG.info("Found Curve[" + generator_.getCurveType() + ", " + field_ + ", " + generator_.getToStatus() + "][" + output.calculateAicDifference() + "]: " + Arrays.toString(bestVal));
         LOG.info("LL change[0x" + Long.toHexString(System.identityHashCode(this)) + "L]: " + startingLL_ + " -> " + bestLL + ": " + (startingLL_ - bestLL) + " \n\n");

@@ -370,6 +370,18 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return _fieldOffsets[entryIndex_].length;
     }
 
+    public S getEntryStatusRestrict(final int entryIndex_)
+    {
+        final int uniqueBeta = _uniqueBeta[entryIndex_];
+
+        if (uniqueBeta == -1)
+        {
+            return null;
+        }
+
+        return this._status.getReachable().get(uniqueBeta);
+    }
+
     public int getEntryRegressorOffset(final int entryIndex_, final int entryDepth_)
     {
         return _fieldOffsets[entryIndex_][entryDepth_];
