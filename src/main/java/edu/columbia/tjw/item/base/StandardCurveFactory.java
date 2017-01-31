@@ -168,6 +168,7 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
 
     private static final class GaussianCurve extends StandardCurve<StandardCurveType>
     {
+        private static final long serialVersionUID = 0xd1c81f26497f177fL;
         private final double _stdDev;
         private final double _invStdDev;
         private final double _mean;
@@ -244,6 +245,7 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
 
     private static final class LogisticCurve extends StandardCurve<StandardCurveType>
     {
+        private static final long serialVersionUID = 0x1dd40a5f2f923106L;
         private final double _center;
         private final double _slope;
         private final double _slopeParam;

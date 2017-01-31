@@ -45,6 +45,31 @@ public abstract class StandardCurve<V extends ItemCurveType<V>> implements ItemC
     }
 
     @Override
+    public String toString()
+    {
+        final StringBuilder builder = new StringBuilder();
+
+        builder.append(this.getClass());
+        builder.append("[");
+        builder.append(this.getCurveType());
+        builder.append("]: ");
+
+        final int paramCount = this.getCurveType().getParamCount();
+
+        for (int i = 0; i < paramCount; i++)
+        {
+            if (i != 0)
+            {
+                builder.append(", ");
+            }
+
+            builder.append(this.getParam(i));
+        }
+
+        return builder.toString();
+    }
+
+    @Override
     public final int compareTo(final ItemCurve<V> otherCurve_)
     {
         if (null == otherCurve_)

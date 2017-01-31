@@ -112,10 +112,8 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             throw new ConvergenceException("Unable to improve model.");
         }
 
-        final ItemCurve<?> trans = best._trans;
-
-        LOG.info("Best transformation: " + trans);
-        LOG.info("Best Field: " + best._field);
+        LOG.info("Best transformation: " + best.getCurve());
+        LOG.info("Best Field: " + best.getRegressor());
         LOG.info("LL improvement: " + best._startingLogL + " -> " + best._logL + ": " + best._llImprovement);
         LOG.info("Best to state: " + best._toState);
         LOG.info("Best point: " + best._point);
@@ -213,9 +211,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         private final double _startingLogL;
         private final double _logL;
         private final double _llImprovement;
-        private final ItemCurve<T> _trans;
-        //private final ParamGenerator<S, R, T> _generator;
-        private final R _field;
+        private final int _entryNumber;
         private final MultivariatePoint _point;
         private final S _toState;
         private final int _rowCount;
@@ -224,12 +220,9 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         public FitResult(final S toState_, final MultivariatePoint point_, final ParamGenerator<S, R, T> generator_, final R field_,
                 final ItemCurve<T> trans_, final double logLikelihood_, final double startingLL_, final int rowCount_)
         {
-
             _logL = logLikelihood_;
-            _trans = trans_;
             _point = point_;
             _llImprovement = (startingLL_ - _logL);
-            _field = field_;
             _startingLogL = startingLL_;
             _toState = toState_;
             _rowCount = rowCount_;
@@ -241,12 +234,20 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
                 params[i] = _point.getElement(i);
             }
 
-            _params = generator_.generatedModel(params, _field).getParams();
+            _params = generator_.generatedModel(params, field_).getParams();
+
+            _entryNumber = _params.getIndex(field_, trans_);
+
         }
 
-        public ItemCurve<T> getTransformation()
+        public R getRegressor()
         {
-            return _trans;
+            return _params.getEntryRegressor(_entryNumber, 0);
+        }
+
+        public ItemCurve<T> getCurve()
+        {
+            return _params.getEntryCurve(_entryNumber, 0);
         }
 
         public ItemModel<S, R, T> getModel()
@@ -266,7 +267,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
         public int getEffectiveParamCount()
         {
-            return (1 + _trans.getCurveType().getParamCount());
+            return (1 + getCurve().getCurveType().getParamCount());
         }
 
         public double calculateAicDifference()
@@ -277,9 +278,10 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             return aicDiff;
         }
 
+        @Override
         public String toString()
         {
-            return "Fit result[" + _trans + ", " + _llImprovement + "]";
+            return "Fit result[" + getCurve() + ", " + _llImprovement + "]";
         }
 
     }
