@@ -110,7 +110,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     {
         final ItemCurveParams<R, T> curveParams = this.generateParams(params_, field_);
 
-        final ItemCurve<T> curve = generateTransformation(params_, field_);
+        final ItemCurve<T> curve = curveParams.getCurve(0);
         final ItemParameters<S, R, T> orig = _baseModel.getParams();
 
         final S status = orig.getStatus();
@@ -192,12 +192,6 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     public final int translateParamNumber(final int input_)
     {
         return input_;
-    }
-
-    @Override
-    public final ItemCurve<T> generateTransformation(double[] params_, final R reg_)
-    {
-        return this.generateParams(params_, reg_).getCurve(0);
     }
 
     @Override

@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
+import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
@@ -290,7 +291,9 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final MultivariatePoint best = result.getOptimum();
         final double[] bestVal = best.getElements();
 
-        final ItemCurve<T> trans = generator_.generateTransformation(bestVal, field_);
+        final ItemCurveParams<R, T> curveParams = generator_.generateParams(bestVal, field_);
+
+        final ItemCurve<T> trans = curveParams.getCurve(0);
 
         final double bestLL = result.minValue();
 
