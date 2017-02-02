@@ -53,20 +53,19 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
     }
 
     @Override
-    public ItemCurve<StandardCurveType> generateCurve(final ItemCurveParams<StandardCurveType> params_)
+    public ItemCurve<StandardCurveType> generateCurve(StandardCurveType type_, int offset_, double[] params_)
     {
-        final double centralityVal = params_.getCurveParams(0);
-        final double slopeParam = params_.getCurveParams(1);
-        final StandardCurveType curveType = params_.getType();
+        final double centralityVal = params_[offset_];
+        final double slopeParam = params_[offset_ + 1];
 
-        switch (curveType)
+        switch (type_)
         {
             case LOGISTIC:
                 return new LogisticCurve(centralityVal, slopeParam);
             case GAUSSIAN:
                 return new GaussianCurve(centralityVal, slopeParam);
             default:
-                throw new RuntimeException("Impossible, unknown type: " + curveType);
+                throw new RuntimeException("Impossible, unknown type: " + type_);
         }
     }
 
@@ -155,7 +154,7 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
 
         final double intercept = -0.5 * betaGuess;
 
-        final ItemCurveParams<StandardCurveType> output = new ItemCurveParams<>(type_, intercept, betaGuess, curveParams);
+        final ItemCurveParams<StandardCurveType> output = new ItemCurveParams<>(type_, this, intercept, betaGuess, curveParams);
         return output;
 
     }

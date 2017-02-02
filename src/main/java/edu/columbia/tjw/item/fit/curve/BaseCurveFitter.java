@@ -306,7 +306,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final FitResult<S, R, T> output = new FitResult<>(updated, entryNumber, bestLL, startingLL_, result.dataElementCount());
 
-        LOG.info("Found Curve[" + generator_.getCurveType() + ", " + field_ + ", " + generator_.getToStatus() + "][" + output.calculateAicDifference() + "]: " + Arrays.toString(bestVal));
+        //LOG.info("Found Curve[" + generator_.getCurveType() + ", " + field_ + ", " + generator_.getToStatus() + "][" + output.calculateAicDifference() + "]: " + Arrays.toString(bestVal));
         LOG.info("LL change[0x" + Long.toHexString(System.identityHashCode(this)) + "L]: " + startingLL_ + " -> " + bestLL + ": " + (startingLL_ - bestLL) + " \n\n");
 
         return output;

@@ -87,16 +87,6 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         _settings = settings_;
     }
 
-    public T getCurveType()
-    {
-        return _type;
-    }
-
-    public S getToStatus()
-    {
-        return _toStatus;
-    }
-
     public final double[] generateParamVector(final int entryIndex_)
     {
         final ItemParameters<S, R, T> params = _baseModel.getParams();
@@ -109,7 +99,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
 
         final ItemCurve<T> curve = params.getEntryCurve(entryIndex_, 0);
 
-        final ItemCurveParams<T> curveParams = new ItemCurveParams<>(_type, interceptAdjustment, beta, curve);
+        final ItemCurveParams<T> curveParams = new ItemCurveParams<>(interceptAdjustment, beta, _type, curve);
 
         final double[] output = curveParams.generatePoint();
         return output;
@@ -118,7 +108,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     @Override
     public final ItemModel<S, R, T> generatedModel(double[] params_, final R field_)
     {
-        //final int paramCount = paramCount();
+        final ItemCurveParams<T> curveParams = this.generateParams(params_);
 
         final ItemCurve<T> curve = generateTransformation(params_);
         final ItemParameters<S, R, T> orig = _baseModel.getParams();
@@ -132,8 +122,8 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         final int matchIndex = updated.getIndex(field_, curve);
         final int interceptIndex = updated.getIndex(_intercept, null);
 
-        final double interceptAdjustment = getInterceptAdjustment(params_);
-        final double beta = getBeta(params_);
+        final double interceptAdjustment = curveParams.getIntercept();
+        final double beta = curveParams.getBeta();
 
         final double[][] values = updated.getBetas();
 
@@ -149,20 +139,6 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     public final int paramCount()
     {
         return _paramCount;
-    }
-
-    @Override
-    public final double getInterceptAdjustment(final double[] params_)
-    {
-        final double interceptAdjustment = params_[ItemCurveParams.getInterceptParamNumber(_type)];
-        return interceptAdjustment;
-    }
-
-    @Override
-    public final double getBeta(final double[] params_)
-    {
-        final double beta = params_[ItemCurveParams.getBetaParamNumber(_type)];
-        return beta;
     }
 
     public final double[] polishCurveParameters(final QuantileDistribution dist_, final double[] rawParams_)
@@ -221,9 +197,14 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     @Override
     public final ItemCurve<T> generateTransformation(double[] params_)
     {
-        final ItemCurveParams<T> params = new ItemCurveParams<>(_type, params_);
-        final ItemCurve<T> curve = _factory.generateCurve(params);
-        return curve;
+        return this.generateParams(params_).getCurve(0);
+    }
+
+    @Override
+    public ItemCurveParams<T> generateParams(double[] params_)
+    {
+        final ItemCurveParams<T> params = new ItemCurveParams<>(_type, _factory, params_);
+        return params;
     }
 
     private final class VectorGenerator implements RandomVectorGenerator
@@ -266,8 +247,8 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         @Override
         public double value(double[] point)
         {
-            final ItemCurveParams<T> params = new ItemCurveParams<>(_params.getType(), point);
-            final ItemCurve<T> curve = _factory.generateCurve(params);
+            final ItemCurveParams<T> params = new ItemCurveParams<>(_params.getType(0), _factory, point);
+            final ItemCurve<T> curve = params.getCurve(0);
 
             final double totalCount = _dist.getTotalCount();
 

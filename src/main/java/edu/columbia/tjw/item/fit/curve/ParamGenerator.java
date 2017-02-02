@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.ItemCurve;
+import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
@@ -37,11 +38,9 @@ public interface ParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
 {
     public ItemModel<S, R, T> generatedModel(final double[] params_, final R field_);
 
+    public ItemCurveParams<T> generateParams(final double[] params_);
+
     public ItemCurve<T> generateTransformation(final double[] params_);
-
-    public double getInterceptAdjustment(final double[] params_);
-
-    public double getBeta(final double[] params_);
 
     public double[] getStartingParams(final QuantileDistribution dist_);
 

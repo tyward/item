@@ -19,65 +19,109 @@
  */
 package edu.columbia.tjw.item;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  *
  * @author tyler
  * @param <T> The curve type defined by these params
  */
-public final class ItemCurveParams<T extends ItemCurveType<T>>
+public final class ItemCurveParams<T extends ItemCurveType<T>> implements Serializable
 {
-    private final T _type;
+    private static final long serialVersionUID = 0x7b981aa6c028bfa7L;
+
+    private final int _size;
     private final double _intercept;
     private final double _beta;
-    private final double[] _curveParams;
+    private final List<T> _types;
+    private final List<ItemCurve<T>> _curves;
 
-    public ItemCurveParams(final T type_, final double[] curvePoint_)
+    public ItemCurveParams(final T type_, ItemCurveFactory<T> factory_, final double[] curvePoint_)
     {
-        if (curvePoint_.length != (2 + type_.getParamCount()))
-        {
-            throw new IllegalArgumentException("Size mismatch.");
-        }
-
-        _type = type_;
-        _intercept = extractIntercept(_type, curvePoint_);
-        _beta = extractBeta(_type, curvePoint_);
-        _curveParams = new double[_type.getParamCount()];
-
-        for (int i = 0; i < _curveParams.length; i++)
-        {
-            _curveParams[i] = curvePoint_[i];
-        }
+        this(Collections.singletonList(type_), factory_, curvePoint_[0], curvePoint_[1], 2, curvePoint_);
     }
 
-    public ItemCurveParams(final T type_, final double intercept_, final double beta_, final ItemCurve<T> curve_)
+    public ItemCurveParams(final List<T> types_, ItemCurveFactory<T> factory_, final double intercept_, final double beta_, final int arrayOffset_, final double[] curvePoint_)
     {
-        _type = type_;
+        _types = Collections.unmodifiableList(new ArrayList<>(types_));
+        _size = calculateSize(_types);
+
         _intercept = intercept_;
         _beta = beta_;
-        _curveParams = new double[type_.getParamCount()];
 
-        for (int i = 0; i < _curveParams.length; i++)
+        int pointer = arrayOffset_;
+
+        List<ItemCurve<T>> curveList = new ArrayList<>(_types.size());
+
+        for (final T next : _types)
         {
-            _curveParams[i] = curve_.getParam(i);
+            if (null == next)
+            {
+                curveList.add(null);
+                continue;
+            }
+
+            ItemCurve<T> curve = factory_.generateCurve(next, pointer, curvePoint_);
+            pointer += next.getParamCount();
+            curveList.add(curve);
         }
+
+        _curves = Collections.unmodifiableList(curveList);
     }
 
-    public ItemCurveParams(final T type_, final double intercept_, final double beta_, final double[] curveParams_)
+    public ItemCurveParams(final double intercept_, final double beta_, final T type_, final ItemCurve<T> curve_)
     {
-        if (curveParams_.length != type_.getParamCount())
+        this(intercept_, beta_, Collections.singletonList(type_), Collections.singletonList(curve_));
+    }
+
+    public ItemCurveParams(final double intercept_, final double beta_, final List<T> types_, final List<ItemCurve<T>> curves_)
+    {
+        if (types_.size() != curves_.size())
         {
-            throw new IllegalArgumentException("Size mismatch.");
+            throw new IllegalArgumentException("Invalid size.");
         }
 
-        _type = type_;
+        _types = Collections.unmodifiableList(new ArrayList<>(types_));
+        _curves = Collections.unmodifiableList(new ArrayList<>(curves_));
+
         _intercept = intercept_;
         _beta = beta_;
-        _curveParams = curveParams_;
+        _size = calculateSize(_types);
     }
 
-    public T getType()
+    public ItemCurveParams(final T type_, ItemCurveFactory<T> factory_, final double intercept_, final double beta_, final double[] curveParams_)
     {
-        return _type;
+        this(Collections.singletonList(type_), factory_, intercept_, beta_, 0, curveParams_);
+    }
+
+    private static <T extends ItemCurveType<T>> int calculateSize(final List<T> types_)
+    {
+        int size = 2;
+
+        for (final T next : types_)
+        {
+            if (null == next)
+            {
+                continue;
+            }
+
+            size += next.getParamCount();
+        }
+
+        return size;
+    }
+
+    public T getType(final int depth_)
+    {
+        return _types.get(depth_);
+    }
+
+    public ItemCurve<T> getCurve(final int depth_)
+    {
+        return _curves.get(depth_);
     }
 
     public double getIntercept()
@@ -90,59 +134,69 @@ public final class ItemCurveParams<T extends ItemCurveType<T>>
         return _beta;
     }
 
-    public double getCurveParams(final int index_)
+    /**
+     * Similar to the notion of entry depth in ItemParameters.
+     *
+     * @return
+     */
+    public int getEntryDepth()
     {
-        if (index_ >= _type.getParamCount())
+        return _types.size();
+    }
+
+    /**
+     * How many parameters are we dealing with here.
+     *
+     * Including all curves, bet and intercept.
+     *
+     * @return
+     */
+    public int size()
+    {
+        return _size;
+    }
+
+    public int getInterceptIndex()
+    {
+        return 0;
+    }
+
+    public int getBetaIndex()
+    {
+        return 1;
+    }
+
+    public void extractPoint(final double[] point_)
+    {
+        if (point_.length != _size)
         {
-            throw new ArrayIndexOutOfBoundsException("Out of bounds: " + index_);
+            throw new IllegalArgumentException("Invalid point array size.");
         }
 
-        return _curveParams[index_];
+        point_[0] = _intercept;
+        point_[1] = _beta;
+
+        int pointer = 2;
+
+        for (final ItemCurve<T> next : _curves)
+        {
+            if (null == next)
+            {
+                continue;
+            }
+
+            for (int i = 0; i < next.getCurveType().getParamCount(); i++)
+            {
+                point_[pointer++] = next.getParam(i);
+            }
+        }
     }
 
     public double[] generatePoint()
     {
-        final int curveParamCount = _type.getParamCount();
-        final double[] output = new double[curveParamCount + 2];
-
-        for (int i = 0; i < curveParamCount; i++)
-        {
-            output[i] = _curveParams[i];
-        }
-
-        output[curveParamCount] = _intercept;
-        output[curveParamCount + 1] = _beta;
+        final double[] output = new double[this.size()];
+        extractPoint(output);
         return output;
-    }
-
-    public static <T extends ItemCurveType<T>> double extractIntercept(final T type_, final double[] paramPoint_)
-    {
-        return paramPoint_[type_.getParamCount()];
-    }
-
-    public static <T extends ItemCurveType<T>> double extractBeta(final T type_, final double[] paramPoint_)
-    {
-        return paramPoint_[type_.getParamCount() + 1];
-    }
-
-    public static <T extends ItemCurveType<T>> int getInterceptParamNumber(final T type_)
-    {
-        return type_.getParamCount();
-    }
-
-    public static <T extends ItemCurveType<T>> int getBetaParamNumber(final T type_)
-    {
-        return type_.getParamCount() + 1;
-    }
-
-    public static <T extends ItemCurveType<T>> int translateCurveParamNumber(final T type_, final int input_)
-    {
-        if (input_ >= type_.getParamCount())
-        {
-            throw new ArrayIndexOutOfBoundsException("Out of range: " + input_);
-        }
-
-        return input_;
     }
 
 }

@@ -72,6 +72,8 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
     private final ItemSettings _settings;
 
+    private ItemCurveParams<T> _params;
+
     public CurveOptimizerFunction(final T curveType_, final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_, final BaseCurveFitter<S, R, T> curveFitter_,
             final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_, final double prevBeta_, final ItemCurve<T> prevCurve_)
     {
@@ -141,10 +143,10 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             _workspace[i] = input_.getElement(i);
         }
 
-        _trans = _generator.generateTransformation(_workspace);
-        _interceptAdjustment = _generator.getInterceptAdjustment(_workspace);
-        _beta = _generator.getBeta(_workspace);
-        //System.out.println("Prepared: " + input_);
+        _params = _generator.generateParams(_workspace);
+        _trans = _params.getCurve(0);
+        _interceptAdjustment = _params.getIntercept();
+        _beta = _params.getBeta();
     }
 
     @Override
@@ -230,8 +232,8 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         final double[] output = new double[reachableCount];
         //final double[] actual = new double[reachableCount];
 
-        final int interceptIndex = ItemCurveParams.getInterceptParamNumber(_curveType);
-        final int betaIndex = ItemCurveParams.getBetaParamNumber(_curveType);
+        final int interceptIndex = _params.getInterceptIndex();
+        final int betaIndex = _params.getBetaIndex();
 
         final RectangularDoubleArray powerScores = _curveFitter.getPowerScores();
 

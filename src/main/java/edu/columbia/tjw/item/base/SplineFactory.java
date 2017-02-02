@@ -43,19 +43,9 @@ public class SplineFactory implements ItemCurveFactory<SplineCurveType>
     }
 
     @Override
-    public ItemCurve<SplineCurveType> generateCurve(final ItemCurveParams<SplineCurveType> params_)
+    public ItemCurve<SplineCurveType> generateCurve(SplineCurveType type_, int offset_, double[] params_)
     {
-        throw new UnsupportedOperationException("Not supported.");
-
-//        switch (type_)
-//        {
-//            case STEP:
-//                return new StepSpline(params_[0], params_[1]);
-//            case BASIS:
-//                return new BasisSpline(params_[0], params_[1]);
-//            default:
-//                throw new RuntimeException("Impossible, unknown type: " + type_);
-//        }
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
