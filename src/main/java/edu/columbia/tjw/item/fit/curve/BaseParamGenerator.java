@@ -247,7 +247,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         @Override
         public double value(double[] point)
         {
-            final ItemCurveParams<R, T> params = new ItemCurveParams<>(_params.getType(0), _params.getRegressor(0), _factory, point);
+            final ItemCurveParams<R, T> params = new ItemCurveParams<>(_params, _factory, point);
             final ItemCurve<T> curve = params.getCurve(0);
 
             final double totalCount = _dist.getTotalCount();

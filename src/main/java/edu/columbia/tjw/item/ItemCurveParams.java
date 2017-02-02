@@ -123,6 +123,34 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         this(Collections.singletonList(type_), Collections.singletonList(field_), factory_, intercept_, beta_, 0, curveParams_);
     }
 
+    public ItemCurveParams(final ItemCurveParams<R, T> baseParams_, ItemCurveFactory<R, T> factory_, final double[] values_)
+    {
+        _size = baseParams_.size();
+        _types = baseParams_._types;
+        _regressors = baseParams_._regressors;
+        _intercept = values_[0];
+        _beta = values_[1];
+
+        int pointer = 2;
+
+        List<ItemCurve<T>> curveList = new ArrayList<>(_types.size());
+
+        for (final T next : _types)
+        {
+            if (null == next)
+            {
+                curveList.add(null);
+                continue;
+            }
+
+            ItemCurve<T> curve = factory_.generateCurve(next, pointer, values_);
+            pointer += next.getParamCount();
+            curveList.add(curve);
+        }
+
+        _curves = Collections.unmodifiableList(curveList);
+    }
+
     private static <T extends ItemCurveType<T>> int calculateSize(final List<T> types_)
     {
         int size = 2;
