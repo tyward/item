@@ -22,6 +22,7 @@ package edu.columbia.tjw.item.base;
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
+import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.MathFunctions;
@@ -37,8 +38,9 @@ import org.apache.commons.math3.util.FastMath;
  *
  *
  * @author tyler
+ * @param <R>
  */
-public final class StandardCurveFactory implements ItemCurveFactory<StandardCurveType>
+public final class StandardCurveFactory<R extends ItemRegressor<R>> implements ItemCurveFactory<R, StandardCurveType>
 {
     private static final double SLOPE_MULT = 10.0;
 
@@ -70,7 +72,7 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
     }
 
     @Override
-    public ItemCurveParams<StandardCurveType> generateStartingParameters(final StandardCurveType type_, final QuantileDistribution dist_, final Random rand_)
+    public ItemCurveParams<R, StandardCurveType> generateStartingParameters(final StandardCurveType type_, final R field_, final QuantileDistribution dist_, final Random rand_)
     {
         final double[] curveParams = new double[2]; //== type_.getParamCount();
 
@@ -154,7 +156,7 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
 
         final double intercept = -0.5 * betaGuess;
 
-        final ItemCurveParams<StandardCurveType> output = new ItemCurveParams<>(type_, this, intercept, betaGuess, curveParams);
+        final ItemCurveParams<R, StandardCurveType> output = new ItemCurveParams<>(type_, field_, this, intercept, betaGuess, curveParams);
         return output;
 
     }

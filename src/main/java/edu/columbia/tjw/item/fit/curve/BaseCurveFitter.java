@@ -53,7 +53,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     //private static final int BLOCK_SIZE = 200 * 1000;
     private static final Logger LOG = LogUtil.getLogger(BaseCurveFitter.class);
 
-    private final ItemCurveFactory<T> _factory;
+    private final ItemCurveFactory<R, T> _factory;
 
     private final ItemSettings _settings;
 
@@ -71,7 +71,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final R _intercept;
     private final S _fromStatus;
 
-    public BaseCurveFitter(final ItemCurveFactory<T> factory_, final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_, final R intercept_)
+    public BaseCurveFitter(final ItemCurveFactory<R, T> factory_, final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_, final R intercept_)
     {
         super(factory_, settings_, grid_);
 
@@ -220,7 +220,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double startingLL = res.getMean();
 
-        final double[] starting = generator.getStartingParams(dist);
+        final double[] starting = generator.getStartingParams(dist, field_);
 
         final FitResult<S, R, T> output = generateFit(generator, func, field_, startingLL, starting);
 
@@ -228,7 +228,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         {
             try
             {
-                final double[] polished = generator.polishCurveParameters(dist, starting);
+                final double[] polished = generator.polishCurveParameters(dist, field_, starting);
 
                 if (!Arrays.equals(starting, polished))
                 {
@@ -290,7 +290,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final MultivariatePoint best = result.getOptimum();
         final double[] bestVal = best.getElements();
 
-        final ItemCurve<T> trans = generator_.generateTransformation(bestVal);
+        final ItemCurve<T> trans = generator_.generateTransformation(bestVal, field_);
 
         final double bestLL = result.minValue();
 

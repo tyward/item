@@ -60,7 +60,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
 {
     private static final Logger LOG = LogUtil.getLogger(BaseParamGenerator.class);
     private final ItemSettings _settings;
-    private final ItemCurveFactory<T> _factory;
+    private final ItemCurveFactory<R, T> _factory;
     private final T _type;
     private final ItemModel<S, R, T> _baseModel;
     private final int _tranParamCount;
@@ -68,7 +68,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     private final S _toStatus;
     private final R _intercept;
 
-    public BaseParamGenerator(final ItemCurveFactory<T> factory_, final T curveType_, final ItemModel<S, R, T> baseModel_, final S toStatus_, final ItemSettings settings_, final R intercept_)
+    public BaseParamGenerator(final ItemCurveFactory<R, T> factory_, final T curveType_, final ItemModel<S, R, T> baseModel_, final S toStatus_, final ItemSettings settings_, final R intercept_)
     {
         if (null == intercept_)
         {
@@ -96,10 +96,10 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
 
         //Start with no intercept adjustment, use existing intercept.
         final double interceptAdjustment = 0.0;
-
+        final R reg = params.getEntryRegressor(entryIndex_, 0);
         final ItemCurve<T> curve = params.getEntryCurve(entryIndex_, 0);
 
-        final ItemCurveParams<T> curveParams = new ItemCurveParams<>(interceptAdjustment, beta, _type, curve);
+        final ItemCurveParams<R, T> curveParams = new ItemCurveParams<>(interceptAdjustment, beta, _type, reg, curve);
 
         final double[] output = curveParams.generatePoint();
         return output;
@@ -108,9 +108,9 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     @Override
     public final ItemModel<S, R, T> generatedModel(double[] params_, final R field_)
     {
-        final ItemCurveParams<T> curveParams = this.generateParams(params_);
+        final ItemCurveParams<R, T> curveParams = this.generateParams(params_, field_);
 
-        final ItemCurve<T> curve = generateTransformation(params_);
+        final ItemCurve<T> curve = generateTransformation(params_, field_);
         final ItemParameters<S, R, T> orig = _baseModel.getParams();
 
         final S status = orig.getStatus();
@@ -141,9 +141,9 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         return _paramCount;
     }
 
-    public final double[] polishCurveParameters(final QuantileDistribution dist_, final double[] rawParams_)
+    public final double[] polishCurveParameters(final QuantileDistribution dist_, final R regressor_, final double[] rawParams_)
     {
-        final ItemCurveParams<T> params = _factory.generateStartingParameters(_type, dist_, _settings.getRandom());
+        final ItemCurveParams<R, T> params = _factory.generateStartingParameters(_type, regressor_, dist_, _settings.getRandom());
 
         //Should use an optimizer to improve the starting parameters.
         final InnerFunction polishFunction = new InnerFunction(dist_, params);
@@ -181,9 +181,9 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     }
 
     @Override
-    public final double[] getStartingParams(final QuantileDistribution dist_)
+    public final double[] getStartingParams(final QuantileDistribution dist_, final R reg_)
     {
-        final ItemCurveParams<T> params = _factory.generateStartingParameters(_type, dist_, _settings.getRandom());
+        final ItemCurveParams<R, T> params = _factory.generateStartingParameters(_type, reg_, dist_, _settings.getRandom());
         final double[] output = params.generatePoint();
         return output;
     }
@@ -195,15 +195,15 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     }
 
     @Override
-    public final ItemCurve<T> generateTransformation(double[] params_)
+    public final ItemCurve<T> generateTransformation(double[] params_, final R reg_)
     {
-        return this.generateParams(params_).getCurve(0);
+        return this.generateParams(params_, reg_).getCurve(0);
     }
 
     @Override
-    public ItemCurveParams<T> generateParams(double[] params_)
+    public ItemCurveParams<R, T> generateParams(double[] params_, final R reg_)
     {
-        final ItemCurveParams<T> params = new ItemCurveParams<>(_type, _factory, params_);
+        final ItemCurveParams<R, T> params = new ItemCurveParams<>(_type, reg_, _factory, params_);
         return params;
     }
 
@@ -236,9 +236,9 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     private final class InnerFunction implements MultivariateFunction
     {
         private final QuantileDistribution _dist;
-        private final ItemCurveParams<T> _params;
+        private final ItemCurveParams<R, T> _params;
 
-        public InnerFunction(final QuantileDistribution dist_, final ItemCurveParams<T> params_)
+        public InnerFunction(final QuantileDistribution dist_, final ItemCurveParams<R, T> params_)
         {
             _dist = dist_;
             _params = params_;
@@ -247,7 +247,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         @Override
         public double value(double[] point)
         {
-            final ItemCurveParams<T> params = new ItemCurveParams<>(_params.getType(0), _factory, point);
+            final ItemCurveParams<R, T> params = new ItemCurveParams<>(_params.getType(0), _params.getRegressor(0), _factory, point);
             final ItemCurve<T> curve = params.getCurve(0);
 
             final double totalCount = _dist.getTotalCount();

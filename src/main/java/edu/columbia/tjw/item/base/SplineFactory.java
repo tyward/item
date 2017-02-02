@@ -22,6 +22,7 @@ package edu.columbia.tjw.item.base;
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
+import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.EnumFamily;
 import java.util.Random;
@@ -30,7 +31,7 @@ import java.util.Random;
  *
  * @author tyler
  */
-public class SplineFactory implements ItemCurveFactory<SplineCurveType>
+public class SplineFactory<R extends ItemRegressor<R>> implements ItemCurveFactory<R, SplineCurveType>
 {
     /**
      * The singleton for this class. It has no free parameters, so no need for
@@ -49,7 +50,7 @@ public class SplineFactory implements ItemCurveFactory<SplineCurveType>
     }
 
     @Override
-    public ItemCurveParams<SplineCurveType> generateStartingParameters(final SplineCurveType type_, final QuantileDistribution dist_, final Random rand_)
+    public ItemCurveParams<R, SplineCurveType> generateStartingParameters(final SplineCurveType type_, final R field_, final QuantileDistribution dist_, final Random rand_)
     {
         throw new UnsupportedOperationException("Not supported.");
 //

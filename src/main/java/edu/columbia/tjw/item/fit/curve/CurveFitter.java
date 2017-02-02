@@ -31,7 +31,6 @@ import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Collection;
 import java.util.List;
@@ -53,7 +52,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
     private final ItemSettings _settings;
     private final ItemStatusGrid<S, R> _grid;
 
-    public CurveFitter(final ItemCurveFactory<T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_)
+    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_)
     {
         if (null == settings_)
         {

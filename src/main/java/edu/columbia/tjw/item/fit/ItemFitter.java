@@ -55,17 +55,17 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 {
     private static final Logger LOG = LogUtil.getLogger(ItemFitter.class);
 
-    private final ItemCurveFactory<T> _factory;
+    private final ItemCurveFactory<R, T> _factory;
     private final ItemSettings _settings;
     private final R _intercept;
     private final EnumFamily<R> _family;
 
-    public ItemFitter(final ItemCurveFactory<T> factory_, final R intercept_)
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_)
     {
         this(factory_, intercept_, new ItemSettings());
     }
 
-    public ItemFitter(final ItemCurveFactory<T> factory_, final R intercept_, ItemSettings settings_)
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, ItemSettings settings_)
     {
         if (null == factory_)
         {

@@ -27,9 +27,10 @@ import java.util.List;
 /**
  *
  * @author tyler
+ * @param <R>
  * @param <T> The curve type defined by these params
  */
-public final class ItemCurveParams<T extends ItemCurveType<T>> implements Serializable
+public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
 {
     private static final long serialVersionUID = 0x7b981aa6c028bfa7L;
 
@@ -37,16 +38,31 @@ public final class ItemCurveParams<T extends ItemCurveType<T>> implements Serial
     private final double _intercept;
     private final double _beta;
     private final List<T> _types;
+    private final List<R> _regressors;
     private final List<ItemCurve<T>> _curves;
 
-    public ItemCurveParams(final T type_, ItemCurveFactory<T> factory_, final double[] curvePoint_)
+    public ItemCurveParams(final T type_, final R field_, ItemCurveFactory<R, T> factory_, final double[] curvePoint_)
     {
-        this(Collections.singletonList(type_), factory_, curvePoint_[0], curvePoint_[1], 2, curvePoint_);
+        this(Collections.singletonList(type_), Collections.singletonList(field_), factory_, curvePoint_[0], curvePoint_[1], 2, curvePoint_);
     }
 
-    public ItemCurveParams(final List<T> types_, ItemCurveFactory<T> factory_, final double intercept_, final double beta_, final int arrayOffset_, final double[] curvePoint_)
+    public ItemCurveParams(final List<T> types_, final List<R> fields_, ItemCurveFactory<R, T> factory_, final double intercept_, final double beta_, final int arrayOffset_, final double[] curvePoint_)
     {
+        if (Double.isNaN(intercept_))
+        {
+            throw new IllegalArgumentException("Intercept must be well defined.");
+        }
+        if (Double.isNaN(beta_))
+        {
+            throw new IllegalArgumentException("Beta must be well defined.");
+        }
+        if (types_.size() != fields_.size())
+        {
+            throw new IllegalArgumentException("Size mismatch.");
+        }
+
         _types = Collections.unmodifiableList(new ArrayList<>(types_));
+        _regressors = Collections.unmodifiableList(new ArrayList<>(fields_));
         _size = calculateSize(_types);
 
         _intercept = intercept_;
@@ -72,19 +88,29 @@ public final class ItemCurveParams<T extends ItemCurveType<T>> implements Serial
         _curves = Collections.unmodifiableList(curveList);
     }
 
-    public ItemCurveParams(final double intercept_, final double beta_, final T type_, final ItemCurve<T> curve_)
+    public ItemCurveParams(final double intercept_, final double beta_, final T type_, final R field_, final ItemCurve<T> curve_)
     {
-        this(intercept_, beta_, Collections.singletonList(type_), Collections.singletonList(curve_));
+        this(intercept_, beta_, Collections.singletonList(type_), Collections.singletonList(field_), Collections.singletonList(curve_));
     }
 
-    public ItemCurveParams(final double intercept_, final double beta_, final List<T> types_, final List<ItemCurve<T>> curves_)
+    public ItemCurveParams(final double intercept_, final double beta_, final List<T> types_, final List<R> fields_, final List<ItemCurve<T>> curves_)
     {
+        if (Double.isNaN(intercept_))
+        {
+            throw new IllegalArgumentException("Intercept must be well defined.");
+        }
+        if (Double.isNaN(beta_))
+        {
+            throw new IllegalArgumentException("Beta must be well defined.");
+        }
+
         if (types_.size() != curves_.size())
         {
             throw new IllegalArgumentException("Invalid size.");
         }
 
         _types = Collections.unmodifiableList(new ArrayList<>(types_));
+        _regressors = Collections.unmodifiableList(new ArrayList<>(fields_));
         _curves = Collections.unmodifiableList(new ArrayList<>(curves_));
 
         _intercept = intercept_;
@@ -92,9 +118,9 @@ public final class ItemCurveParams<T extends ItemCurveType<T>> implements Serial
         _size = calculateSize(_types);
     }
 
-    public ItemCurveParams(final T type_, ItemCurveFactory<T> factory_, final double intercept_, final double beta_, final double[] curveParams_)
+    public ItemCurveParams(final T type_, final R field_, ItemCurveFactory<R, T> factory_, final double intercept_, final double beta_, final double[] curveParams_)
     {
-        this(Collections.singletonList(type_), factory_, intercept_, beta_, 0, curveParams_);
+        this(Collections.singletonList(type_), Collections.singletonList(field_), factory_, intercept_, beta_, 0, curveParams_);
     }
 
     private static <T extends ItemCurveType<T>> int calculateSize(final List<T> types_)
@@ -117,6 +143,11 @@ public final class ItemCurveParams<T extends ItemCurveType<T>> implements Serial
     public T getType(final int depth_)
     {
         return _types.get(depth_);
+    }
+
+    public R getRegressor(final int depth_)
+    {
+        return _regressors.get(depth_);
     }
 
     public ItemCurve<T> getCurve(final int depth_)

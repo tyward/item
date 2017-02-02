@@ -22,7 +22,6 @@ package edu.columbia.tjw.item.fit.curve;
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemSettings;
@@ -36,7 +35,6 @@ import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
 import edu.columbia.tjw.item.optimize.MultivariateGradient;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -61,6 +59,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final S _status;
     private final int[] _actualOffsets;
     private final T _curveType;
+    private final R _field;
 
     private final double _prevBeta;
     private final ItemCurve<T> _prevCurve;
@@ -72,7 +71,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
     private final ItemSettings _settings;
 
-    private ItemCurveParams<T> _params;
+    private ItemCurveParams<R, T> _params;
 
     public CurveOptimizerFunction(final T curveType_, final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_, final BaseCurveFitter<S, R, T> curveFitter_,
             final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_, final double prevBeta_, final ItemCurve<T> prevCurve_)
@@ -81,6 +80,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
         _prevBeta = prevBeta_;
         _prevCurve = prevCurve_;
+        _field = field_;
 
         _curveFitter = curveFitter_;
         _curveType = curveType_;
@@ -143,7 +143,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             _workspace[i] = input_.getElement(i);
         }
 
-        _params = _generator.generateParams(_workspace);
+        _params = _generator.generateParams(_workspace, _field);
         _trans = _params.getCurve(0);
         _interceptAdjustment = _params.getIntercept();
         _beta = _params.getBeta();

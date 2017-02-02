@@ -38,11 +38,11 @@ public interface ParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
 {
     public ItemModel<S, R, T> generatedModel(final double[] params_, final R field_);
 
-    public ItemCurveParams<T> generateParams(final double[] params_);
+    public ItemCurveParams<R, T> generateParams(final double[] params_, final R reg_);
 
-    public ItemCurve<T> generateTransformation(final double[] params_);
+    public ItemCurve<T> generateTransformation(final double[] params_, final R reg_);
 
-    public double[] getStartingParams(final QuantileDistribution dist_);
+    public double[] getStartingParams(final QuantileDistribution dist_, final R reg_);
 
     public int paramCount();
 
