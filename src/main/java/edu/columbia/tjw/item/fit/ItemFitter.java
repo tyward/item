@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.ItemCurveFactory;
+import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
@@ -140,7 +141,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         for (final R field : coefficients_)
         {
-            params = params.addBeta(field, null, -1);
+            params = params.addBeta(field);
         }
 
         return fitCoefficients(params, grid_, filters_);

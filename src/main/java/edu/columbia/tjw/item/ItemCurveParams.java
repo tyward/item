@@ -88,12 +88,12 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         _curves = Collections.unmodifiableList(curveList);
     }
 
-    public ItemCurveParams(final double intercept_, final double beta_, final T type_, final R field_, final ItemCurve<T> curve_)
+    public ItemCurveParams(final double intercept_, final double beta_, final R field_, final ItemCurve<T> curve_)
     {
-        this(intercept_, beta_, Collections.singletonList(type_), Collections.singletonList(field_), Collections.singletonList(curve_));
+        this(intercept_, beta_, Collections.singletonList(field_), Collections.singletonList(curve_));
     }
 
-    public ItemCurveParams(final double intercept_, final double beta_, final List<T> types_, final List<R> fields_, final List<ItemCurve<T>> curves_)
+    public ItemCurveParams(final double intercept_, final double beta_, final List<R> fields_, final List<ItemCurve<T>> curves_)
     {
         if (Double.isNaN(intercept_))
         {
@@ -103,13 +103,26 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         {
             throw new IllegalArgumentException("Beta must be well defined.");
         }
-
-        if (types_.size() != curves_.size())
+        if (fields_.size() != curves_.size())
         {
-            throw new IllegalArgumentException("Invalid size.");
+            throw new IllegalArgumentException("List size mismatch: " + fields_.size() + " !+ " + curves_.size());
         }
 
-        _types = Collections.unmodifiableList(new ArrayList<>(types_));
+        final List<T> types = new ArrayList<>(curves_.size());
+
+        for (final ItemCurve<T> curve : curves_)
+        {
+            if (null == curve)
+            {
+                types.add(null);
+            }
+            else
+            {
+                types.add(curve.getCurveType());
+            }
+        }
+
+        _types = Collections.unmodifiableList(types);
         _regressors = Collections.unmodifiableList(new ArrayList<>(fields_));
         _curves = Collections.unmodifiableList(new ArrayList<>(curves_));
 
@@ -166,6 +179,21 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         }
 
         return size;
+    }
+
+    public List<T> getTypes()
+    {
+        return _types;
+    }
+
+    public List<R> getRegressors()
+    {
+        return _regressors;
+    }
+
+    public List<ItemCurve<T>> getCurves()
+    {
+        return _curves;
     }
 
     public T getType(final int depth_)

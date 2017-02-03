@@ -40,6 +40,9 @@ import java.util.TreeSet;
 public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
 {
     private static final int[] EMPTY = new int[0];
+
+    //This is just to make it clear that the 0th entry is always the intercept.
+    private static final int INTERCEPT_INDEX = 0;
     private static final long serialVersionUID = 0x35c74a5424d6cf48L;
 
     private final S _status;
@@ -162,17 +165,12 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
      * @param regs_
      * @param curves_
      */
-    private ItemParameters(final ItemParameters<S, R, T> base_, final List<R> regs_, final List<ItemCurve<T>> curves_, final int toStatusTarget_)
+    private ItemParameters(final ItemParameters<S, R, T> base_, final ItemCurveParams<R, T> curveParams_, final S toStatus_)
     {
         _status = base_._status;
         _intercept = base_._intercept;
         _selfIndex = base_._selfIndex;
         _filters = base_._filters;
-//        _trans = base_._trans;
-//        _uniqueFields = base_._uniqueFields;
-//        _fieldOffsets = base_._fieldOffsets;
-//        _transOffsets = base_._transOffsets;
-//        _uniqueBeta = base_._uniqueBeta;
 
         final SortedSet<R> newFields = new TreeSet<>();
 
@@ -180,11 +178,12 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         final Set<ItemCurve<T>> newTrans = new HashSet<>();
 
         newFields.addAll(base_._uniqueFields);
-        newFields.addAll(regs_);
+        newFields.addAll(curveParams_.getRegressors());
 
         newTrans.addAll(base_._trans);
-        newTrans.addAll(curves_);
+        newTrans.addAll(curveParams_.getCurves());
 
+        //Always add the new entry to the end...
         final int baseEntryCount = base_.getEntryCount();
         final int newEntryCount = baseEntryCount + 1;
         final int endIndex = baseEntryCount;
@@ -195,7 +194,23 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
         _uniqueBeta = Arrays.copyOf(base_._uniqueBeta, newEntryCount);
 
-        _uniqueBeta[endIndex] = toStatusTarget_;
+        final int toIndex;
+
+        if (null == toStatus_)
+        {
+            toIndex = -1;
+        }
+        else
+        {
+            toIndex = _status.getReachable().indexOf(toStatus_);
+
+            if (toIndex == -1)
+            {
+                throw new IllegalArgumentException("Not reachable status: " + toStatus_);
+            }
+        }
+
+        _uniqueBeta[endIndex] = toIndex;
         _fieldOffsets = new int[newEntryCount][];
         _transOffsets = new int[newEntryCount][];
         _betas = new double[base_._betas.length][];
@@ -224,23 +239,25 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         //Now fill out the last entry...
-        final int endDepth = regs_.size();
-
-        if (curves_.size() != endDepth)
-        {
-            throw new IllegalArgumentException("Invalid depth.");
-        }
+        final int endDepth = curveParams_.getEntryDepth();
 
         _fieldOffsets[endIndex] = new int[endDepth];
         _transOffsets[endIndex] = new int[endDepth];
 
         for (int i = 0; i < endDepth; i++)
         {
-            final R field = regs_.get(i);
-            final ItemCurve<T> curve = curves_.get(i);
+            final R field = curveParams_.getRegressor(i);
+            final ItemCurve<T> curve = curveParams_.getCurve(i);
 
             _fieldOffsets[endIndex][i] = _uniqueFields.indexOf(field);
             _transOffsets[endIndex][i] = _trans.indexOf(curve);
+        }
+
+        if (toIndex != -1)
+        {
+            //In this case, we have a real curve, let's set the betas....
+            _betas[toIndex][endIndex] = curveParams_.getBeta();
+            _betas[toIndex][INTERCEPT_INDEX] += curveParams_.getIntercept();
         }
 
     }
@@ -266,6 +283,11 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         for (int i = 0; i < dropIndices_.length; i++)
         {
             drop[dropIndices_[i]] = true;
+        }
+
+        if (drop[INTERCEPT_INDEX])
+        {
+            throw new IllegalArgumentException("The intercept index cannot be dropped.");
         }
 
         int dropped = 0;
@@ -358,6 +380,11 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
             pointer++;
         }
+    }
+
+    public int getInterceptIndex()
+    {
+        return INTERCEPT_INDEX;
     }
 
     public int getEntryCount()
@@ -561,19 +588,38 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     }
 
     /**
+     * Adds an empty beta entry, with just the given field.
+     *
+     * @param regressor_
+     * @return
+     */
+    public ItemParameters<S, R, T> addBeta(final R regressor_)
+    {
+        final ItemCurveParams<R, T> fieldParams = new ItemCurveParams<>(0.0, 0.0, regressor_, null);
+        return new ItemParameters<>(this, fieldParams, null);
+    }
+
+    /**
      * Creates a new set of parameters with an additional beta.
      *
-     * @param field_ The regressor on which the new curve is defined
-     * @param trans_ The curve that is being added (defined on field_)
+     * @param curveParams_
+     * @param toStatus_
+     *
      * @return A new set of parameters, with the given curve added and its beta
      * set to zero.
      */
-    public ItemParameters<S, R, T> addBeta(final R field_, final ItemCurve<T> trans_, final int toStatusIndex_)
+    public ItemParameters<S, R, T> addBeta(final ItemCurveParams<R, T> curveParams_, final S toStatus_)
     {
-        final List<R> fields = Collections.singletonList(field_);
-        final List<ItemCurve<T>> curves = Collections.singletonList(trans_);
+        if (null == toStatus_)
+        {
+            throw new NullPointerException("To status cannot be null.");
+        }
+        if (toStatus_ == this._status)
+        {
+            throw new NullPointerException("Beta for from status must be zero.");
+        }
 
-        return new ItemParameters<>(this, fields, curves, toStatusIndex_);
+        return new ItemParameters<>(this, curveParams_, toStatus_);
     }
 
     public ItemParameters<S, R, T> updateBetas(final double[][] betas_)

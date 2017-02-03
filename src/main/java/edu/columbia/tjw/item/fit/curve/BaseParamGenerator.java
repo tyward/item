@@ -99,7 +99,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         final R reg = params.getEntryRegressor(entryIndex_, 0);
         final ItemCurve<T> curve = params.getEntryCurve(entryIndex_, 0);
 
-        final ItemCurveParams<R, T> curveParams = new ItemCurveParams<>(interceptAdjustment, beta, _type, reg, curve);
+        final ItemCurveParams<R, T> curveParams = new ItemCurveParams<>(interceptAdjustment, beta, reg, curve);
 
         final double[] output = curveParams.generatePoint();
         return output;
@@ -110,28 +110,27 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
     {
         final ItemCurveParams<R, T> curveParams = this.generateParams(params_, field_);
 
-        final ItemCurve<T> curve = curveParams.getCurve(0);
+        //final ItemCurve<T> curve = curveParams.getCurve(0);
         final ItemParameters<S, R, T> orig = _baseModel.getParams();
 
-        final S status = orig.getStatus();
-        final List<S> reachable = status.getReachable();
-        final int toIndex = reachable.indexOf(_toStatus);
-
-        final ItemParameters<S, R, T> updated = orig.addBeta(field_, curve, toIndex);
-
-        final int matchIndex = updated.getIndex(field_, curve);
-        final int interceptIndex = updated.getIndex(_intercept, null);
-
-        final double interceptAdjustment = curveParams.getIntercept();
-        final double beta = curveParams.getBeta();
-
-        final double[][] values = updated.getBetas();
-
-        values[toIndex][interceptIndex] += interceptAdjustment;
-        values[toIndex][matchIndex] = beta;
-
-        final ItemParameters<S, R, T> adjusted = updated.updateBetas(values);
-        final ItemModel<S, R, T> output = _baseModel.updateParameters(adjusted);
+//        final S status = orig.getStatus();
+//        final List<S> reachable = status.getReachable();
+//        final int toIndex = reachable.indexOf(_toStatus);
+        final ItemParameters<S, R, T> updated = orig.addBeta(curveParams, _toStatus);
+//
+//        final int matchIndex = updated.getIndex(field_, curve);
+//        final int interceptIndex = updated.getInterceptIndex();
+//
+//        final double interceptAdjustment = curveParams.getIntercept();
+//        final double beta = curveParams.getBeta();
+//
+//        final double[][] values = updated.getBetas();
+//
+//        values[toIndex][interceptIndex] += interceptAdjustment;
+//        values[toIndex][matchIndex] = beta;
+//
+//        final ItemParameters<S, R, T> adjusted = updated.updateBetas(values);
+        final ItemModel<S, R, T> output = _baseModel.updateParameters(updated);
         return output;
     }
 
