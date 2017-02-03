@@ -112,8 +112,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             throw new ConvergenceException("Unable to improve model.");
         }
 
-        LOG.info("Best transformation: " + best.getCurve());
-        LOG.info("Best Field: " + best.getRegressor());
+        LOG.info("Best transformation: " + best.toString());
         LOG.info("LL improvement: " + best._startingLogL + " -> " + best._logL + ": " + best._llImprovement);
         LOG.info("Best to state: " + best.getToState());
 
@@ -231,16 +230,20 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             return _toState;
         }
 
-        public R getRegressor()
+        public ItemCurveParams<R, T> getCurveParams()
         {
-            return _curveParams.getRegressor(0);
+            return _curveParams;
         }
 
-        public ItemCurve<T> getCurve()
-        {
-            return _curveParams.getCurve(0);
-        }
-
+//        public R getRegressor()
+//        {
+//            return _curveParams.getRegressor(0);
+//        }
+//
+//        public ItemCurve<T> getCurve()
+//        {
+//            return _curveParams.getCurve(0);
+//        }
         public ItemModel<S, R, T> getModel()
         {
             return new ItemModel<>(_params);
@@ -258,7 +261,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
         public int getEffectiveParamCount()
         {
-            return (1 + getCurve().getCurveType().getParamCount());
+            return (_curveParams.size() - 1);
         }
 
         public double calculateAicDifference()
@@ -272,7 +275,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         @Override
         public String toString()
         {
-            return "Fit result[" + getCurve() + ", " + _llImprovement + "]";
+            return "Fit result[" + _llImprovement + "]: \n" + _curveParams.toString();
         }
 
     }

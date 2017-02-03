@@ -286,4 +286,31 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         return output;
     }
 
+    @Override
+    public String toString()
+    {
+        final StringBuilder builder = new StringBuilder();
+        builder.append("ItemCurveParams[");
+        builder.append(this._intercept);
+        builder.append(", ");
+        builder.append(this._beta);
+        builder.append("]:\n");
+
+        for (int i = 0; i < this.getEntryDepth(); i++)
+        {
+            final ItemCurve<T> curve = this.getCurve(i);
+            final R reg = this.getRegressor(i);
+
+            builder.append("\n\t[");
+            builder.append(i);
+            builder.append("][");
+            builder.append(reg);
+            builder.append("]: ");
+            builder.append(curve);
+        }
+
+        final String output = builder.toString();
+        return output;
+    }
+
 }
