@@ -55,25 +55,17 @@ import org.apache.commons.math3.random.RandomVectorGenerator;
 public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private static final Logger LOG = LogUtil.getLogger(BaseParamGenerator.class);
-    private final ItemSettings _settings;
-    private final ItemCurveFactory<R, T> _factory;
 
-    public BaseParamGenerator(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_)
-    {
-        _factory = factory_;
-        _settings = settings_;
-    }
-
-    public final ItemCurveParams<R, T> polishCurveParameters(final QuantileDistribution dist_, final R regressor_, final ItemCurveParams<R, T> params_)
+    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> ItemCurveParams<R, T> polishCurveParameters(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final QuantileDistribution dist_, final R regressor_, final ItemCurveParams<R, T> params_)
     {
         //Should use an optimizer to improve the starting parameters.
-        final InnerFunction polishFunction = new InnerFunction(dist_, params_);
+        final InnerFunction<S, R, T> polishFunction = new InnerFunction<>(factory_, dist_, params_);
 
         final double[] rawParams = params_.generatePoint();
 
-        final RandomVectorGenerator gen = new VectorGenerator(rawParams, _settings.getRandom());
+        final RandomVectorGenerator gen = new VectorGenerator(rawParams, settings_.getRandom());
 
-        final int multiStarts = Math.max(1, _settings.getPolishMultiStartPoints());
+        final int multiStarts = Math.max(1, settings_.getPolishMultiStartPoints());
 
         final MultivariateOptimizer baseOptimizer = new PowellOptimizer(1.0e-3, 1.0e-3);
         final BaseMultivariateOptimizer<PointValuePair> optim = new MultiStartMultivariateOptimizer(baseOptimizer, multiStarts, gen);
@@ -92,7 +84,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
 
             if (end < start)
             {
-                return new ItemCurveParams<>(params_, _factory, endPoint);
+                return new ItemCurveParams<>(params_, factory_, endPoint);
             }
         }
         catch (final TooManyEvaluationsException e)
@@ -103,7 +95,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         return params_;
     }
 
-    private final class VectorGenerator implements RandomVectorGenerator
+    private static final class VectorGenerator implements RandomVectorGenerator
     {
         private final Random _rand;
         private final double[] _base;
@@ -129,13 +121,15 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
 
     }
 
-    private final class InnerFunction implements MultivariateFunction
+    private static final class InnerFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements MultivariateFunction
     {
         private final QuantileDistribution _dist;
         private final ItemCurveParams<R, T> _params;
+        final ItemCurveFactory<R, T> _factory;
 
-        public InnerFunction(final QuantileDistribution dist_, final ItemCurveParams<R, T> params_)
+        public InnerFunction(final ItemCurveFactory<R, T> factory_, final QuantileDistribution dist_, final ItemCurveParams<R, T> params_)
         {
+            _factory = factory_;
             _dist = dist_;
             _params = params_;
         }
@@ -162,7 +156,7 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
                 final double x = _dist.getMeanX(i);
                 final double y = _dist.getMeanY(i);
                 final double mass = _dist.getCount(i);
-                final double devY = _dist.getDevY(i);
+                //final double devY = _dist.getDevY(i);
 
                 // We think y ~ f(x), so let's do some calculations. 
                 final double raw = curve.transform(x);
@@ -173,9 +167,8 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
                 final double predicted = intercept + (beta * raw);
 
                 //We can't say anything with more confidence than this.
-                final double minDev = 1.0 / mass;
-                final double adjDev = Math.max(devY, minDev);
-
+                //final double minDev = 1.0 / mass;
+                //final double adjDev = Math.max(devY, minDev);
                 //final double prob = FastMath.exp(y);
                 //This will not be a proper log likelihood calc, but instead will use weighted Least Squares, which is close to the same thing in this case. 
                 final double resid = (y - predicted);

@@ -202,7 +202,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
 
         final QuantileDistribution dist = generateDistribution(field_, toStatus_);
-        final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, _settings);
         final ItemCurveParams<R, T> starting = _factory.generateStartingParameters(curveType_, field_, dist, _settings.getRandom());
 
         final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, false);
@@ -223,7 +222,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         {
             try
             {
-                final ItemCurveParams<R, T> polished = generator.polishCurveParameters(dist, field_, starting);
+                final ItemCurveParams<R, T> polished = BaseParamGenerator.polishCurveParameters(_factory, _settings, dist, field_, starting);
 
                 if (polished != starting)
                 {
