@@ -181,14 +181,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return _powerScores;
     }
 
-    private BaseParamGenerator<S, R, T> buildGenerator(T curveType_, S toStatus_, final ItemModel<S, R, T> model_)
-    {
-        final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, model_, toStatus_, _settings, _intercept);
-        return generator;
-    }
-
-    private CurveOptimizerFunction<S, R, T> generateFunction(final ItemCurveParams<R, T> initParams_, S toStatus_, final BaseParamGenerator<S, R, T> generator_,
-            final boolean subtractStarting_)
+    private CurveOptimizerFunction<S, R, T> generateFunction(final ItemCurveParams<R, T> initParams_, S toStatus_, final boolean subtractStarting_)
     {
         final ParamFittingGrid<S, R, T> paramGrid = getParamGrid();
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(initParams_, _factory, _fromStatus, toStatus_, this, _actualOutcomes,
@@ -209,13 +202,12 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
 
         final QuantileDistribution dist = generateDistribution(field_, toStatus_);
-        final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType_, toStatus_, _model);
+        final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, _settings);
+        final ItemCurveParams<R, T> starting = _factory.generateStartingParameters(curveType_, field_, dist, _settings.getRandom());
 
-        final ItemCurveParams<R, T> starting = generator.getStartingParams(dist, field_);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, false);
 
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, generator, false);
-
-        final int dimension = generator.paramCount();
+        final int dimension = starting.size();
 
         //Take advantage of the fact that this starts out as all zeros, and that all zeros
         //means no change....
@@ -225,7 +217,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double startingLL = res.getMean();
 
-        final FitResult<S, R, T> output = generateFit(toStatus_, func, field_, startingLL, starting);
+        final FitResult<S, R, T> output = generateFit(toStatus_, _model.getParams(), func, field_, startingLL, starting);
 
         if (_settings.getPolishStartingParams())
         {
@@ -237,7 +229,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 {
                     LOG.info("Have polished parameters, testing.");
 
-                    final FitResult<S, R, T> output2 = generateFit(toStatus_, func, field_, startingLL, polished);
+                    final FitResult<S, R, T> output2 = generateFit(toStatus_, _model.getParams(), func, field_, startingLL, polished);
 
                     //LOG.info("Fit comparison: " + output.getLogLikelihood() + " <> " + output2.getLogLikelihood());
                     final double aic1 = output.calculateAicDifference();
@@ -275,7 +267,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return output;
     }
 
-    private FitResult<S, R, T> generateFit(final S toStatus_, final CurveOptimizerFunction<S, R, T> func_, R field_,
+    private FitResult<S, R, T> generateFit(final S toStatus_, final ItemParameters<S, R, T> baseParams_, final CurveOptimizerFunction<S, R, T> func_, R field_,
             final double startingLL_, final ItemCurveParams<R, T> starting_) throws ConvergenceException
     {
         final double[] startingArray = starting_.generatePoint();
@@ -290,7 +282,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         //final ItemCurveParams<R, T> curveParams = generator_.generateParams(bestVal, field_);
         final double bestLL = result.minValue();
 
-        final ItemParameters<S, R, T> updated = _model.getParams().addBeta(curveParams, toStatus_);
+        final ItemParameters<S, R, T> updated = baseParams_.addBeta(curveParams, toStatus_);
 
         //ItemParameters<S, R, T> updated = generator_.generatedModel(curveParams).getParams();
         final int entryNumber = updated.getIndex(field_, curveParams.getCurve(0));
@@ -324,19 +316,13 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         LOG.info("Calibrating curve: " + targetCurve + ", " + field + ", " + toStatus_);
 
-        final T curveType = targetCurve.getCurveType();
-
         final ItemCurveParams<R, T> entryParams = params.getEntryCurveParams(entryIndex_);
         final double[] starting = entryParams.generatePoint();
 
         //Changes are allowed...
-        final int statusIndex = params.getStatus().getReachable().indexOf(toStatus_);
         final ItemParameters<S, R, T> reduced = params.dropIndex(entryIndex_);
-        final ItemModel<S, R, T> model = new ItemModel<>(reduced);
-        final double prevBeta = _model.getParams().getBeta(statusIndex, entryIndex_);
 
-        final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType, toStatus_, model);
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(entryParams, toStatus_, generator, true);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(entryParams, toStatus_, true);
 
         //Take advantage of the fact that this starts out as all zeros, and that all zeros
         //means no change....
@@ -347,18 +333,12 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         LOG.info("Starting LL: " + startingLL + " (+/- " + res.getStdDev() + ")");
 
-        final FitResult<S, R, T> result = generateFit(toStatus_, func, field, startingLL, entryParams);
+        final FitResult<S, R, T> result = generateFit(toStatus_, reduced, func, field, startingLL, entryParams);
 
         final double endingLL = result.getLogLikelihood();
 
         LOG.info("LL improvement: " + startingLL + " -> " + endingLL);
 
-        final double llDev = res.getStdDev();
-
-        //This isn't the right notion of Z-score. We need the z-score of the difference, not of the point itself.
-//        final double zScore = (startingLL - endingLL) / llDev;
-//
-//        LOG.info("Curve calibration Z-Score: " + zScore);
         final double aicDiff = result.calculateAicDifference();
 
         LOG.info("AIC diff: " + aicDiff);

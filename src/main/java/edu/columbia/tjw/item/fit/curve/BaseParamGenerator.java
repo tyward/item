@@ -23,8 +23,6 @@ import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
-import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
@@ -32,7 +30,6 @@ import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Arrays;
 import org.apache.commons.math3.analysis.MultivariateFunction;
-import java.util.List;
 import java.util.Random;
 import java.util.logging.Logger;
 import org.apache.commons.math3.exception.TooManyEvaluationsException;
@@ -56,50 +53,15 @@ import org.apache.commons.math3.random.RandomVectorGenerator;
  * @param <T> The curve type for this generator
  */
 public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
-        implements ParamGenerator<S, R, T>
 {
     private static final Logger LOG = LogUtil.getLogger(BaseParamGenerator.class);
     private final ItemSettings _settings;
     private final ItemCurveFactory<R, T> _factory;
-    private final T _type;
-    private final ItemModel<S, R, T> _baseModel;
-    private final int _tranParamCount;
-    private final int _paramCount;
-    private final S _toStatus;
-    private final R _intercept;
 
-    public BaseParamGenerator(final ItemCurveFactory<R, T> factory_, final T curveType_, final ItemModel<S, R, T> baseModel_, final S toStatus_, final ItemSettings settings_, final R intercept_)
+    public BaseParamGenerator(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_)
     {
-        if (null == intercept_)
-        {
-            throw new NullPointerException("Intercept cannot be null.");
-        }
-
-        _intercept = intercept_;
         _factory = factory_;
-        _type = curveType_;
-        _baseModel = baseModel_;
-        _tranParamCount = curveType_.getParamCount();
-        _paramCount = _tranParamCount + 2;
-
-        _toStatus = toStatus_;
-
         _settings = settings_;
-    }
-
-    @Override
-    public final ItemModel<S, R, T> generatedModel(final ItemCurveParams<R, T> params_)
-    {
-        final ItemParameters<S, R, T> orig = _baseModel.getParams();
-        final ItemParameters<S, R, T> updated = orig.addBeta(params_, _toStatus);
-        final ItemModel<S, R, T> output = _baseModel.updateParameters(updated);
-        return output;
-    }
-
-    @Override
-    public final int paramCount()
-    {
-        return _paramCount;
     }
 
     public final ItemCurveParams<R, T> polishCurveParameters(final QuantileDistribution dist_, final R regressor_, final ItemCurveParams<R, T> params_)
@@ -139,20 +101,6 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         }
 
         return params_;
-    }
-
-    @Override
-    public final ItemCurveParams<R, T> getStartingParams(final QuantileDistribution dist_, final R reg_)
-    {
-        final ItemCurveParams<R, T> params = _factory.generateStartingParameters(_type, reg_, dist_, _settings.getRandom());
-        return params;
-    }
-
-    @Override
-    public ItemCurveParams<R, T> generateParams(double[] params_, final R reg_)
-    {
-        final ItemCurveParams<R, T> params = new ItemCurveParams<>(_type, reg_, _factory, params_);
-        return params;
     }
 
     private final class VectorGenerator implements RandomVectorGenerator
