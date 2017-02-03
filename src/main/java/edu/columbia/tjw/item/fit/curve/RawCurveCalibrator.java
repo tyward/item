@@ -59,6 +59,11 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
     public static <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> ItemCurveParams<R, T> polishCurveParameters(final ItemCurveFactory<R, T> factory_,
             final ItemSettings settings_, final QuantileDistribution dist_, final R regressor_, final ItemCurveParams<R, T> params_)
     {
+        if (params_.getEntryDepth() > 1)
+        {
+            throw new IllegalArgumentException("Only valid on entries of depth 1.");
+        }
+
         //Should use an optimizer to improve the starting parameters.
         final InnerFunction<S, R, T> polishFunction = new InnerFunction<>(factory_, dist_, params_);
 

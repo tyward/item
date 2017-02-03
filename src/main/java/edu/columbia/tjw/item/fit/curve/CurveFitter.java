@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
+import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ParamFilter;
@@ -209,33 +210,35 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         private final double _startingLogL;
         private final double _logL;
         private final double _llImprovement;
-        private final int _entryNumber;
         private final int _rowCount;
+        private final S _toState;
         private final ItemParameters<S, R, T> _params;
+        private final ItemCurveParams<R, T> _curveParams;
 
-        public FitResult(final ItemParameters<S, R, T> params_, final int entryNumber_, final double logLikelihood_, final double startingLL_, final int rowCount_)
+        public FitResult(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> curveParams_, final S toState_, final double logLikelihood_, final double startingLL_, final int rowCount_)
         {
             _params = params_;
+            _curveParams = curveParams_;
+            _toState = toState_;
             _logL = logLikelihood_;
             _llImprovement = (startingLL_ - _logL);
             _startingLogL = startingLL_;
-            _entryNumber = entryNumber_;
             _rowCount = rowCount_;
         }
 
         public S getToState()
         {
-            return _params.getEntryStatusRestrict(_entryNumber);
+            return _toState;
         }
 
         public R getRegressor()
         {
-            return _params.getEntryRegressor(_entryNumber, 0);
+            return _curveParams.getRegressor(0);
         }
 
         public ItemCurve<T> getCurve()
         {
-            return _params.getEntryCurve(_entryNumber, 0);
+            return _curveParams.getCurve(0);
         }
 
         public ItemModel<S, R, T> getModel()
