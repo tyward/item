@@ -52,11 +52,12 @@ import org.apache.commons.math3.random.RandomVectorGenerator;
  * @param <R> The regressor type for this generator
  * @param <T> The curve type for this generator
  */
-public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
-    private static final Logger LOG = LogUtil.getLogger(BaseParamGenerator.class);
+    private static final Logger LOG = LogUtil.getLogger(RawCurveCalibrator.class);
 
-    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> ItemCurveParams<R, T> polishCurveParameters(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final QuantileDistribution dist_, final R regressor_, final ItemCurveParams<R, T> params_)
+    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> ItemCurveParams<R, T> polishCurveParameters(final ItemCurveFactory<R, T> factory_,
+            final ItemSettings settings_, final QuantileDistribution dist_, final R regressor_, final ItemCurveParams<R, T> params_)
     {
         //Should use an optimizer to improve the starting parameters.
         final InnerFunction<S, R, T> polishFunction = new InnerFunction<>(factory_, dist_, params_);

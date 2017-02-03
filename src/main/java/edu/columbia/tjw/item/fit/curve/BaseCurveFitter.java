@@ -222,7 +222,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         {
             try
             {
-                final ItemCurveParams<R, T> polished = BaseParamGenerator.polishCurveParameters(_factory, _settings, dist, field_, starting);
+                final ItemCurveParams<R, T> polished = RawCurveCalibrator.polishCurveParameters(_factory, _settings, dist, field_, starting);
 
                 if (polished != starting)
                 {
