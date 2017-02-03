@@ -44,13 +44,7 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
 {
     private static final double SLOPE_MULT = 10.0;
 
-    /**
-     * The singleton for this class. It has no free parameters, so no need for
-     * more than one.
-     */
-    public static final StandardCurveFactory SINGLETON = new StandardCurveFactory();
-
-    private StandardCurveFactory()
+    public StandardCurveFactory()
     {
     }
 

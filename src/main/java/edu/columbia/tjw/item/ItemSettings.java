@@ -47,9 +47,10 @@ public final class ItemSettings implements Serializable
     private static final boolean ALLOW_INTERACTION_CURVES = true;
     private static final boolean DEFAULT_USE_THREADING = true;
     private static final boolean DEFAULT_POLISH_STARTING_PARAMS = false;
+    private static final boolean CENTRALITY_BOUND = true;
     private static final double Z_SCORE_CUTOFF = 1.0;
 
-    private static final long serialVersionUID = 6850856502170239624L;
+    private static final long serialVersionUID = 0x2bc96e9485221bf6L;
 
     private final Random _rand;
     private final boolean _randomShuffle;
@@ -57,6 +58,7 @@ public final class ItemSettings implements Serializable
     private final boolean _approximateDerivatives;
     private final boolean _polishStartingParams;
     private final boolean _allowInteractionCurves;
+    private final boolean _boundCentrality;
     private final int _polishMultStartPoints;
 
     private final double _aicCutoff;
@@ -102,8 +104,14 @@ public final class ItemSettings implements Serializable
         _polishStartingParams = polishStartingParams_;
         _polishMultStartPoints = POLISH_MULTI_START_POINTS;
         _allowInteractionCurves = allowInteractionCurves_;
+        _boundCentrality = CENTRALITY_BOUND;
 
         _zScoreCutoff = Z_SCORE_CUTOFF;
+    }
+
+    public boolean getBoundCentrality()
+    {
+        return _boundCentrality;
     }
 
     public int getPolishMultiStartPoints()
