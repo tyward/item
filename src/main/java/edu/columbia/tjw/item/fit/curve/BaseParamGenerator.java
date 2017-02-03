@@ -87,49 +87,11 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         _settings = settings_;
     }
 
-    public final double[] generateParamVector(final int entryIndex_)
-    {
-        final ItemParameters<S, R, T> params = _baseModel.getParams();
-        //final int index = params.getIndex(field_, curve_);
-        final int statusIndex = params.toStatusIndex(_toStatus);
-        final double beta = params.getBeta(statusIndex, entryIndex_);
-
-        //Start with no intercept adjustment, use existing intercept.
-        final double interceptAdjustment = 0.0;
-        final R reg = params.getEntryRegressor(entryIndex_, 0);
-        final ItemCurve<T> curve = params.getEntryCurve(entryIndex_, 0);
-
-        final ItemCurveParams<R, T> curveParams = new ItemCurveParams<>(interceptAdjustment, beta, reg, curve);
-
-        final double[] output = curveParams.generatePoint();
-        return output;
-    }
-
     @Override
-    public final ItemModel<S, R, T> generatedModel(double[] params_, final R field_)
+    public final ItemModel<S, R, T> generatedModel(final ItemCurveParams<R, T> params_)
     {
-        final ItemCurveParams<R, T> curveParams = this.generateParams(params_, field_);
-
-        //final ItemCurve<T> curve = curveParams.getCurve(0);
         final ItemParameters<S, R, T> orig = _baseModel.getParams();
-
-//        final S status = orig.getStatus();
-//        final List<S> reachable = status.getReachable();
-//        final int toIndex = reachable.indexOf(_toStatus);
-        final ItemParameters<S, R, T> updated = orig.addBeta(curveParams, _toStatus);
-//
-//        final int matchIndex = updated.getIndex(field_, curve);
-//        final int interceptIndex = updated.getInterceptIndex();
-//
-//        final double interceptAdjustment = curveParams.getIntercept();
-//        final double beta = curveParams.getBeta();
-//
-//        final double[][] values = updated.getBetas();
-//
-//        values[toIndex][interceptIndex] += interceptAdjustment;
-//        values[toIndex][matchIndex] = beta;
-//
-//        final ItemParameters<S, R, T> adjusted = updated.updateBetas(values);
+        final ItemParameters<S, R, T> updated = orig.addBeta(params_, _toStatus);
         final ItemModel<S, R, T> output = _baseModel.updateParameters(updated);
         return output;
     }
@@ -140,22 +102,22 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
         return _paramCount;
     }
 
-    public final double[] polishCurveParameters(final QuantileDistribution dist_, final R regressor_, final double[] rawParams_)
+    public final ItemCurveParams<R, T> polishCurveParameters(final QuantileDistribution dist_, final R regressor_, final ItemCurveParams<R, T> params_)
     {
-        final ItemCurveParams<R, T> params = _factory.generateStartingParameters(_type, regressor_, dist_, _settings.getRandom());
-
         //Should use an optimizer to improve the starting parameters.
-        final InnerFunction polishFunction = new InnerFunction(dist_, params);
+        final InnerFunction polishFunction = new InnerFunction(dist_, params_);
 
-        final RandomVectorGenerator gen = new VectorGenerator(rawParams_, _settings.getRandom());
+        final double[] rawParams = params_.generatePoint();
+
+        final RandomVectorGenerator gen = new VectorGenerator(rawParams, _settings.getRandom());
 
         final int multiStarts = Math.max(1, _settings.getPolishMultiStartPoints());
 
         final MultivariateOptimizer baseOptimizer = new PowellOptimizer(1.0e-3, 1.0e-3);
         final BaseMultivariateOptimizer<PointValuePair> optim = new MultiStartMultivariateOptimizer(baseOptimizer, multiStarts, gen);
 
-        final InitialGuess guess = new InitialGuess(rawParams_);
-        final double start = polishFunction.value(rawParams_);
+        final InitialGuess guess = new InitialGuess(rawParams);
+        final double start = polishFunction.value(rawParams);
 
         try
         {
@@ -164,11 +126,11 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
             final double end = result.getValue();
             final double[] endPoint = result.getPointRef();
 
-            LOG.info("Polish run completed (" + start + " -> " + end + ")[" + optim.getIterations() + "]: " + Arrays.toString(rawParams_) + " -> " + Arrays.toString(endPoint));
+            LOG.info("Polish run completed (" + start + " -> " + end + ")[" + optim.getIterations() + "]: " + Arrays.toString(rawParams) + " -> " + Arrays.toString(endPoint));
 
             if (end < start)
             {
-                return endPoint;
+                return new ItemCurveParams<>(params_, _factory, endPoint);
             }
         }
         catch (final TooManyEvaluationsException e)
@@ -176,21 +138,14 @@ public class BaseParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor
             LOG.info("Polish failed, too many evaluations.");
         }
 
-        return rawParams_.clone();
+        return params_;
     }
 
     @Override
-    public final double[] getStartingParams(final QuantileDistribution dist_, final R reg_)
+    public final ItemCurveParams<R, T> getStartingParams(final QuantileDistribution dist_, final R reg_)
     {
         final ItemCurveParams<R, T> params = _factory.generateStartingParameters(_type, reg_, dist_, _settings.getRandom());
-        final double[] output = params.generatePoint();
-        return output;
-    }
-
-    @Override
-    public final int translateParamNumber(final int input_)
-    {
-        return input_;
+        return params;
     }
 
     @Override

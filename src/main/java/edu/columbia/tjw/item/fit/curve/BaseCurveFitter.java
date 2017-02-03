@@ -187,11 +187,12 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return generator;
     }
 
-    private CurveOptimizerFunction<S, R, T> generateFunction(T curveType_, R field_, S toStatus_, final BaseParamGenerator<S, R, T> generator_, final double prevBeta_, final ItemCurve<T> prevCurve_)
+    private CurveOptimizerFunction<S, R, T> generateFunction(final ItemCurveParams<R, T> initParams_, S toStatus_, final BaseParamGenerator<S, R, T> generator_,
+            final boolean subtractStarting_)
     {
         final ParamFittingGrid<S, R, T> paramGrid = getParamGrid();
-        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(curveType_, generator_, field_, _fromStatus, toStatus_, this, _actualOutcomes,
-                paramGrid, _indexList, _settings, prevBeta_, prevCurve_);
+        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(initParams_, _factory, _fromStatus, toStatus_, this, _actualOutcomes,
+                paramGrid, _indexList, _settings, subtractStarting_);
 
         return func;
     }
@@ -209,7 +210,10 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final QuantileDistribution dist = generateDistribution(field_, toStatus_);
         final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType_, toStatus_, _model);
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType_, field_, toStatus_, generator, Double.NaN, null);
+
+        final ItemCurveParams<R, T> starting = generator.getStartingParams(dist, field_);
+
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, generator, false);
 
         final int dimension = generator.paramCount();
 
@@ -221,21 +225,19 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double startingLL = res.getMean();
 
-        final double[] starting = generator.getStartingParams(dist, field_);
-
-        final FitResult<S, R, T> output = generateFit(generator, func, field_, startingLL, starting);
+        final FitResult<S, R, T> output = generateFit(toStatus_, func, field_, startingLL, starting);
 
         if (_settings.getPolishStartingParams())
         {
             try
             {
-                final double[] polished = generator.polishCurveParameters(dist, field_, starting);
+                final ItemCurveParams<R, T> polished = generator.polishCurveParameters(dist, field_, starting);
 
-                if (!Arrays.equals(starting, polished))
+                if (polished != starting)
                 {
                     LOG.info("Have polished parameters, testing.");
 
-                    final FitResult<S, R, T> output2 = generateFit(generator, func, field_, startingLL, polished);
+                    final FitResult<S, R, T> output2 = generateFit(toStatus_, func, field_, startingLL, polished);
 
                     //LOG.info("Fit comparison: " + output.getLogLikelihood() + " <> " + output2.getLogLikelihood());
                     final double aic1 = output.calculateAicDifference();
@@ -273,39 +275,25 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return output;
     }
 
-    private FitResult<S, R, T> generateFit(final BaseParamGenerator<S, R, T> generator_, final CurveOptimizerFunction<S, R, T> func_, R field_, final double startingLL_, final double[] starting_) throws ConvergenceException
+    private FitResult<S, R, T> generateFit(final S toStatus_, final CurveOptimizerFunction<S, R, T> func_, R field_,
+            final double startingLL_, final ItemCurveParams<R, T> starting_) throws ConvergenceException
     {
-        final int dimension = generator_.paramCount();
-
-        //Take advantage of the fact that this starts out as all zeros, and that all zeros
-        //means no change....
-        final MultivariatePoint startingPoint = new MultivariatePoint(dimension);
-
-        for (int i = 0; i < dimension; i++)
-        {
-            startingPoint.setElement(i, starting_[i]);
-        }
+        final double[] startingArray = starting_.generatePoint();
+        final MultivariatePoint startingPoint = new MultivariatePoint(startingArray);
 
         OptimizationResult<MultivariatePoint> result = _optimizer.optimize(func_, startingPoint);
 
         final MultivariatePoint best = result.getOptimum();
         final double[] bestVal = best.getElements();
+        final ItemCurveParams<R, T> curveParams = new ItemCurveParams<>(starting_, _factory, bestVal);
 
-        final ItemCurveParams<R, T> curveParams = generator_.generateParams(bestVal, field_);
-
-        final ItemCurve<T> trans = curveParams.getCurve(0);
-
+        //final ItemCurveParams<R, T> curveParams = generator_.generateParams(bestVal, field_);
         final double bestLL = result.minValue();
 
-        final double[] params = new double[generator_.paramCount()];
+        final ItemParameters<S, R, T> updated = _model.getParams().addBeta(curveParams, toStatus_);
 
-        for (int i = 0; i < params.length; i++)
-        {
-            params[i] = best.getElement(i);
-        }
-
-        ItemParameters<S, R, T> updated = generator_.generatedModel(params, field_).getParams();
-        final int entryNumber = updated.getIndex(field_, trans);
+        //ItemParameters<S, R, T> updated = generator_.generatedModel(curveParams).getParams();
+        final int entryNumber = updated.getIndex(field_, curveParams.getCurve(0));
 
         final FitResult<S, R, T> output = new FitResult<>(updated, entryNumber, bestLL, startingLL_, result.dataElementCount());
 
@@ -338,10 +326,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final T curveType = targetCurve.getCurveType();
 
-        final BaseParamGenerator<S, R, T> g1 = buildGenerator(curveType, toStatus_, _model);
-
-        //Extract from the original params, we will strike it out of the updated params.
-        final double[] starting = g1.generateParamVector(entryIndex_);
+        final ItemCurveParams<R, T> entryParams = params.getEntryCurveParams(entryIndex_);
+        final double[] starting = entryParams.generatePoint();
 
         //Changes are allowed...
         final int statusIndex = params.getStatus().getReachable().indexOf(toStatus_);
@@ -350,21 +336,18 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final double prevBeta = _model.getParams().getBeta(statusIndex, entryIndex_);
 
         final BaseParamGenerator<S, R, T> generator = buildGenerator(curveType, toStatus_, model);
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(curveType, field, toStatus_, generator, prevBeta, targetCurve);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(entryParams, toStatus_, generator, true);
 
         //Take advantage of the fact that this starts out as all zeros, and that all zeros
         //means no change....
-        final int dimension = generator.paramCount();
-        final MultivariatePoint startingPoint = new MultivariatePoint(dimension);
-        startingPoint.setElements(starting);
-
+        final MultivariatePoint startingPoint = new MultivariatePoint(starting);
         final EvaluationResult res = func.generateResult();
         func.value(startingPoint, 0, func.numRows(), res);
         final double startingLL = res.getMean();
 
         LOG.info("Starting LL: " + startingLL + " (+/- " + res.getStdDev() + ")");
 
-        final FitResult<S, R, T> result = generateFit(generator, func, field, startingLL, starting);
+        final FitResult<S, R, T> result = generateFit(toStatus_, func, field, startingLL, entryParams);
 
         final double endingLL = result.getLogLikelihood();
 

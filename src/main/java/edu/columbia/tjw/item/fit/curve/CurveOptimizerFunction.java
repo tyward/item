@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.ItemCurve;
+import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemRegressor;
@@ -48,7 +49,8 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
 {
     private final LogLikelihood<S> _likelihood;
-    private final ParamGenerator<S, R, T> _generator;
+    //private final ParamGenerator<S, R, T> _generator;
+    final ItemCurveFactory<R, T> _factory;
     private final double[] _regressor;
     private final int _size;
     private final double[] _workspace;
@@ -58,11 +60,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
     private final S _status;
     private final int[] _actualOffsets;
-    private final T _curveType;
     private final R _field;
-
-    private final double _prevBeta;
-    private final ItemCurve<T> _prevCurve;
 
     private ItemCurve<?> _trans;
     private double _interceptAdjustment;
@@ -71,19 +69,23 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
     private final ItemSettings _settings;
 
+    private final ItemCurveParams<R, T> _initParams;
+    private final boolean _subtractStarting;
+
     private ItemCurveParams<R, T> _params;
 
-    public CurveOptimizerFunction(final T curveType_, final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_, final BaseCurveFitter<S, R, T> curveFitter_,
-            final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_, final double prevBeta_, final ItemCurve<T> prevCurve_)
+    public CurveOptimizerFunction(final ItemCurveParams<R, T> initParams_, final ItemCurveFactory<R, T> factory_, final S fromStatus_, final S toStatus_, final BaseCurveFitter<S, R, T> curveFitter_,
+            final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_, final boolean subtractStarting_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
-        _prevBeta = prevBeta_;
-        _prevCurve = prevCurve_;
-        _field = field_;
+        _field = initParams_.getRegressor(0);
+
+        _factory = factory_;
+        _initParams = initParams_;
+        _subtractStarting = subtractStarting_;
 
         _curveFitter = curveFitter_;
-        _curveType = curveType_;
         _settings = settings_;
         _likelihood = new LogLikelihood<>(fromStatus_);
         _actualOffsets = new int[actualOrdinals_.length];
@@ -95,13 +97,12 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         }
 
         _status = fromStatus_;
-        _generator = generator_;
         _size = _actualOffsets.length;
-        _workspace = new double[_generator.paramCount()];
+        _workspace = new double[_initParams.size()];
         _regressor = new double[_size];
         _toIndex = fromStatus_.getReachable().indexOf(toStatus_);
 
-        final ItemRegressorReader reader = grid_.getRegressorReader(field_);
+        final ItemRegressorReader reader = grid_.getRegressorReader(_field);
 
         for (int i = 0; i < _size; i++)
         {
@@ -110,13 +111,12 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
             _regressor[i] = regressor;
         }
-
     }
 
     @Override
     public int dimension()
     {
-        return _generator.paramCount();
+        return _initParams.size();
     }
 
     @Override
@@ -143,7 +143,9 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             _workspace[i] = input_.getElement(i);
         }
 
-        _params = _generator.generateParams(_workspace, _field);
+        _params = new ItemCurveParams<>(_initParams, _factory, _workspace);
+
+        //_params = _generator.generateParams(_workspace, _field);
         _trans = _params.getCurve(0);
         _interceptAdjustment = _params.getIntercept();
         _beta = _params.getBeta();
@@ -179,9 +181,14 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
             final double prevContribution;
 
-            if (null != _prevCurve)
+            if (_subtractStarting)
             {
-                prevContribution = _prevBeta * _prevCurve.transform(regressor);
+                final double prevBeta = _initParams.getBeta();
+                final double prevTransformed = _initParams.getCurve(0).transform(regressor);
+
+                prevContribution = prevBeta * prevTransformed;
+
+                //prevContribution = _prevBeta * _prevCurve.transform(regressor);
             }
             else
             {
@@ -279,10 +286,9 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
             for (int w = 0; w < _trans.getCurveType().getParamCount(); w++)
             {
-                final int mapped = _generator.translateParamNumber(w);
                 final double paramDerivative = _trans.derivative(w, regressor);
                 final double combined = xDerivative * this._beta * paramDerivative;
-                derivative[mapped] += combined;
+                derivative[w] += combined;
             }
 
             count++;

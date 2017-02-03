@@ -425,6 +425,34 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return _transOffsets[entryIndex_][entryDepth_];
     }
 
+    public ItemCurveParams<R, T> getEntryCurveParams(final int entryIndex_)
+    {
+        final int toIndex = _uniqueBeta[entryIndex_];
+
+        if (toIndex == -1)
+        {
+            throw new IllegalArgumentException("Can only extract curve params for actual curves.");
+        }
+
+        final int depth = getEntryDepth(entryIndex_);
+        final List<R> regs = new ArrayList<>(depth);
+        final List<ItemCurve<T>> curves = new ArrayList<>(depth);
+
+        for (int i = 0; i < depth; i++)
+        {
+            final R reg = this.getEntryRegressor(entryIndex_, i);
+            final ItemCurve<T> curve = this.getEntryCurve(entryIndex_, i);
+            regs.add(reg);
+            curves.add(curve);
+        }
+
+        final double interceptAdjustment = 0.0;
+        final double beta = _betas[toIndex][entryIndex_];
+
+        final ItemCurveParams<R, T> output = new ItemCurveParams<>(interceptAdjustment, beta, regs, curves);
+        return output;
+    }
+
     public ItemCurve<T> getEntryCurve(final int entryIndex_, final int entryDepth_)
     {
         final int offset = getEntryCurveOffset(entryIndex_, entryDepth_);

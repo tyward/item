@@ -19,7 +19,6 @@
  */
 package edu.columbia.tjw.item.fit.curve;
 
-import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
@@ -36,22 +35,12 @@ import edu.columbia.tjw.item.algo.QuantileDistribution;
  */
 public interface ParamGenerator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
-    public ItemModel<S, R, T> generatedModel(final double[] params_, final R field_);
+    public ItemModel<S, R, T> generatedModel(final ItemCurveParams<R, T> params_);
 
     public ItemCurveParams<R, T> generateParams(final double[] params_, final R reg_);
 
-    public double[] getStartingParams(final QuantileDistribution dist_, final R reg_);
+    public ItemCurveParams<R, T> getStartingParams(final QuantileDistribution dist_, final R reg_);
 
     public int paramCount();
-
-    /**
-     * Translates from the parameter number (as known by the underlying
-     * transformation) to the parameter number corresponding in the params
-     * passed to this generator.
-     *
-     * @param input_ The param number to translate
-     * @return The translated param number
-     */
-    public int translateParamNumber(final int input_);
 
 }
