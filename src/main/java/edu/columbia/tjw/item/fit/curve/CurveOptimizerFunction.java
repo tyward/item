@@ -52,10 +52,11 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final LogLikelihood<S> _likelihood;
     //private final ParamGenerator<S, R, T> _generator;
     final ItemCurveFactory<R, T> _factory;
-    private final double[] _regressor;
+    //private final double[] _regressor;
     private final int _size;
     private final double[] _workspace;
     private final int _toIndex;
+    private final int[] _indexList;
 
     private final BaseCurveFitter<S, R, T> _curveFitter;
 
@@ -85,6 +86,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
         //_field = initParams_.getRegressor(0);
+        _indexList = indexList_;
         _factory = factory_;
         _initParams = initParams_;
         _subtractStarting = subtractStarting_;
@@ -103,7 +105,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         _status = fromStatus_;
         _size = _actualOffsets.length;
         _workspace = new double[_initParams.size()];
-        _regressor = new double[_size];
+        //_regressor = new double[_size];
         _toIndex = fromStatus_.getReachable().indexOf(toStatus_);
 
         final int depth = _initParams.getEntryDepth();
@@ -141,15 +143,15 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 //                _regressor[i] = regressor;
 //            }
 //        }
-        final ItemRegressorReader reader = grid_.getRegressorReader(initParams_.getRegressor(0));
-
-        for (int i = 0; i < _size; i++)
-        {
-            final int mapped = indexList_[i];
-            final double regressor = reader.asDouble(mapped);
-
-            _regressor[i] = regressor;
-        }
+//        final ItemRegressorReader reader = grid_.getRegressorReader(initParams_.getRegressor(0));
+//
+//        for (int i = 0; i < _size; i++)
+//        {
+//            final int mapped = indexList_[i];
+//            final double regressor = reader.asDouble(mapped);
+//
+//            _regressor[i] = regressor;
+//        }
     }
 
     @Override
@@ -217,8 +219,14 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             final int actualOffset = _actualOffsets[i];
 
             //double weight = 1.0;
-            final double regressor = _regressor[i];//_regData[0][i];//_readers[0].asDouble(i);
+            final int mapped = _indexList[i];
+            //final double regressor = _regressor[i];//_regData[0][i];//_readers[0].asDouble(i);
+            final double regressor = _regData[0][mapped];
 
+//            if (Math.abs(reg2 - regressor) > 1.0e-5)
+//            {
+//                System.out.println("ping!");
+//            }
             final double transformed = _trans.transform(regressor);
             final double contribution = (_beta * transformed);
 
@@ -315,7 +323,11 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             }
             //}
 
-            final double regressor = _regressor[i]; //_regData[0][i]; //_readers[0].asDouble(i);
+            //final double regressor = _regressor[i]; //_regData[0][i]; //_readers[0].asDouble(i);
+            final int mapped = _indexList[i];
+            //final double regressor = _regressor[i];//_regData[0][i];//_readers[0].asDouble(i);
+            final double regressor = _regData[0][mapped];
+
             final double transformed = this._trans.transform(regressor);
 
             //In our special case, the derivative is directly proportional to beta, because we apply it to only one state. 
