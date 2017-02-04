@@ -62,11 +62,11 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     public LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_)
     {
         final int reachableCount = params_.getStatus().getReachableCount();
-        final int regressorCount = params_.getEntryCount();
+        final int entryCount = params_.getEntryCount();
 
         final S from = params_.getStatus();
 
-        final int maxSize = reachableCount * regressorCount;
+        final int maxSize = reachableCount * entryCount;
 
         int pointer = 0;
         double[] beta = new double[maxSize];
@@ -77,20 +77,9 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         {
             final S to = from.getReachable().get(i);
 
-            for (int k = 0; k < regressorCount; k++)
+            for (int k = 0; k < entryCount; k++)
             {
-                final S restrict = params_.getEntryStatusRestrict(k);
-
-                if (null != restrict && restrict != to)
-                {
-                    //This transition is effectively filtered....
-                    continue;
-                }
-
-                final R field = params_.getEntryRegressor(k, 0);
-                final ItemCurve<T> trans = params_.getEntryCurve(k, 0);
-
-                if (params_.isFiltered(from, to, field, trans, filters_))
+                if (params_.betaIsFrozen(to, k, filters_))
                 {
                     continue;
                 }

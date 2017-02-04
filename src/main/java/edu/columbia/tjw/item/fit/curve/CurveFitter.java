@@ -52,6 +52,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
     private final EnumFamily<T> _family;
     private final ItemSettings _settings;
     private final ItemStatusGrid<S, R> _grid;
+    private final ItemCurveFactory<R, T> _factory;
 
     public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_)
     {
@@ -60,6 +61,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             throw new NullPointerException("Settings cannot be null.");
         }
 
+        _factory = factory_;
         _family = factory_.getFamily();
         _settings = settings_;
         _grid = grid_;
@@ -142,20 +144,20 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             fieldLoop:
             for (final R field : fields_)
             {
-                if (params.isFiltered(fromStatus, toStatus, field, null, filters_))
-                {
-                    continue fieldLoop;
-                }
-
-                //if (_settings.getAllowInteractionCurves())
-//                {
-//                    //If we are allowing interaction curves, then attempt to fit one of those now..
-//
-//                }
                 for (final T curveType : _family.getMembers())
                 {
                     try
                     {
+                        //First, check for admissibiilty.
+                        //Requires making a quick vacuous set of params...
+                        final ItemCurveParams<R, T> vacuousParams = new ItemCurveParams<>(0.0, 0.0, field,
+                                _factory.generateCurve(curveType, 0, new double[curveType.getParamCount()]));
+
+                        if (params.curveIsForbidden(toStatus, vacuousParams, filters_))
+                        {
+                            continue;
+                        }
+
                         final FitResult<S, R, T> res = findBest(curveType, field, toStatus);
 
                         final double improvement = res.calculateAicDifference();

@@ -39,6 +39,34 @@ public interface ParamFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 {
 
     /**
+     * For the given params, are we allowed to change the
+     * [toStatus_][paramEntry_] beta?
+     *
+     * @param params_ The params to consider
+     * @param toStatus_ The toStatus of the beta within params_
+     * @param paramEntry_ The entry number of the beta within params_
+     * @return True if the beta described by this function call is frozen, and
+     * should not be changed.
+     */
+    public boolean betaIsFrozen(final ItemParameters<S, R, T> params_, final S toStatus_, final int paramEntry_);
+
+    /**
+     * Are we allowed to extend the given parameters with the given
+     * curveParams_?
+     *
+     * N.B: This will be called before the curve params are fully fit, so it
+     * should not depend on the values of beta, intercept, or the curve params.
+     * If it does depend on these values, it will be called a second time after
+     * fitting, but rejecting curve params at that stage will be costly.
+     *
+     * @param params_ The params to consider.
+     * @param toStatus_ The toStatus under consideration.
+     * @param curveParams_ The curve params to consider.
+     * @return True if these params should be rejected.
+     */
+    public boolean curveIsForbidden(final ItemParameters<S, R, T> params_, final S toStatus_, final ItemCurveParams<R, T> curveParams_);
+
+    /**
      * True if this item is to be ignored.
      *
      * Coefficients are described by the tuple (from, to, field, transformation)
@@ -53,6 +81,5 @@ public interface ParamFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * transformation.
      * @return True if this coefficient should not be adjusted.
      */
-    public boolean isFiltered(final S fromStatus_, final S toStatus_, final R field_, final ItemCurve<T> trans_);
-
+    //public boolean isFiltered(final S fromStatus_, final S toStatus_, final R field_, final ItemCurve<T> trans_);
 }

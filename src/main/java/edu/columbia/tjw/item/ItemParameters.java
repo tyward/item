@@ -469,16 +469,29 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return _trans;
     }
 
-    private boolean checkFilter(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_, final Collection<ParamFilter<S, R, T>> filters_)
+    public boolean betaIsFrozen(S toStatus_, int paramEntry_, final Collection<ParamFilter<S, R, T>> otherFilters_)
     {
-        if (null == filters_)
+        if (_uniqFilter.betaIsFrozen(this, toStatus_, paramEntry_))
+        {
+            return true;
+        }
+
+        for (final ParamFilter<S, R, T> next : getFilters())
+        {
+            if (next.betaIsFrozen(this, toStatus_, paramEntry_))
+            {
+                return true;
+            }
+        }
+
+        if (null == otherFilters_)
         {
             return false;
         }
 
-        for (final ParamFilter<S, R, T> next : filters_)
+        for (final ParamFilter<S, R, T> next : otherFilters_)
         {
-            if (next.isFiltered(fromStatus_, toStatus_, field_, trans_))
+            if (next.betaIsFrozen(this, toStatus_, paramEntry_))
             {
                 return true;
             }
@@ -487,24 +500,32 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return false;
     }
 
-    public boolean isFiltered(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_)
+    public boolean curveIsForbidden(S toStatus_, ItemCurveParams<R, T> curveParams_, final Collection<ParamFilter<S, R, T>> otherFilters_)
     {
-        return isFiltered(fromStatus_, toStatus_, field_, trans_, null);
-    }
+        if (_uniqFilter.curveIsForbidden(this, toStatus_, curveParams_))
+        {
+            return true;
+        }
 
-    public boolean isFiltered(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_, final Collection<ParamFilter<S, R, T>> extraFilters_)
-    {
-        if (_uniqFilter.isFiltered(fromStatus_, toStatus_, field_, trans_))
+        for (final ParamFilter<S, R, T> next : getFilters())
         {
-            return true;
+            if (next.curveIsForbidden(this, toStatus_, curveParams_))
+            {
+                return true;
+            }
         }
-        if (checkFilter(fromStatus_, toStatus_, field_, trans_, getFilters()))
+
+        if (null == otherFilters_)
         {
-            return true;
+            return false;
         }
-        if (checkFilter(fromStatus_, toStatus_, field_, trans_, extraFilters_))
+
+        for (final ParamFilter<S, R, T> next : otherFilters_)
         {
-            return true;
+            if (next.curveIsForbidden(this, toStatus_, curveParams_))
+            {
+                return true;
+            }
         }
 
         return false;
@@ -762,39 +783,23 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         private static final long serialVersionUID = 0x49e89a36e4553a69L;
 
         @Override
-        public boolean isFiltered(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_)
+        public boolean betaIsFrozen(ItemParameters<S, R, T> params_, S toStatus_, int paramEntry_)
         {
-            if (fromStatus_ != ItemParameters.this.getStatus())
-            {
-                return false;
-            }
-
-            if (fromStatus_.equals(toStatus_))
+            if (params_.getStatus() == toStatus_)
             {
                 return true;
             }
 
-            final int toIndex = ItemParameters.this.getStatus().getReachable().indexOf(toStatus_);
-
-            final int entryCount = getEntryCount();
-
-            for (int i = 0; i < entryCount; i++)
+            for (int i = 0; i < params_.getEntryCount(); i++)
             {
-                final R reg = getEntryRegressor(i, 0);
+                final S restrict = params_.getEntryStatusRestrict(i);
 
-                if (reg != field_)
+                if (null == restrict)
                 {
                     continue;
                 }
 
-                final ItemCurve<T> trans = getEntryCurve(i, 0);
-
-                if (trans != trans_)
-                {
-                    continue;
-                }
-
-                if (_uniqueBeta[i] != -1 && _uniqueBeta[i] != toIndex)
+                if (restrict != toStatus_)
                 {
                     return true;
                 }
@@ -802,6 +807,14 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
             return false;
         }
+
+        @Override
+        public boolean curveIsForbidden(ItemParameters<S, R, T> params_, S toStatus_, ItemCurveParams<R, T> curveParams_)
+        {
+            //We don't forbid any new additions, except where fromStatus_ == toStatus_
+            return (params_.getStatus() == toStatus_);
+        }
+
     }
 
 }
