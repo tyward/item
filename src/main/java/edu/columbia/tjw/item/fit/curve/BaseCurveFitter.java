@@ -19,7 +19,6 @@
  */
 package edu.columbia.tjw.item.fit.curve;
 
-import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;

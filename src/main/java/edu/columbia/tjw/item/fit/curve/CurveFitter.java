@@ -19,7 +19,6 @@
  */
 package edu.columbia.tjw.item.fit.curve;
 
-import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
@@ -34,7 +33,6 @@ import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -159,6 +157,12 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
                         }
 
                         final FitResult<S, R, T> res = findBest(curveType, field, toStatus);
+
+                        if (params.curveIsForbidden(toStatus, res.getCurveParams(), filters_))
+                        {
+                            LOG.info("Generated curve, but it is forbidden by filters, dropping: " + res.getCurveParams());
+                            continue;
+                        }
 
                         final double improvement = res.calculateAicDifference();
 
