@@ -77,7 +77,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
-        //_field = initParams_.getRegressor(0);
         _indexList = indexList_;
         _factory = factory_;
         _initParams = initParams_;
@@ -161,19 +160,13 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         //final double[] actual = new double[cols];
 
         final int depth = _params.getEntryDepth();
-        final double interceptAdjustment;
+
+        // N.B: The intercept adjustment from the prev params has already been absorbed into 
+        // the intercept term. No need to redo it or adjust for it here, it's already part of 
+        // the baseline, we are fitting only an additive adjustment on top of that.
+        final double interceptAdjustment = _params.getIntercept();
         final double beta = _params.getBeta();
-
-        if (_subtractStarting)
-        {
-            interceptAdjustment = _params.getIntercept() - _initParams.getIntercept();
-        }
-        else
-        {
-            interceptAdjustment = _params.getIntercept();
-        }
-
-        final ItemCurve<T> trans = _params.getCurve(0);
+        final double prevBeta = _initParams.getBeta();
 
         for (int i = start_; i < end_; i++)
         {
@@ -186,28 +179,61 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             final int actualOffset = _actualOffsets[i];
 
             final int mapped = _indexList[i];
-            final double regressor = _regData[0][mapped];
+            double weight = 1.0;
 
-            final double transformed = trans.transform(regressor);
-            final double contribution = (beta * transformed);
+            for (int k = 0; k < depth; k++)
+            {
+                final double regressor = _regData[k][mapped];
+                final ItemCurve<T> trans = _params.getCurve(k);
+                final double transformed;
 
-            final double prevContribution;
+                if (null == trans)
+                {
+                    transformed = regressor;
+                }
+                else
+                {
+                    transformed = trans.transform(regressor);
+                }
 
+                weight *= transformed;
+            }
+
+            double contribution = beta * weight;
+
+//            final double regressor = _regData[0][mapped];
+//
+//            final double transformed = trans.transform(regressor);
+//            final double contribution = (beta * transformed);
+//            final double prevContribution;
             if (_subtractStarting)
             {
-                final double prevBeta = _initParams.getBeta();
-                final double prevTransformed = _initParams.getCurve(0).transform(regressor);
+                double prevWeight = 1.0;
 
-                prevContribution = prevBeta * prevTransformed;
-            }
-            else
-            {
-                prevContribution = 0.0;
+                for (int k = 0; k < depth; k++)
+                {
+                    final double regressor = _regData[k][mapped];
+                    final ItemCurve<T> trans = _initParams.getCurve(k);
+                    final double transformed;
+
+                    if (null == trans)
+                    {
+                        transformed = regressor;
+                    }
+                    else
+                    {
+                        transformed = trans.transform(regressor);
+                    }
+
+                    prevWeight *= transformed;
+                }
+
+                contribution -= prevBeta * prevWeight;
             }
 
             //We are replacing one curve with another (if _prevCurve != null), so subtract off the 
             // curve we previously had before adding this new one.
-            final double totalContribution = interceptAdjustment + contribution - prevContribution;
+            final double totalContribution = interceptAdjustment + contribution;
 
             computed[_toIndex] += totalContribution;
 
@@ -217,7 +243,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             final double logLikelihood = _likelihood.logLikelihood(computed, actualOffset);
 
             result_.add(logLikelihood, result_.getHighWater(), i + 1);
-
         }
     }
 
