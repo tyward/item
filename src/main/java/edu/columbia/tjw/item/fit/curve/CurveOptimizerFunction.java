@@ -274,6 +274,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         final double[] output = new double[reachableCount];
         //final double[] actual = new double[reachableCount];
 
+        final int depth = _params.getEntryDepth();
         final int interceptIndex = _params.getInterceptIndex();
         final int betaIndex = _params.getBetaIndex();
 
@@ -281,7 +282,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
         //N.B: The derivative depes only on current params, not on _initParms, regardless of _subtractStarting.
         final double beta = _params.getBeta();
-        final ItemCurve<T> trans = _params.getCurve(0);
 
         for (int i = start_; i < end_; i++)
         {
@@ -308,7 +308,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
             final int mapped = _indexList[i];
             final double regressor = _regData[0][mapped];
-
+            final ItemCurve<T> trans = _params.getCurve(0);
             final double transformed = trans.transform(regressor);
 
             //In our special case, the derivative is directly proportional to beta, because we apply it to only one state. 
