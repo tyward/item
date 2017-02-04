@@ -34,6 +34,10 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
 {
     private static final long serialVersionUID = 0x7b981aa6c028bfa7L;
 
+    private static final int INTERCEPT_INDEX = 0;
+    private static final int BETA_INDEX = 1;
+    private static final int NON_CURVE_PARAM_COUNT = 2;
+
     private final int _size;
     private final double _intercept;
     private final double _beta;
@@ -49,7 +53,7 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
 
     public ItemCurveParams(final T type_, final R field_, ItemCurveFactory<R, T> factory_, final double[] curvePoint_)
     {
-        this(Collections.singletonList(type_), Collections.singletonList(field_), factory_, curvePoint_[0], curvePoint_[1], 2, curvePoint_);
+        this(Collections.singletonList(type_), Collections.singletonList(field_), factory_, curvePoint_[INTERCEPT_INDEX], curvePoint_[BETA_INDEX], NON_CURVE_PARAM_COUNT, curvePoint_);
     }
 
     public ItemCurveParams(final List<T> types_, final List<R> fields_, ItemCurveFactory<R, T> factory_, final double intercept_, final double beta_, final int arrayOffset_, final double[] curvePoint_)
@@ -76,11 +80,11 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
 
         _curveOffsets = new int[_size];
         _curveIndices = new int[_size];
-        _curveOffsets[getInterceptIndex()] = -1;
-        _curveOffsets[getBetaIndex()] = -1;
+        _curveOffsets[INTERCEPT_INDEX] = -1;
+        _curveOffsets[BETA_INDEX] = -1;
 
-        _curveIndices[getInterceptIndex()] = -1;
-        _curveIndices[getBetaIndex()] = -1;
+        _curveIndices[INTERCEPT_INDEX] = -1;
+        _curveIndices[BETA_INDEX] = -1;
 
         int pointer = arrayOffset_;
 
@@ -99,7 +103,7 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
 
             //Whatever our array offset, we want this to be the "raw" pointer, 
             // what it would have been if the offset was 2, indicating it starts after intercept and beta...
-            final int basePointer = 2 + pointer - arrayOffset_;
+            final int basePointer = NON_CURVE_PARAM_COUNT + pointer - arrayOffset_;
 
             for (int i = 0; i < paramCount; i++)
             {
@@ -158,13 +162,13 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
 
         _curveOffsets = new int[_size];
         _curveIndices = new int[_size];
-        _curveOffsets[getInterceptIndex()] = -1;
-        _curveOffsets[getBetaIndex()] = -1;
+        _curveOffsets[INTERCEPT_INDEX] = -1;
+        _curveOffsets[BETA_INDEX] = -1;
 
-        _curveIndices[getInterceptIndex()] = -1;
-        _curveIndices[getBetaIndex()] = -1;
+        _curveIndices[INTERCEPT_INDEX] = -1;
+        _curveIndices[BETA_INDEX] = -1;
 
-        int pointer = 2;
+        int pointer = NON_CURVE_PARAM_COUNT;
 
         for (int i = 0; i < _types.size(); i++)
         {
@@ -196,12 +200,12 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         _size = baseParams_.size();
         _types = baseParams_._types;
         _regressors = baseParams_._regressors;
-        _intercept = values_[0];
-        _beta = values_[1];
+        _intercept = values_[INTERCEPT_INDEX];
+        _beta = values_[BETA_INDEX];
         _curveIndices = baseParams_._curveIndices;
         _curveOffsets = baseParams_._curveOffsets;
 
-        int pointer = 2;
+        int pointer = NON_CURVE_PARAM_COUNT;
 
         List<ItemCurve<T>> curveList = new ArrayList<>(_types.size());
 
@@ -223,7 +227,7 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
 
     private static <T extends ItemCurveType<T>> int calculateSize(final List<T> types_)
     {
-        int size = 2;
+        int size = NON_CURVE_PARAM_COUNT;
 
         for (final T next : types_)
         {
@@ -314,12 +318,12 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
 
     public int getInterceptIndex()
     {
-        return 0;
+        return INTERCEPT_INDEX;
     }
 
     public int getBetaIndex()
     {
-        return 1;
+        return BETA_INDEX;
     }
 
     public void extractPoint(final double[] point_)
@@ -329,10 +333,10 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
             throw new IllegalArgumentException("Invalid point array size.");
         }
 
-        point_[0] = _intercept;
-        point_[1] = _beta;
+        point_[INTERCEPT_INDEX] = _intercept;
+        point_[BETA_INDEX] = _beta;
 
-        int pointer = 2;
+        int pointer = NON_CURVE_PARAM_COUNT;
 
         for (final ItemCurve<T> next : _curves)
         {

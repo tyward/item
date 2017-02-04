@@ -515,30 +515,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return _filters;
     }
 
-    public int getIndex(final R field_, final ItemCurve<?> trans_)
-    {
-        for (int i = 0; i < this.getEntryCount(); i++)
-        {
-            final R nextReg = this.getEntryRegressor(i, 0);
-
-            if (nextReg != field_)
-            {
-                continue;
-            }
-
-            final ItemCurve<T> curve = this.getEntryCurve(i, 0);
-
-            if (!compareTrans(curve, trans_))
-            {
-                continue;
-            }
-
-            return i;
-        }
-
-        return -1;
-    }
-
     private boolean compareTrans(final ItemCurve<?> trans1_, final ItemCurve<?> trans2_)
     {
         //We demand exact reference equality for this operation.
@@ -826,23 +802,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
             return false;
         }
-    }
-
-    private final class SelfTransitionFilter implements ParamFilter<S, R, T>
-    {
-        private static final long serialVersionUID = 3355948289866022590L;
-
-        public SelfTransitionFilter()
-        {
-        }
-
-        @Override
-        public boolean isFiltered(S fromStatus_, S toStatus_, R field_, ItemCurve<T> trans_)
-        {
-            final boolean output = fromStatus_.equals(toStatus_);
-            return output;
-        }
-
     }
 
 }

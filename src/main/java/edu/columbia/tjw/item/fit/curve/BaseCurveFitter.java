@@ -216,7 +216,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double startingLL = res.getMean();
 
-        final FitResult<S, R, T> output = generateFit(toStatus_, _model.getParams(), func, field_, startingLL, starting);
+        final FitResult<S, R, T> output = generateFit(toStatus_, _model.getParams(), func, startingLL, starting);
 
         if (_settings.getPolishStartingParams())
         {
@@ -228,7 +228,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 {
                     LOG.info("Have polished parameters, testing.");
 
-                    final FitResult<S, R, T> output2 = generateFit(toStatus_, _model.getParams(), func, field_, startingLL, polished);
+                    final FitResult<S, R, T> output2 = generateFit(toStatus_, _model.getParams(), func, startingLL, polished);
 
                     //LOG.info("Fit comparison: " + output.getLogLikelihood() + " <> " + output2.getLogLikelihood());
                     final double aic1 = output.calculateAicDifference();
@@ -266,8 +266,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return output;
     }
 
-    private FitResult<S, R, T> generateFit(final S toStatus_, final ItemParameters<S, R, T> baseParams_, final CurveOptimizerFunction<S, R, T> func_, R field_,
-            final double startingLL_, final ItemCurveParams<R, T> starting_) throws ConvergenceException
+    private FitResult<S, R, T> generateFit(final S toStatus_, final ItemParameters<S, R, T> baseParams_, final CurveOptimizerFunction<S, R, T> func_, final double startingLL_, final ItemCurveParams<R, T> starting_) throws ConvergenceException
     {
         final double[] startingArray = starting_.generatePoint();
         final MultivariatePoint startingPoint = new MultivariatePoint(startingArray);
@@ -293,24 +292,11 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     {
         final ItemParameters<S, R, T> params = _model.getParams();
 
-        final R field = params.getEntryRegressor(entryIndex_, 0);
-        final ItemCurve<T> targetCurve = params.getEntryCurve(entryIndex_, 0);
-
-        if (null == targetCurve)
-        {
-            throw new IllegalArgumentException("Invalid calibration entry.");
-        }
-
-        //final S toStatus = params.get
-        if (params.isFiltered(_fromStatus, toStatus_, field, targetCurve))
-        {
-            return _model;
-        }
-
-        LOG.info("Calibrating curve: " + targetCurve + ", " + field + ", " + toStatus_);
-
+        //N.B: Don't check for filtering, this is an entry we already have, filtering isn't relevant.
         final ItemCurveParams<R, T> entryParams = params.getEntryCurveParams(entryIndex_);
         final double[] starting = entryParams.generatePoint();
+
+        LOG.info("Calibrating curve: " + entryParams);
 
         //Changes are allowed...
         final ItemParameters<S, R, T> reduced = params.dropIndex(entryIndex_);
@@ -326,7 +312,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         LOG.info("Starting LL: " + startingLL + " (+/- " + res.getStdDev() + ")");
 
-        final FitResult<S, R, T> result = generateFit(toStatus_, reduced, func, field, startingLL, entryParams);
+        final FitResult<S, R, T> result = generateFit(toStatus_, reduced, func, startingLL, entryParams);
 
         final double endingLL = result.getLogLikelihood();
 

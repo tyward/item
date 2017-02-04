@@ -71,30 +71,25 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         final ItemParameters<S, R, T> params = getParams();
 
         final int entryCount = params.getEntryCount();
-        final List<S> statList = params.getStatus().getReachable();
         ItemModel<S, R, T> model = new ItemModel<>(params);
 
-        //final List<T> item
         for (int i = 0; i < entryCount; i++)
         {
-            final ItemCurve<T> curve = params.getEntryCurve(i, 0);
+            final S status = params.getEntryStatusRestrict(i);
 
-            if (null == curve)
+            if (null == status)
             {
                 continue;
             }
 
-            for (final S status : statList)
+            try
             {
-                try
-                {
-                    model = calibrateCurve(i, status);
-                }
-                catch (final ConvergenceException e)
-                {
-                    LOG.info("Trouble converging, moving on to next curve.");
-                    LOG.info(e.getMessage());
-                }
+                model = calibrateCurve(i, status);
+            }
+            catch (final ConvergenceException e)
+            {
+                LOG.info("Trouble converging, moving on to next curve.");
+                LOG.info(e.getMessage());
             }
         }
 
@@ -235,15 +230,6 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             return _curveParams;
         }
 
-//        public R getRegressor()
-//        {
-//            return _curveParams.getRegressor(0);
-//        }
-//
-//        public ItemCurve<T> getCurve()
-//        {
-//            return _curveParams.getCurve(0);
-//        }
         public ItemModel<S, R, T> getModel()
         {
             return new ItemModel<>(_params);

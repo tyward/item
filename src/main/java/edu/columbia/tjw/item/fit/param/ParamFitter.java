@@ -79,6 +79,14 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             for (int k = 0; k < regressorCount; k++)
             {
+                final S restrict = params_.getEntryStatusRestrict(k);
+
+                if (null != restrict && restrict != to)
+                {
+                    //This transition is effectively filtered....
+                    continue;
+                }
+
                 final R field = params_.getEntryRegressor(k, 0);
                 final ItemCurve<T> trans = params_.getEntryCurve(k, 0);
 
