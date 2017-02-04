@@ -275,6 +275,10 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         //final double[] actual = new double[reachableCount];
 
         final int depth = _params.getEntryDepth();
+        final double[] weights = new double[depth];
+        final double[] knockoutWeights = new double[depth];
+        //final double[] componentDeriv = new double[depth];
+
         final int interceptIndex = _params.getInterceptIndex();
         final int betaIndex = _params.getBetaIndex();
 
@@ -307,25 +311,75 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             }
 
             final int mapped = _indexList[i];
-            final double regressor = _regData[0][mapped];
-            final ItemCurve<T> trans = _params.getCurve(0);
-            final double transformed = trans.transform(regressor);
+            double weight = 1.0;
+
+            for (int k = 0; k < depth; k++)
+            {
+                final double regressor = _regData[k][mapped];
+                final ItemCurve<T> trans = _params.getCurve(k);
+                final double transformed;
+
+                if (null == trans)
+                {
+                    transformed = regressor;
+                }
+                else
+                {
+                    transformed = trans.transform(regressor);
+                }
+
+                weights[k] = transformed;
+                knockoutWeights[k] = 1.0;
+                weight *= transformed;
+            }
+
+            //Fill in the weight of everything but this curve....
+            for (int k = 0; k < depth; k++)
+            {
+                for (int w = 0; w < depth; w++)
+                {
+                    if (w == k)
+                    {
+                        continue;
+                    }
+
+                    knockoutWeights[k] *= weights[w];
+                }
+            }
 
             //In our special case, the derivative is directly proportional to beta, because we apply it to only one state. 
             final double interceptDerivative = xDerivative;
 
-            final double betaDerivative = xDerivative * transformed;
+            final double betaDerivative = xDerivative * weight;
 
             derivative[interceptIndex] += interceptDerivative;
             derivative[betaIndex] += betaDerivative;
 
-            for (int w = 0; w < trans.getCurveType().getParamCount(); w++)
+            for (int w = 0; w < _params.size(); w++)
             {
-                final double paramDerivative = trans.derivative(w, regressor);
-                final double combined = xDerivative * beta * paramDerivative;
-                derivative[w] += combined;
+                if (w == interceptIndex || w == betaIndex)
+                {
+                    //Already handled these cases.
+                    continue;
+                }
+
+                final int depthIndex = _params.indexToCurveIndex(w);
+                final double regressor = _regData[depthIndex][mapped];
+                final ItemCurve<T> targetCurve = _params.getCurve(depthIndex);
+                final int curveOffset = _params.indexToCurveOffset(w);
+                final double paramDerivative = targetCurve.derivative(curveOffset, regressor);
+                final double knockoutWeight = knockoutWeights[depthIndex];
+
+                final double deriv = xDerivative * beta * paramDerivative * knockoutWeight;
+                derivative[w] += deriv;
             }
 
+//            for (int w = 0; w < trans.getCurveType().getParamCount(); w++)
+//            {
+//                final double paramDerivative = trans.derivative(w, regressor);
+//                final double combined = xDerivative * beta * paramDerivative;
+//                derivative[w] += combined;
+//            }
             count++;
         }
 

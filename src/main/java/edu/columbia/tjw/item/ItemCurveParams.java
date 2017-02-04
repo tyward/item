@@ -41,6 +41,12 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
     private final List<R> _regressors;
     private final List<ItemCurve<T>> _curves;
 
+    //These are used to track which parameter of which underlying curve a given 
+    // element of the curvePoint_ array points to. This is important for 
+    //calculating derivatives.
+    private final int[] _curveOffsets;
+    private final int[] _curveIndices;
+
     public ItemCurveParams(final T type_, final R field_, ItemCurveFactory<R, T> factory_, final double[] curvePoint_)
     {
         this(Collections.singletonList(type_), Collections.singletonList(field_), factory_, curvePoint_[0], curvePoint_[1], 2, curvePoint_);
@@ -68,6 +74,14 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         _intercept = intercept_;
         _beta = beta_;
 
+        _curveOffsets = new int[_size];
+        _curveIndices = new int[_size];
+        _curveOffsets[getInterceptIndex()] = -1;
+        _curveOffsets[getBetaIndex()] = -1;
+
+        _curveIndices[getInterceptIndex()] = -1;
+        _curveIndices[getBetaIndex()] = -1;
+
         int pointer = arrayOffset_;
 
         List<ItemCurve<T>> curveList = new ArrayList<>(_types.size());
@@ -81,6 +95,18 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
             }
 
             ItemCurve<T> curve = factory_.generateCurve(next, pointer, curvePoint_);
+            final int paramCount = next.getParamCount();
+
+            //Whatever our array offset, we want this to be the "raw" pointer, 
+            // what it would have been if the offset was 2, indicating it starts after intercept and beta...
+            final int basePointer = 2 + pointer - arrayOffset_;
+
+            for (int i = 0; i < paramCount; i++)
+            {
+                _curveIndices[basePointer + i] = curveList.size();
+                _curveOffsets[basePointer + i] = i;
+            }
+
             pointer += next.getParamCount();
             curveList.add(curve);
         }
@@ -129,6 +155,35 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         _intercept = intercept_;
         _beta = beta_;
         _size = calculateSize(_types);
+
+        _curveOffsets = new int[_size];
+        _curveIndices = new int[_size];
+        _curveOffsets[getInterceptIndex()] = -1;
+        _curveOffsets[getBetaIndex()] = -1;
+
+        _curveIndices[getInterceptIndex()] = -1;
+        _curveIndices[getBetaIndex()] = -1;
+
+        int pointer = 2;
+
+        for (int i = 0; i < _types.size(); i++)
+        {
+            final T next = _types.get(i);
+
+            if (null == next)
+            {
+                continue;
+            }
+
+            final int paramCount = next.getParamCount();
+
+            for (int w = 0; w < paramCount; w++)
+            {
+                _curveOffsets[pointer + w] = w;
+                _curveIndices[pointer + w] = i;
+            }
+        }
+
     }
 
     public ItemCurveParams(final T type_, final R field_, ItemCurveFactory<R, T> factory_, final double intercept_, final double beta_, final double[] curveParams_)
@@ -143,6 +198,8 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         _regressors = baseParams_._regressors;
         _intercept = values_[0];
         _beta = values_[1];
+        _curveIndices = baseParams_._curveIndices;
+        _curveOffsets = baseParams_._curveOffsets;
 
         int pointer = 2;
 
@@ -241,6 +298,18 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
     public int size()
     {
         return _size;
+    }
+
+    public int indexToCurveIndex(final int index_)
+    {
+        final int curveIndex = _curveIndices[index_];
+        return curveIndex;
+    }
+
+    public int indexToCurveOffset(final int index_)
+    {
+        final int curveOffset = _curveOffsets[index_];
+        return curveOffset;
     }
 
     public int getInterceptIndex()
