@@ -144,6 +144,12 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
         public double value(double[] point)
         {
             final ItemCurveParams<R, T> params = new ItemCurveParams<>(_params, _factory, point);
+
+            if (params.getEntryDepth() > 0)
+            {
+                throw new IllegalArgumentException("Raw calibration only available for entries of depth 1.");
+            }
+
             final ItemCurve<T> curve = params.getCurve(0);
 
             final double totalCount = _dist.getTotalCount();
