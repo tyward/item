@@ -19,7 +19,6 @@
  */
 package edu.columbia.tjw.item.fit.param;
 
-import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ParamFilter;

@@ -425,6 +425,55 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return _transOffsets[entryIndex_][entryDepth_];
     }
 
+    /**
+     * This function will find the entry corresponding to the given curve
+     * parameters.
+     *
+     * HOWEVER, it is necessary for the entry to match exactly, meaning many of
+     * the constituent objects must be the exact same object. This is most
+     * useful for (for instance) finding the entry of some ItemCurveParams that
+     * were just used a moment ago to expand these parameters.
+     *
+     * @param params_ The ItemCurveParams to look for.
+     * @return The entryIndex that would return equivalent params in response to
+     * getEntryCurveParams(index), -1 if no such entry.
+     */
+    public int getEntryIndex(final ItemCurveParams<R, T> params_)
+    {
+        final int entryCount = this.getEntryCount();
+        final int testDepth = params_.getEntryDepth();
+
+        outer:
+        for (int i = 0; i < entryCount; i++)
+        {
+            final int depth = this.getEntryDepth(i);
+
+            if (depth != testDepth)
+            {
+                continue;
+            }
+
+            for (int w = 0; w < depth; w++)
+            {
+                if (this.getEntryCurve(i, w) != params_.getCurve(w))
+                {
+                    continue outer;
+                }
+                if (this.getEntryRegressor(i, w) != params_.getRegressor(w))
+                {
+                    continue outer;
+                }
+
+                //Do I verify the value of beta as well? No, I think I can safely skip that.
+            }
+
+            //We made it, this is the entry you're looking for.
+            return i;
+        }
+
+        return -1;
+    }
+
     public ItemCurveParams<R, T> getEntryCurveParams(final int entryIndex_)
     {
         final int toIndex = _uniqueBeta[entryIndex_];

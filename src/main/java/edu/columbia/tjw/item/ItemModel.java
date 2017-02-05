@@ -146,26 +146,25 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         for (int i = 0; i < numEntries; i++)
         {
             final int depth = _params.getEntryDepth(i);
-            double regSum = 0.0;
+            double weight = 1.0;
 
             for (int w = 0; w < depth; w++)
             {
                 final int regIndex = _params.getEntryRegressorOffset(i, w);
                 final double rawReg = rawRegressors_[regIndex];
-
                 final ItemCurve<T> curve = _params.getEntryCurve(i, w);
 
                 if (null == curve)
                 {
-                    regSum += rawReg;
+                    weight *= rawReg;
                 }
                 else
                 {
-                    regSum += curve.transform(rawReg);
+                    weight *= curve.transform(rawReg);
                 }
             }
 
-            regWorkspace_[i] = regSum;
+            regWorkspace_[i] = weight;
         }
     }
 

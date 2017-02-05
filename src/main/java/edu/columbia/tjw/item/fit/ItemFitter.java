@@ -20,7 +20,6 @@
 package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.ItemCurveFactory;
-import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
@@ -255,6 +254,14 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return startingLL;
     }
 
+    private double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_)
+    {
+        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(params_), _settings);
+        final double ll = fitter.computeLogLikelihood(params_, grid, null);
+        return ll;
+    }
+
     /**
      * Add some new curves to this model.
      *
@@ -276,11 +283,24 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         final long start = System.currentTimeMillis();
         ItemModel<S, R, T> model = new ItemModel<>(params_);
 
+        double bestLL = computeLogLikelihood(params_, grid_);
+
         for (int i = 0; i < curveCount_; i++)
         {
             try
             {
                 model = fitCoefficients(model, grid_, filters_);
+
+                final double test = computeLogLikelihood(model.getParams(), grid_);
+
+                if (test > bestLL)
+                {
+                    LOG.info("LL got worse: " + bestLL + " -> " + test);
+                    LOG.info("Current parameters: " + model.getParams());
+                    throw new IllegalStateException("Impossible.");
+                }
+
+                bestLL = test;
             }
             catch (final ConvergenceException e)
             {
@@ -289,13 +309,36 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             final CurveFitter<S, R, T> fitter = new BaseCurveFitter<>(_factory, model, grid_, _settings, _intercept);
 
+//            //First, try to calibrate any existing curves to improve the fit. 
+//            model = fitter.calibrateCurves();
+//
+//            final double test = computeLogLikelihood(model.getParams(), grid_);
+//
+//            if (test > bestLL)
+//            {
+//                LOG.info("LL got worse: " + bestLL + " -> " + test);
+//                LOG.info("Current parameters: " + model.getParams());
+//                throw new IllegalStateException("Impossible.");
+//            }
+//
+//            bestLL = test;
+
             try
             {
-                //First, try to calibrate any existing curves to improve the fit. 
-                model = fitter.calibrateCurves();
 
                 //Now, try to add a new curve. 
                 model = fitter.generateCurve(curveFields_, filters_);
+
+                final double test2 = computeLogLikelihood(model.getParams(), grid_);
+
+                if (test2 > bestLL)
+                {
+                    LOG.info("LL got worse: " + bestLL + " -> " + test2);
+                    LOG.info("Current parameters: " + model.getParams());
+                    throw new IllegalStateException("Impossible.");
+                }
+
+                bestLL = test2;
 
 //                //If the expansion worked, try to update all curve betas...
 //                final CurveFitter<S, R, T> f2 = new BaseCurveFitter<>(_factory, model, grid_, _settings, _intercept);
