@@ -31,6 +31,8 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
+import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.ArrayList;
@@ -73,42 +75,76 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         _grid = grid_;
     }
 
+    private double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_)
+    {
+        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(params_), _settings);
+        final double ll = fitter.computeLogLikelihood(params_, grid, null);
+        return ll;
+    }
+
     public final ItemModel<S, R, T> calibrateCurves()
     {
         LOG.info("Starting curve calibration sweep.");
-        final ItemParameters<S, R, T> params = getParams();
+        final ItemParameters<S, R, T> initParams = getParams();
 
-        final int entryCount = params.getEntryCount();
-        ItemModel<S, R, T> model = new ItemModel<>(params);
-        int pointer = 0;
+        final int entryCount = initParams.getEntryCount();
+        ItemModel<S, R, T> model = new ItemModel<>(initParams);
+
+        final List<ItemCurveParams<R, T>> curveEntries = new ArrayList<>();
 
         for (int i = 0; i < entryCount; i++)
         {
-            final S status = params.getEntryStatusRestrict(i);
-
-            if (null == status)
+            if (initParams.getEntryStatusRestrict(i) == null)
             {
                 continue;
             }
 
+            curveEntries.add(initParams.getEntryCurveParams(i));
+        }
+
+        for (final ItemCurveParams<R, T> entry : curveEntries)
+        {
+            final ItemParameters<S, R, T> params = model.getParams();
+            final int entryIndex = params.getEntryIndex(entry);
+
+            if (entryIndex == -1)
+            {
+                throw new IllegalStateException("Impossible.");
+            }
+
+            final S status = params.getEntryStatusRestrict(entryIndex);
+
+            if (null == status)
+            {
+                throw new IllegalStateException("Impossible.");
+            }
+
+            final double startingLL = computeLogLikelihood(params, _grid);
+
             try
             {
-                model = calibrateCurve(pointer, status);
-
-                if (model.getParams() == params)
-                {
-                    //This is a hack, note that if we adjust an entry, we place 
-                    // it at the end of the list, so the pointers need to be a bit clever.
-                    //This thing was unchanged, increment the pointer.
-                    pointer++;
-                }
-
+                model = calibrateCurve(entryIndex, status);
             }
             catch (final ConvergenceException e)
             {
                 LOG.info("Trouble converging, moving on to next curve.");
                 LOG.info(e.getMessage());
             }
+
+            final double endingLL = computeLogLikelihood(model.getParams(), _grid);
+
+            if (endingLL > startingLL)
+            {
+                LOG.warning("Ending LL is worse than starting: " + startingLL + " -> " + endingLL);
+
+                LOG.info("Curve calibration starting params: " + params);
+                LOG.warning("Starting entry: " + entry);
+                LOG.warning("Ending params: " + model.getParams());
+
+                throw new IllegalStateException("Impossible.");
+            }
+
         }
 
         LOG.info("Finished curve calibration sweep: " + getParams());

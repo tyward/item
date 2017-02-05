@@ -309,19 +309,19 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             final CurveFitter<S, R, T> fitter = new BaseCurveFitter<>(_factory, model, grid_, _settings, _intercept);
 
-//            //First, try to calibrate any existing curves to improve the fit. 
-//            model = fitter.calibrateCurves();
-//
-//            final double test = computeLogLikelihood(model.getParams(), grid_);
-//
-//            if (test > bestLL)
-//            {
-//                LOG.info("LL got worse: " + bestLL + " -> " + test);
-//                LOG.info("Current parameters: " + model.getParams());
-//                throw new IllegalStateException("Impossible.");
-//            }
-//
-//            bestLL = test;
+            //First, try to calibrate any existing curves to improve the fit. 
+            model = fitter.calibrateCurves();
+
+            final double test = computeLogLikelihood(model.getParams(), grid_);
+
+            if (test > bestLL)
+            {
+                LOG.info("LL got worse: " + bestLL + " -> " + test);
+                LOG.info("Current parameters: " + model.getParams());
+                throw new IllegalStateException("Impossible.");
+            }
+
+            bestLL = test;
 
             try
             {
