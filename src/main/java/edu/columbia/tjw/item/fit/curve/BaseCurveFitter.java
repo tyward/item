@@ -68,7 +68,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final int[] _actualOutcomes;
     private final MultivariateOptimizer _optimizer;
     private final int[] _indexList;
-    private final R _intercept;
     private final S _fromStatus;
 
     public BaseCurveFitter(final ItemCurveFactory<R, T> factory_, final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_, final R intercept_)
@@ -80,7 +79,6 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
             throw new NullPointerException("Intercept cannot be null.");
         }
 
-        _intercept = intercept_;
         _settings = settings_;
         _factory = factory_;
         _model = model_;
@@ -225,7 +223,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
                 if (polished != starting)
                 {
-                    LOG.info("Have polished parameters, testing.");
+                    //LOG.info("Have polished parameters, testing.");
 
                     final FitResult<S, R, T> output2 = generateFit(toStatus_, _model.getParams(), func, startingLL, polished);
 
@@ -281,32 +279,20 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final ItemParameters<S, R, T> updated = baseParams_.addBeta(curveParams, toStatus_);
         final FitResult<S, R, T> output = new FitResult<>(updated, curveParams, toStatus_, bestLL, startingLL_, result.dataElementCount());
 
-        LOG.info("LL change[0x" + Long.toHexString(System.identityHashCode(this)) + "L]: " + startingLL_ + " -> " + bestLL + ": " + (startingLL_ - bestLL) + " \n\n");
-        LOG.info("Updated entry: " + curveParams);
-
+//        LOG.info("LL change[0x" + Long.toHexString(System.identityHashCode(this)) + "L]: " + startingLL_ + " -> " + bestLL + ": " + (startingLL_ - bestLL) + " \n\n");
+//        LOG.info("Updated entry: " + curveParams);
         return output;
     }
 
+    @Override
     public FitResult<S, R, T> fitEntryExpansion(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> initParams_, S toStatus_,
             final boolean subtractStarting_, final double startingLL_) throws ConvergenceException
     {
-        final double[] starting = initParams_.generatePoint();
         final CurveOptimizerFunction<S, R, T> func = generateFunction(initParams_, toStatus_, subtractStarting_);
-
-//        final MultivariatePoint startingPoint = new MultivariatePoint(starting);
-//        final EvaluationResult res = func.generateResult();
-//        func.value(startingPoint, 0, func.numRows(), res);
-//        final double startingLL = res.getMean();
-        final double llCheck = computeLogLikelihood(params_, _grid);
-
-        LOG.info("Starting LL: " + startingLL_);
-        LOG.info("LLCheck: " + llCheck);
-
+        //final double llCheck = computeLogLikelihood(params_, _grid);
         final FitResult<S, R, T> result = generateFit(toStatus_, params_, func, startingLL_, initParams_);
-
-        final double endingLL = result.getLogLikelihood();
-
-        LOG.info("LL improvement: " + startingLL_ + " -> " + endingLL);
+        //final double endingLL = result.getLogLikelihood();
+        //LOG.info("LL improvement: " + startingLL_ + " -> " + endingLL);
 
         return result;
     }
@@ -318,47 +304,21 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         //N.B: Don't check for filtering, this is an entry we already have, filtering isn't relevant.
         final ItemCurveParams<R, T> entryParams = params.getEntryCurveParams(entryIndex_);
-
-        final double[] starting = entryParams.generatePoint();
-
-        LOG.info("Calibrating curve: " + entryParams);
-
-        //Changes are allowed...
         final ItemParameters<S, R, T> reduced = params.dropIndex(entryIndex_);
-
         final double startingLL = this.computeLogLikelihood(params, _grid);
 
         FitResult<S, R, T> result = fitEntryExpansion(reduced, entryParams, toStatus_, true, startingLL);
-//        final CurveOptimizerFunction<S, R, T> func = generateFunction(entryParams, toStatus_, true);
-//
-//        //Take advantage of the fact that this starts out as all zeros, and that all zeros
-//        //means no change....
-//        final MultivariatePoint startingPoint = new MultivariatePoint(starting);
-//        final EvaluationResult res = func.generateResult();
-//        func.value(startingPoint, 0, func.numRows(), res);
-//        final double startingLL = res.getMean();
-//        
-//        LOG.info("Starting LL: " + startingLL + " (+/- " + res.getStdDev() + ")");
-//        
-//        final FitResult<S, R, T> result = generateFit(toStatus_, reduced, func, startingLL, entryParams);
-//        final double endingLL = result.getLogLikelihood();
-//
-//        LOG.info("LL improvement: " + startingLL + " -> " + endingLL);
-
         final double aicDiff = result.calculateAicDifference();
-
-        LOG.info("AIC diff: " + aicDiff);
 
         if (aicDiff > _settings.getAicCutoff())
         {
             //We demand that the AIC improvement is more than the bare minimum. 
             // Also, demand that the resulting diff is statistically significant.
-            LOG.info("AIC improvement is not large enough, keeping old curve.");
+            //LOG.info("AIC improvement is not large enough, keeping old curve.");
             return _model;
         }
 
-        LOG.info("Computed a better entry: " + result.getCurveParams());
-
+        LOG.info("Improved a curve:[" + aicDiff + "]: " + result.getCurveParams());
         ItemModel<S, R, T> outputModel = result.getModel();
 
         this.setModel(outputModel);

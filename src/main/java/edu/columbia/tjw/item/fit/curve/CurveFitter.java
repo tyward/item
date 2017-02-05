@@ -161,26 +161,28 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             throw new ConvergenceException("Unable to improve model.");
         }
 
-        LOG.info("Best transformation: " + best.toString());
-        LOG.info("LL improvement: " + best._startingLogL + " -> " + best._logL + ": " + best._llImprovement);
-        LOG.info("Best to state: " + best.getToState());
+        LOG.info("Generated curve[" + best.aicPerParameter() + "][" + best._startingLogL + " -> " + best._logL + "][" + best.getToState() + "]: " + best.getCurveParams());
 
-        final double aicDiff = best.calculateAicDifference();
+//        LOG.info("Best transformation: " + best.toString());
+//        LOG.info("LL improvement: " + best._startingLogL + " -> " + best._logL + ": " + best._llImprovement);
+//        LOG.info("Best to state: " + best.getToState());
+        //final double aicDiff = best.calculateAicDifference();
+        final double aicPP = best.aicPerParameter();
 
-        LOG.info("AIC diff: " + aicDiff);
-
-        if (aicDiff > _settings.getAicCutoff())
+        if (aicPP > _settings.getAicCutoff())
         {
             //We demand that the AIC improvement is more than the bare minimum. 
             //We want this curve to be good enough to support at least N+5 parameters.
             LOG.info("AIC improvement is not large enough.");
-            throw new ConvergenceException("No curves could be added with sufficient AIC improvement: " + aicDiff);
+            throw new ConvergenceException("No curves could be added with sufficient AIC improvement: " + aicPP);
         }
 
-        final double ll = computeLogLikelihood(this.getParams(), _grid);
-
-        LOG.info("Log Likelihood check: " + ll);
-
+//        final double ll = computeLogLikelihood(this.getParams(), _grid);
+//
+//        if(Math.abs(ll - best._logL))
+//        
+//        
+//        LOG.info("Log Likelihood check: " + ll);
         if (_settings.getAllowInteractionCurves())
         {
             LOG.info("Now calculating interactions.");
@@ -198,35 +200,110 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
                     break;
                 }
 
-                final double updatedLL = computeLogLikelihood(interactionResult.getModel().getParams(), _grid);
-
-                if (updatedLL >= ll)
-                {
-                    LOG.warning("LL mismatch!");
-                    throw new IllegalStateException("Impossible.");
-                }
-
-                LOG.info("Added interaction term, improved results: " + bestAicPP + " -> " + interAicPP);
-                LOG.info("New Parameters: " + interactionResult.getModel().getParams().toString());
+                LOG.info("Added interaction term[" + bestAicPP + " -> " + interAicPP + "]");
                 best = interactionResult;
             }
         }
 
         ItemModel<S, R, T> output = best.getModel();
-        LOG.info("Updated parameters: \n" + output.getParams().toString());
-
+        LOG.info("New Parameters: \n" + output.getParams().toString());
         return output;
     }
 
+//    public FitResult<S, R, T> generateInteractionTerm() throws ConvergenceException
+//    {
+//
+//    }
+//
+//    private FitResult<S, R, T> testOneInteraction(final ItemCurveParams<R, T> curveParams_, final S toStatus_, final double startingLL_)
+//    {
+//        final ItemParameters<S, R, T> params = getParams();
+//        final int entryCount = params.getEntryCount();
+//
+//        //We can't have one entry depend on a single regressor twice. 
+//        final SortedSet<R> usedRegs = new TreeSet<>();
+//        final SortedSet<R> nullCurveRegs = new TreeSet<>();
+//
+//        for (int i = 0; i < curveParams_.getEntryDepth(); i++)
+//        {
+//            usedRegs.add(curveParams_.getRegressor(i));
+//        }
+//
+//        final double intercept = curveParams_.getIntercept();
+//        final double beta = curveParams_.getBeta();
+//
+//        FitResult<S, R, T> bestResult = null;
+//
+//        for (int i = 0; i < entryCount; i++)
+//        {
+//            if (i == params.getInterceptIndex())
+//            {
+//                //Intercept is an implicit interaction curve with everything, can't add it.
+//                continue;
+//            }
+//
+//            final int depth = params.getEntryDepth(i);
+//
+//            for (int w = 0; w < depth; w++)
+//            {
+//                final R reg = params.getEntryRegressor(i, w);
+//
+//                if (usedRegs.contains(reg))
+//                {
+//                    continue;
+//                }
+//
+//                final ItemCurve<T> curve = params.getEntryCurve(i, w);
+//
+//                if (null == curve)
+//                {
+//                    //This is a flag, don't try the same flag multiple times.
+//                    if (nullCurveRegs.contains(reg))
+//                    {
+//                        continue;
+//                    }
+//
+//                    nullCurveRegs.add(reg);
+//                }
+//
+//                final List<ItemCurve<T>> curveList = new ArrayList<>(curveParams_.getCurves());
+//                final List<R> regs = new ArrayList<>(curveParams_.getRegressors());
+//
+//                curveList.add(curve);
+//                regs.add(reg);
+//
+//                final ItemCurveParams<R, T> testParams = new ItemCurveParams<>(intercept, beta, regs, curveList);
+//
+//                try
+//                {
+//                    final FitResult<S, R, T> expandedResult = fitEntryExpansion(params, testParams, toStatus_, false, startingLL);
+//
+//                    final double origPpAic = bestResult.aicPerParameter();
+//                    final double newPpAic = expandedResult.aicPerParameter();
+//
+//                    //LOG.info("Interaction term result: " + origPpAic + " -> " + newPpAic);
+//                    //AIC will be negative, better AIC is more negative.
+//                    if (newPpAic < origPpAic)
+//                    {
+//                        bestResult = expandedResult;
+//                        LOG.info("Found improved result[" + origPpAic + " -> " + newPpAic + "]: " + bestResult.getCurveParams());
+//                    }
+//                }
+//                catch (final ConvergenceException e)
+//                {
+//                    LOG.info("Convergence exception, moving on: " + e.toString());
+//                }
+//            }
+//        }
+//
+//        //Unable to make any improvements, just return the original results.
+//        return bestResult;
+//
+//    }
     private FitResult<S, R, T> generateInteractionTerm(final FitResult<S, R, T> currentResult_, final double baseLL_)
     {
-        LOG.info("Attempting to expand curve with interaction terms.");
-
         final double startingLL = currentResult_.getLogLikelihood();
-
         final ItemParameters<S, R, T> params = getParams();
-
-        final double ll2 = computeLogLikelihood(currentResult_.getModel().getParams(), _grid);
 
         final ItemCurveParams<R, T> expansionCurve = currentResult_.getCurveParams();
         final S toStatus = currentResult_.getToState();
@@ -243,6 +320,8 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
         final double intercept = expansionCurve.getIntercept();
         final double beta = expansionCurve.getBeta();
+
+        FitResult<S, R, T> bestResult = currentResult_;
 
         for (int i = 0; i < entryCount; i++)
         {
@@ -288,18 +367,15 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
                 {
                     final FitResult<S, R, T> expandedResult = fitEntryExpansion(params, testParams, toStatus, false, startingLL);
 
-                    final double origPpAic = currentResult_.aicPerParameter();
+                    final double origPpAic = bestResult.aicPerParameter();
                     final double newPpAic = expandedResult.aicPerParameter();
 
-                    LOG.info("Interaction term result: " + origPpAic + " -> " + newPpAic);
-
+                    //LOG.info("Interaction term result: " + origPpAic + " -> " + newPpAic);
                     //AIC will be negative, better AIC is more negative.
                     if (newPpAic < origPpAic)
                     {
-                        final double ll3 = computeLogLikelihood(expandedResult.getModel().getParams(), _grid);
-                        final double ll4 = computeLogLikelihood(params, _grid);
-
-                        return expandedResult;
+                        bestResult = expandedResult;
+                        LOG.info("Found improved result[" + origPpAic + " -> " + newPpAic + "]: " + bestResult.getCurveParams());
                     }
                 }
                 catch (final ConvergenceException e)
@@ -310,7 +386,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         //Unable to make any improvements, just return the original results.
-        return currentResult_;
+        return bestResult;
     }
 
     private FitResult<S, R, T> findBest(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filters_)
