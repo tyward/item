@@ -282,28 +282,31 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final FitResult<S, R, T> output = new FitResult<>(updated, curveParams, toStatus_, bestLL, startingLL_, result.dataElementCount());
 
         LOG.info("LL change[0x" + Long.toHexString(System.identityHashCode(this)) + "L]: " + startingLL_ + " -> " + bestLL + ": " + (startingLL_ - bestLL) + " \n\n");
+        LOG.info("Updated entry: " + curveParams);
 
         return output;
     }
 
     public FitResult<S, R, T> fitEntryExpansion(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> initParams_, S toStatus_,
-            final boolean subtractStarting_) throws ConvergenceException
+            final boolean subtractStarting_, final double startingLL_) throws ConvergenceException
     {
         final double[] starting = initParams_.generatePoint();
         final CurveOptimizerFunction<S, R, T> func = generateFunction(initParams_, toStatus_, subtractStarting_);
 
-        final MultivariatePoint startingPoint = new MultivariatePoint(starting);
-        final EvaluationResult res = func.generateResult();
-        func.value(startingPoint, 0, func.numRows(), res);
-        final double startingLL = res.getMean();
+//        final MultivariatePoint startingPoint = new MultivariatePoint(starting);
+//        final EvaluationResult res = func.generateResult();
+//        func.value(startingPoint, 0, func.numRows(), res);
+//        final double startingLL = res.getMean();
+        final double llCheck = computeLogLikelihood(params_, _grid);
 
-        LOG.info("Starting LL: " + startingLL + " (+/- " + res.getStdDev() + ")");
+        LOG.info("Starting LL: " + startingLL_);
+        LOG.info("LLCheck: " + llCheck);
 
-        final FitResult<S, R, T> result = generateFit(toStatus_, params_, func, startingLL, initParams_);
+        final FitResult<S, R, T> result = generateFit(toStatus_, params_, func, startingLL_, initParams_);
 
         final double endingLL = result.getLogLikelihood();
 
-        LOG.info("LL improvement: " + startingLL + " -> " + endingLL);
+        LOG.info("LL improvement: " + startingLL_ + " -> " + endingLL);
 
         return result;
     }
@@ -323,7 +326,9 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         //Changes are allowed...
         final ItemParameters<S, R, T> reduced = params.dropIndex(entryIndex_);
 
-        FitResult<S, R, T> result = fitEntryExpansion(reduced, entryParams, toStatus_, true);
+        final double startingLL = this.computeLogLikelihood(params, _grid);
+
+        FitResult<S, R, T> result = fitEntryExpansion(reduced, entryParams, toStatus_, true, startingLL);
 //        final CurveOptimizerFunction<S, R, T> func = generateFunction(entryParams, toStatus_, true);
 //
 //        //Take advantage of the fact that this starts out as all zeros, and that all zeros
