@@ -476,9 +476,14 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     public ItemCurveParams<R, T> getEntryCurveParams(final int entryIndex_)
     {
+        return getEntryCurveParams(entryIndex_, false);
+    }
+
+    public ItemCurveParams<R, T> getEntryCurveParams(final int entryIndex_, final boolean allowNonCurve_)
+    {
         final int toIndex = _uniqueBeta[entryIndex_];
 
-        if (toIndex == -1)
+        if (toIndex == -1 && !allowNonCurve_)
         {
             throw new IllegalArgumentException("Can only extract curve params for actual curves.");
         }
@@ -496,7 +501,16 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         final double interceptAdjustment = 0.0;
-        final double beta = _betas[toIndex][entryIndex_];
+        final double beta;
+
+        if (toIndex != -1)
+        {
+            beta = _betas[toIndex][entryIndex_];
+        }
+        else
+        {
+            beta = 0.0;
+        }
 
         final ItemCurveParams<R, T> output = new ItemCurveParams<>(interceptAdjustment, beta, regs, curves);
         return output;
@@ -686,7 +700,14 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     {
         if (null == toStatus_)
         {
-            throw new NullPointerException("To status cannot be null.");
+            for (final ItemCurve<T> curve : curveParams_.getCurves())
+            {
+                if (null != curve)
+                {
+                    //This is OK as long as none of the curves are set (in which case, it's just a list of flags...)
+                    throw new NullPointerException("To status cannot be null for non-flag curves.");
+                }
+            }
         }
         if (toStatus_ == this._status)
         {

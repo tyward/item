@@ -210,6 +210,152 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         return output;
     }
 
+    private ItemCurveParams<R, T> appendToCurveParams(final ItemCurveParams<R, T> initParams_, final ItemCurve<T> curve_, final R reg_)
+    {
+        final List<ItemCurve<T>> curveList = new ArrayList<>(initParams_.getCurves());
+        final List<R> regs = new ArrayList<>(initParams_.getRegressors());
+
+        curveList.add(curve_);
+        regs.add(reg_);
+
+        final double intercept = initParams_.getIntercept();
+        final double beta = initParams_.getBeta();
+
+        final ItemCurveParams<R, T> curveParams = new ItemCurveParams<>(intercept, beta, regs, curveList);
+
+        return curveParams;
+    }
+
+    private SortedSet<R> getFlagRegs(final ItemParameters<S, R, T> params_)
+    {
+        final int entryCount = params_.getEntryCount();
+        final SortedSet<R> flagRegs = new TreeSet<>();
+
+        for (int i = 0; i < entryCount; i++)
+        {
+            if (params_.getEntryStatusRestrict(i) != null)
+            {
+                continue;
+            }
+            if (params_.getInterceptIndex() == i)
+            {
+                continue;
+            }
+
+            final int depth = params_.getEntryDepth(i);
+
+            for (int k = 0; k < depth; k++)
+            {
+                final R reg = params_.getEntryRegressor(i, k);
+                flagRegs.add(reg);
+            }
+        }
+
+        return flagRegs;
+    }
+
+    public FitResult<S, R, T> generateFlagInteraction(final double startingLL_)
+    {
+        final ItemParameters<S, R, T> params = getParams();
+        final int entryCount = params.getEntryCount();
+
+        final SortedSet<R> flagRegs = getFlagRegs(params);
+
+        FitResult<S, R, T> bestResult = null;
+
+        //Now, for each flag reg, attempt to interact it with each other regressor by simply adding one more entry...
+        for (int i = 0; i < entryCount; i++)
+        {
+            final ItemCurveParams<R, T> curveParams = params.getEntryCurveParams(i, true);
+            final TreeSet<R> curveRegs = new TreeSet<>(curveParams.getRegressors());
+
+            for (final R nextReg : flagRegs)
+            {
+                if (curveRegs.contains(nextReg))
+                {
+                    continue;
+                }
+
+                final ItemCurveParams<R, T> testParams = appendToCurveParams(curveParams, null, nextReg);
+
+                final S toStatus = params.getEntryStatusRestrict(i);
+
+                FitResult<S, R, T> expandedResult = null;
+
+                if (null == toStatus)
+                {
+                    //This is a flag-flag interaction term...
+                    final ItemParameters<S, R, T> updatedParams = params.addBeta(testParams, null);
+
+                    final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(updatedParams, _grid);
+                    final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(updatedParams), _settings);
+
+                    try
+                    {
+                        final ItemModel<S, R, T> model = fitter.fit(grid, null);
+
+                        final double llValue = fitter.computeLogLikelihood(model.getParams(), grid, null);
+
+                        if (llValue < startingLL_)
+                        {
+                            final ItemParameters<S, R, T> updated = model.getParams();
+                            expandedResult = new FitResult<>(updated, updated.getEntryCurveParams(updated.getEntryCount() - 1, true), toStatus, llValue, startingLL_, grid.size());
+                        }
+                    }
+                    catch (final ConvergenceException e)
+                    {
+                        LOG.info("Convergence exception, moving on: " + e.toString());
+                        continue;
+                    }
+                }
+                else
+                {
+                    //This is a flag-curve interaction term.
+                    try
+                    {
+                        expandedResult = fitEntryExpansion(params, testParams, toStatus, false, startingLL_);
+                    }
+                    catch (final ConvergenceException e)
+                    {
+                        LOG.info("Convergence exception, moving on: " + e.toString());
+                        continue;
+                    }
+                }
+
+                if (null == expandedResult)
+                {
+                    continue;
+                }
+
+                final double newPpAic = expandedResult.aicPerParameter();
+
+                if (newPpAic >= 0.0)
+                {
+                    continue;
+                }
+
+                if (null == bestResult)
+                {
+                    bestResult = expandedResult;
+                }
+                else
+                {
+                    final double origPpAic = bestResult.aicPerParameter();
+
+                    //LOG.info("Interaction term result: " + origPpAic + " -> " + newPpAic);
+                    //AIC will be negative, better AIC is more negative.
+                    if (newPpAic < origPpAic)
+                    {
+                        bestResult = expandedResult;
+                        LOG.info("Found improved result[" + origPpAic + " -> " + newPpAic + "]: " + bestResult.getCurveParams());
+                    }
+                }
+            }
+        }
+
+        return bestResult;
+    }
+
     private FitResult<S, R, T> generateInteractionTerm(final ItemCurveParams<R, T> curveParams_, final S toStatus_, final double startingLL_)
     {
         final ItemParameters<S, R, T> params = getParams();
@@ -223,9 +369,6 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         {
             usedRegs.add(curveParams_.getRegressor(i));
         }
-
-        final double intercept = curveParams_.getIntercept();
-        final double beta = curveParams_.getBeta();
 
         FitResult<S, R, T> bestResult = null;
 
@@ -261,13 +404,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
                     nullCurveRegs.add(reg);
                 }
 
-                final List<ItemCurve<T>> curveList = new ArrayList<>(curveParams_.getCurves());
-                final List<R> regs = new ArrayList<>(curveParams_.getRegressors());
-
-                curveList.add(curve);
-                regs.add(reg);
-
-                final ItemCurveParams<R, T> testParams = new ItemCurveParams<>(intercept, beta, regs, curveList);
+                final ItemCurveParams<R, T> testParams = appendToCurveParams(curveParams_, curve, reg);
 
                 try
                 {
@@ -408,7 +545,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
     protected abstract FitResult<S, R, T> findBest(final T curveType_, final R field_, final S toStatus_) throws ConvergenceException;
 
-    protected static final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+    public static final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
     {
         private final double _startingLogL;
         private final double _logL;
@@ -478,6 +615,48 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         public String toString()
         {
             return "Fit result[" + _llImprovement + "]: \n" + _curveParams.toString();
+        }
+
+    }
+
+    private final class ParamFilterImpl implements ParamFilter<S, R, T>
+    {
+        private final int _targetEntry;
+        private final ItemCurveParams<R, T> _curveParams;
+
+        public ParamFilterImpl(final int targetEntry_, final ItemCurveParams<R, T> curveParams_)
+        {
+            _targetEntry = targetEntry_;
+            _curveParams = curveParams_;
+        }
+
+        @Override
+        public boolean betaIsFrozen(ItemParameters<S, R, T> params_, S toStatus_, int paramEntry_)
+        {
+            //We freeze the betas except for the current entry, the new entry, and the intercept.
+            if (params_.getInterceptIndex() == paramEntry_)
+            {
+                return false;
+            }
+            if (paramEntry_ == _targetEntry)
+            {
+                return false;
+            }
+
+            final int foundIndex = params_.getEntryIndex(_curveParams);
+
+            if (foundIndex == paramEntry_)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public boolean curveIsForbidden(ItemParameters<S, R, T> params_, S toStatus_, ItemCurveParams<R, T> curveParams_)
+        {
+            return false;
         }
 
     }
