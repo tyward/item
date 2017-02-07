@@ -161,6 +161,57 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
         return StandardCurveType.FAMILY;
     }
 
+    @Override
+    public ItemCurve<StandardCurveType> boundCentrality(ItemCurve<StandardCurveType> inputCurve_, double lowerBound_, double upperBound_)
+    {
+        if (null == inputCurve_)
+        {
+            return null;
+        }
+
+        final StandardCurveType type = inputCurve_.getCurveType();
+
+        switch (type)
+        {
+            case LOGISTIC:
+            {
+                final LogisticCurve curve = (LogisticCurve) inputCurve_;
+
+                final double center = curve._center;
+
+                if (center < lowerBound_)
+                {
+                    return new LogisticCurve(lowerBound_, Math.sqrt(curve._slope));
+                }
+                if (center > upperBound_)
+                {
+                    return new LogisticCurve(upperBound_, Math.sqrt(curve._slope));
+                }
+
+                return curve;
+            }
+            case GAUSSIAN:
+            {
+                final GaussianCurve curve = (GaussianCurve) inputCurve_;
+                final double center = curve._mean;
+
+                if (center < lowerBound_)
+                {
+                    return new GaussianCurve(lowerBound_, Math.sqrt(curve._stdDev));
+                }
+                if (center > upperBound_)
+                {
+                    return new GaussianCurve(upperBound_, Math.sqrt(curve._stdDev));
+                }
+
+                return curve;
+            }
+            default:
+                throw new RuntimeException("Impossible.");
+        }
+
+    }
+
     private static final class GaussianCurve extends StandardCurve<StandardCurveType>
     {
         private static final long serialVersionUID = 0xd1c81f26497f177fL;

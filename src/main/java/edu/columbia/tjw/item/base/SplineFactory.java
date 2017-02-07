@@ -30,6 +30,7 @@ import java.util.Random;
 /**
  *
  * @author tyler
+ * @param <R>
  */
 public class SplineFactory<R extends ItemRegressor<R>> implements ItemCurveFactory<R, SplineCurveType>
 {
@@ -82,6 +83,12 @@ public class SplineFactory<R extends ItemRegressor<R>> implements ItemCurveFacto
     public EnumFamily<SplineCurveType> getFamily()
     {
         return SplineCurveType.FAMILY;
+    }
+
+    @Override
+    public ItemCurve<SplineCurveType> boundCentrality(ItemCurve<SplineCurveType> inputCurve_, double lowerBound_, double upperBound_)
+    {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     private static final class BasisSpline extends StandardCurve<SplineCurveType>

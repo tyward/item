@@ -34,6 +34,20 @@ public interface ItemCurveFactory<R extends ItemRegressor<R>, T extends ItemCurv
 {
 
     /**
+     * Most curves should have a notion of the "center" of the curve. Often, we
+     * won't want this center to be wildly outside of the bulk of the dataset.
+     * Therefore, this function allows us to force the center of the curve into
+     * a reasonable range.
+     *
+     * @param inputCurve_ The curve to bound.
+     * @param lowerBound_ The lower bound for the center of the curve.
+     * @param upperBound_ The upper bound for the center of the curve.
+     * @return A curve with center bounded within the given range, possibly the
+     * original curve if it needed no adjustment.
+     */
+    public ItemCurve<T> boundCentrality(final ItemCurve<T> inputCurve_, final double lowerBound_, final double upperBound_);
+
+    /**
      * Generates a curve of the proper type by reading the next batch of params
      * from params_
      *

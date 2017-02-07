@@ -90,7 +90,28 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
 
             if (end < start)
             {
-                return new ItemCurveParams<>(params_, factory_, endPoint);
+                final ItemCurveParams<R, T> output = new ItemCurveParams<>(params_, factory_, endPoint);
+
+                //N.B: We can easily end up with fairly crazy curve parameters, so bound them as needed here...
+                //We will allow curves to "run off" a little bit, where it is supported by sufficient evidence, but we won't start a curve way out there...
+                if (settings_.getBoundCentrality())
+                {
+                    final double lowBound = dist_.getMeanX(0);
+                    final double highBound = dist_.getMeanX(dist_.size() - 1);
+
+                    final ItemCurve<T> curve = output.getCurve(0);
+                    final ItemCurve<T> bounded = factory_.boundCentrality(curve, lowBound, highBound);
+
+                    if (bounded == curve)
+                    {
+                        return output;
+                    }
+
+                    final ItemCurveParams<R, T> adjusted = new ItemCurveParams<>(output.getIntercept(), output.getBeta(), output.getRegressor(0), bounded);
+                    return adjusted;
+                }
+
+                return output;
             }
         }
         catch (final TooManyEvaluationsException e)

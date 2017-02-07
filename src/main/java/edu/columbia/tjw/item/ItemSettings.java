@@ -46,7 +46,7 @@ public final class ItemSettings implements Serializable
     private static final int POLISH_MULTI_START_POINTS = 20;
     private static final boolean ALLOW_INTERACTION_CURVES = true;
     private static final boolean DEFAULT_USE_THREADING = true;
-    private static final boolean DEFAULT_POLISH_STARTING_PARAMS = false;
+    private static final boolean DEFAULT_POLISH_STARTING_PARAMS = true;
     private static final boolean CENTRALITY_BOUND = true;
     private static final double Z_SCORE_CUTOFF = 1.0;
 
