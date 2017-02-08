@@ -78,6 +78,9 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         _family = factory_.getFamily();
         _settings = settings_;
         _grid = grid_;
+
+        _fitter = new CurveParamsFitter<>(_factory, model_, _grid, _settings);
+
     }
 
     public void setModel(final ItemModel<S, R, T> model_)
@@ -132,9 +135,18 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             final double startingLL = computeLogLikelihood(params, _grid);
 
+            FitResult<S, R, T> calibrated = null;
+
             try
             {
-                model = calibrateCurve(entryIndex, status);
+                calibrated = calibrateCurve(entryIndex, status);
+
+                if (null == calibrated)
+                {
+                    continue;
+                }
+
+                model = calibrated.getModel();
             }
             catch (final ConvergenceException e)
             {
@@ -578,22 +590,23 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
      * fitter, if necessary.
      *
      * @param entryIndex_ The index of the entry to calibrate.
+     * @param toStatus_
      * @return
      * @throws ConvergenceException
      */
-    protected ItemModel<S, R, T> calibrateCurve(final int entryIndex_, final S toStatus_) throws ConvergenceException
+    protected FitResult<S, R, T> calibrateCurve(final int entryIndex_, final S toStatus_) throws ConvergenceException
     {
         FitResult<S, R, T> result = _fitter.calibrateExistingCurve(entryIndex_, toStatus_);
 
         if (null == result)
         {
-            return new ItemModel<>(_fitter.getParams());
+            return null;
         }
 
         ItemModel<S, R, T> outputModel = result.getModel();
 
         this.setModel(outputModel);
-        return outputModel;
+        return result;
     }
 
 //    protected ItemParameters<S, R, T> getParams()
