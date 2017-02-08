@@ -37,9 +37,12 @@ import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 
@@ -254,14 +257,15 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         return flagRegs;
     }
 
-    public FitResult<S, R, T> generateFlagInteraction(final double startingLL_)
+    public FitResult<S, R, T> generateFlagInteraction(final double startingLL_, final int maxFlags_)
     {
         final ItemParameters<S, R, T> params = getParams();
         final int entryCount = params.getEntryCount();
 
         final SortedSet<R> flagRegs = getFlagRegs(params);
 
-        FitResult<S, R, T> bestResult = null;
+        //FitResult<S, R, T> bestResult = null;
+        final SortedMap<Double, FitResult<S, R, T>> viableResults = new TreeMap<>(Collections.reverseOrder());
 
         //Now, for each flag reg, attempt to interact it with each other regressor by simply adding one more entry...
         for (int i = 0; i < entryCount; i++)
@@ -334,22 +338,56 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
                     continue;
                 }
 
-                if (null == bestResult)
-                {
-                    bestResult = expandedResult;
-                }
-                else
-                {
-                    final double origPpAic = bestResult.aicPerParameter();
+                viableResults.put(newPpAic, expandedResult);
+            }
+        }
 
-                    //LOG.info("Interaction term result: " + origPpAic + " -> " + newPpAic);
-                    //AIC will be negative, better AIC is more negative.
-                    if (newPpAic < origPpAic)
-                    {
-                        bestResult = expandedResult;
-                        LOG.info("Found improved result[" + origPpAic + " -> " + newPpAic + "]: " + bestResult.getCurveParams());
-                    }
+        if (viableResults.size() < 1)
+        {
+            return null;
+        }
+
+        FitResult<S, R, T> bestResult = null;
+
+        for (final FitResult<S, R, T> val : viableResults.values())
+        {
+            if (null == bestResult)
+            {
+                bestResult = val;
+                continue;
+            }
+
+            final ItemParameters<S, R, T> current = bestResult.getModel().getParams();
+
+            final ItemCurveParams<R, T> expansion = val.getCurveParams();
+            final ItemParameters<S, R, T> updatedParams = params.addBeta(expansion, val.getToState());
+
+            final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(updatedParams, _grid);
+            final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(updatedParams), _settings);
+
+            try
+            {
+                final ItemModel<S, R, T> model = fitter.fit(grid, null);
+                final ItemParameters<S, R, T> modParams = model.getParams();
+
+                final double llValue = fitter.computeLogLikelihood(modParams, grid, null);
+
+                final FitResult<S, R, T> expResults = new FitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), val.getToState(), llValue, bestResult.getLogLikelihood(), grid.size());
+
+                final double ppAic = expResults.aicPerParameter();
+
+                //Require some minimal level of goodness.
+                if (ppAic > _settings.getAicCutoff())
+                {
+                    continue;
                 }
+
+                bestResult = expResults;
+            }
+            catch (final ConvergenceException e)
+            {
+                LOG.info("Convergence exception, moving on: " + e.toString());
+                continue;
             }
         }
 
