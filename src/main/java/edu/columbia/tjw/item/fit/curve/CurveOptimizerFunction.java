@@ -55,7 +55,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final int _toIndex;
     private final int[] _indexList;
 
-    private final BaseCurveFitter<S, R, T> _curveFitter;
+    private final CurveParamsFitter<S, R, T> _curveFitter;
 
     private final S _status;
     private final int[] _actualOffsets;
@@ -72,7 +72,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     //N.B: This is an unsafe reference to an array owned by someone else, be careful with it.
     private final float[][] _regData;
 
-    public CurveOptimizerFunction(final ItemCurveParams<R, T> initParams_, final ItemCurveFactory<R, T> factory_, final S fromStatus_, final S toStatus_, final BaseCurveFitter<S, R, T> curveFitter_,
+    public CurveOptimizerFunction(final ItemCurveParams<R, T> initParams_, final ItemCurveFactory<R, T> factory_, final S fromStatus_, final S toStatus_, final CurveParamsFitter<S, R, T> curveFitter_,
             final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_, final boolean subtractStarting_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());

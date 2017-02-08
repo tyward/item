@@ -209,7 +209,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         ItemModel<S, R, T> output = best.getModel();
-        LOG.info("New Parameters: \n" + output.getParams().toString());
+        LOG.info("New Parameters[" + best.getLogLikelihood() + "]: \n" + output.getParams().toString());
         return output;
     }
 
