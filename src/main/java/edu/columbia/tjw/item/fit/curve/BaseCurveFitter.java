@@ -27,11 +27,8 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.optimize.EvaluationResult;
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.logging.Logger;
 
@@ -101,25 +98,13 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     @Override
     protected ItemModel<S, R, T> calibrateCurve(final int entryIndex_, final S toStatus_) throws ConvergenceException
     {
-        final ItemParameters<S, R, T> params = _model.getParams();
+        FitResult<S, R, T> result = _fitter.calibrateExistingCurve(entryIndex_, toStatus_);
 
-        //N.B: Don't check for filtering, this is an entry we already have, filtering isn't relevant.
-        final ItemCurveParams<R, T> entryParams = params.getEntryCurveParams(entryIndex_);
-        final ItemParameters<S, R, T> reduced = params.dropIndex(entryIndex_);
-        final double startingLL = this.computeLogLikelihood(params, _grid);
-
-        FitResult<S, R, T> result = fitEntryExpansion(reduced, entryParams, toStatus_, true, startingLL);
-        final double aicDiff = result.calculateAicDifference();
-
-        if (aicDiff > _settings.getAicCutoff())
+        if (null == result)
         {
-            //We demand that the AIC improvement is more than the bare minimum. 
-            // Also, demand that the resulting diff is statistically significant.
-            //LOG.info("AIC improvement is not large enough, keeping old curve.");
             return _model;
         }
 
-        LOG.info("Improved a curve:[" + aicDiff + "]: " + result.getCurveParams());
         ItemModel<S, R, T> outputModel = result.getModel();
 
         this.setModel(outputModel);

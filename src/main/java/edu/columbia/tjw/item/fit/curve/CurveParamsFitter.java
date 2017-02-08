@@ -186,6 +186,28 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return _powerScores;
     }
 
+    public FitResult<S, R, T> calibrateExistingCurve(final int entryIndex_, final S toStatus_) throws ConvergenceException
+    {
+        final ItemParameters<S, R, T> params = _model.getParams();
+
+        //N.B: Don't check for filtering, this is an entry we already have, filtering isn't relevant.
+        final ItemCurveParams<R, T> entryParams = params.getEntryCurveParams(entryIndex_);
+        final ItemParameters<S, R, T> reduced = params.dropIndex(entryIndex_);
+
+        FitResult<S, R, T> result = expandParameters(reduced, entryParams, toStatus_, true);
+        final double aicDiff = result.calculateAicDifference();
+
+        if (aicDiff > _settings.getAicCutoff())
+        {
+            //We demand that the AIC improvement is more than the bare minimum. 
+            // Also, demand that the resulting diff is statistically significant.
+            //LOG.info("AIC improvement is not large enough, keeping old curve.");
+            return null;
+        }
+
+        return result;
+    }
+
     public FitResult<S, R, T> calibrateCurveAddition(T curveType_, R field_, S toStatus_) throws ConvergenceException
     {
         LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
