@@ -53,7 +53,7 @@ import java.util.logging.Logger;
  * @param <R> The regressor type for this fitter
  * @param <T> The curve type for this fitter
  */
-public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private static final Logger LOG = LogUtil.getLogger(CurveFitter.class);
 
@@ -65,7 +65,9 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
     private final ItemStatusGrid<S, R> _grid;
     private final ItemCurveFactory<R, T> _factory;
 
-    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_)
+    private CurveParamsFitter<S, R, T> _fitter;
+
+    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_, final ItemModel<S, R, T> model_)
     {
         if (null == settings_)
         {
@@ -76,6 +78,11 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         _family = factory_.getFamily();
         _settings = settings_;
         _grid = grid_;
+    }
+
+    public void setModel(final ItemModel<S, R, T> model_)
+    {
+        _fitter = new CurveParamsFitter<>(_fitter, model_.getParams());
     }
 
     protected double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_)
@@ -89,7 +96,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
     public final ItemModel<S, R, T> calibrateCurves()
     {
         LOG.info("Starting curve calibration sweep.");
-        final ItemParameters<S, R, T> initParams = getParams();
+        final ItemParameters<S, R, T> initParams = _fitter.getParams();
 
         final int entryCount = initParams.getEntryCount();
         ItemModel<S, R, T> model = new ItemModel<>(initParams);
@@ -150,7 +157,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
         }
 
-        LOG.info("Finished curve calibration sweep: " + getParams());
+        LOG.info("Finished curve calibration sweep: " + _fitter.getParams());
 
         return model;
     }
@@ -259,7 +266,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
     public FitResult<S, R, T> generateFlagInteraction(final double startingLL_, final int maxFlags_)
     {
-        final ItemParameters<S, R, T> params = getParams();
+        final ItemParameters<S, R, T> params = _fitter.getParams();
         final int entryCount = params.getEntryCount();
 
         final SortedSet<R> flagRegs = getFlagRegs(params);
@@ -317,7 +324,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
                     //This is a flag-curve interaction term.
                     try
                     {
-                        expandedResult = fitEntryExpansion(params, testParams, toStatus, false, startingLL_);
+                        expandedResult = _fitter.expandParameters(params, testParams, toStatus, false, startingLL_);
                     }
                     catch (final ConvergenceException e)
                     {
@@ -396,7 +403,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
     private FitResult<S, R, T> generateInteractionTerm(final ItemCurveParams<R, T> curveParams_, final S toStatus_, final double startingLL_)
     {
-        final ItemParameters<S, R, T> params = getParams();
+        final ItemParameters<S, R, T> params = _fitter.getParams();
         final int entryCount = params.getEntryCount();
 
         //We can't have one entry depend on a single regressor twice. 
@@ -446,7 +453,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
                 try
                 {
-                    final FitResult<S, R, T> expandedResult = fitEntryExpansion(params, testParams, toStatus_, false, startingLL_);
+                    final FitResult<S, R, T> expandedResult = _fitter.expandParameters(params, testParams, toStatus_, false, startingLL_);
 
                     if (null == bestResult)
                     {
@@ -480,7 +487,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
     private FitResult<S, R, T> generateInteractionTerm(final FitResult<S, R, T> currentResult_)
     {
         final double startingLL = currentResult_.getLogLikelihood();
-        final ItemParameters<S, R, T> params = getParams();
+        final ItemParameters<S, R, T> params = _fitter.getParams();
         final ItemCurveParams<R, T> expansionCurve = currentResult_.getCurveParams();
         final S toStatus = currentResult_.getToState();
 
@@ -507,7 +514,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
 
     private FitResult<S, R, T> findBest(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filters_)
     {
-        final ItemParameters<S, R, T> params = getParams();
+        final ItemParameters<S, R, T> params = _fitter.getParams();
         final S fromStatus = params.getStatus();
         FitResult<S, R, T> bestResult = null;
         double bestImprovement = 0.0;
@@ -531,7 +538,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
                             continue;
                         }
 
-                        final FitResult<S, R, T> res = findBest(curveType, field, toStatus);
+                        final FitResult<S, R, T> res = _fitter.calibrateCurveAddition(curveType, field, toStatus);
 
                         if (params.curveIsForbidden(toStatus, res.getCurveParams(), filters_))
                         {
@@ -574,15 +581,26 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
      * @return
      * @throws ConvergenceException
      */
-    protected abstract ItemModel<S, R, T> calibrateCurve(final int entryIndex_, final S toStatus_) throws ConvergenceException;
+    protected ItemModel<S, R, T> calibrateCurve(final int entryIndex_, final S toStatus_) throws ConvergenceException
+    {
+        FitResult<S, R, T> result = _fitter.calibrateExistingCurve(entryIndex_, toStatus_);
 
-    public abstract FitResult<S, R, T> fitEntryExpansion(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> initParams_, S toStatus_,
-            final boolean subtractStarting_, final double startingLL_) throws ConvergenceException;
+        if (null == result)
+        {
+            return new ItemModel<>(_fitter.getParams());
+        }
 
-    protected abstract ItemParameters<S, R, T> getParams();
+        ItemModel<S, R, T> outputModel = result.getModel();
 
-    protected abstract FitResult<S, R, T> findBest(final T curveType_, final R field_, final S toStatus_) throws ConvergenceException;
+        this.setModel(outputModel);
+        return outputModel;
+    }
 
+//    protected ItemParameters<S, R, T> getParams()
+//    {
+//        return _fitter.getParams();
+//    }
+    //protected abstract FitResult<S, R, T> findBest(final T curveType_, final R field_, final S toStatus_) throws ConvergenceException;
     private final class ParamFilterImpl implements ParamFilter<S, R, T>
     {
         private final int _targetEntry;

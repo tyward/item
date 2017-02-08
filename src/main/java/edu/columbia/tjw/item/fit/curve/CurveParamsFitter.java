@@ -82,23 +82,30 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             throw new IllegalArgumentException("From status mismatch.");
         }
 
-        this._settings = baseFitter_._settings;
-        this._factory = baseFitter_._factory;
-        this._grid = baseFitter_._grid;
-        this._optimizer = baseFitter_._optimizer;
-        this._fromStatus = baseFitter_._fromStatus;
+        //The synchronization doesn't cost much, and improves the correctness.
+        synchronized (this)
+        {
+            synchronized (baseFitter_)
+            {
+                this._settings = baseFitter_._settings;
+                this._factory = baseFitter_._factory;
+                this._grid = baseFitter_._grid;
+                this._optimizer = baseFitter_._optimizer;
+                this._fromStatus = baseFitter_._fromStatus;
 
-        //These can save some resources by copying over.
-        this._indexList = baseFitter_._indexList;
-        this._actualOutcomes = baseFitter_._actualOutcomes;
+                //These can save some resources by copying over.
+                this._indexList = baseFitter_._indexList;
+                this._actualOutcomes = baseFitter_._actualOutcomes;
+            }
 
-        //These we need to build each time...
-        final int count = _indexList.length;
-        final int reachableCount = _fromStatus.getReachableCount();
-        this._model = new ItemModel<>(params_);
-        _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
-        _powerScores = new RectangularDoubleArray(count, reachableCount);
-        fillPowerScores();
+            //These we need to build each time...
+            final int count = _indexList.length;
+            final int reachableCount = _fromStatus.getReachableCount();
+            this._model = new ItemModel<>(params_);
+            _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
+            _powerScores = new RectangularDoubleArray(count, reachableCount);
+            fillPowerScores();
+        }
     }
 
     public CurveParamsFitter(final ItemCurveFactory<R, T> factory_, final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_)
@@ -128,56 +135,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
             _powerScores = new RectangularDoubleArray(count, reachableCount);
             fillPowerScores();
-        }
-    }
-
-    private static <S extends ItemStatus<S>, R extends ItemRegressor<R>> int[] generateIndexList(final ItemStatusGrid<S, R> grid_, final S fromStatus_)
-    {
-        final int gridSize = grid_.size();
-        final int fromStatusOrdinal = fromStatus_.ordinal();
-        final int[] indexList = new int[gridSize];
-        int count = 0;
-
-        for (int i = 0; i < gridSize; i++)
-        {
-            final int statOrdinal = grid_.getStatus(i);
-
-            if (statOrdinal != fromStatusOrdinal)
-            {
-                continue;
-            }
-            if (!grid_.hasNextStatus(i))
-            {
-                continue;
-            }
-
-            indexList[count++] = i;
-        }
-
-        final int[] output = Arrays.copyOf(indexList, count);
-        return output;
-    }
-
-    private void fillPowerScores()
-    {
-        final int reachableCount = _fromStatus.getReachableCount();
-        final double[] probabilities = new double[reachableCount];
-        final int baseCase = _fromStatus.getReachable().indexOf(_fromStatus);
-        final int count = _actualOutcomes.length;
-
-        for (int i = 0; i < count; i++)
-        {
-            final int index = _indexList[i];
-
-            _model.transitionProbability(_paramGrid, index, probabilities);
-
-            MultiLogistic.multiLogitFunction(baseCase, probabilities, probabilities);
-
-            for (int w = 0; w < reachableCount; w++)
-            {
-                final double next = probabilities[w];
-                _powerScores.set(i, w, next);
-            }
         }
     }
 
@@ -329,4 +286,58 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return startingLL;
     }
 
+    public ItemParameters<S, R, T> getParams()
+    {
+        return _model.getParams();
+    }
+
+    private static <S extends ItemStatus<S>, R extends ItemRegressor<R>> int[] generateIndexList(final ItemStatusGrid<S, R> grid_, final S fromStatus_)
+    {
+        final int gridSize = grid_.size();
+        final int fromStatusOrdinal = fromStatus_.ordinal();
+        final int[] indexList = new int[gridSize];
+        int count = 0;
+
+        for (int i = 0; i < gridSize; i++)
+        {
+            final int statOrdinal = grid_.getStatus(i);
+
+            if (statOrdinal != fromStatusOrdinal)
+            {
+                continue;
+            }
+            if (!grid_.hasNextStatus(i))
+            {
+                continue;
+            }
+
+            indexList[count++] = i;
+        }
+
+        final int[] output = Arrays.copyOf(indexList, count);
+        return output;
+    }
+
+    private void fillPowerScores()
+    {
+        final int reachableCount = _fromStatus.getReachableCount();
+        final double[] probabilities = new double[reachableCount];
+        final int baseCase = _fromStatus.getReachable().indexOf(_fromStatus);
+        final int count = _actualOutcomes.length;
+
+        for (int i = 0; i < count; i++)
+        {
+            final int index = _indexList[i];
+
+            _model.transitionProbability(_paramGrid, index, probabilities);
+
+            MultiLogistic.multiLogitFunction(baseCase, probabilities, probabilities);
+
+            for (int w = 0; w < reachableCount; w++)
+            {
+                final double next = probabilities[w];
+                _powerScores.set(i, w, next);
+            }
+        }
+    }
 }
