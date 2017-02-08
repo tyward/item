@@ -115,7 +115,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     public ItemModel<S, R, T> fit(final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
-        LOG.info("Fitting Coefficients: " + _model.getParams());
+        //LOG.info("Fitting Coefficients");
 
         final LogisticModelFunction<S, R, T> function = generateFunction(_model.getParams(), grid_, filters_);
         final double[] beta = function.getBeta();
@@ -126,14 +126,9 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         function.value(point, 0, function.numRows(), res);
 
         final double oldLL = res.getMean();
-        LOG.info("\n\n -->Log Likelihood: " + oldLL);
+        //LOG.info("\n\n -->Log Likelihood: " + oldLL);
 
         final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(function, point);
-
-        if (!result.converged())
-        {
-            LOG.info("Exhausted dataset before convergence, moving on.");
-        }
 
         final MultivariatePoint optimumPoint = result.getOptimum();
 
@@ -143,7 +138,12 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         final double newLL = result.minValue();
-        LOG.info("LL improvement: " + oldLL + " -> " + newLL);
+        LOG.info("Fitting coefficients, LL improvement: " + oldLL + " -> " + newLL);
+
+        if (!result.converged())
+        {
+            LOG.info("Exhausted dataset before convergence, moving on.");
+        }
 
         if (newLL > oldLL)
         {

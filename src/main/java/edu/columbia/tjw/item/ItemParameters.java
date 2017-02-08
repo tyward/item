@@ -860,19 +860,16 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                 return true;
             }
 
-            for (int i = 0; i < params_.getEntryCount(); i++)
+            final S restrict = params_.getEntryStatusRestrict(paramEntry_);
+
+            if (null == restrict)
             {
-                final S restrict = params_.getEntryStatusRestrict(i);
+                return false;
+            }
 
-                if (null == restrict)
-                {
-                    continue;
-                }
-
-                if (restrict != toStatus_)
-                {
-                    return true;
-                }
+            if (restrict != toStatus_)
+            {
+                return true;
             }
 
             return false;
