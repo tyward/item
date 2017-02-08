@@ -164,7 +164,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             throw new ConvergenceException("Unable to improve model.");
         }
 
-        LOG.info("Generated curve[" + best.aicPerParameter() + "][" + best._startingLogL + " -> " + best._logL + "][" + best.getToState() + "]: " + best.getCurveParams());
+        LOG.info("Generated curve[" + best.aicPerParameter() + "][" + best.getStartingLogLikelihood() + " -> " + best.getLogLikelihood() + "][" + best.getToState() + "]: " + best.getCurveParams());
 
 //        LOG.info("Best transformation: " + best.toString());
 //        LOG.info("LL improvement: " + best._startingLogL + " -> " + best._logL + ": " + best._llImprovement);
@@ -582,80 +582,6 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
     protected abstract ItemParameters<S, R, T> getParams();
 
     protected abstract FitResult<S, R, T> findBest(final T curveType_, final R field_, final S toStatus_) throws ConvergenceException;
-
-    public static final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
-    {
-        private final double _startingLogL;
-        private final double _logL;
-        private final double _llImprovement;
-        private final int _rowCount;
-        private final S _toState;
-        private final ItemParameters<S, R, T> _params;
-        private final ItemCurveParams<R, T> _curveParams;
-
-        public FitResult(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> curveParams_, final S toState_, final double logLikelihood_, final double startingLL_, final int rowCount_)
-        {
-            _params = params_;
-            _curveParams = curveParams_;
-            _toState = toState_;
-            _logL = logLikelihood_;
-            _llImprovement = (startingLL_ - _logL);
-            _startingLogL = startingLL_;
-            _rowCount = rowCount_;
-        }
-
-        public S getToState()
-        {
-            return _toState;
-        }
-
-        public ItemCurveParams<R, T> getCurveParams()
-        {
-            return _curveParams;
-        }
-
-        public ItemModel<S, R, T> getModel()
-        {
-            return new ItemModel<>(_params);
-        }
-
-        public double getLogLikelihood()
-        {
-            return _logL;
-        }
-
-        public double improvementPerParameter()
-        {
-            return _llImprovement / getEffectiveParamCount();
-        }
-
-        public double aicPerParameter()
-        {
-            final double aic = calculateAicDifference();
-            final double output = aic / getEffectiveParamCount();
-            return output;
-        }
-
-        public int getEffectiveParamCount()
-        {
-            return (_curveParams.size() - 1);
-        }
-
-        public double calculateAicDifference()
-        {
-            final double scaledImprovement = _llImprovement * _rowCount;
-            final double paramContribution = getEffectiveParamCount();
-            final double aicDiff = 2.0 * (paramContribution - scaledImprovement);
-            return aicDiff;
-        }
-
-        @Override
-        public String toString()
-        {
-            return "Fit result[" + _llImprovement + "]: \n" + _curveParams.toString();
-        }
-
-    }
 
     private final class ParamFilterImpl implements ParamFilter<S, R, T>
     {

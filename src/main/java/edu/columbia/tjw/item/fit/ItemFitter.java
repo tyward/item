@@ -31,7 +31,7 @@ import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 import edu.columbia.tjw.item.fit.curve.BaseCurveFitter;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
-import edu.columbia.tjw.item.fit.curve.CurveFitter.FitResult;
+import edu.columbia.tjw.item.fit.curve.FitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
