@@ -139,7 +139,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             try
             {
-                calibrated = calibrateCurve(entryIndex, status);
+                calibrated = calibrateCurve(entryIndex, status, startingLL);
 
                 if (null == calibrated)
                 {
@@ -492,14 +492,25 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             }
         }
 
+        if (null == bestResult)
+        {
+            return bestResult;
+        }
+
+        if (bestResult.aicPerParameter() >= _settings.getAicCutoff())
+        {
+            //This result didn't even meet the minimal standards needed for acceptance.
+            return null;
+        }
+
         //Unable to make any improvements, just return the original results.
         return bestResult;
     }
 
     private FitResult<S, R, T> generateInteractionTerm(final FitResult<S, R, T> currentResult_)
     {
-        final double startingLL = currentResult_.getLogLikelihood();
-        final ItemParameters<S, R, T> params = _fitter.getParams();
+        final double startingLL = currentResult_.getStartingLogLikelihood();
+        //final ItemParameters<S, R, T> params = _fitter.getParams();
         final ItemCurveParams<R, T> expansionCurve = currentResult_.getCurveParams();
         final S toStatus = currentResult_.getToState();
 
@@ -507,6 +518,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         if (null == interactionResult)
         {
+            LOG.info("No good interaction results.");
             return currentResult_;
         }
 
@@ -520,8 +532,12 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             LOG.info("Found improved result[" + origPpAic + " -> " + newPpAic + "]: " + interactionResult.getCurveParams());
             return interactionResult;
         }
+        else
+        {
+            LOG.info("Best interaction term isn't better[" + origPpAic + " -> " + newPpAic + "]: " + interactionResult.getCurveParams());
+            return currentResult_;
+        }
 
-        return currentResult_;
     }
 
     private FitResult<S, R, T> findBest(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filters_)
@@ -594,9 +610,9 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
      * @return
      * @throws ConvergenceException
      */
-    protected FitResult<S, R, T> calibrateCurve(final int entryIndex_, final S toStatus_) throws ConvergenceException
+    protected FitResult<S, R, T> calibrateCurve(final int entryIndex_, final S toStatus_, final double startingLL_) throws ConvergenceException
     {
-        FitResult<S, R, T> result = _fitter.calibrateExistingCurve(entryIndex_, toStatus_);
+        FitResult<S, R, T> result = _fitter.calibrateExistingCurve(entryIndex_, toStatus_, startingLL_);
 
         if (null == result)
         {

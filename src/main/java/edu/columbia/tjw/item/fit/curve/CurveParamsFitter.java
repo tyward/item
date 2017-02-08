@@ -143,7 +143,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return _powerScores;
     }
 
-    public FitResult<S, R, T> calibrateExistingCurve(final int entryIndex_, final S toStatus_) throws ConvergenceException
+    public FitResult<S, R, T> calibrateExistingCurve(final int entryIndex_, final S toStatus_, final double startingLL_) throws ConvergenceException
     {
         final ItemParameters<S, R, T> params = _model.getParams();
 
@@ -151,7 +151,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final ItemCurveParams<R, T> entryParams = params.getEntryCurveParams(entryIndex_);
         final ItemParameters<S, R, T> reduced = params.dropIndex(entryIndex_);
 
-        FitResult<S, R, T> result = expandParameters(reduced, entryParams, toStatus_, true);
+        FitResult<S, R, T> result = expandParameters(reduced, entryParams, toStatus_, true, startingLL_);
         final double aicDiff = result.calculateAicDifference();
 
         if (aicDiff > _settings.getAicCutoff())

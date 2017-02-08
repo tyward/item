@@ -138,7 +138,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         final double newLL = result.minValue();
-        LOG.info("Fitting coefficients, LL improvement: " + oldLL + " -> " + newLL);
+        LOG.info("Fitting coefficients, LL improvement: " + oldLL + " -> " + newLL + "(" + (newLL - oldLL) + ")");
 
         if (!result.converged())
         {
@@ -153,8 +153,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         final ItemParameters<S, R, T> updated = function.generateParams(beta);
         final ItemModel<S, R, T> output = _model.updateParameters(updated);
 
-        LOG.info("Updated Coefficients: " + output.getParams());
-
+        //LOG.info("Updated Coefficients: " + output.getParams());
         return output;
     }
 
