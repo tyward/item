@@ -292,10 +292,26 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             final ItemCurveParams<R, T> curveParams = params.getEntryCurveParams(i, true);
             final TreeSet<R> curveRegs = new TreeSet<>(curveParams.getRegressors());
 
+            if (i == params.getInterceptIndex())
+            {
+                //Obviously interactions with the intercept are vacuous.
+                continue;
+            }
+
             for (final R nextReg : flagRegs)
             {
                 if (curveRegs.contains(nextReg))
                 {
+                    continue;
+                }
+
+                if ((curveParams.getEntryDepth() == 1)
+                        && (curveParams.getRegressor(0).compareTo(nextReg) > 0)
+                        && (curveParams.getCurve(0) == null))
+                {
+                    //This is a flag entry, but we don't want to add entries (a, b) 
+                    //and also (b, a), so take only the one where the first 
+                    //regressor is before the second.
                     continue;
                 }
 
@@ -367,6 +383,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         FitResult<S, R, T> bestResult = null;
+        int usedCount = 0;
 
         for (final FitResult<S, R, T> val : viableResults.values())
         {
@@ -379,7 +396,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             final ItemParameters<S, R, T> current = bestResult.getModel().getParams();
 
             final ItemCurveParams<R, T> expansion = val.getCurveParams();
-            final ItemParameters<S, R, T> updatedParams = params.addBeta(expansion, val.getToState());
+            final ItemParameters<S, R, T> updatedParams = current.addBeta(expansion, val.getToState());
 
             final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(updatedParams, _grid);
             final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(updatedParams), _settings);
@@ -402,6 +419,12 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                 }
 
                 bestResult = expResults;
+                usedCount++;
+
+                if (usedCount >= maxFlags_)
+                {
+                    break;
+                }
             }
             catch (final ConvergenceException e)
             {
