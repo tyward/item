@@ -317,18 +317,21 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             try
             {
-                model = fitCoefficients(model, grid_, filters_);
+                final ItemModel<S, R, T> m2 = fitCoefficients(model, grid_, filters_);
 
                 final double test = computeLogLikelihood(model.getParams(), grid_);
 
                 if (test > bestLL)
                 {
                     LOG.info("LL got worse: " + bestLL + " -> " + test);
-                    LOG.info("Current parameters: " + model.getParams());
-                    throw new IllegalStateException("Impossible.");
+                    LOG.info("Previous parameters: " + model.getParams());
+                    LOG.info("Current parameters: " + m2.getParams());
                 }
-
-                bestLL = test;
+                else
+                {
+                    bestLL = test;
+                    model = m2;
+                }
             }
             catch (final ConvergenceException e)
             {
@@ -338,35 +341,40 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, grid_, model);
 
             //First, try to calibrate any existing curves to improve the fit. 
-            model = fitter.calibrateCurves();
+            final ItemModel<S, R, T> m3 = fitter.calibrateCurves();
 
             final double test = computeLogLikelihood(model.getParams(), grid_);
 
             if (test > bestLL)
             {
                 LOG.info("LL got worse: " + bestLL + " -> " + test);
-                LOG.info("Current parameters: " + model.getParams());
-                throw new IllegalStateException("Impossible.");
+                LOG.info("Previous parameters: " + model.getParams());
+                LOG.info("Current parameters: " + m3.getParams());
             }
-
-            bestLL = test;
+            else
+            {
+                bestLL = test;
+                model = m3;
+            }
 
             try
             {
-
                 //Now, try to add a new curve. 
-                model = fitter.generateCurve(curveFields_, filters_);
+                final ItemModel<S, R, T> m4 = fitter.generateCurve(curveFields_, filters_);
 
                 final double test2 = computeLogLikelihood(model.getParams(), grid_);
 
                 if (test2 > bestLL)
                 {
-                    LOG.info("LL got worse: " + bestLL + " -> " + test2);
-                    LOG.info("Current parameters: " + model.getParams());
-                    throw new IllegalStateException("Impossible.");
+                    LOG.info("LL got worse: " + bestLL + " -> " + test);
+                    LOG.info("Previous parameters: " + model.getParams());
+                    LOG.info("Current parameters: " + m4.getParams());
                 }
-
-                bestLL = test2;
+                else
+                {
+                    bestLL = test2;
+                    model = m4;
+                }
 
 //                //If the expansion worked, try to update all curve betas...
 //                final CurveFitter<S, R, T> f2 = new BaseCurveFitter<>(_factory, model, grid_, _settings, _intercept);
