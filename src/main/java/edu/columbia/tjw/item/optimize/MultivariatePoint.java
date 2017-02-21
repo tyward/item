@@ -187,8 +187,7 @@ public class MultivariatePoint implements EvaluationPoint<MultivariatePoint>
 
         if (mag == 0.0)
         {
-            Arrays.fill(_point, 1.0);
-            this.normalize();
+            throw new IllegalStateException("Cannot normalize the zero point.");
         }
 
         final double invMag = 1.0 / mag;
