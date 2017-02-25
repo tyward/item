@@ -35,6 +35,7 @@ import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
+import edu.columbia.tjw.item.util.MathFunctions;
 import java.util.Collection;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -221,7 +222,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             final double ll2 = f2.computeLogLikelihood(rebuilt, new ParamFittingGrid<>(rebuilt, grid_), filters_);
 
-            if (ll2 < baseLL)
+            if (MathFunctions.isAicBetter(baseLL, ll2))
             {
                 LOG.info("Annealing improved model: " + baseLL + " -> " + ll2);
                 base = rebuilt;
@@ -277,9 +278,10 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             return model;
         }
 
-        if (result.getLogLikelihood() > bestLL)
+        if (MathFunctions.isAicWorse(bestLL, result.getLogLikelihood()))
         {
-            throw new IllegalStateException("Impossible.");
+            LOG.info("Flag interactions made things worse, skipping.");
+            return model;
         }
 
         LOG.info("Improved results through interactions: " + result.aicPerParameter());
@@ -321,7 +323,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
                 final double test = computeLogLikelihood(model.getParams(), grid_);
 
-                if (test > bestLL)
+                if (MathFunctions.isAicWorse(bestLL, test))
                 {
                     LOG.info("LL got worse: " + bestLL + " -> " + test);
                     LOG.info("Previous parameters: " + model.getParams());
@@ -345,7 +347,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             final double test = computeLogLikelihood(model.getParams(), grid_);
 
-            if (test > bestLL)
+            if (MathFunctions.isAicWorse(bestLL, test))
             {
                 LOG.info("LL got worse: " + bestLL + " -> " + test);
                 LOG.info("Previous parameters: " + model.getParams());
@@ -364,7 +366,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
                 final double test2 = computeLogLikelihood(model.getParams(), grid_);
 
-                if (test2 > bestLL)
+                if (MathFunctions.isAicWorse(bestLL, test2))
                 {
                     LOG.info("LL got worse: " + bestLL + " -> " + test);
                     LOG.info("Previous parameters: " + model.getParams());
