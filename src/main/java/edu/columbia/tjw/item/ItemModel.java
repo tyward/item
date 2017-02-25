@@ -129,7 +129,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return logLikelihood;
     }
 
-    public void fillWorkspace(final double[] rawRegressors_, final double[] regWorkspace_)
+    private void fillWorkspace(final double[] rawRegressors_, final double[] regWorkspace_)
     {
         if (rawRegressors_.length != _rawRegWorkspace.length)
         {
@@ -266,9 +266,11 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 continue;
             }
 
-            transitionProbability(grid_, i, computed);
+            //We inline a bunch of these calcs to reduce duplication of effort.
             grid_.getRegressors(i, rawReg);
             this.fillWorkspace(rawReg, regressors);
+            rawPowerScores(regressors, computed);
+            MultiLogistic.multiLogisticFunction(computed, computed);
 
             final int actualTransition = grid_.getNextStatus(i);
 
@@ -298,6 +300,12 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                     final double actualProbability = actual[q];
                     final double computedProb = computed[q];
                     final double contribution = actualProbability * betaDerivative / computedProb;
+
+                    if (Double.isNaN(contribution))
+                    {
+                        throw new IllegalStateException("Contribution is NaN.");
+                    }
+
                     betaTerm += contribution;
                 }
 
@@ -321,21 +329,30 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      */
     public int transitionProbability(final ItemParamGrid<S, R, T> grid_, final int index_, final double[] output_)
     {
-        final double[] regressors = _regWorkspace;
-
         grid_.getRegressors(index_, _rawRegWorkspace);
-        fillWorkspace(_rawRegWorkspace, regressors);
-
-        multiLogisticFunction(regressors, output_);
+        multiLogisticFunction(_rawRegWorkspace, output_);
 
         return _betas.length;
     }
 
     public void powerScores(final double[] regressors_, final double[] workspace_)
     {
-        //computeWeighting(regressors_, _regWeightedWorkspace);
+        if (regressors_.length != _rawRegWorkspace.length)
+        {
+            throw new IllegalArgumentException("Length mismatch: " + regressors_.length + " != " + _rawRegWorkspace.length);
+        }
+        if (workspace_.length != _betas.length)
+        {
+            throw new IllegalArgumentException("Length mismatch: " + workspace_.length + " != " + _reachableSize);
+        }
 
-        final int inputSize = regressors_.length;
+        fillWorkspace(regressors_, _regWorkspace);
+        rawPowerScores(_regWorkspace, workspace_);
+    }
+
+    private void rawPowerScores(final double[] regressors_, final double[] workspace_)
+    {
+        final int inputSize = _regWorkspace.length;
         final int outputSize = _betas.length;
 
         for (int i = 0; i < outputSize; i++)
@@ -352,7 +369,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
-    public void multiLogisticFunction(final double[] regressors_, final double[] workspace_)
+    private void multiLogisticFunction(final double[] regressors_, final double[] workspace_)
     {
         powerScores(regressors_, workspace_);
         MultiLogistic.multiLogisticFunction(workspace_, workspace_);
