@@ -181,8 +181,27 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 
     private Object readResolve()
     {
-        //Enforce the singleton condition.
-        return this._members[0].getFamily();
+        //Lots of odd ordering issues can happen due to serialization, be 
+        //tolerant of things that are half built or otherwise problematic.
+        for (final V next : this._members)
+        {
+            if (null == next)
+            {
+                continue;
+            }
+
+            final EnumFamily<V> fam = next.getFamily();
+
+            if (null != fam)
+            {
+                return fam;
+            }
+        }
+
+        //Hmm, looks like the members are still being initialized, just return 
+        //this object as-is, it will likely be used to fill out the member 
+        //family objects.
+        return this;
     }
 
     /**
