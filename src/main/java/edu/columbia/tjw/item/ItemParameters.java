@@ -39,8 +39,6 @@ import java.util.TreeSet;
  */
 public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
 {
-    private static final int[] EMPTY = new int[0];
-
     //This is just to make it clear that the 0th entry is always the intercept.
     private static final int INTERCEPT_INDEX = 0;
     private static final long serialVersionUID = 0x35c74a5424d6cf48L;
@@ -84,13 +82,13 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _filters = Collections.unmodifiableList(Collections.emptyList());
 
         _uniqueBeta = new int[1];
-        _uniqueBeta[0] = -1;
+        _uniqueBeta[INTERCEPT_INDEX] = -1;
 
         _fieldOffsets = new int[1][1];
-        _fieldOffsets[0][0] = 0;
+        _fieldOffsets[INTERCEPT_INDEX][0] = 0;
 
         _transOffsets = new int[1][1];
-        _transOffsets[0][0] = 0;
+        _transOffsets[INTERCEPT_INDEX][0] = 0;
 
         _selfIndex = _status.getReachable().indexOf(_status);
     }
