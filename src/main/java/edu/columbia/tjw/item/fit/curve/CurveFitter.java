@@ -91,8 +91,8 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     protected double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_)
     {
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(params_), _settings);
-        final double ll = fitter.computeLogLikelihood(params_, grid, null);
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(params_), grid, _settings, null);
+        final double ll = fitter.computeLogLikelihood(params_);
         return ll;
     }
 
@@ -327,13 +327,13 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                     final ItemParameters<S, R, T> updatedParams = params.addBeta(testParams, null);
 
                     final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(updatedParams, _grid);
-                    final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(updatedParams), _settings);
+                    final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(updatedParams), grid, _settings, null);
 
                     try
                     {
-                        final ItemModel<S, R, T> model = fitter.fit(grid, null);
+                        final ItemModel<S, R, T> model = fitter.fit();
 
-                        final double llValue = fitter.computeLogLikelihood(model.getParams(), grid, null);
+                        final double llValue = fitter.computeLogLikelihood(model.getParams());
 
                         if (llValue < startingLL_)
                         {
@@ -399,14 +399,14 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             final ItemParameters<S, R, T> updatedParams = current.addBeta(expansion, val.getToState());
 
             final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(updatedParams, _grid);
-            final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(updatedParams), _settings);
+            final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(updatedParams), grid, _settings, null);
 
             try
             {
-                final ItemModel<S, R, T> model = fitter.fit(grid, null);
+                final ItemModel<S, R, T> model = fitter.fit();
                 final ItemParameters<S, R, T> modParams = model.getParams();
 
-                final double llValue = fitter.computeLogLikelihood(modParams, grid, null);
+                final double llValue = fitter.computeLogLikelihood(modParams);
 
                 final FitResult<S, R, T> expResults = new FitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), val.getToState(), llValue, bestResult.getLogLikelihood(), grid.size());
 

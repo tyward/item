@@ -176,9 +176,9 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private ItemModel<S, R, T> fitCoefficients(final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(model_.getParams(), fittingGrid_);
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(model_, _settings);
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(model_, grid, _settings, filters_);
 
-        final ItemModel<S, R, T> m2 = fitter.fit(grid, filters_);
+        final ItemModel<S, R, T> m2 = fitter.fit();
 
         if (null == m2)
         {
@@ -193,10 +193,10 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     {
         final int regCount = params_.getEntryCount();
 
-        final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params_), _settings);
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
+        final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params_), grid, _settings, null);
 
-        final double startingLL = f1.computeLogLikelihood(params_, grid, filters_);
+        final double startingLL = f1.computeLogLikelihood(params_);
         double baseLL = startingLL;
 
         ItemParameters<S, R, T> base = params_;
@@ -218,9 +218,9 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             final ItemParameters<S, R, T> rebuilt = expandModel(reduced, grid_, curveFields_, filters_, reduction).getParams();
 
-            final ParamFitter<S, R, T> f2 = new ParamFitter<>(new ItemModel<>(rebuilt), _settings);
+            final ParamFitter<S, R, T> f2 = new ParamFitter<>(new ItemModel<>(rebuilt), new ParamFittingGrid<>(rebuilt, grid_), _settings, null);
 
-            final double ll2 = f2.computeLogLikelihood(rebuilt, new ParamFittingGrid<>(rebuilt, grid_), filters_);
+            final double ll2 = f2.computeLogLikelihood(rebuilt);
 
             if (MathFunctions.isAicBetter(baseLL, ll2))
             {
@@ -245,21 +245,11 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return new ItemModel<>(base);
     }
 
-    public double computeLogLikelihood(final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> grid_)
-    {
-        final ItemParameters<S, R, T> params = model_.getParams();
-        final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params), _settings);
-
-        final double startingLL = f1.computeLogLikelihood(params, new ParamFittingGrid<>(params, grid_), null);
-
-        return startingLL;
-    }
-
     private double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_)
     {
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(params_), _settings);
-        final double ll = fitter.computeLogLikelihood(params_, grid, null);
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(params_), grid, _settings, null);
+        final double ll = fitter.computeLogLikelihood(params_);
         return ll;
     }
 
