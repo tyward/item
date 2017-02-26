@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
@@ -54,10 +55,10 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     private final Collection<ParamFilter<S, R, T>> _filters;
     private final LogisticModelFunction<S, R, T> _function;
 
-    public ParamFitter(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final ItemSettings settings_, final Collection<ParamFilter<S, R, T>> filters_)
+    public ParamFitter(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_, final Collection<ParamFilter<S, R, T>> filters_)
     {
         _model = new ItemModel<>(params_);
-        _grid = grid_;
+        _grid = new ParamFittingGrid<>(params_, grid_);
         _filters = filters_;
         _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
         _settings = settings_;
@@ -77,7 +78,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return logLikelihood;
     }
 
-    public ItemModel<S, R, T> fit() throws ConvergenceException
+    public ItemParameters<S, R, T> fit() throws ConvergenceException
     {
         //LOG.info("Fitting Coefficients");
         final double[] beta = _function.getBeta();
@@ -113,10 +114,10 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         final ItemParameters<S, R, T> updated = _function.generateParams(beta);
-        final ItemModel<S, R, T> output = _model.updateParameters(updated);
+        //final ItemModel<S, R, T> output = _model.updateParameters(updated);
 
         //LOG.info("Updated Coefficients: " + output.getParams());
-        return output;
+        return updated;
     }
 
     private LogisticModelFunction<S, R, T> generateFunction()

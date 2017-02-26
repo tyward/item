@@ -108,16 +108,16 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         }
     }
 
-    public CurveParamsFitter(final ItemCurveFactory<R, T> factory_, final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_)
+    public CurveParamsFitter(final ItemCurveFactory<R, T> factory_, final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_)
     {
         synchronized (this)
         {
             _settings = settings_;
             _factory = factory_;
-            _model = model_;
+            _model = new ItemModel<>(params_);
             _grid = grid_;
             _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
-            _fromStatus = model_.getParams().getStatus();
+            _fromStatus = params_.getStatus();
 
             final int reachableCount = _fromStatus.getReachableCount();
 

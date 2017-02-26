@@ -375,11 +375,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         MultiLogistic.multiLogisticFunction(workspace_, workspace_);
     }
 
-    public ItemModel<S, R, T> updateParameters(ItemParameters<S, R, T> params_)
-    {
-        return new ItemModel<>(params_);
-    }
-
     public double betaDerivative(final double[] regressors_, final double[] computedProbabilities_, final int regressorIndex_, final int toStateIndex_, final int toStateBetaIndex_)
     {
         final double output = MultiLogistic.multiLogisticBetaDerivative(regressors_, computedProbabilities_, regressorIndex_, toStateIndex_, toStateBetaIndex_);

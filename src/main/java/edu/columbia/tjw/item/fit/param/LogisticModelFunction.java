@@ -108,7 +108,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
         final ItemParameters<S, R, T> updated = generateParams(_beta);
         _params = updated;
-        _model = _model.updateParameters(_params);
+        _model = new ItemModel<>(_params);
     }
 
     @Override
@@ -187,7 +187,6 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
                 derivative[i] = derivative[i] * invCount;
             }
         }
-
 
         final MultivariatePoint der = new MultivariatePoint(derivative);
 

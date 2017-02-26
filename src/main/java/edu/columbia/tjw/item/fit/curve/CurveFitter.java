@@ -31,7 +31,6 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
-import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -67,7 +66,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     private CurveParamsFitter<S, R, T> _fitter;
 
-    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_, final ItemModel<S, R, T> model_)
+    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_, final ItemParameters<S, R, T> params_)
     {
         if (null == settings_)
         {
@@ -79,7 +78,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         _settings = settings_;
         _grid = grid_;
 
-        _fitter = new CurveParamsFitter<>(_factory, model_, _grid, _settings);
+        _fitter = new CurveParamsFitter<>(_factory, params_, _grid, _settings);
 
     }
 
@@ -90,19 +89,18 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     protected double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_)
     {
-        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, grid, _settings, null);
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, grid_, _settings, null);
         final double ll = fitter.computeLogLikelihood(params_);
         return ll;
     }
 
-    public final ItemModel<S, R, T> calibrateCurves()
+    public final ItemParameters<S, R, T> calibrateCurves()
     {
         LOG.info("Starting curve calibration sweep.");
         final ItemParameters<S, R, T> initParams = _fitter.getParams();
 
         final int entryCount = initParams.getEntryCount();
-        ItemModel<S, R, T> model = new ItemModel<>(initParams);
+        ItemParameters<S, R, T> current = initParams;
 
         final List<ItemCurveParams<R, T>> curveEntries = new ArrayList<>();
 
@@ -118,7 +116,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         for (final ItemCurveParams<R, T> entry : curveEntries)
         {
-            final ItemParameters<S, R, T> params = model.getParams();
+            final ItemParameters<S, R, T> params = current;
             final int entryIndex = params.getEntryIndex(entry);
 
             if (entryIndex == -1)
@@ -135,18 +133,16 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             final double startingLL = computeLogLikelihood(params, _grid);
 
-            FitResult<S, R, T> calibrated = null;
-
             try
             {
-                calibrated = calibrateCurve(entryIndex, status, startingLL);
+                final FitResult<S, R, T> calibrated = calibrateCurve(entryIndex, status, startingLL);
 
                 if (null == calibrated)
                 {
                     continue;
                 }
 
-                model = calibrated.getModel();
+                current = calibrated.getModelParams();
             }
             catch (final ConvergenceException e)
             {
@@ -154,7 +150,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                 LOG.info(e.getMessage());
             }
 
-            final double endingLL = computeLogLikelihood(model.getParams(), _grid);
+            final double endingLL = computeLogLikelihood(current, _grid);
 
             if (endingLL > startingLL)
             {
@@ -162,7 +158,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
                 LOG.info("Curve calibration starting params: " + params);
                 LOG.warning("Starting entry: " + entry);
-                LOG.warning("Ending params: " + model.getParams());
+                LOG.warning("Ending params: " + current);
 
                 throw new IllegalStateException("Impossible.");
             }
@@ -171,10 +167,10 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         LOG.info("Finished curve calibration sweep: " + _fitter.getParams());
 
-        return model;
+        return current;
     }
 
-    public final ItemModel<S, R, T> generateCurve(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filter_) throws ConvergenceException
+    public final ItemParameters<S, R, T> generateCurve(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filter_) throws ConvergenceException
     {
         FitResult<S, R, T> best = findBest(fields_, filter_);
 
@@ -227,8 +223,8 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             }
         }
 
-        ItemModel<S, R, T> output = best.getModel();
-        LOG.info("New Parameters[" + best.getLogLikelihood() + "]: \n" + output.getParams().toString());
+        final ItemParameters<S, R, T> output = best.getModelParams();
+        LOG.info("New Parameters[" + best.getLogLikelihood() + "]: \n" + output.toString());
         return output;
     }
 
@@ -325,20 +321,17 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                 {
                     //This is a flag-flag interaction term...
                     final ItemParameters<S, R, T> updatedParams = params.addBeta(testParams, null);
-
-                    final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(updatedParams, _grid);
-                    final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, grid, _settings, null);
+                    final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, _grid, _settings, null);
 
                     try
                     {
-                        final ItemModel<S, R, T> model = fitter.fit();
+                        final ItemParameters<S, R, T> modParams = fitter.fit();
 
-                        final double llValue = fitter.computeLogLikelihood(model.getParams());
+                        final double llValue = fitter.computeLogLikelihood(modParams);
 
                         if (llValue < startingLL_)
                         {
-                            final ItemParameters<S, R, T> updated = model.getParams();
-                            expandedResult = new FitResult<>(updated, updated.getEntryCurveParams(updated.getEntryCount() - 1, true), toStatus, llValue, startingLL_, grid.size());
+                            expandedResult = new FitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), toStatus, llValue, startingLL_, _grid.size());
                         }
                     }
                     catch (final ConvergenceException e)
@@ -393,22 +386,20 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                 continue;
             }
 
-            final ItemParameters<S, R, T> current = bestResult.getModel().getParams();
+            final ItemParameters<S, R, T> current = bestResult.getModelParams();
 
             final ItemCurveParams<R, T> expansion = val.getCurveParams();
             final ItemParameters<S, R, T> updatedParams = current.addBeta(expansion, val.getToState());
 
-            final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(updatedParams, _grid);
-            final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, grid, _settings, null);
+            final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, _grid, _settings, null);
 
             try
             {
-                final ItemModel<S, R, T> model = fitter.fit();
-                final ItemParameters<S, R, T> modParams = model.getParams();
+                final ItemParameters<S, R, T> modParams = fitter.fit();
 
                 final double llValue = fitter.computeLogLikelihood(modParams);
 
-                final FitResult<S, R, T> expResults = new FitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), val.getToState(), llValue, bestResult.getLogLikelihood(), grid.size());
+                final FitResult<S, R, T> expResults = new FitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), val.getToState(), llValue, bestResult.getLogLikelihood(), _grid.size());
 
                 final double ppAic = expResults.aicPerParameter();
 
@@ -630,6 +621,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
      *
      * @param entryIndex_ The index of the entry to calibrate.
      * @param toStatus_
+     * @param startingLL_
      * @return
      * @throws ConvergenceException
      */
@@ -642,19 +634,15 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             return null;
         }
 
-        ItemModel<S, R, T> outputModel = result.getModel();
+        final ItemModel<S, R, T> outputModel = new ItemModel<>(result.getModelParams());
 
         this.setModel(outputModel);
         return result;
     }
 
-//    protected ItemParameters<S, R, T> getParams()
-//    {
-//        return _fitter.getParams();
-//    }
-    //protected abstract FitResult<S, R, T> findBest(final T curveType_, final R field_, final S toStatus_) throws ConvergenceException;
     private final class ParamFilterImpl implements ParamFilter<S, R, T>
     {
+        private static final long serialVersionUID = 0x96a9dae406ede7d1L;
         private final int _targetEntry;
         private final ItemCurveParams<R, T> _curveParams;
 

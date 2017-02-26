@@ -64,9 +64,9 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return _curveParams;
     }
 
-    public ItemModel<S, R, T> getModel()
+    public ItemParameters<S, R, T> getModelParams()
     {
-        return new ItemModel<>(_params);
+        return _params;
     }
 
     public double getStartingLogLikelihood()
