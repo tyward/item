@@ -91,7 +91,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     protected double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_)
     {
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(params_), grid, _settings, null);
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, grid, _settings, null);
         final double ll = fitter.computeLogLikelihood(params_);
         return ll;
     }
@@ -327,7 +327,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                     final ItemParameters<S, R, T> updatedParams = params.addBeta(testParams, null);
 
                     final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(updatedParams, _grid);
-                    final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(updatedParams), grid, _settings, null);
+                    final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, grid, _settings, null);
 
                     try
                     {
@@ -399,7 +399,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             final ItemParameters<S, R, T> updatedParams = current.addBeta(expansion, val.getToState());
 
             final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(updatedParams, _grid);
-            final ParamFitter<S, R, T> fitter = new ParamFitter<>(new ItemModel<>(updatedParams), grid, _settings, null);
+            final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, grid, _settings, null);
 
             try
             {
