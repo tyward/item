@@ -198,7 +198,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         for (int i = 0; i < statCount; i++)
         {
-            final int reachableOrdinal = _likelihood.ordinalToOffset(i);//_reachableMap[i];
+            final int reachableOrdinal = _likelihood.ordinalToOffset(i);
 
             if (reachableOrdinal < 0)
             {
@@ -274,19 +274,16 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             final int actualTransition = grid_.getNextStatus(i);
 
-            for (int w = 0; w < reachable.size(); w++)
-            {
-                final S next = reachable.get(w);
+            final int actualOffset = _likelihood.ordinalToOffset(actualTransition);
 
-                if (next.ordinal() == actualTransition)
-                {
-                    actual[w] = 1.0;
-                }
-                else
-                {
-                    actual[w] = 0.0;
-                }
+            if (actualOffset < 0)
+            {
+                //This is a supposedly impossible transition, skip it.
+                continue;
             }
+
+            Arrays.fill(actual, 0.0);
+            actual[actualOffset] = 1.0;
 
             for (int z = 0; z < dimension; z++)
             {
