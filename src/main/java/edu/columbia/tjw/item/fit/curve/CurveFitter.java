@@ -31,6 +31,7 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
+import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -325,12 +326,12 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
                     try
                     {
-                        final ItemParameters<S, R, T> modParams = fitter.fit();
+                        final ParamFitResult<S, R, T> fitResult = fitter.fit();
+                        final double llValue = fitResult.getEndingLL();
 
-                        final double llValue = fitter.computeLogLikelihood(modParams);
-
-                        if (llValue < startingLL_)
+                        if (!fitResult.isUnchanged())
                         {
+                            final ItemParameters<S, R, T> modParams = fitResult.getEndingParams();
                             expandedResult = new CurveFitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), toStatus, llValue, startingLL_, _grid.size());
                         }
                     }
@@ -390,17 +391,15 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             final ItemCurveParams<R, T> expansion = val.getCurveParams();
             final ItemParameters<S, R, T> updatedParams = current.addBeta(expansion, val.getToState());
-
             final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, _grid, _settings, null);
 
             try
             {
-                final ItemParameters<S, R, T> modParams = fitter.fit();
-
-                final double llValue = fitter.computeLogLikelihood(modParams);
+                final ParamFitResult<S, R, T> fitResult = fitter.fit();
+                final double llValue = fitResult.getEndingLL();
+                final ItemParameters<S, R, T> modParams = fitResult.getEndingParams();
 
                 final CurveFitResult<S, R, T> expResults = new CurveFitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), val.getToState(), llValue, bestResult.getLogLikelihood(), _grid.size());
-
                 final double ppAic = expResults.aicPerParameter();
 
                 //Require some minimal level of goodness.

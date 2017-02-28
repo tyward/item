@@ -21,7 +21,6 @@ package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
@@ -93,7 +92,7 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
 
     public int getEffectiveParamCount()
     {
-        return _curveParams.size() - 1;
+        return _curveParams.getEffectiveParamCount();
     }
 
     public double calculateAicDifference()

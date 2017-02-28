@@ -30,6 +30,7 @@ import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.curve.CurveFitResult;
+import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
@@ -133,7 +134,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A model fit with all the additional allowed coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ItemParameters<S, R, T> addCoefficients(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_,
+    public ParamFitResult<S, R, T> addCoefficients(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_,
             final Collection<R> coefficients_) throws ConvergenceException
     {
         ItemParameters<S, R, T> params = params_;
@@ -157,18 +158,11 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A model with newly optimized coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ItemParameters<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    public ParamFitResult<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, grid_, _settings, filters_);
-
-        final ItemParameters<S, R, T> m2 = fitter.fit();
-
-        if (null == m2)
-        {
-            throw new ConvergenceException("Unable to improve parameter fit.");
-        }
-
-        return m2;
+        final ParamFitResult<S, R, T> fitResult = fitter.fit();
+        return fitResult;
     }
 
     public ItemParameters<S, R, T> runAnnealingPass(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Set<R> curveFields_,
@@ -287,20 +281,18 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             try
             {
-                final ItemParameters<S, R, T> m2 = fitCoefficients(params, grid_, filters_);
+                final ParamFitResult<S, R, T> fitResult = fitCoefficients(params, grid_, filters_);
 
-                final double test = computeLogLikelihood(m2, grid_);
-
-                if (MathFunctions.isAicWorse(bestLL, test))
+                if (fitResult.isWorse())
                 {
-                    LOG.info("LL got worse: " + bestLL + " -> " + test);
+                    LOG.info("LL got worse: " + bestLL + " -> " + fitResult.getEndingLL());
                     LOG.info("Previous parameters: " + params);
-                    LOG.info("Current parameters: " + m2);
+                    LOG.info("Current parameters: " + fitResult.getEndingParams());
                 }
                 else
                 {
-                    bestLL = test;
-                    params = m2;
+                    bestLL = fitResult.getEndingLL();
+                    params = fitResult.getEndingParams();
                 }
             }
             catch (final ConvergenceException e)
@@ -377,7 +369,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         try
         {
-            params = fitCoefficients(params, grid_, filters_);
+            final ParamFitResult<S, R, T> fitResult = fitCoefficients(params, grid_, filters_);
+
+            if (fitResult.isBetter())
+            {
+                params = fitResult.getEndingParams();
+            }
         }
         catch (final ConvergenceException e)
         {

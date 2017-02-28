@@ -61,6 +61,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     // If  we allow only one beta to be set for this entry, place its index here, otherwise -1.
     private final int[] _uniqueBeta;
 
+    private final int _effectiveParamCount;
+
     public ItemParameters(final S status_, final R intercept_)
     {
         if (null == status_)
@@ -91,6 +93,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _transOffsets[INTERCEPT_INDEX][0] = 0;
 
         _selfIndex = _status.getReachable().indexOf(_status);
+        _effectiveParamCount = calculateEffectiveParamCount();
     }
 
     /**
@@ -154,6 +157,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
             _filters = Collections.unmodifiableList(newFilters);
         }
+
+        _effectiveParamCount = calculateEffectiveParamCount();
     }
 
     /**
@@ -258,6 +263,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             _betas[toIndex][INTERCEPT_INDEX] += curveParams_.getIntercept();
         }
 
+        _effectiveParamCount = calculateEffectiveParamCount();
     }
 
     /**
@@ -378,6 +384,47 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
             pointer++;
         }
+
+        _effectiveParamCount = calculateEffectiveParamCount();
+    }
+
+    private int calculateEffectiveParamCount()
+    {
+        final int effectiveTransSize = this._status.getReachableCount() - 1;
+        int paramCount = 0;
+
+        for (int i = 0; i < this.getEntryCount(); i++)
+        {
+            final boolean isRestricted = (this.getEntryStatusRestrict(i) != null);
+
+            if (isRestricted)
+            {
+                paramCount += 1;
+            }
+            else
+            {
+                paramCount += effectiveTransSize;
+            }
+
+            for (int z = 0; z < this.getEntryDepth(i); z++)
+            {
+                final ItemCurve<T> curve = this.getEntryCurve(i, z);
+
+                if (null == curve)
+                {
+                    continue;
+                }
+
+                paramCount += curve.getCurveType().getParamCount();
+            }
+        }
+
+        return paramCount;
+    }
+
+    public int getEffectiveParamCount()
+    {
+        return _effectiveParamCount;
     }
 
     public int getInterceptIndex()

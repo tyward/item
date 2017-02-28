@@ -242,6 +242,12 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         return size;
     }
 
+    public int getEffectiveParamCount()
+    {
+        //Always one less than the size, because we aren't charged for the intercept.
+        return (_size - 1);
+    }
+
     public List<T> getTypes()
     {
         return _types;

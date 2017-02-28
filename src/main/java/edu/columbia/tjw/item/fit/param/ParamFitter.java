@@ -78,21 +78,20 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return logLikelihood;
     }
 
-    public ItemParameters<S, R, T> fit() throws ConvergenceException
+    public ParamFitResult<S, R, T> fit() throws ConvergenceException
     {
         //LOG.info("Fitting Coefficients");
         final double[] beta = _function.getBeta();
 
         final MultivariatePoint point = new MultivariatePoint(beta);
-
+        final int numRows = _function.numRows();
         final EvaluationResult res = _function.generateResult();
-        _function.value(point, 0, _function.numRows(), res);
+        _function.value(point, 0, numRows, res);
 
         final double oldLL = res.getMean();
         //LOG.info("\n\n -->Log Likelihood: " + oldLL);
 
         final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(_function, point);
-
         final MultivariatePoint optimumPoint = result.getOptimum();
 
         for (int i = 0; i < beta.length; i++)
@@ -108,16 +107,20 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             LOG.info("Exhausted dataset before convergence, moving on.");
         }
 
+        final ParamFitResult<S, R, T> output;
+
         if (newLL > oldLL)
         {
-            return null;
+            output = new ParamFitResult<>(_model.getParams(), _model.getParams(), oldLL, oldLL, numRows);
+        }
+        else
+        {
+            final ItemParameters<S, R, T> updated = _function.generateParams(beta);
+            output = new ParamFitResult<>(_model.getParams(), updated, newLL, oldLL, numRows);
         }
 
-        final ItemParameters<S, R, T> updated = _function.generateParams(beta);
-        //final ItemModel<S, R, T> output = _model.updateParameters(updated);
-
         //LOG.info("Updated Coefficients: " + output.getParams());
-        return updated;
+        return output;
     }
 
     private LogisticModelFunction<S, R, T> generateFunction()
