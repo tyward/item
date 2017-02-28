@@ -33,7 +33,7 @@ import edu.columbia.tjw.item.ItemStatus;
  * @param <R>
  * @param <T>
  */
-public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private final double _startingLogL;
     private final double _logL;
@@ -43,7 +43,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final ItemParameters<S, R, T> _params;
     private final ItemCurveParams<R, T> _curveParams;
 
-    public FitResult(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> curveParams_, final S toState_, final double logLikelihood_, final double startingLL_, final int rowCount_)
+    public CurveFitResult(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> curveParams_, final S toState_, final double logLikelihood_, final double startingLL_, final int rowCount_)
     {
         _params = params_;
         _curveParams = curveParams_;

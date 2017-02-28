@@ -29,7 +29,7 @@ import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
-import edu.columbia.tjw.item.fit.curve.FitResult;
+import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
@@ -239,7 +239,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         final double bestLL = computeLogLikelihood(params_, grid_);
 
         final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, grid_, params_);
-        final FitResult<S, R, T> result = fitter.generateFlagInteraction(bestLL, interactionCount_);
+        final CurveFitResult<S, R, T> result = fitter.generateFlagInteraction(bestLL, interactionCount_);
 
         if (null == result)
         {
