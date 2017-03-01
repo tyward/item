@@ -77,6 +77,11 @@ public final class ParamFitResult<S extends ItemStatus<S>, R extends ItemRegress
 
     public boolean isWorse()
     {
+        if (_starting.getEffectiveParamCount() != _endingParams.getEffectiveParamCount())
+        {
+
+        }
+
         return MathFunctions.isAicWorse(_startingLogL, _logL);
     }
 
