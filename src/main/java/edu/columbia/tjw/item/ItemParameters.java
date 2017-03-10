@@ -723,11 +723,28 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     /**
      * Adds an empty beta entry, with just the given field.
      *
+     * Note, if these parameters already contain a raw flag for this beta, then
+     * this is returned unchanged.
+     *
      * @param regressor_
      * @return
      */
     public ItemParameters<S, R, T> addBeta(final R regressor_)
     {
+        for (int i = 0; i < this.getEntryCount(); i++)
+        {
+            if (this.getEntryDepth(i) != 1)
+            {
+                continue;
+            }
+
+            if (this.getEntryRegressor(i, 0) == regressor_)
+            {
+                //Already have a flag for this regressor, return unchanged.
+                return this;
+            }
+        }
+
         final ItemCurveParams<R, T> fieldParams = new ItemCurveParams<>(0.0, 0.0, regressor_, null);
         return new ItemParameters<>(this, fieldParams, null);
     }

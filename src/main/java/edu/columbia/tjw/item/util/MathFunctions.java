@@ -49,6 +49,47 @@ public final class MathFunctions
         return output;
     }
 
+    /**
+     * Compares the two doubles, see if they are different beyond a level that
+     * would be typical of rounding error.
+     *
+     * Both numbers must be well defined (not infinite, not NaN) for this to
+     * work. Also, both must be positive.
+     *
+     * @param a_
+     * @param b_
+     * @return +1 if a_ > b_, -1 if b_ > a_, and 0 if they are too close to
+     * tell.
+     */
+    public static int doubleCompareRounded(final double a_, final double b_)
+    {
+        if (!(a_ > 0.0) || Double.isInfinite(a_))
+        {
+            throw new IllegalArgumentException("Invalid starting value: " + a_);
+        }
+        if (!(b_ > 0.0) || Double.isInfinite(b_))
+        {
+            throw new IllegalArgumentException("Invalid ending value: " + b_);
+        }
+
+        final double diff = b_ - a_;
+        final double norm = b_ + b_;
+        final double relDiff = diff / norm;
+
+        if (relDiff > SQRT_EPSILON)
+        {
+            return 1;
+        }
+        else if (relDiff < -SQRT_EPSILON)
+        {
+            return -1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
     public static boolean isAicBetter(final double starting_, final double ending_)
     {
         //Seems fairly obvious.
@@ -65,22 +106,7 @@ public final class MathFunctions
      */
     public static boolean isAicWorse(final double starting_, final double ending_)
     {
-        if (!(starting_ > 0.0) || Double.isInfinite(starting_))
-        {
-            throw new IllegalArgumentException("Invalid starting value.");
-        }
-        if (!(ending_ > 0.0) || Double.isInfinite(ending_))
-        {
-            throw new IllegalArgumentException("Invalid ending value.");
-        }
-
-        //The change in the AIC. 
-        final double diff = ending_ - starting_;
-        final double norm = ending_ + starting_;
-        final double relDiff = diff / norm;
-
-        final boolean output = relDiff > SQRT_EPSILON;
-        return output;
+        return doubleCompareRounded(starting_, ending_) > 0;
     }
 
 }
