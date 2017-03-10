@@ -43,7 +43,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double ROUNDING_TOLERANCE = 1.0e-8;
     private final LogLikelihood<S> _likelihood;
     private final ItemParameters<S, R, T> _params;
-    //private final List<S> _reachable;
 
     private final double[][] _betas;
     private final int _reachableSize;
