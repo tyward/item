@@ -344,7 +344,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             try
             {
                 //Now, try to add a new curve. 
-                final ItemParameters<S, R, T> m4 = fitter.generateCurve(curveFields_, filters_);
+                final CurveFitter<S, R, T> fitter2 = new CurveFitter<>(_factory, _settings, _grid, subChain.getBestParameters());
+                final ItemParameters<S, R, T> m4 = fitter2.generateCurve(curveFields_, filters_);
 
                 final double test2 = computeLogLikelihood(m4);
                 final boolean isBetter2 = subChain.pushResults(m4, test2);
