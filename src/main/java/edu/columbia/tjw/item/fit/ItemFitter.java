@@ -35,7 +35,6 @@ import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
-import edu.columbia.tjw.item.util.MathFunctions;
 import java.util.Collection;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -220,11 +219,11 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     {
         final int regCount = _chain.getBestParameters().getEntryCount();
 
-        ItemParameters<S, R, T> base = _chain.getBestParameters();
-        double logLikelihood = _chain.getLogLikelihood();
+        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(_chain);
 
         for (final R regressor : curveFields_)
         {
+            final ItemParameters<S, R, T> base = subChain.getBestParameters();
             final ItemParameters<S, R, T> reduced = base.dropRegressor(regressor);
             final int reducedCount = reduced.getEntryCount();
             final int reduction = regCount - reducedCount;
@@ -236,13 +235,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             LOG.info("Annealing attempting to drop " + reduction + " curves from " + regressor + ", now rebuilding");
 
-            final ParamFitResult<S, R, T> rebuilt = expandModel(reduced, logLikelihood, curveFields_, filters_, reduction);
+            final ParamFitResult<S, R, T> rebuilt = expandModel(reduced, subChain.getLogLikelihood(), curveFields_, filters_, reduction);
+            final boolean better = subChain.pushResults(rebuilt);
 
-            if (rebuilt.isBetter())
+            if (better)
             {
                 LOG.info("Annealing improved model: " + rebuilt.getStartingLL() + " -> " + rebuilt.getEndingLL() + " (" + rebuilt.getAic() + ")");
-                base = rebuilt.getEndingParams();
-                logLikelihood = rebuilt.getEndingLL();
             }
             else
             {
@@ -253,11 +251,9 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             LOG.info("---->Finished rebuild after dropping regressor: " + regressor);
         }
 
-        _chain.pushResults(base, logLikelihood);
-
-        final ParamFitResult<S, R, T> improvement = _chain.getLatestResults();
-
-        return improvement;
+        final ParamFitResult<S, R, T> consolidated = subChain.getConsolidatedResults();
+        _chain.pushResults(consolidated);
+        return consolidated;
     }
 
     private double computeLogLikelihood(final ItemParameters<S, R, T> params_)
@@ -305,8 +301,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
     {
         final long start = System.currentTimeMillis();
-        final double startingLL = computeLogLikelihood(params_);
-        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(params_, startingLL, _grid.size());
+        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(params_, startingLL_, _grid.size());
 
         for (int i = 0; i < curveCount_; i++)
         {
@@ -336,7 +331,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             if (!isBetter)
             {
-                LOG.info("LL got worse: " + subChain.getLogLikelihood() + " -> " + test);
+                LOG.info("LL got worse (or unchanged): " + subChain.getLogLikelihood() + " -> " + test);
                 LOG.info("Previous parameters: " + subChain.getBestParameters());
                 LOG.info("Current parameters: " + m3);
             }
@@ -345,14 +340,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             {
                 //Now, try to add a new curve. 
                 final CurveFitter<S, R, T> fitter2 = new CurveFitter<>(_factory, _settings, _grid, subChain.getBestParameters());
-                final ItemParameters<S, R, T> m4 = fitter2.generateCurve(curveFields_, filters_);
-
-                final double test2 = computeLogLikelihood(m4);
-                final boolean isBetter2 = subChain.pushResults(m4, test2);
+                final CurveFitResult<S, R, T> m4 = fitter2.generateCurve(curveFields_, filters_);
+                final boolean isBetter2 = subChain.pushResults(m4);
 
                 if (!isBetter2)
                 {
-                    LOG.info("LL got worse: " + subChain.getLogLikelihood() + " -> " + test);
+                    LOG.info("LL got worse (or unchanged): " + subChain.getLogLikelihood() + " -> " + test);
                     LOG.info("Previous parameters: " + subChain.getBestParameters());
                     LOG.info("Current parameters: " + m4);
                 }
@@ -374,7 +367,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         try
         {
             final ParamFitResult<S, R, T> fitResult = innerFitCoefficients(subChain.getBestParameters(), filters_);
-
             subChain.pushResults(fitResult);
         }
         catch (final ConvergenceException e)

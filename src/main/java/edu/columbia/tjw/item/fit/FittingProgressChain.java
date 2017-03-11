@@ -23,6 +23,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MathFunctions;
@@ -46,6 +47,16 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     private final List<ParamProgressFrame<S, R, T>> _frameListReadOnly;
     private final int _rowCount;
 
+    /**
+     * Start a new chain from the latest entry of the current chain.
+     *
+     * @param baseChain_
+     */
+    public FittingProgressChain(final FittingProgressChain<S, R, T> baseChain_)
+    {
+        this(baseChain_.getBestParameters(), baseChain_.getLogLikelihood(), baseChain_.getRowCount());
+    }
+
     public FittingProgressChain(final ItemParameters<S, R, T> fitResult_, final double startingLL_, final int rowCount_)
     {
         if (rowCount_ <= 0)
@@ -60,6 +71,11 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         _frameList.add(frame);
         _frameListReadOnly = Collections.unmodifiableList(_frameList);
 
+    }
+
+    public boolean pushResults(final CurveFitResult<S, R, T> curveResult_)
+    {
+        return this.pushResults(curveResult_.getModelParams(), curveResult_.getLogLikelihood());
     }
 
     public boolean pushResults(final ParamFitResult<S, R, T> fitResult_)
@@ -84,6 +100,11 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(fitResult_, logLikelihood_, getLatestFrame(), _rowCount);
         _frameList.add(frame);
         return true;
+    }
+
+    public int getRowCount()
+    {
+        return _rowCount;
     }
 
     public int size()

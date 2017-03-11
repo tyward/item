@@ -35,6 +35,7 @@ import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.LogUtil;
+import edu.columbia.tjw.item.util.MathFunctions;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -153,7 +154,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             final double endingLL = computeLogLikelihood(current, _grid);
 
-            if (endingLL > startingLL)
+            if (MathFunctions.doubleCompareRounded(endingLL, startingLL) < 0)
             {
                 LOG.warning("Ending LL is worse than starting: " + startingLL + " -> " + endingLL);
 
@@ -171,7 +172,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return current;
     }
 
-    public final ItemParameters<S, R, T> generateCurve(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filter_) throws ConvergenceException
+    public final CurveFitResult<S, R, T> generateCurve(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filter_) throws ConvergenceException
     {
         CurveFitResult<S, R, T> best = findBest(fields_, filter_);
 
@@ -182,10 +183,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         LOG.info("Generated curve[" + best.aicPerParameter() + "][" + best.getStartingLogLikelihood() + " -> " + best.getLogLikelihood() + "][" + best.getToState() + "]: " + best.getCurveParams());
 
-//        LOG.info("Best transformation: " + best.toString());
-//        LOG.info("LL improvement: " + best._startingLogL + " -> " + best._logL + ": " + best._llImprovement);
-//        LOG.info("Best to state: " + best.getToState());
-        //final double aicDiff = best.calculateAicDifference();
         final double aicPP = best.aicPerParameter();
 
         if (aicPP > _settings.getAicCutoff())
@@ -196,12 +193,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             throw new ConvergenceException("No curves could be added with sufficient AIC improvement: " + aicPP);
         }
 
-//        final double ll = computeLogLikelihood(this.getParams(), _grid);
-//
-//        if(Math.abs(ll - best._logL))
-//        
-//        
-//        LOG.info("Log Likelihood check: " + ll);
         if (_settings.getAllowInteractionCurves())
         {
             LOG.info("Now calculating interactions.");
@@ -224,9 +215,8 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             }
         }
 
-        final ItemParameters<S, R, T> output = best.getModelParams();
-        LOG.info("New Parameters[" + best.getLogLikelihood() + "]: \n" + output.toString());
-        return output;
+        LOG.info("New Parameters[" + best.getLogLikelihood() + "]: \n" + best.getModelParams().toString());
+        return best;
     }
 
     private ItemCurveParams<R, T> appendToCurveParams(final ItemCurveParams<R, T> initParams_, final ItemCurve<T> curve_, final R reg_)
