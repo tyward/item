@@ -31,6 +31,8 @@ import edu.columbia.tjw.item.util.EnumFamily;
 public interface ItemGrid<R extends ItemRegressor<R>>
 {
 
+    public boolean hasRegressorReader(final R field_);
+
     /**
      * Gets the reader for the given field
      *

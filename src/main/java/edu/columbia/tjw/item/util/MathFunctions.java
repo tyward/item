@@ -28,7 +28,7 @@ import org.apache.commons.math3.util.FastMath;
 public final class MathFunctions
 {
     // SQRT of the difference between 1.0 and the smallest value larger than 1.0.
-    private static final double SQRT_EPSILON = Math.sqrt(Math.ulp(1.0));
+    public static final double SQRT_EPSILON = Math.sqrt(Math.ulp(1.0));
 
     private MathFunctions()
     {

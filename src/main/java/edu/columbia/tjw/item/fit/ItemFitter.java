@@ -97,7 +97,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _intercept = intercept_;
         _family = intercept_.getFamily();
         _status = status_;
-        _grid = randomizeGrid(grid_);
+        _grid = randomizeGrid(grid_, _settings);
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept);
         final double logLikelihood = this.computeLogLikelihood(starting);
@@ -134,14 +134,14 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @param grid_ The grid to randomize
      * @return A randomized version of grid_
      */
-    private ItemStatusGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_)
+    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>> ItemStatusGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_, final ItemSettings settings_)
     {
         if (grid_ instanceof RandomizedStatusGrid)
         {
             return grid_;
         }
 
-        final ItemStatusGrid<S, R> wrapped = new RandomizedStatusGrid<>(grid_, _settings, _family);
+        final ItemStatusGrid<S, R> wrapped = new RandomizedStatusGrid<>(grid_, settings_, grid_.getRegressorFamily());
         return wrapped;
     }
 
@@ -256,10 +256,10 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return consolidated;
     }
 
-    private double computeLogLikelihood(final ItemParameters<S, R, T> params_)
+    public double computeLogLikelihood(final ItemParameters<S, R, T> params_)
     {
-        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _grid);
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, grid, _settings, null);
+        //final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _grid);
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, _grid, _settings, null);
         final double ll = fitter.computeLogLikelihood(params_);
         return ll;
     }

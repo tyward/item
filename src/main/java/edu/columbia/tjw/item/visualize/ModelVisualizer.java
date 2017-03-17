@@ -347,6 +347,12 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
             return _regressor.getFamily();
         }
 
+        @Override
+        public boolean hasRegressorReader(R field_)
+        {
+            return _readers[field_.ordinal()] != null;
+        }
+
     }
 
     private static final class ConstantRegressorReader implements ItemRegressorReader

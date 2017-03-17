@@ -114,4 +114,10 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
         return this.getUnderlying().getRegressorFamily();
     }
 
+    @Override
+    public boolean hasRegressorReader(R field_)
+    {
+        return this.getUnderlying().hasRegressorReader(field_);
+    }
+
 }
