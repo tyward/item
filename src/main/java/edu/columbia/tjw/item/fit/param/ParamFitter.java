@@ -19,7 +19,6 @@
  */
 package edu.columbia.tjw.item.fit.param;
 
-import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ParamFilter;
@@ -27,6 +26,7 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
@@ -34,7 +34,6 @@ import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.logging.Logger;
@@ -49,34 +48,90 @@ import java.util.logging.Logger;
 public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private static final Logger LOG = LogUtil.getLogger(ParamFitter.class);
-    private ItemModel<S, R, T> _model;
+    private final ItemModel<S, R, T> _model;
     private final MultivariateOptimizer _optimizer;
     private final ItemSettings _settings;
+    private final ParamFittingGrid<S, R, T> _grid;
+    private final Collection<ParamFilter<S, R, T>> _filters;
+    private final LogisticModelFunction<S, R, T> _function;
 
-    public ParamFitter(final ItemModel<S, R, T> model_, final ItemSettings settings_)
+    public ParamFitter(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_, final Collection<ParamFilter<S, R, T>> filters_)
     {
-        _model = model_;
+        _model = new ItemModel<>(params_);
+        _grid = new ParamFittingGrid<>(params_, grid_);
+        _filters = filters_;
         _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
         _settings = settings_;
+
+        _function = generateFunction();
     }
 
-    public LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_)
+    public double computeLogLikelihood(final ItemParameters<S, R, T> params_)
     {
-        final ArrayList<ParamFilter<S, R, T>> filters = new ArrayList<>();
+        final double[] startingPoint = _function.getBeta();
 
-        if (null != filters_)
+        final EvaluationResult res = _function.generateResult();
+        final MultivariatePoint point = new MultivariatePoint(startingPoint);
+        _function.value(point, 0, _function.numRows(), res);
+
+        final double logLikelihood = res.getMean();
+        return logLikelihood;
+    }
+
+    public ParamFitResult<S, R, T> fit() throws ConvergenceException
+    {
+        //LOG.info("Fitting Coefficients");
+        final double[] beta = _function.getBeta();
+
+        final MultivariatePoint point = new MultivariatePoint(beta);
+        final int numRows = _function.numRows();
+        final EvaluationResult res = _function.generateResult();
+        _function.value(point, 0, numRows, res);
+
+        final double oldLL = res.getMean();
+        //LOG.info("\n\n -->Log Likelihood: " + oldLL);
+
+        final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(_function, point);
+        final MultivariatePoint optimumPoint = result.getOptimum();
+
+        for (int i = 0; i < beta.length; i++)
         {
-            filters.addAll(filters_);
+            beta[i] = optimumPoint.getElement(i);
         }
 
-        filters.addAll(params_.getFilters());
+        final double newLL = result.minValue();
+        LOG.info("Fitting coefficients, LL improvement: " + oldLL + " -> " + newLL + "(" + (newLL - oldLL) + ")");
 
-        final int reachableCount = params_.getStatus().getReachableCount();
-        final int regressorCount = params_.regressorCount();
+        if (!result.converged())
+        {
+            LOG.info("Exhausted dataset before convergence, moving on.");
+        }
 
-        final S from = params_.getStatus();
+        final ParamFitResult<S, R, T> output;
 
-        final int maxSize = reachableCount * regressorCount;
+        if (newLL > oldLL)
+        {
+            output = new ParamFitResult<>(_model.getParams(), _model.getParams(), oldLL, oldLL, numRows);
+        }
+        else
+        {
+            final ItemParameters<S, R, T> updated = _function.generateParams(beta);
+            output = new ParamFitResult<>(_model.getParams(), updated, newLL, oldLL, numRows);
+        }
+
+        //LOG.info("Updated Coefficients: " + output.getParams());
+        return output;
+    }
+
+    private LogisticModelFunction<S, R, T> generateFunction()
+    {
+        final ItemParameters<S, R, T> params = _model.getParams();
+        final int reachableCount = params.getStatus().getReachableCount();
+        final int entryCount = params.getEntryCount();
+
+        final S from = params.getStatus();
+
+        final int maxSize = reachableCount * entryCount;
 
         int pointer = 0;
         double[] beta = new double[maxSize];
@@ -87,30 +142,17 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         {
             final S to = from.getReachable().get(i);
 
-            for (int k = 0; k < regressorCount; k++)
+            for (int k = 0; k < entryCount; k++)
             {
-                final R field = params_.getRegressor(k);
-                final ItemCurve<T> trans = params_.getTransformation(k);
-                boolean isFiltered = false;
-
-                for (final ParamFilter<S, R, T> filter : filters)
+                if (params.betaIsFrozen(to, k, _filters))
                 {
-                    final boolean filtered = filter.isFiltered(from, to, field, trans);
-
-                    if (filtered)
-                    {
-                        isFiltered = true;
-                        break;
-                    }
+                    continue;
                 }
 
-                if (!isFiltered)
-                {
-                    beta[pointer] = params_.getBeta(i, k);
-                    statusPointers[pointer] = i;
-                    regPointers[pointer] = k;
-                    pointer++;
-                }
+                beta[pointer] = params.getBeta(i, k);
+                statusPointers[pointer] = i;
+                regPointers[pointer] = k;
+                pointer++;
             }
         }
 
@@ -118,92 +160,9 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         statusPointers = Arrays.copyOf(statusPointers, pointer);
         regPointers = Arrays.copyOf(regPointers, pointer);
 
-        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(beta, statusPointers, regPointers, params_, grid_, new ItemModel<>(params_), _settings);
+        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(beta, statusPointers, regPointers, params, _grid, new ItemModel<>(params), _settings);
 
         return function;
-    }
-
-    public double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_)
-    {
-        final LogisticModelFunction<S, R, T> function = generateFunction(params_, grid_, filters_);
-
-        final double[] startingPoint = function.getBeta();
-
-        final EvaluationResult res = function.generateResult();
-        final MultivariatePoint point = new MultivariatePoint(startingPoint);
-        function.value(point, 0, function.numRows(), res);
-
-        final double logLikelihood = res.getMean();
-        return logLikelihood;
-    }
-
-    public ItemModel<S, R, T> fit(final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
-    {
-
-        final LogisticModelFunction<S, R, T> function = generateFunction(_model.getParams(), grid_, filters_);
-        final double[] beta = function.getBeta();
-
-        final MultivariatePoint point = new MultivariatePoint(beta);
-
-        final EvaluationResult res = function.generateResult();
-        function.value(point, 0, function.numRows(), res);
-
-        final double oldLL = res.getMean();
-        LOG.info("\n\n -->Log Likelihood: " + oldLL);
-
-        final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(function, point);
-
-        if (!result.converged())
-        {
-            LOG.info("Exhausted dataset before convergence, moving on.");
-        }
-
-        final MultivariatePoint optimumPoint = result.getOptimum();
-
-        for (int i = 0; i < beta.length; i++)
-        {
-            beta[i] = optimumPoint.getElement(i);
-        }
-
-        final double newLL = result.minValue();
-        LOG.info("LL improvement: " + oldLL + " -> " + newLL);
-
-        if (newLL > oldLL)
-        {
-            return null;
-        }
-
-        final ItemParameters<S, R, T> updated = function.generateParams(beta);
-        final ItemModel<S, R, T> output = _model.updateParameters(updated);
-        return output;
-    }
-
-    public ItemModel<S, R, T> fitAndUpdate(final ParamFittingGrid<S, R, T> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
-    {
-        final ItemModel<S, R, T> result = fit(grid_, filters_);
-
-        if (null != result)
-        {
-            _model = result;
-        }
-
-        return result;
-    }
-
-    private ItemParameters<S, R, T> updateParams(final ItemParameters<S, R, T> params_, final int[] rowPointers_, final int[] colPointers_, final double[] betas_)
-    {
-        final double[][] beta = params_.getBetas();
-
-        for (int i = 0; i < betas_.length; i++)
-        {
-            final int row = rowPointers_[i];
-            final int column = colPointers_[i];
-            final double value = betas_[i];
-            beta[row][column] = value;
-        }
-
-        final ItemParameters<S, R, T> updated = params_.updateBetas(beta);
-        return updated;
     }
 
 }

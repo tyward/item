@@ -21,7 +21,6 @@ package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
@@ -29,14 +28,14 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
-import edu.columbia.tjw.item.fit.curve.BaseCurveFitter;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
+import edu.columbia.tjw.item.fit.curve.CurveFitResult;
+import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -56,17 +55,21 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 {
     private static final Logger LOG = LogUtil.getLogger(ItemFitter.class);
 
-    private final ItemCurveFactory<T> _factory;
+    private final ItemCurveFactory<R, T> _factory;
     private final ItemSettings _settings;
     private final R _intercept;
     private final EnumFamily<R> _family;
+    private final S _status;
+    private final ItemStatusGrid<S, R> _grid;
 
-    public ItemFitter(final ItemCurveFactory<T> factory_, final R intercept_)
+    private FittingProgressChain<S, R, T> _chain;
+
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_, final ItemStatusGrid<S, R> grid_)
     {
-        this(factory_, intercept_, new ItemSettings());
+        this(factory_, intercept_, status_, grid_, new ItemSettings());
     }
 
-    public ItemFitter(final ItemCurveFactory<T> factory_, final R intercept_, ItemSettings settings_)
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_, final ItemStatusGrid<S, R> grid_, ItemSettings settings_)
     {
         if (null == factory_)
         {
@@ -80,22 +83,41 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             throw new NullPointerException("Settings cannot be null.");
         }
+        if (null == status_)
+        {
+            throw new NullPointerException("Status cannot be null.");
+        }
+        if (null == grid_)
+        {
+            throw new NullPointerException("Grid cannot be null.");
+        }
 
         _factory = factory_;
         _settings = settings_;
         _intercept = intercept_;
         _family = intercept_.getFamily();
+        _status = status_;
+        _grid = randomizeGrid(grid_, _settings);
+
+        final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept);
+        final double logLikelihood = this.computeLogLikelihood(starting);
+
+        _chain = new FittingProgressChain<>(starting, logLikelihood, _grid.size());
     }
 
-    public ItemParameters<S, R, T> generateInitialParameters(final S status_)
+    public S getStatus()
     {
-        if (status_.getReachableCount() < 2)
-        {
-            throw new IllegalArgumentException("Only one reachable state, no need for a model.");
-        }
+        return _status;
+    }
 
-        final ItemParameters<S, R, T> initial = new ItemParameters<>(status_, Collections.singletonList(_intercept));
-        return initial;
+    public double getBestLogLikelihood()
+    {
+        return _chain.getLogLikelihood();
+    }
+
+    public ItemParameters<S, R, T> getBestParameters()
+    {
+        return _chain.getBestParameters();
     }
 
     /**
@@ -112,104 +134,98 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @param grid_ The grid to randomize
      * @return A randomized version of grid_
      */
-    public ItemStatusGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_)
+    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>> ItemStatusGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_, final ItemSettings settings_)
     {
         if (grid_ instanceof RandomizedStatusGrid)
         {
             return grid_;
         }
 
-        final ItemStatusGrid<S, R> wrapped = new RandomizedStatusGrid<>(grid_, _settings, _family);
+        final ItemStatusGrid<S, R> wrapped = new RandomizedStatusGrid<>(grid_, settings_, grid_.getRegressorFamily());
         return wrapped;
+    }
+
+    private ParamFitResult<S, R, T> considerResult(final ParamFitResult<S, R, T> result_)
+    {
+        final boolean isBetter = _chain.pushResults(result_);
+
+        //Restate this in terms of the current best, just to be sure...
+        final ParamFitResult<S, R, T> result = _chain.getLatestResults();
+
+        if (isBetter)
+        {
+            LOG.info("Fitter improved result: " + result.getStartingLL() + " -> " + result.getEndingLL() + " (" + result.getAic() + ")s");
+        }
+        else
+        {
+            LOG.info("Fitter unable to improve result: " + result.getStartingLL());
+        }
+
+        return result;
     }
 
     /**
      * Add a group of coefficients to the model, then refit all coefficients.
      *
-     * @param params_ The parameters to expand
-     * @param grid_ The grid of raw data to use for fitting.
      * @param filters_ Any filters that should be used to limit the allowed
      * coefficients, else null
      * @param coefficients_ The set of coefficients to fit.
      * @return A model fit with all the additional allowed coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ItemModel<S, R, T> addCoefficients(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_,
+    public ParamFitResult<S, R, T> addCoefficients(final Collection<ParamFilter<S, R, T>> filters_,
             final Collection<R> coefficients_) throws ConvergenceException
     {
-        ItemParameters<S, R, T> params = params_;
+        ItemParameters<S, R, T> params = _chain.getBestParameters();
 
         for (final R field : coefficients_)
         {
-            params = params.addBeta(field, null);
+            params = params.addBeta(field);
         }
 
-        return fitCoefficients(params, grid_, filters_);
+        final ParamFitResult<S, R, T> fitResult = innerFitCoefficients(params, filters_);
+        return considerResult(fitResult);
     }
 
     /**
      *
      * Optimize the coefficients.
      *
-     * @param params_ The parameters to start with
-     * @param grid_ A factory that can create datasets for fitting
      * @param filters_ Filters describing any coefficients that should not be
      * adjusted
      * @return A model with newly optimized coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ItemModel<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    public ParamFitResult<S, R, T> fitCoefficients(final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
-        ItemModel<S, R, T> model = new ItemModel<>(params_);
-        //final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(gridFactory_);
-        //final ItemFittingGrid<S, R> grid = gridFactory_.prepareGrid(params_);
-        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
-
-        return fitCoefficients(model, grid, filters_);
+        return innerFitCoefficients(_chain.getBestParameters(), filters_);
     }
 
-    /**
-     * Same as overloaded method, different parameters.
-     *
-     * @param model_ The model to use as a starting point
-     * @param fittingGrid_ The grid of data used for fitting
-     * @param filters_ Any filters to apply
-     * @return An updated model with the beta values refit
-     * @throws ConvergenceException If no progress could be made
-     */
-    private ItemModel<S, R, T> fitCoefficients(final ItemModel<S, R, T> model_, final ParamFittingGrid<S, R, T> fittingGrid_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    public ParamFitResult<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(model_, _settings);
-
-        final ItemModel<S, R, T> m2 = fitter.fit(fittingGrid_, filters_);
-
-        if (null == m2)
-        {
-            throw new ConvergenceException("Unable to improve parameter fit.");
-        }
-
-        return m2;
+        return innerFitCoefficients(params_, filters_);
     }
 
-    public ItemModel<S, R, T> runAnnealingPass(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Set<R> curveFields_,
+    private ParamFitResult<S, R, T> innerFitCoefficients(final ItemParameters<S, R, T> params_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    {
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, _grid, _settings, filters_);
+        final ParamFitResult<S, R, T> fitResult = fitter.fit();
+        _chain.pushResults(fitResult);
+        return _chain.getLatestResults();
+    }
+
+    public ParamFitResult<S, R, T> runAnnealingPass(final Set<R> curveFields_,
             final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
-        final int regCount = params_.regressorCount();
+        final int regCount = _chain.getBestParameters().getEntryCount();
 
-        final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params_), _settings);
-        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
-
-        final double startingLL = f1.computeLogLikelihood(params_, grid, filters_);
-        double baseLL = startingLL;
-
-        ItemParameters<S, R, T> base = params_;
+        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(_chain);
 
         for (final R regressor : curveFields_)
         {
+            final ItemParameters<S, R, T> base = subChain.getBestParameters();
             final ItemParameters<S, R, T> reduced = base.dropRegressor(regressor);
-
-            final int reducedCount = reduced.regressorCount();
-
+            final int reducedCount = reduced.getEntryCount();
             final int reduction = regCount - reducedCount;
 
             if (reduction <= 0)
@@ -217,43 +233,48 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 continue;
             }
 
-            final ItemParameters<S, R, T> rebuilt = expandModel(reduced, grid_, curveFields_, filters_, reduction).getParams();
+            LOG.info("Annealing attempting to drop " + reduction + " curves from " + regressor + ", now rebuilding");
 
-            final ParamFitter<S, R, T> f2 = new ParamFitter<>(new ItemModel<>(rebuilt), _settings);
+            final ParamFitResult<S, R, T> rebuilt = expandModel(reduced, subChain.getLogLikelihood(), curveFields_, filters_, reduction);
+            final boolean better = subChain.pushResults(rebuilt);
 
-            final double ll2 = f2.computeLogLikelihood(rebuilt, new ParamFittingGrid<>(rebuilt, grid_), filters_);
-
-            if (ll2 < baseLL)
+            if (better)
             {
-                LOG.info("Annealing improved model: " + baseLL + " -> " + ll2);
-                base = rebuilt;
-                baseLL = ll2;
+                LOG.info("Annealing improved model: " + rebuilt.getStartingLL() + " -> " + rebuilt.getEndingLL() + " (" + rebuilt.getAic() + ")");
             }
             else
             {
-                LOG.info("Annealing did not improve model, keeping old model: " + baseLL + " -> " + ll2);
+                LOG.info("Annealing did not improve model, keeping old model");
             }
 
             //TODO: Check this for improvement?
             LOG.info("---->Finished rebuild after dropping regressor: " + regressor);
         }
 
-        if (baseLL == startingLL)
-        {
-            throw new ConvergenceException("Unable to make progress.");
-        }
-
-        return new ItemModel<>(base);
+        final ParamFitResult<S, R, T> consolidated = subChain.getConsolidatedResults();
+        _chain.pushResults(consolidated);
+        return consolidated;
     }
 
-    public double computeLogLikelihood(final ItemModel<S, R, T> model_, final ItemStatusGrid<S, R> grid_)
+    public double computeLogLikelihood(final ItemParameters<S, R, T> params_)
     {
-        final ItemParameters<S, R, T> params = model_.getParams();
-        final ParamFitter<S, R, T> f1 = new ParamFitter<>(new ItemModel<>(params), _settings);
+        //final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _grid);
+        final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, _grid, _settings, null);
+        final double ll = fitter.computeLogLikelihood(params_);
+        return ll;
+    }
 
-        final double startingLL = f1.computeLogLikelihood(params, new ParamFittingGrid<>(params, grid_), null);
+    public ParamFitResult<S, R, T> generateFlagInteractions(final int interactionCount_)
+    {
+        final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, _chain.getBestParameters());
+        final CurveFitResult<S, R, T> result = fitter.generateFlagInteraction(_chain.getLogLikelihood(), interactionCount_);
 
-        return startingLL;
+        if (null != result)
+        {
+            _chain.pushResults(result.getModelParams(), result.getLogLikelihood());
+        }
+
+        return _chain.getLatestResults();
     }
 
     /**
@@ -262,8 +283,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * This function is the heart of the ITEM system, and uses most of the
      * computational resources.
      *
-     * @param params_ The parameters to start with
-     * @param grid_ A factory that can create datasets for fitting
      * @param curveFields_ The regressors on which to draw curves
      * @param filters_ Filters describing any curves that should not be drawn or
      * optimized
@@ -271,31 +290,65 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A new model with additional curves added, and all coefficients
      * optimized.
      */
-    public ItemModel<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final Set<R> curveFields_,
+    public ParamFitResult<S, R, T> expandModel(final Set<R> curveFields_,
+            final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
+    {
+        final ParamFitResult<S, R, T> result = expandModel(_chain.getBestParameters(), _chain.getLogLikelihood(), curveFields_, filters_, curveCount_);
+        return considerResult(result);
+    }
+
+    private ParamFitResult<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final double startingLL_, final Set<R> curveFields_,
             final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
     {
         final long start = System.currentTimeMillis();
-        ItemModel<S, R, T> model = new ItemModel<>(params_);
+        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(params_, startingLL_, _grid.size());
 
-        //final ItemGridFactory<S, R, T> wrapped = new RandomizedCurveFactory<>(gridFactory_);
         for (int i = 0; i < curveCount_; i++)
         {
-            final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(model.getParams(), grid_);
-
             try
             {
-                model = fitCoefficients(model, grid, filters_);
+                final ParamFitResult<S, R, T> fitResult = innerFitCoefficients(subChain.getBestParameters(), filters_);
+
+                final boolean isBetter = subChain.pushResults(fitResult);
+
+                if (!isBetter)
+                {
+                    LOG.info("LL got worse: " + subChain.getLogLikelihood() + " -> " + fitResult.getEndingLL());
+                    LOG.info("Current parameters: " + fitResult.getEndingParams());
+                }
             }
             catch (final ConvergenceException e)
             {
                 LOG.info("Unable to improve results in coefficient fit, moving on.");
             }
 
-            final CurveFitter<S, R, T> fitter = new BaseCurveFitter<>(_factory, model, grid, _settings, _intercept);
+            final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, subChain.getBestParameters());
+
+            //First, try to calibrate any existing curves to improve the fit. 
+            final ItemParameters<S, R, T> m3 = fitter.calibrateCurves();
+            final double test = computeLogLikelihood(m3);
+            final boolean isBetter = subChain.pushResults(m3, test);
+
+            if (!isBetter)
+            {
+                LOG.info("LL got worse (or unchanged): " + subChain.getLogLikelihood() + " -> " + test);
+                LOG.info("Previous parameters: " + subChain.getBestParameters());
+                LOG.info("Current parameters: " + m3);
+            }
 
             try
             {
-                model = fitter.generateCurve(curveFields_, filters_);
+                //Now, try to add a new curve. 
+                final CurveFitter<S, R, T> fitter2 = new CurveFitter<>(_factory, _settings, _grid, subChain.getBestParameters());
+                final CurveFitResult<S, R, T> m4 = fitter2.generateCurve(curveFields_, filters_);
+                final boolean isBetter2 = subChain.pushResults(m4);
+
+                if (!isBetter2)
+                {
+                    LOG.info("LL got worse (or unchanged): " + subChain.getLogLikelihood() + " -> " + test);
+                    LOG.info("Previous parameters: " + subChain.getBestParameters());
+                    LOG.info("Current parameters: " + m4);
+                }
             }
             catch (final ConvergenceException e)
             {
@@ -308,19 +361,20 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 LOG.info("Time marker: " + (System.currentTimeMillis() - start));
                 LOG.info("Heap used: " + Runtime.getRuntime().totalMemory() / (1024 * 1024));
             }
+
         }
 
         try
         {
-            final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(model.getParams(), grid_);
-            model = fitCoefficients(model, grid, filters_);
+            final ParamFitResult<S, R, T> fitResult = innerFitCoefficients(subChain.getBestParameters(), filters_);
+            subChain.pushResults(fitResult);
         }
         catch (final ConvergenceException e)
         {
             LOG.info("Unable to improve results in coefficient fit, moving on.");
         }
 
-        return model;
+        return subChain.getConsolidatedResults();
     }
 
 }

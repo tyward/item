@@ -43,11 +43,11 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double ROUNDING_TOLERANCE = 1.0e-8;
     private final LogLikelihood<S> _likelihood;
     private final ItemParameters<S, R, T> _params;
-    private final List<S> _reachable;
 
     private final double[][] _betas;
     private final int _reachableSize;
 
+    private final double[] _rawRegWorkspace;
     private final double[] _regWorkspace;
     private final double[] _probWorkspace;
     private final double[] _actualProbWorkspace;
@@ -68,16 +68,16 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _params = params_;
             final S status = params_.getStatus();
 
-            _reachable = status.getReachable();
-
+            //_reachable = status.getReachable();
             _betas = params_.getBetas();
             _reachableSize = status.getReachableCount();
 
             _likelihood = new LogLikelihood<>(status);
 
-            final int regCount = this.getRegressorCount();
+            final int entryCount = params_.getEntryCount();
 
-            _regWorkspace = new double[regCount];
+            _rawRegWorkspace = new double[params_.getUniqueRegressors().size()];
+            _regWorkspace = new double[entryCount];
             _probWorkspace = new double[_reachableSize];
             _actualProbWorkspace = new double[_reachableSize];
         }
@@ -86,11 +86,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     public S getStatus()
     {
         return _params.getStatus();
-    }
-
-    public final int getRegressorCount()
-    {
-        return _params.regressorCount();
     }
 
     public final ItemParameters<S, R, T> getParams()
@@ -132,6 +127,45 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return logLikelihood;
     }
 
+    private void fillWorkspace(final double[] rawRegressors_, final double[] regWorkspace_)
+    {
+        if (rawRegressors_.length != _rawRegWorkspace.length)
+        {
+            throw new IllegalArgumentException("Length mismatch.");
+        }
+
+        final int numEntries = _params.getEntryCount();
+
+        if (regWorkspace_.length != numEntries)
+        {
+            throw new IllegalArgumentException("Length mismatch.");
+        }
+
+        for (int i = 0; i < numEntries; i++)
+        {
+            final int depth = _params.getEntryDepth(i);
+            double weight = 1.0;
+
+            for (int w = 0; w < depth; w++)
+            {
+                final int regIndex = _params.getEntryRegressorOffset(i, w);
+                final double rawReg = rawRegressors_[regIndex];
+                final ItemCurve<T> curve = _params.getEntryCurve(i, w);
+
+                if (null == curve)
+                {
+                    weight *= rawReg;
+                }
+                else
+                {
+                    weight *= curve.transform(rawReg);
+                }
+            }
+
+            regWorkspace_[i] = weight;
+        }
+    }
+
     /**
      * This will take packed probabilities (only the reachable states for this
      * status), and fill out a vector of unpacked probabilities (all statuses
@@ -162,7 +196,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         for (int i = 0; i < statCount; i++)
         {
-            final int reachableOrdinal = _likelihood.ordinalToOffset(i);//_reachableMap[i];
+            final int reachableOrdinal = _likelihood.ordinalToOffset(i);
 
             if (reachableOrdinal < 0)
             {
@@ -213,6 +247,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final double[] computed = _probWorkspace;
         final double[] actual = _actualProbWorkspace;
         final double[] regressors = _regWorkspace;
+        final double[] rawReg = _rawRegWorkspace;
         final List<S> reachable = getParams().getStatus().getReachable();
         int count = 0;
 
@@ -229,24 +264,24 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 continue;
             }
 
-            transitionProbability(grid_, i, computed);
-            grid_.getRegressors(i, regressors);
+            //We inline a bunch of these calcs to reduce duplication of effort.
+            grid_.getRegressors(i, rawReg);
+            this.fillWorkspace(rawReg, regressors);
+            rawPowerScores(regressors, computed);
+            MultiLogistic.multiLogisticFunction(computed, computed);
 
             final int actualTransition = grid_.getNextStatus(i);
 
-            for (int w = 0; w < reachable.size(); w++)
-            {
-                final S next = reachable.get(w);
+            final int actualOffset = _likelihood.ordinalToOffset(actualTransition);
 
-                if (next.ordinal() == actualTransition)
-                {
-                    actual[w] = 1.0;
-                }
-                else
-                {
-                    actual[w] = 0.0;
-                }
+            if (actualOffset < 0)
+            {
+                //This is a supposedly impossible transition, skip it.
+                continue;
             }
+
+            Arrays.fill(actual, 0.0);
+            actual[actualOffset] = 1.0;
 
             for (int z = 0; z < dimension; z++)
             {
@@ -260,6 +295,12 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                     final double actualProbability = actual[q];
                     final double computedProb = computed[q];
                     final double contribution = actualProbability * betaDerivative / computedProb;
+
+                    if (Double.isNaN(contribution))
+                    {
+                        throw new IllegalStateException("Contribution is NaN.");
+                    }
+
                     betaTerm += contribution;
                 }
 
@@ -283,18 +324,30 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      */
     public int transitionProbability(final ItemParamGrid<S, R, T> grid_, final int index_, final double[] output_)
     {
-        final double[] regressors = _regWorkspace;
-
-        grid_.getRegressors(index_, regressors);
-
-        multiLogisticFunction(regressors, output_);
+        grid_.getRegressors(index_, _rawRegWorkspace);
+        multiLogisticFunction(_rawRegWorkspace, output_);
 
         return _betas.length;
     }
 
     public void powerScores(final double[] regressors_, final double[] workspace_)
     {
-        final int inputSize = regressors_.length;
+        if (regressors_.length != _rawRegWorkspace.length)
+        {
+            throw new IllegalArgumentException("Length mismatch: " + regressors_.length + " != " + _rawRegWorkspace.length);
+        }
+        if (workspace_.length != _betas.length)
+        {
+            throw new IllegalArgumentException("Length mismatch: " + workspace_.length + " != " + _reachableSize);
+        }
+
+        fillWorkspace(regressors_, _regWorkspace);
+        rawPowerScores(_regWorkspace, workspace_);
+    }
+
+    private void rawPowerScores(final double[] regressors_, final double[] workspace_)
+    {
+        final int inputSize = _regWorkspace.length;
         final int outputSize = _betas.length;
 
         for (int i = 0; i < outputSize; i++)
@@ -311,15 +364,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
-    public void multiLogisticFunction(final double[] regressors_, final double[] workspace_)
+    private void multiLogisticFunction(final double[] regressors_, final double[] workspace_)
     {
         powerScores(regressors_, workspace_);
         MultiLogistic.multiLogisticFunction(workspace_, workspace_);
-    }
-
-    public ItemModel<S, R, T> updateParameters(ItemParameters<S, R, T> params_)
-    {
-        return new ItemModel<>(params_);
     }
 
     public double betaDerivative(final double[] regressors_, final double[] computedProbabilities_, final int regressorIndex_, final int toStateIndex_, final int toStateBetaIndex_)

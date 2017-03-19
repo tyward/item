@@ -22,6 +22,7 @@ package edu.columbia.tjw.item.base;
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
+import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.EnumFamily;
 import java.util.Random;
@@ -29,8 +30,9 @@ import java.util.Random;
 /**
  *
  * @author tyler
+ * @param <R>
  */
-public class SplineFactory implements ItemCurveFactory<SplineCurveType>
+public class SplineFactory<R extends ItemRegressor<R>> implements ItemCurveFactory<R, SplineCurveType>
 {
     /**
      * The singleton for this class. It has no free parameters, so no need for
@@ -43,23 +45,13 @@ public class SplineFactory implements ItemCurveFactory<SplineCurveType>
     }
 
     @Override
-    public ItemCurve<SplineCurveType> generateCurve(final ItemCurveParams<SplineCurveType> params_)
+    public ItemCurve<SplineCurveType> generateCurve(SplineCurveType type_, int offset_, double[] params_)
     {
-        throw new UnsupportedOperationException("Not supported.");
-
-//        switch (type_)
-//        {
-//            case STEP:
-//                return new StepSpline(params_[0], params_[1]);
-//            case BASIS:
-//                return new BasisSpline(params_[0], params_[1]);
-//            default:
-//                throw new RuntimeException("Impossible, unknown type: " + type_);
-//        }
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
-    public ItemCurveParams<SplineCurveType> generateStartingParameters(final SplineCurveType type_, final QuantileDistribution dist_, final Random rand_)
+    public ItemCurveParams<R, SplineCurveType> generateStartingParameters(final SplineCurveType type_, final R field_, final QuantileDistribution dist_, final Random rand_)
     {
         throw new UnsupportedOperationException("Not supported.");
 //
@@ -91,6 +83,12 @@ public class SplineFactory implements ItemCurveFactory<SplineCurveType>
     public EnumFamily<SplineCurveType> getFamily()
     {
         return SplineCurveType.FAMILY;
+    }
+
+    @Override
+    public ItemCurve<SplineCurveType> boundCentrality(ItemCurve<SplineCurveType> inputCurve_, double lowerBound_, double upperBound_)
+    {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     private static final class BasisSpline extends StandardCurve<SplineCurveType>

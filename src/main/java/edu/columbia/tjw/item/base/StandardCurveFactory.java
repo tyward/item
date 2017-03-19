@@ -22,6 +22,7 @@ package edu.columbia.tjw.item.base;
 import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
+import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.MathFunctions;
@@ -37,41 +38,35 @@ import org.apache.commons.math3.util.FastMath;
  *
  *
  * @author tyler
+ * @param <R>
  */
-public final class StandardCurveFactory implements ItemCurveFactory<StandardCurveType>
+public final class StandardCurveFactory<R extends ItemRegressor<R>> implements ItemCurveFactory<R, StandardCurveType>
 {
     private static final double SLOPE_MULT = 10.0;
 
-    /**
-     * The singleton for this class. It has no free parameters, so no need for
-     * more than one.
-     */
-    public static final StandardCurveFactory SINGLETON = new StandardCurveFactory();
-
-    private StandardCurveFactory()
+    public StandardCurveFactory()
     {
     }
 
     @Override
-    public ItemCurve<StandardCurveType> generateCurve(final ItemCurveParams<StandardCurveType> params_)
+    public ItemCurve<StandardCurveType> generateCurve(StandardCurveType type_, int offset_, double[] params_)
     {
-        final double centralityVal = params_.getCurveParams(0);
-        final double slopeParam = params_.getCurveParams(1);
-        final StandardCurveType curveType = params_.getType();
+        final double centralityVal = params_[offset_];
+        final double slopeParam = params_[offset_ + 1];
 
-        switch (curveType)
+        switch (type_)
         {
             case LOGISTIC:
                 return new LogisticCurve(centralityVal, slopeParam);
             case GAUSSIAN:
                 return new GaussianCurve(centralityVal, slopeParam);
             default:
-                throw new RuntimeException("Impossible, unknown type: " + curveType);
+                throw new RuntimeException("Impossible, unknown type: " + type_);
         }
     }
 
     @Override
-    public ItemCurveParams<StandardCurveType> generateStartingParameters(final StandardCurveType type_, final QuantileDistribution dist_, final Random rand_)
+    public ItemCurveParams<R, StandardCurveType> generateStartingParameters(final StandardCurveType type_, final R field_, final QuantileDistribution dist_, final Random rand_)
     {
         final double[] curveParams = new double[2]; //== type_.getParamCount();
 
@@ -155,7 +150,7 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
 
         final double intercept = -0.5 * betaGuess;
 
-        final ItemCurveParams<StandardCurveType> output = new ItemCurveParams<>(type_, intercept, betaGuess, curveParams);
+        final ItemCurveParams<R, StandardCurveType> output = new ItemCurveParams<>(type_, field_, this, intercept, betaGuess, curveParams);
         return output;
 
     }
@@ -166,8 +161,60 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
         return StandardCurveType.FAMILY;
     }
 
+    @Override
+    public ItemCurve<StandardCurveType> boundCentrality(ItemCurve<StandardCurveType> inputCurve_, double lowerBound_, double upperBound_)
+    {
+        if (null == inputCurve_)
+        {
+            return null;
+        }
+
+        final StandardCurveType type = inputCurve_.getCurveType();
+
+        switch (type)
+        {
+            case LOGISTIC:
+            {
+                final LogisticCurve curve = (LogisticCurve) inputCurve_;
+
+                final double center = curve._center;
+
+                if (center < lowerBound_)
+                {
+                    return new LogisticCurve(lowerBound_, Math.sqrt(curve._slope));
+                }
+                if (center > upperBound_)
+                {
+                    return new LogisticCurve(upperBound_, Math.sqrt(curve._slope));
+                }
+
+                return curve;
+            }
+            case GAUSSIAN:
+            {
+                final GaussianCurve curve = (GaussianCurve) inputCurve_;
+                final double center = curve._mean;
+
+                if (center < lowerBound_)
+                {
+                    return new GaussianCurve(lowerBound_, Math.sqrt(curve._stdDev));
+                }
+                if (center > upperBound_)
+                {
+                    return new GaussianCurve(upperBound_, Math.sqrt(curve._stdDev));
+                }
+
+                return curve;
+            }
+            default:
+                throw new RuntimeException("Impossible.");
+        }
+
+    }
+
     private static final class GaussianCurve extends StandardCurve<StandardCurveType>
     {
+        private static final long serialVersionUID = 0xd1c81f26497f177fL;
         private final double _stdDev;
         private final double _invStdDev;
         private final double _mean;
@@ -244,6 +291,7 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
 
     private static final class LogisticCurve extends StandardCurve<StandardCurveType>
     {
+        private static final long serialVersionUID = 0x1dd40a5f2f923106L;
         private final double _center;
         private final double _slope;
         private final double _slopeParam;

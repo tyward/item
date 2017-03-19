@@ -31,7 +31,9 @@ public class RandomTool
     {
         for (int i = 0; i < 100; i++)
         {
-            System.out.println(CORE.nextLong() + "L");
+            final long next = CORE.nextLong();
+
+            System.out.println(next + "L, 0x" + Long.toHexString(next) + "L");
         }
     }
 

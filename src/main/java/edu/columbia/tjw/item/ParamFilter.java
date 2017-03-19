@@ -39,14 +39,32 @@ public interface ParamFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 {
 
     /**
-     * The associated regressor for this filter, or null.
+     * For the given params, are we allowed to change the
+     * [toStatus_][paramEntry_] beta?
      *
-     * Should be set only if this filter is to be dropped when the regressor is
-     * dropped. Typically the case for filters generated during curve drawing.
-     *
-     * @return The regressor this filter will filter on (or null, if none)
+     * @param params_ The params to consider
+     * @param toStatus_ The toStatus of the beta within params_
+     * @param paramEntry_ The entry number of the beta within params_
+     * @return True if the beta described by this function call is frozen, and
+     * should not be changed.
      */
-    public R relatedRegressor();
+    public boolean betaIsFrozen(final ItemParameters<S, R, T> params_, final S toStatus_, final int paramEntry_);
+
+    /**
+     * Are we allowed to extend the given parameters with the given
+     * curveParams_?
+     *
+     * N.B: This will be called before the curve params are fully fit, so it
+     * should not depend on the values of beta, intercept, or the curve params.
+     * If it does depend on these values, it will be called a second time after
+     * fitting, but rejecting curve params at that stage will be costly.
+     *
+     * @param params_ The params to consider.
+     * @param toStatus_ The toStatus under consideration.
+     * @param curveParams_ The curve params to consider.
+     * @return True if these params should be rejected.
+     */
+    public boolean curveIsForbidden(final ItemParameters<S, R, T> params_, final S toStatus_, final ItemCurveParams<R, T> curveParams_);
 
     /**
      * True if this item is to be ignored.
@@ -57,12 +75,11 @@ public interface ParamFilter<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * This filter allows some of these tuples to be ignored.
      *
      * @param fromStatus_ Status of the model in question
-     * @param toStatus_ Status of this transition 
+     * @param toStatus_ Status of this transition
      * @param field_ The regressor
      * @param trans_ The transformation to be applied, null if no
      * transformation.
      * @return True if this coefficient should not be adjusted.
      */
-    public boolean isFiltered(final S fromStatus_, final S toStatus_, final R field_, final ItemCurve<T> trans_);
-
+    //public boolean isFiltered(final S fromStatus_, final S toStatus_, final R field_, final ItemCurve<T> trans_);
 }

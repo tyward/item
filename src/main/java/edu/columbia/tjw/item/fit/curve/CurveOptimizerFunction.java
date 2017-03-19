@@ -20,13 +20,13 @@
 package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.ItemCurve;
+import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.RandomizedStatusGrid.MappedReader;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 import edu.columbia.tjw.item.util.LogLikelihood;
@@ -49,37 +49,43 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
 {
     private final LogLikelihood<S> _likelihood;
-    private final ParamGenerator<S, R, T> _generator;
-    private final R _field;
-    private final double[] _regressor;
+    private final ItemCurveFactory<R, T> _factory;
     private final int _size;
     private final double[] _workspace;
     private final int _toIndex;
-    private final double _centrality;
-    private final double _stdDev;
+    private final int[] _indexList;
 
-    private final ItemModel<S, R, T> _model;
-    private final RectangularDoubleArray _powerScores;
+    private final CurveParamsFitter<S, R, T> _curveFitter;
+
+    private final S _status;
     private final int[] _actualOffsets;
-    private final T _curveType;
 
-    private ItemCurve<?> _trans;
-    private double _interceptAdjustment;
-    private double _beta;
     private MultivariatePoint _prevPoint;
 
     private final ItemSettings _settings;
 
-    //private final MultivariateDifferentiableFunction _diff;
-    public CurveOptimizerFunction(final T curveType_, final ParamGenerator<S, R, T> generator_, final R field_, final S fromStatus_, final S toStatus_, final RectangularDoubleArray powerScores_, final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final ItemModel<S, R, T> model_, final int[] indexList_, final ItemSettings settings_)
+    private final ItemCurveParams<R, T> _initParams;
+    private final boolean _subtractStarting;
+
+    private ItemCurveParams<R, T> _params;
+
+    //N.B: This is an unsafe reference to an array owned by someone else, be careful with it.
+    private final float[][] _regData;
+
+    public CurveOptimizerFunction(final ItemCurveParams<R, T> initParams_, final ItemCurveFactory<R, T> factory_, final S fromStatus_, final S toStatus_, final CurveParamsFitter<S, R, T> curveFitter_,
+            final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_, final boolean subtractStarting_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
-        _curveType = curveType_;
+        _indexList = indexList_;
+        _factory = factory_;
+        _initParams = initParams_;
+        _subtractStarting = subtractStarting_;
+
+        _curveFitter = curveFitter_;
         _settings = settings_;
         _likelihood = new LogLikelihood<>(fromStatus_);
-        _powerScores = powerScores_;
-        _actualOffsets = new int[actualOrdinals_.length]; //actualOrdinals_.clone();
+        _actualOffsets = new int[actualOrdinals_.length];
 
         //Convert ordinals to offsets. 
         for (int i = 0; i < _actualOffsets.length; i++)
@@ -87,46 +93,29 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             _actualOffsets[i] = _likelihood.ordinalToOffset(actualOrdinals_[i]);
         }
 
-        _model = model_;
-        _generator = generator_;
-        _field = field_;
-        _size = _powerScores.getRows();
-        _workspace = new double[_generator.paramCount()];
-        _regressor = new double[_size];
+        _status = fromStatus_;
+        _size = _actualOffsets.length;
+        _workspace = new double[_initParams.size()];
         _toIndex = fromStatus_.getReachable().indexOf(toStatus_);
 
-        //final NumericGridReader<?> reader = grid_.getReader(_field);
-        //Take one random point as the mean for our optimization.
-        //final int meanSelector = (int) (_size * RandomTool.nextDouble());
-        //final double mean = reader.asDouble(indexList_[meanSelector], offsetList_[meanSelector]);
-        double eX = 0.0;
-        double eX2 = 0.0;
+        final int depth = _initParams.getEntryDepth();
+        _regData = new float[depth][];
 
-        final ItemRegressorReader reader = grid_.getRegressorReader(_field);
-
-        for (int i = 0; i < _size; i++)
+        for (int i = 0; i < depth; i++)
         {
-            final int mapped = indexList_[i];
-            final double regressor = reader.asDouble(mapped);
+            final R reg = _initParams.getRegressor(i);
+            //_readers[i] = grid_.getRegressorReader(reg);
 
-            _regressor[i] = regressor;
+            final MappedReader reader = (MappedReader) grid_.getRegressorReader(reg);
 
-            eX += regressor;
-            eX2 += (regressor * regressor);
+            _regData[i] = reader.getUnderlyingArray();
         }
-
-        eX = eX / _size;
-        eX2 = eX2 / _size;
-
-        //These can be dropped, keeping temporarily for debugging purposes.
-        _centrality = eX;
-        _stdDev = Math.sqrt(eX2 - (eX * eX));
     }
 
     @Override
     public int dimension()
     {
-        return _generator.paramCount();
+        return _initParams.size();
     }
 
     @Override
@@ -153,10 +142,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             _workspace[i] = input_.getElement(i);
         }
 
-        _trans = _generator.generateTransformation(_workspace);
-        _interceptAdjustment = _generator.getInterceptAdjustment(_workspace);
-        _beta = _generator.getBeta(_workspace);
-        //System.out.println("Prepared: " + input_);
+        _params = new ItemCurveParams<>(_initParams, _factory, _workspace);
     }
 
     @Override
@@ -167,25 +153,89 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             return;
         }
 
-        final int cols = _powerScores.getColumns();
+        final RectangularDoubleArray powerScores = _curveFitter.getPowerScores();
+        final int cols = powerScores.getColumns();
 
         final double[] computed = new double[cols];
         //final double[] actual = new double[cols];
+
+        final int depth = _params.getEntryDepth();
+
+        // N.B: The intercept adjustment from the prev params has already been absorbed into 
+        // the intercept term. No need to redo it or adjust for it here, it's already part of 
+        // the baseline, we are fitting only an additive adjustment on top of that.
+        final double interceptAdjustment = _params.getIntercept();
+        final double beta = _params.getBeta();
+        final double prevBeta = _initParams.getBeta();
 
         for (int i = start_; i < end_; i++)
         {
             for (int k = 0; k < cols; k++)
             {
-                computed[k] = _powerScores.get(i, k);
+                computed[k] = powerScores.get(i, k);
                 //actual[k] = _actualProbabilities.get(i, k);
             }
 
             final int actualOffset = _actualOffsets[i];
-            final double regressor = _regressor[i];
-            final double transformed = _trans.transform(regressor);
-            final double contribution = (_interceptAdjustment + (_beta * transformed));
 
-            computed[_toIndex] += contribution;
+            final int mapped = _indexList[i];
+            double weight = 1.0;
+
+            for (int k = 0; k < depth; k++)
+            {
+                final double regressor = _regData[k][mapped];
+                final ItemCurve<T> trans = _params.getCurve(k);
+                final double transformed;
+
+                if (null == trans)
+                {
+                    transformed = regressor;
+                }
+                else
+                {
+                    transformed = trans.transform(regressor);
+                }
+
+                weight *= transformed;
+            }
+
+            double contribution = beta * weight;
+
+//            final double regressor = _regData[0][mapped];
+//
+//            final double transformed = trans.transform(regressor);
+//            final double contribution = (beta * transformed);
+//            final double prevContribution;
+            if (_subtractStarting)
+            {
+                double prevWeight = 1.0;
+
+                for (int k = 0; k < depth; k++)
+                {
+                    final double regressor = _regData[k][mapped];
+                    final ItemCurve<T> trans = _initParams.getCurve(k);
+                    final double transformed;
+
+                    if (null == trans)
+                    {
+                        transformed = regressor;
+                    }
+                    else
+                    {
+                        transformed = trans.transform(regressor);
+                    }
+
+                    prevWeight *= transformed;
+                }
+
+                contribution -= prevBeta * prevWeight;
+            }
+
+            //We are replacing one curve with another (if _prevCurve != null), so subtract off the 
+            // curve we previously had before adding this new one.
+            final double totalContribution = interceptAdjustment + contribution;
+
+            computed[_toIndex] += totalContribution;
 
             //Converte these power scores into probabilities.
             MultiLogistic.multiLogisticFunction(computed, computed);
@@ -208,7 +258,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             return new MultivariateGradient(input_, der, null, 0.0);
         }
 
-        final List<S> reachable = _model.getParams().getStatus().getReachable();
+        final List<S> reachable = _status.getReachable();
         int count = 0;
         final int reachableCount = reachable.size();
 
@@ -224,14 +274,24 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         final double[] output = new double[reachableCount];
         //final double[] actual = new double[reachableCount];
 
-        final int interceptIndex = ItemCurveParams.getInterceptParamNumber(_curveType);
-        final int betaIndex = ItemCurveParams.getBetaParamNumber(_curveType);
+        final int depth = _params.getEntryDepth();
+        final double[] weights = new double[depth];
+        final double[] knockoutWeights = new double[depth];
+        //final double[] componentDeriv = new double[depth];
+
+        final int interceptIndex = _params.getInterceptIndex();
+        final int betaIndex = _params.getBetaIndex();
+
+        final RectangularDoubleArray powerScores = _curveFitter.getPowerScores();
+
+        //N.B: The derivative depes only on current params, not on _initParms, regardless of _subtractStarting.
+        final double beta = _params.getBeta();
 
         for (int i = start_; i < end_; i++)
         {
             for (int w = 0; w < reachableCount; w++)
             {
-                scores[w] = _powerScores.get(i, w);
+                scores[w] = powerScores.get(i, w);
                 //actual[w] = _actualProbabilities.get(i, w);
             }
 
@@ -241,10 +301,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
             double xDerivative = 0.0;
 
-            //for (int w = 0; w < reachableCount; w++)
-            //{
-            //    final double probRatio = actual[w] / workspace1[w];
-            //    final double derivTerm = output[w] * probRatio;
             final int actualOffset = _actualOffsets[i];
 
             if (actualOffset >= 0)
@@ -253,28 +309,77 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
                 final double derivTerm = output[actualOffset] / workspace1[actualOffset];
                 xDerivative += derivTerm;
             }
-            //}
 
-            final double regressor = this._regressor[i];
+            final int mapped = _indexList[i];
+            double weight = 1.0;
 
-            final double transformed = this._trans.transform(regressor);
+            for (int k = 0; k < depth; k++)
+            {
+                final double regressor = _regData[k][mapped];
+                final ItemCurve<T> trans = _params.getCurve(k);
+                final double transformed;
+
+                if (null == trans)
+                {
+                    transformed = regressor;
+                }
+                else
+                {
+                    transformed = trans.transform(regressor);
+                }
+
+                weights[k] = transformed;
+                knockoutWeights[k] = 1.0;
+                weight *= transformed;
+            }
+
+            //Fill in the weight of everything but this curve....
+            for (int k = 0; k < depth; k++)
+            {
+                for (int w = 0; w < depth; w++)
+                {
+                    if (w == k)
+                    {
+                        continue;
+                    }
+
+                    knockoutWeights[k] *= weights[w];
+                }
+            }
 
             //In our special case, the derivative is directly proportional to beta, because we apply it to only one state. 
             final double interceptDerivative = xDerivative;
 
-            final double betaDerivative = xDerivative * transformed;
+            final double betaDerivative = xDerivative * weight;
 
             derivative[interceptIndex] += interceptDerivative;
             derivative[betaIndex] += betaDerivative;
 
-            for (int w = 0; w < _trans.getCurveType().getParamCount(); w++)
+            for (int w = 0; w < _params.size(); w++)
             {
-                final int mapped = _generator.translateParamNumber(w);
-                final double paramDerivative = _trans.derivative(w, regressor);
-                final double combined = xDerivative * this._beta * paramDerivative;
-                derivative[mapped] += combined;
+                if (w == interceptIndex || w == betaIndex)
+                {
+                    //Already handled these cases.
+                    continue;
+                }
+
+                final int depthIndex = _params.indexToCurveIndex(w);
+                final double regressor = _regData[depthIndex][mapped];
+                final ItemCurve<T> targetCurve = _params.getCurve(depthIndex);
+                final int curveOffset = _params.indexToCurveOffset(w);
+                final double paramDerivative = targetCurve.derivative(curveOffset, regressor);
+                final double knockoutWeight = knockoutWeights[depthIndex];
+
+                final double deriv = xDerivative * beta * paramDerivative * knockoutWeight;
+                derivative[w] += deriv;
             }
 
+//            for (int w = 0; w < trans.getCurveType().getParamCount(); w++)
+//            {
+//                final double paramDerivative = trans.derivative(w, regressor);
+//                final double combined = xDerivative * beta * paramDerivative;
+//                derivative[w] += combined;
+//            }
             count++;
         }
 

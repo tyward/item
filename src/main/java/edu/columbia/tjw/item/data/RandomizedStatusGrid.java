@@ -125,7 +125,13 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
         return _underlying.getRegressorFamily();
     }
 
-    private final class MappedReader implements ItemRegressorReader
+    @Override
+    public boolean hasRegressorReader(R field_)
+    {
+        return _underlying.hasRegressorReader(field_);
+    }
+
+    public final class MappedReader implements ItemRegressorReader
     {
         private final float[] _data;
 
@@ -138,6 +144,19 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
         public double asDouble(int index_)
         {
             return _data[index_];
+        }
+
+        /**
+         * N.B: This is extremely dangerous, to give out our underlying array.
+         *
+         * However, it is very useful for performance reasons, so it is allowed,
+         * but hidden.
+         *
+         * @return
+         */
+        public float[] getUnderlyingArray()
+        {
+            return _data;
         }
 
         @Override

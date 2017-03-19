@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.util.HashUtil;
 import java.util.Arrays;
 
 /**
@@ -32,6 +33,14 @@ public class MultivariatePoint implements EvaluationPoint<MultivariatePoint>
     public MultivariatePoint(final double[] raw_)
     {
         _point = raw_.clone();
+
+        for (int i = 0; i < _point.length; i++)
+        {
+            if (Double.isNaN(_point[i]) || Double.isInfinite(_point[i]))
+            {
+                throw new IllegalArgumentException("Points must be well defined: " + this.toString());
+            }
+        }
     }
 
     public MultivariatePoint(final MultivariatePoint copyFrom_)
@@ -68,7 +77,7 @@ public class MultivariatePoint implements EvaluationPoint<MultivariatePoint>
 
     public void setElement(final int index_, final double value_)
     {
-        if (Double.isNaN(value_))
+        if (Double.isNaN(value_) || Double.isInfinite(value_))
         {
             throw new IllegalArgumentException("Points must be well defined.");
         }
@@ -137,6 +146,11 @@ public class MultivariatePoint implements EvaluationPoint<MultivariatePoint>
     @Override
     public void scale(double input_)
     {
+        if (Double.isNaN(input_) || Double.isInfinite(input_))
+        {
+            throw new IllegalArgumentException("Points must be well defined: " + input_);
+        }
+
         for (int i = 0; i < _point.length; i++)
         {
             _point[i] = input_ * _point[i];
@@ -165,6 +179,17 @@ public class MultivariatePoint implements EvaluationPoint<MultivariatePoint>
     public void normalize()
     {
         final double mag = this.getMagnitude();
+
+        if (Double.isNaN(mag) || Double.isInfinite(mag))
+        {
+            throw new IllegalArgumentException("Points must be well defined: " + this.toString());
+        }
+
+        if (mag == 0.0)
+        {
+            throw new IllegalStateException("Cannot normalize the zero point.");
+        }
+
         final double invMag = 1.0 / mag;
 
         for (int i = 0; i < _point.length; i++)
@@ -202,6 +227,20 @@ public class MultivariatePoint implements EvaluationPoint<MultivariatePoint>
         }
     }
 
+    @Override
+    public int hashCode()
+    {
+        int hash = HashUtil.startHash(MultivariatePoint.class);
+
+        for (int i = 0; i < this._point.length; i++)
+        {
+            hash = HashUtil.mix(hash, Double.doubleToLongBits(this._point[i]));
+        }
+
+        return hash;
+    }
+
+    @Override
     public boolean equals(final Object that_)
     {
         if (null == that_)
@@ -236,6 +275,7 @@ public class MultivariatePoint implements EvaluationPoint<MultivariatePoint>
         return equal;
     }
 
+    @Override
     public String toString()
     {
         final StringBuilder builder = new StringBuilder();
