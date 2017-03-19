@@ -32,6 +32,7 @@ import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.fit.ItemCalcGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -47,11 +48,10 @@ import java.util.TreeSet;
  * @param <R> The regressor family for this visualizer
  * @param <T> The curve family for this visualizer
  */
-public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
 {
-    private final ItemModel<S, R, T> _model;
-    private final ParamFittingGrid<S, R, T> _grid;
-    private final EnumFamily<S> _statusFamily;
+    private static final long serialVersionUID = 4198554232525136207L;
+    private final ItemParameters<S, R, T> _params;
     private final SortedSet<S> _reachable;
     private final SortedSet<R> _regressors;
     private final SortedMap<S, SortedMap<R, QuantileDistribution>> _distMap;
@@ -69,11 +69,9 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
             throw new IllegalArgumentException("Bucket count must be at least 10: " + approxBuckets_);
         }
 
-        _model = new ItemModel<>(params_);
-        _grid = grid_;
-
-        _statusFamily = _grid.getStatusFamily();
-
+        _params = params_;
+        final ItemModel<S, R, T> model = new ItemModel<>(params_);
+        final ParamFittingGrid<S, R, T> grid = grid_;
         final S from = params_.getStatus();
 
         final TreeSet<R> basic = new TreeSet<>(params_.getRegressorList());
@@ -105,22 +103,22 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 final QuantApprox approx = new QuantApprox(approxBuckets_, approxLoad_);
                 final QuantApprox modelApprox = new QuantApprox(approxBuckets_, approxLoad_);
 
-                final ItemRegressorReader reader = _grid.getRegressorReader(reg);
+                final ItemRegressorReader reader = grid.getRegressorReader(reg);
 
                 final int toOrdinal = to.ordinal();
 
-                for (int i = 0; i < _grid.size(); i++)
+                for (int i = 0; i < grid.size(); i++)
                 {
-                    if (fromOrdinal != _grid.getStatus(i))
+                    if (fromOrdinal != grid.getStatus(i))
                     {
                         continue;
                     }
-                    if (!_grid.hasNextStatus(i))
+                    if (!grid.hasNextStatus(i))
                     {
                         continue;
                     }
 
-                    final int trueToOrdinal = _grid.getNextStatus(i);
+                    final int trueToOrdinal = grid.getNextStatus(i);
                     final double prob;
 
                     if (trueToOrdinal == toOrdinal)
@@ -135,7 +133,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
                     final double x = reader.asDouble(i);
                     approx.addObservation(x, prob, true);
 
-                    _model.transitionProbability(_grid, i, workspace);
+                    model.transitionProbability(grid, i, workspace);
                     final double modelProb = workspace[toIndex];
                     modelApprox.addObservation(x, modelProb);
                 }
@@ -159,7 +157,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     public S getFrom()
     {
-        return _model.getStatus();
+        return _params.getStatus();
     }
 
     public SortedSet<S> getReachable()
@@ -279,10 +277,11 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double stepSize = (regMax_ - regMin_) / steps_;
 
+        final ItemModel<S, R, T> model = new ItemModel<>(_params);
         final InnerGrid grid = new InnerGrid(steps_, regMin_, stepSize, regressor_, regValues_);
-        final ItemCalcGrid<S, R, T> paramGrid = new ItemCalcGrid<>(_model.getParams(), grid);
+        final ItemCalcGrid<S, R, T> paramGrid = new ItemCalcGrid<>(_params, grid);
 
-        final List<S> reachable = _model.getParams().getStatus().getReachable();
+        final List<S> reachable = _params.getStatus().getReachable();
         final int toIndex = reachable.indexOf(to_);
 
         if (toIndex < 0)
@@ -297,7 +296,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         for (int i = 0; i < steps_; i++)
         {
-            _model.transitionProbability(paramGrid, i, probability);
+            model.transitionProbability(paramGrid, i, probability);
 
             x[i] = regMin_ + (i * stepSize);
             y[i] = probability[toIndex];

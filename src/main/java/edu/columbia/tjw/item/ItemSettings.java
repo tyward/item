@@ -38,12 +38,16 @@ public final class ItemSettings implements Serializable
     private static final double STANDARD_AIC_CUTOFF = -5.0;
     private static final int BLOCK_SIZE = 200 * 1000;
     private static final int THREAD_BLOCK_SIZE = 10 * 1000;
+    private static final int POLISH_MULTI_START_POINTS = 20;
+
     private static final long serialVersionUID = 6850856502170239624L;
 
     private final Random _rand;
     private final boolean _randomShuffle;
     private final boolean _useThreading;
     private final boolean _approximateDerivatives;
+    private final boolean _polishStartingParams;
+    private final int _polishMultStartPoints;
 
     private final double _aicCutoff;
 
@@ -52,10 +56,10 @@ public final class ItemSettings implements Serializable
 
     public ItemSettings()
     {
-        this(true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD), BLOCK_SIZE, THREAD_BLOCK_SIZE, true);
+        this(true, STANDARD_AIC_CUTOFF, RandomTool.getRandom(PrngType.STANDARD), BLOCK_SIZE, THREAD_BLOCK_SIZE, true, false);
     }
 
-    public ItemSettings(final boolean randomShuffle_, final double aicCutoff_, final Random rand_, final int blockSize_, final int threadBlockSize_, final boolean useThreading_)
+    public ItemSettings(final boolean randomShuffle_, final double aicCutoff_, final Random rand_, final int blockSize_, final int threadBlockSize_, final boolean useThreading_, final boolean polishStartingParams_)
     {
         if (aicCutoff_ > 0.0)
         {
@@ -78,6 +82,18 @@ public final class ItemSettings implements Serializable
         _threadBlockSize = threadBlockSize_;
         _useThreading = useThreading_;
         _approximateDerivatives = false;
+        _polishStartingParams = polishStartingParams_;
+        _polishMultStartPoints = POLISH_MULTI_START_POINTS;
+    }
+
+    public int getPolishMultiStartPoints()
+    {
+        return _polishMultStartPoints;
+    }
+
+    public boolean getPolishStartingParams()
+    {
+        return _polishStartingParams;
     }
 
     public boolean getUseThreading()
@@ -110,4 +126,8 @@ public final class ItemSettings implements Serializable
         return _rand;
     }
 
+    public boolean approximateDerivatives()
+    {
+        return _approximateDerivatives;
+    }
 }

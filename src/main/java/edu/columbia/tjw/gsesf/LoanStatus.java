@@ -143,7 +143,11 @@ public enum LoanStatus implements ItemStatus<LoanStatus>
 
         final char visibleName = this.getVisibleName();
 
+<<<<<<< HEAD
         final List<LoanStatus> indistinguishable = new ArrayList<LoanStatus>();
+=======
+        final List<LoanStatus> indistinguishable = new ArrayList<>();
+>>>>>>> a8e9a2f12fa09efccf94a83e3b65965d3938531b
 
         for (int i = 0; i < count(); i++)
         {

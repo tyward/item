@@ -101,7 +101,7 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
         return output;
     }
 
-    private final FitResult<S, R, T> findBest(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filters_)
+    private FitResult<S, R, T> findBest(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filters_)
     {
         final S fromStatus = _params.getStatus();
         FitResult<S, R, T> bestResult = null;
@@ -183,7 +183,6 @@ public abstract class CurveFitter<S extends ItemStatus<S>, R extends ItemRegress
             _trans = trans_;
             _point = point_;
             _llImprovement = (startingLL_ - _logL);
-            //_generator = generator_;
             _field = field_;
             _startingLogL = startingLL_;
             _toState = toState_;

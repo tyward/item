@@ -35,7 +35,7 @@ import java.util.List;
  *
  * @author tyler
  * @param <S> The status type for this quantile distribution
- * @param <R> The regressor type for this quantile distritbution
+ * @param <R> The regressor type for this quantile distribution
  */
 public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends ItemRegressor<R>>
 {
@@ -46,10 +46,14 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
 
     public ItemQuantileDistribution(final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_, final S fromStatus_, R field_, S toStatus_, final int[] indexList_)
     {
+        this(grid_, powerScores_, fromStatus_, grid_.getRegressorReader(field_), toStatus_, indexList_);
+    }
+
+    public ItemQuantileDistribution(final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_, final S fromStatus_, final ItemRegressorReader reader_, S toStatus_, final int[] indexList_)
+    {
         _likelihood = new LogLikelihood<>(fromStatus_);
 
-        final ItemRegressorReader reader = grid_.getRegressorReader(field_);
-        final ItemRegressorReader wrapped = new WrappedRegressorReader(reader, indexList_);
+        final ItemRegressorReader wrapped = new WrappedRegressorReader(reader_, indexList_);
         final ItemRegressorReader yReader = new InnerResponseReader<>(toStatus_, grid_, powerScores_, _likelihood, indexList_);
 
         final QuantileStatistics stats = new QuantileStatistics(wrapped, yReader);
@@ -71,17 +75,17 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
             final double next = _orig.getMeanY(i);
             final double nextDev = _orig.getDevY(i);
             final long nextCount = _orig.getCount(i);
-            
-            if(nextCount < 1)
+
+            if (nextCount < 1)
             {
                 continue;
             }
-            
+
+            //We are actually looking at something like E[actual / predicted]
             final double nextMin = 0.5 / nextCount; //We can't justify a probability smaller than this given our observation count. 
-            final double nextMax = 1.0 - nextMin;
+            final double nextMax = 1.0 / nextMin; //1.0 - nextMin;
             final double boundedNext = Math.max(nextMin, Math.min(nextMax, next));
-            
-            
+
             final double adjustment = Math.log(boundedNext);
 
             //The operating theory here is that dev is small relative to the adjustment, so we can approximate this...
@@ -206,7 +210,9 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
                 {
                     //We took this transition (or one indistinguishable from it). 
                     actValue = 1.0;
-                    break;
+
+                    //Don't break out, we need to sum up all the probability mass...
+                    //break;
                 }
             }
 
@@ -214,7 +220,7 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
             //Ideally, this ratio is approximately 1, or at least E[ratio] = 1. 
             //We can compute -ln(1/E[ratio]) and that will give us a power score adjustment we can
             //use to improve our fit. Notice that we are ignoring the non-multiplcative nature of the logistic function. 
-            //We will need to run the optimizer over this thing eventually, but this shoudl give us a good starting point. 
+            //We will need to run the optimizer over this thing eventually, but this should give us a good starting point. 
             final double ratio = (actValue / probSum);
 
             //final double residual = (actValue - probSum);

@@ -40,6 +40,8 @@ import org.apache.commons.math3.util.FastMath;
  */
 public final class StandardCurveFactory implements ItemCurveFactory<StandardCurveType>
 {
+    private static final double SLOPE_MULT = 10.0;
+
     /**
      * The singleton for this class. It has no free parameters, so no need for
      * more than one.
@@ -99,16 +101,29 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
         curveParams[0] = xVal;
 
         final double distDev = dist_.getDevX();
+
+        //This is a reasonable estimate of how low the std. dev can realistically be. 
+        //Given that we have seen only finitely many observations, we could never say with confidence that it's zero.
+        //Also, in case the mean happens to be zero, and the dev is zero, then we add a tiny value to not divide by zero.
+        final double minDev = 1.0e-10 + Math.abs(dist_.getMeanX() / dist_.getTotalCount());
+
         final double slopeParam;
         final double betaGuess;
 
         switch (type_)
         {
             case LOGISTIC:
-                slopeParam = Math.sqrt(1.0 / (distDev + 1.0e-10));
+                // The logic is that we'll want one unit of slope to occupy something 
+                // like the midpoint between 1 bucket and all the buckets, so about sqrt(buckets)
+                // However, randomize this a bit to give us more chances to get it right. 
+                final double slopeScale = (0.5 + rand_.nextDouble()) * Math.sqrt(size);
+
+                //The square root is because the slope is squared before being applied, to keep the logistic upward sloping.
+                slopeParam = Math.sqrt(slopeScale / Math.max(minDev, distDev));
+                //slopeParam = Math.sqrt(1.0 / (distDev + 1.0e-10));
 
                 double xCorrelation = 0.0;
-                double xVar = 0.0;
+                //double xVar = 0.0;
                 final double meanY = dist_.getMeanY();
                 final double meanX = dist_.getMeanX();
 
@@ -129,7 +144,7 @@ public final class StandardCurveFactory implements ItemCurveFactory<StandardCurv
 
                 break;
             case GAUSSIAN:
-                slopeParam = distDev;
+                slopeParam = (0.5 + rand_.nextDouble()) * Math.max(minDev, distDev);
                 betaGuess = dist_.getMeanY(xIndex) - dist_.getMeanY();
                 break;
             default:

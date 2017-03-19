@@ -37,7 +37,6 @@ import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 import java.util.Arrays;
-import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -113,8 +112,7 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _powerScores = new RectangularDoubleArray(count, reachableCount);
         _actualOutcomes = new int[count];
 
-        final List<S> reachable = fromStatus.getReachable();
-
+        //final List<S> reachable = fromStatus.getReachable();
         final int baseCase = fromStatus.getReachable().indexOf(fromStatus);
 
         for (int i = 0; i < count; i++)
@@ -137,6 +135,8 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
     @Override
     protected FitResult<S, R, T> findBest(T curveType_, R field_, S toStatus_) throws ConvergenceException
     {
+        LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
+
         final BaseParamGenerator<S, R, T> generator = new BaseParamGenerator<>(_factory, curveType_, _model, toStatus_, _settings, _intercept);
         //LOG.info("\n\nFinding best: " + generator_ + " " + field_ + " " + toStatus_);
 
@@ -159,27 +159,82 @@ public class BaseCurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final double[] starting = generator.getStartingParams(dist);
 
-        for (int i = 0; i < dimension; i++)
+        final FitResult<S, R, T> output = generateFit(generator, func, field_, startingLL, starting);
+
+        if (_settings.getPolishStartingParams())
         {
-            startingPoint.setElement(i, starting[i]);
+            try
+            {
+                final double[] polished = generator.polishCurveParameters(dist, starting);
+
+                if (!Arrays.equals(starting, polished))
+                {
+                    LOG.info("Have polished parameters, testing.");
+
+                    final FitResult<S, R, T> output2 = generateFit(generator, func, field_, startingLL, polished);
+
+                    //LOG.info("Fit comparison: " + output.getLogLikelihood() + " <> " + output2.getLogLikelihood());
+                    final double aic1 = output.calculateAicDifference();
+                    final double aic2 = output2.calculateAicDifference();
+                    final String resString;
+
+                    if (aic1 > aic2)
+                    {
+                        resString = "BETTER";
+                    }
+                    else if (aic2 > aic1)
+                    {
+                        resString = "WORSE";
+                    }
+                    else
+                    {
+                        resString = "SAME";
+                    }
+
+                    LOG.info("Polished params[" + aic1 + " <> " + aic2 + "]: " + resString);
+
+                    if (aic1 > aic2)
+                    {
+                        //If the new results are actually better, return those instead.
+                        return output2;
+                    }
+                }
+            }
+            catch (final Exception e)
+            {
+                LOG.info("Exception during polish: " + e.toString());
+            }
         }
 
-        OptimizationResult<MultivariatePoint> result = _optimizer.optimize(func, startingPoint);
+        return output;
+    }
+
+    private FitResult<S, R, T> generateFit(final BaseParamGenerator<S, R, T> generator_, final CurveOptimizerFunction<S, R, T> func_, R field_, final double startingLL_, final double[] starting_) throws ConvergenceException
+    {
+        final int dimension = generator_.paramCount();
+
+        //Take advantage of the fact that this starts out as all zeros, and that all zeros
+        //means no change....
+        final MultivariatePoint startingPoint = new MultivariatePoint(dimension);
+
+        for (int i = 0; i < dimension; i++)
+        {
+            startingPoint.setElement(i, starting_[i]);
+        }
+
+        OptimizationResult<MultivariatePoint> result = _optimizer.optimize(func_, startingPoint);
 
         final MultivariatePoint best = result.getOptimum();
         final double[] bestVal = best.getElements();
 
-        final ItemCurve<T> trans = generator.generateTransformation(bestVal);
+        final ItemCurve<T> trans = generator_.generateTransformation(bestVal);
 
         final double bestLL = result.minValue();
 
-        final FitResult<S, R, T> output = new FitResult<S, R, T>(toStatus_, best, generator, field_, trans, bestLL, startingLL, result.dataElementCount());
+        final FitResult<S, R, T> output = new FitResult<S, R, T>(generator_.getToStatus(), best, generator_, field_, trans, bestLL, startingLL_, result.dataElementCount());
 
-        LOG.info("\nFound Curve: " + curveType_ + " " + field_ + " " + toStatus_);
-        LOG.info("Best point: " + best);
-        LOG.info("LL change: " + startingLL + " -> " + bestLL + ": " + (startingLL - bestLL));
-        LOG.info("AIC diff: " + output.calculateAicDifference());
-        LOG.info("\n\n");
+        LOG.info("Found Curve[" + generator_.getCurveType() + ", " + field_ + ", " + generator_.getToStatus() + "][" + output.calculateAicDifference() + "]: " + Arrays.toString(bestVal));
+        LOG.info("LL change: " + startingLL_ + " -> " + bestLL + ": " + (startingLL_ - bestLL) + " \n\n");
 
         return output;
     }
