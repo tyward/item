@@ -219,11 +219,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return best;
     }
 
-<<<<<<< HEAD
-    private FitResult<S, R, T> findBest(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filters_)
-=======
     private ItemCurveParams<R, T> appendToCurveParams(final ItemCurveParams<R, T> initParams_, final ItemCurve<T> curve_, final R reg_)
->>>>>>> e4f339e4d24ef314aa5fee4aede5fd57bbbf698b
     {
         final List<ItemCurve<T>> curveList = new ArrayList<>(initParams_.getCurves());
         final List<R> regs = new ArrayList<>(initParams_.getRegressors());
@@ -627,20 +623,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             return null;
         }
 
-<<<<<<< HEAD
-            _logL = logLikelihood_;
-            _trans = trans_;
-            _point = point_;
-            _llImprovement = (startingLL_ - _logL);
-            _field = field_;
-            _startingLogL = startingLL_;
-            _toState = toState_;
-            _rowCount = rowCount_;
-
-            final double[] params = new double[generator_.paramCount()];
-=======
         final ItemModel<S, R, T> outputModel = new ItemModel<>(result.getModelParams());
->>>>>>> e4f339e4d24ef314aa5fee4aede5fd57bbbf698b
 
         this.setModel(outputModel);
         return result;

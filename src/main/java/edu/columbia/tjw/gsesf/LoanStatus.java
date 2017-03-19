@@ -144,6 +144,9 @@ public enum LoanStatus implements ItemStatus<LoanStatus>
         final char visibleName = this.getVisibleName();
 
 <<<<<<< HEAD
+        final List<LoanStatus> indistinguishable = new ArrayList<>();
+=======
+<<<<<<< HEAD
 <<<<<<< HEAD
         final List<LoanStatus> indistinguishable = new ArrayList<LoanStatus>();
 =======
@@ -152,6 +155,7 @@ public enum LoanStatus implements ItemStatus<LoanStatus>
 =======
         final List<LoanStatus> indistinguishable = new ArrayList<>();
 >>>>>>> e4f339e4d24ef314aa5fee4aede5fd57bbbf698b
+>>>>>>> master
 
         for (int i = 0; i < count(); i++)
         {
