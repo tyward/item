@@ -58,7 +58,7 @@ public final class MathFunctions
      *
      * @param a_
      * @param b_
-     * @return +1 if a_ > b_, -1 if b_ > a_, and 0 if they are too close to
+     * @return +1 if a_ &gt; b_, -1 if b_ &gt; a_, and 0 if they are too close to
      * tell.
      */
     public static int doubleCompareRounded(final double a_, final double b_)
