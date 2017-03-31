@@ -49,6 +49,15 @@ public final class MathFunctions
         return output;
     }
 
+    public static double computeAicDifference(final int paramCountA_, final int paramCountB_, final double entropyA_, final double entropyB_, final int rowCount_)
+    {
+        final double llImprovement = entropyA_ - entropyB_;
+        final double scaledImprovement = llImprovement * rowCount_;
+        final double paramContribution = paramCountB_ - paramCountA_;
+        final double aicDiff = 2.0 * (paramContribution - scaledImprovement);
+        return aicDiff;
+    }
+
     /**
      * Compares the two doubles, see if they are different beyond a level that
      * would be typical of rounding error.
@@ -58,8 +67,8 @@ public final class MathFunctions
      *
      * @param a_
      * @param b_
-     * @return +1 if a_ &gt; b_, -1 if b_ &gt; a_, and 0 if they are too close to
-     * tell.
+     * @return +1 if a_ &gt; b_, -1 if b_ &gt; a_, and 0 if they are too close
+     * to tell.
      */
     public static int doubleCompareRounded(final double a_, final double b_)
     {

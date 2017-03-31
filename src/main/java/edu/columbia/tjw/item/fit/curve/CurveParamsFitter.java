@@ -264,12 +264,20 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
         OptimizationResult<MultivariatePoint> result = _optimizer.optimize(func_, startingPoint);
 
+        final double bestLL;
+
+        if (!result.converged() && result.minValue() <= 0.0)
+        {
+            bestLL = startingLL_;
+        }
+        else
+        {
+            bestLL = result.minValue();
+        }
+
         final MultivariatePoint best = result.getOptimum();
         final double[] bestVal = best.getElements();
         final ItemCurveParams<R, T> curveParams = new ItemCurveParams<>(starting_, _factory, bestVal);
-
-        final double bestLL = result.minValue();
-
         final ItemParameters<S, R, T> updated = baseParams_.addBeta(curveParams, toStatus_);
         final CurveFitResult<S, R, T> output = new CurveFitResult<>(updated, curveParams, toStatus_, bestLL, startingLL_, result.dataElementCount());
         return output;

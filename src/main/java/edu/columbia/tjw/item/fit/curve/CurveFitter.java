@@ -41,11 +41,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.SortedSet;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Logger;
+import org.apache.commons.math3.util.Pair;
 
 /**
  *
@@ -123,14 +122,14 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         //Go through these in a random order.
         Collections.shuffle(curveEntries, _settings.getRandom());
-        final int minCurves = Math.min(_settings.getCalibrateSize(), curveEntries.size());
+        final int minCurves = _settings.getCalibrateSize();
 
         //So long as average improvement is above the bound, we will continue...
         //However, always do at least minCurves computations first...
         final double improvementBound = improvementTarget_ * _settings.getImprovementRatio();
         double totalImprovement = 0.0;
 
-        for (int i = 0; i < minCurves; i++)
+        for (int i = 0; i < curveEntries.size(); i++)
         {
             final double targetLevel = (totalImprovement / (i + 1));
 
@@ -221,19 +220,17 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         {
             LOG.info("Now calculating interactions.");
 
-            for (int i = 0; i < MAX_INTERACTION_DEPTH; i++)
+            final CurveFitResult<S, R, T> interactionResult = this.generateInteractions(best, false);
+
+            final double bestAicPP = best.aicPerParameter();
+            final double interAicPP = interactionResult.aicPerParameter();
+
+            if (interAicPP >= bestAicPP)
             {
-                final CurveFitResult<S, R, T> interactionResult = generateInteractionTerm(best);
-
-                final double bestAicPP = best.aicPerParameter();
-                final double interAicPP = interactionResult.aicPerParameter();
-
-                if (interAicPP >= bestAicPP)
-                {
-                    LOG.info("Interaction terms were not better.");
-                    break;
-                }
-
+                LOG.info("Interaction terms were not better.");
+            }
+            else
+            {
                 LOG.info("Added interaction term[" + bestAicPP + " -> " + interAicPP + "]");
                 best = interactionResult;
             }
@@ -287,286 +284,473 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return flagRegs;
     }
 
-    public CurveFitResult<S, R, T> generateFlagInteraction(final double startingLL_, final int maxFlags_)
+    private CurveFitResult<S, R, T> generateSingleInteraction(final R reg_,
+            final CurveFitResult<S, R, T> starting_, final ItemCurve<T> curve_, final S toStatus)
     {
-        final ItemParameters<S, R, T> params = _fitter.getParams();
-        final int entryCount = params.getEntryCount();
+        final ItemParameters<S, R, T> startingParams = starting_.getModelParams();
+        final ItemCurveParams<R, T> curveParams = starting_.getCurveParams();
+        final ItemCurveParams<R, T> testParams = appendToCurveParams(curveParams, curve_, reg_);
 
-        final List<R> flagRegs = new ArrayList<>(getFlagRegs(params));
-
-        Collections.shuffle(flagRegs, _settings.getRandom());
-        final SortedMap<Double, CurveFitResult<S, R, T>> viableResults = new TreeMap<>(Collections.reverseOrder());
-
-        for (final R reg : flagRegs)
+        if (null == toStatus)
         {
-            //Now, for each flag reg, attempt to interact it with each other regressor by simply adding one more entry...
-            for (int i = 0; i < entryCount; i++)
-            {
-                final ItemCurveParams<R, T> curveParams = params.getEntryCurveParams(i, true);
-                final SortedSet<R> curveRegs = new TreeSet<>(curveParams.getRegressors());
-
-                if (i == params.getInterceptIndex())
-                {
-                    //Obviously interactions with the intercept are vacuous.
-                    continue;
-                }
-                if (curveRegs.contains(reg))
-                {
-                    //The entry already has this flag, skip.
-                    continue;
-                }
-
-                if ((curveParams.getEntryDepth() == 1)
-                        && (curveParams.getRegressor(0).compareTo(reg) > 0)
-                        && (curveParams.getCurve(0) == null))
-                {
-                    //This is a flag entry, but we don't want to add entries (a, b) 
-                    //and also (b, a), so take only the one where the first 
-                    //regressor is before the second.
-                    continue;
-                }
-
-                final ItemCurveParams<R, T> testParams = appendToCurveParams(curveParams, null, reg);
-                final S toStatus = params.getEntryStatusRestrict(i);
-
-                CurveFitResult<S, R, T> expandedResult = null;
-
-                if (null == toStatus)
-                {
-                    //This is a flag-flag interaction term...
-                    final ItemParameters<S, R, T> updatedParams = params.addBeta(testParams, null);
-                    final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, _grid, _settings, null);
-
-                    try
-                    {
-                        final ParamFitResult<S, R, T> fitResult = fitter.fit();
-                        final double llValue = fitResult.getEndingLL();
-
-                        if (!fitResult.isUnchanged())
-                        {
-                            final ItemParameters<S, R, T> modParams = fitResult.getEndingParams();
-                            expandedResult = new CurveFitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), toStatus, llValue, startingLL_, _grid.size());
-                        }
-                    }
-                    catch (final ConvergenceException e)
-                    {
-                        LOG.info("Convergence exception, moving on: " + e.toString());
-                        continue;
-                    }
-                }
-                else
-                {
-                    //This is a flag-curve interaction term.
-                    try
-                    {
-                        expandedResult = _fitter.expandParameters(params, testParams, toStatus, false, startingLL_);
-                    }
-                    catch (final ConvergenceException e)
-                    {
-                        LOG.info("Convergence exception, moving on: " + e.toString());
-                        continue;
-                    }
-                }
-
-                if (null == expandedResult)
-                {
-                    continue;
-                }
-
-                final double newPpAic = expandedResult.aicPerParameter();
-
-                if (newPpAic >= 0.0)
-                {
-                    continue;
-                }
-
-                viableResults.put(newPpAic, expandedResult);
-
-            }
-        }
-
-        if (viableResults.size() < 1)
-        {
-            return null;
-        }
-
-        CurveFitResult<S, R, T> bestResult = null;
-        int usedCount = 0;
-
-        for (final CurveFitResult<S, R, T> val : viableResults.values())
-        {
-            if (null == bestResult)
-            {
-                bestResult = val;
-                continue;
-            }
-
-            final ItemParameters<S, R, T> current = bestResult.getModelParams();
-
-            final ItemCurveParams<R, T> expansion = val.getCurveParams();
-            final ItemParameters<S, R, T> updatedParams = current.addBeta(expansion, val.getToState());
+            //This is a flag-flag interaction term...
+            //This means, among other things, that we just add an additional entry with more flags
+            final ItemParameters<S, R, T> updatedParams = startingParams.addBeta(testParams, null);
             final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, _grid, _settings, null);
 
             try
             {
                 final ParamFitResult<S, R, T> fitResult = fitter.fit();
                 final double llValue = fitResult.getEndingLL();
-                final ItemParameters<S, R, T> modParams = fitResult.getEndingParams();
 
-                final CurveFitResult<S, R, T> expResults = new CurveFitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), val.getToState(), llValue, bestResult.getLogLikelihood(), _grid.size());
-                final double ppAic = expResults.aicPerParameter();
-
-                //Require some minimal level of goodness.
-                if (ppAic > _settings.getAicCutoff())
+                if (!fitResult.isUnchanged())
                 {
-                    continue;
+                    final ItemParameters<S, R, T> modParams = fitResult.getEndingParams();
+                    return new CurveFitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), toStatus, llValue, starting_.getStartingLogLikelihood(), _grid.size());
                 }
-
-                bestResult = expResults;
-                usedCount++;
-
-                if (usedCount >= maxFlags_)
+                else
                 {
-                    break;
+                    //Unable to improve this, just move to the next loop.
+                    return starting_;
                 }
             }
             catch (final ConvergenceException e)
             {
                 LOG.info("Convergence exception, moving on: " + e.toString());
-                continue;
+                return starting_;
             }
         }
-
-        return bestResult;
+        else
+        {
+            //This is a flag-curve interaction term.
+            // Try to append this to the given CurveParams
+            try
+            {
+                //First, we need to get rid of the existing entry. 
+                final int entryNumber = startingParams.getEntryIndex(curveParams);
+                final ItemParameters<S, R, T> reducedParams = startingParams.dropIndex(entryNumber);
+                return _fitter.expandParameters(reducedParams, testParams, toStatus, false, starting_.getStartingLogLikelihood());
+            }
+            catch (final ConvergenceException e)
+            {
+                LOG.info("Convergence exception, moving on: " + e.toString());
+                return starting_;
+            }
+        }
     }
 
-    private CurveFitResult<S, R, T> generateInteractionTerm(final ItemCurveParams<R, T> curveParams_, final S toStatus_, final double startingLL_)
+    public CurveFitResult<S, R, T> generateInteractions(final CurveFitResult<S, R, T> startingResult_, final boolean flagsOnly_)
     {
-        final ItemParameters<S, R, T> params = _fitter.getParams();
-        final int entryCount = params.getEntryCount();
+        final double llImprovement = Math.max(0.0, startingResult_.getStartingLogLikelihood() - startingResult_.getLogLikelihood());
+        final double improvementBound = llImprovement * _settings.getImprovementRatio();
+        final int minCurves = _settings.getCalibrateSize();
 
-        //We can't have one entry depend on a single regressor twice. 
-        final SortedSet<R> usedRegs = new TreeSet<>();
-        final SortedSet<R> nullCurveRegs = new TreeSet<>();
+        final ItemParameters<S, R, T> startingParams = startingResult_.getModelParams();
+        final int entryNum = startingParams.getEntryIndex(startingResult_.getCurveParams());
+        final S toStatus = startingParams.getEntryStatusRestrict(entryNum);
 
-        for (int i = 0; i < curveParams_.getEntryDepth(); i++)
+        if (entryNum == startingParams.getInterceptIndex())
         {
-            usedRegs.add(curveParams_.getRegressor(i));
+            //Obviously interactions with the intercept are vacuous.
+            return startingResult_;
         }
 
-        CurveFitResult<S, R, T> bestResult = null;
+        final ItemCurveParams<R, T> curveParams = startingResult_.getCurveParams();
+        final SortedSet<R> curveRegs = new TreeSet<>(curveParams.getRegressors());
 
-        for (int i = 0; i < entryCount; i++)
+        final SortedSet<R> flags = getFlagRegs(startingParams);
+        final List<Pair<R, ItemCurve<T>>> allRegs = new ArrayList<>();
+
+        for (final R reg : flags)
         {
-            if (i == params.getInterceptIndex())
+            if (curveRegs.contains(reg))
             {
-                //Intercept is an implicit interaction curve with everything, can't add it.
+                //The entry already has this flag, skip.
                 continue;
             }
 
-            final int depth = params.getEntryDepth(i);
-
-            for (int w = 0; w < depth; w++)
+            if ((curveParams.getEntryDepth() == 1)
+                    && (curveParams.getRegressor(0).compareTo(reg) > 0)
+                    && (curveParams.getCurve(0) == null))
             {
-                final R reg = params.getEntryRegressor(i, w);
+                //This is a flag entry, but we don't want to add entries (a, b) 
+                //and also (b, a), so take only the one where the first 
+                //regressor is before the second.
+                continue;
+            }
 
-                if (usedRegs.contains(reg))
+            allRegs.add(new Pair<>(reg, null));
+        }
+
+        if (null != toStatus && !flagsOnly_)
+        {
+            for (int i = 0; i < startingParams.getEntryCount(); i++)
+            {
+                if (i == entryNum)
                 {
                     continue;
                 }
 
-                final ItemCurve<T> curve = params.getEntryCurve(i, w);
+                final int depth = startingParams.getEntryDepth(i);
 
-                if (null == curve)
+                for (int z = 0; z < depth; z++)
                 {
-                    //This is a flag, don't try the same flag multiple times.
-                    if (nullCurveRegs.contains(reg))
+                    final ItemCurve<T> curve = startingParams.getEntryCurve(i, z);
+
+                    if (null == curve)
                     {
                         continue;
                     }
 
-                    nullCurveRegs.add(reg);
-                }
-
-                final ItemCurveParams<R, T> testParams = appendToCurveParams(curveParams_, curve, reg);
-
-                try
-                {
-                    final CurveFitResult<S, R, T> expandedResult = _fitter.expandParameters(params, testParams, toStatus_, false, startingLL_);
-
-                    if (null == bestResult)
-                    {
-                        bestResult = expandedResult;
-                    }
-                    else
-                    {
-                        final double origPpAic = bestResult.aicPerParameter();
-                        final double newPpAic = expandedResult.aicPerParameter();
-
-                        //LOG.info("Interaction term result: " + origPpAic + " -> " + newPpAic);
-                        //AIC will be negative, better AIC is more negative.
-                        if (newPpAic < origPpAic)
-                        {
-                            bestResult = expandedResult;
-                            LOG.info("Found improved result[" + origPpAic + " -> " + newPpAic + "]: " + bestResult.getCurveParams());
-                        }
-                    }
-                }
-                catch (final ConvergenceException e)
-                {
-                    LOG.info("Convergence exception, moving on: " + e.toString());
+                    final R curveReg = startingParams.getEntryRegressor(i, z);
+                    allRegs.add(new Pair<>(curveReg, curve));
                 }
             }
         }
 
-        if (null == bestResult)
+        Collections.shuffle(allRegs, _settings.getRandom());
+        CurveFitResult<S, R, T> expandedResult = startingResult_;
+
+        for (int i = 0; i < allRegs.size(); i++)
         {
-            return bestResult;
+            final Pair<R, ItemCurve<T>> pair = allRegs.get(i);
+
+            final CurveFitResult<S, R, T> result = generateSingleInteraction(pair.getFirst(), expandedResult, pair.getSecond(), toStatus);
+
+            final double resultLL = result.getLogLikelihood();
+            final double newLL = expandedResult.getLogLikelihood();
+            final double startingLL = startingResult_.getLogLikelihood();
+
+            final int resultParamCount = result.getModelParams().getEffectiveParamCount();
+            final int expandedParamCount = expandedResult.getModelParams().getEffectiveParamCount();
+            final int startingParamCount = startingParams.getEffectiveParamCount();
+
+            //First, check AIC per parameter
+            final double aic = MathFunctions.computeAicDifference(
+                    expandedParamCount, resultParamCount, newLL, resultLL, this._grid.size());
+
+            final double prevAic = MathFunctions.computeAicDifference(
+                    startingParamCount, expandedParamCount, startingLL, newLL, this._grid.size());
+
+            if (aic < prevAic && aic < _settings.getAicCutoff())
+            {
+                //If this wasn't good enough, we skip it. Perhaps we loop more, perhaps not. 
+                expandedResult = result;
+            }
+
+            final double totalImprovement = startingLL - resultLL;
+            final double targetLevel = (totalImprovement / (i + 1));
+
+            if ((i + 1) >= minCurves && (targetLevel < improvementBound))
+            {
+                //Not enough improvement, break out.
+                break;
+            }
         }
 
-        if (bestResult.aicPerParameter() >= _settings.getAicCutoff())
-        {
-            //This result didn't even meet the minimal standards needed for acceptance.
-            return null;
-        }
-
-        //Unable to make any improvements, just return the original results.
-        return bestResult;
+        return expandedResult;
     }
 
-    private CurveFitResult<S, R, T> generateInteractionTerm(final CurveFitResult<S, R, T> currentResult_)
-    {
-        final double startingLL = currentResult_.getStartingLogLikelihood();
-        //final ItemParameters<S, R, T> params = _fitter.getParams();
-        final ItemCurveParams<R, T> expansionCurve = currentResult_.getCurveParams();
-        final S toStatus = currentResult_.getToState();
-
-        final CurveFitResult<S, R, T> interactionResult = this.generateInteractionTerm(expansionCurve, toStatus, startingLL);
-
-        if (null == interactionResult)
-        {
-            LOG.info("No good interaction results.");
-            return currentResult_;
-        }
-
-        final double origPpAic = currentResult_.aicPerParameter();
-        final double newPpAic = interactionResult.aicPerParameter();
-
-        //LOG.info("Interaction term result: " + origPpAic + " -> " + newPpAic);
-        //AIC will be negative, better AIC is more negative.
-        if (newPpAic < origPpAic)
-        {
-            LOG.info("Found improved result[" + origPpAic + " -> " + newPpAic + "]: " + interactionResult.getCurveParams());
-            return interactionResult;
-        }
-        else
-        {
-            LOG.info("Best interaction term isn't better[" + origPpAic + " -> " + newPpAic + "]: " + interactionResult.getCurveParams());
-            return currentResult_;
-        }
-
-    }
-
+//    /**
+//     * Potentially add some flag interaction terms to the given curve result.
+//     *
+//     * @param startingResult_
+//     * @return
+//     */
+//    public CurveFitResult<S, R, T> generateFlagInteraction(final CurveFitResult<S, R, T> startingResult_)
+//    {
+//        final double llImprovement = Math.max(0.0, startingResult_.getStartingLogLikelihood() - startingResult_.getLogLikelihood());
+//        final double improvementBound = llImprovement * _settings.getImprovementRatio();
+//        final int minCurves = _settings.getCalibrateSize();
+//
+//       //N.B: params does NOT contain the startingResult_.
+//        final ItemParameters<S, R, T> params = _fitter.getParams();
+//        final int entryCount = params.getEntryCount();
+//
+//        double totalImprovement = 0.0;
+//        int count = 0;
+//
+//        final List<R> flagRegs = new ArrayList<>(getFlagRegs(params));
+//
+//        Collections.shuffle(flagRegs, _settings.getRandom());
+//
+//
+//        for (final R reg : flagRegs)
+//        {
+//            final double targetLevel = (totalImprovement / (++count));
+//
+//            if (count >= minCurves && (targetLevel < improvementBound))
+//            {
+//                //Not enough improvement, break out.
+//                break;
+//            }
+//
+//            //Now, for each flag reg, attempt to interact it with each other regressor by simply adding one more entry...
+//            for (int i = 0; i < entryCount; i++)
+//            {
+//                final ItemCurveParams<R, T> curveParams = params.getEntryCurveParams(i, true);
+//                final SortedSet<R> curveRegs = new TreeSet<>(curveParams.getRegressors());
+//
+//                if (i == params.getInterceptIndex())
+//                {
+//                    //Obviously interactions with the intercept are vacuous.
+//                    continue;
+//                }
+//                if (curveRegs.contains(reg))
+//                {
+//                    //The entry already has this flag, skip.
+//                    continue;
+//                }
+//
+//                if ((curveParams.getEntryDepth() == 1)
+//                        && (curveParams.getRegressor(0).compareTo(reg) > 0)
+//                        && (curveParams.getCurve(0) == null))
+//                {
+//                    //This is a flag entry, but we don't want to add entries (a, b) 
+//                    //and also (b, a), so take only the one where the first 
+//                    //regressor is before the second.
+//                    continue;
+//                }
+//
+//                final ItemCurveParams<R, T> testParams = appendToCurveParams(curveParams, null, reg);
+//                final S toStatus = params.getEntryStatusRestrict(i);
+//
+//                CurveFitResult<S, R, T> expandedResult = null;
+//
+//                if (null == toStatus)
+//                {
+//                    //This is a flag-flag interaction term...
+//                    final ItemParameters<S, R, T> updatedParams = params.addBeta(testParams, null);
+//                    final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, _grid, _settings, null);
+//
+//                    try
+//                    {
+//                        final ParamFitResult<S, R, T> fitResult = fitter.fit();
+//                        final double llValue = fitResult.getEndingLL();
+//
+//                        if (!fitResult.isUnchanged())
+//                        {
+//                            final ItemParameters<S, R, T> modParams = fitResult.getEndingParams();
+//                            expandedResult = new CurveFitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), toStatus, llValue, startingLL_, _grid.size());
+//                        }
+//                    }
+//                    catch (final ConvergenceException e)
+//                    {
+//                        LOG.info("Convergence exception, moving on: " + e.toString());
+//                        continue;
+//                    }
+//                }
+//                else
+//                {
+//                    //This is a flag-curve interaction term.
+//                    try
+//                    {
+//                        expandedResult = _fitter.expandParameters(params, testParams, toStatus, false, startingLL_);
+//                    }
+//                    catch (final ConvergenceException e)
+//                    {
+//                        LOG.info("Convergence exception, moving on: " + e.toString());
+//                        continue;
+//                    }
+//                }
+//
+//                if (null == expandedResult)
+//                {
+//                    continue;
+//                }
+//
+//                final double newPpAic = expandedResult.aicPerParameter();
+//
+//                if (newPpAic >= 0.0)
+//                {
+//                    continue;
+//                }
+//
+//                viableResults.put(newPpAic, expandedResult);
+//
+//            }
+//        }
+//
+//        if (viableResults.size() < 1)
+//        {
+//            return null;
+//        }
+//
+//        CurveFitResult<S, R, T> bestResult = null;
+//        int usedCount = 0;
+//
+//        for (final CurveFitResult<S, R, T> val : viableResults.values())
+//        {
+//            if (null == bestResult)
+//            {
+//                bestResult = val;
+//                continue;
+//            }
+//
+//            final ItemParameters<S, R, T> current = bestResult.getModelParams();
+//
+//            final ItemCurveParams<R, T> expansion = val.getCurveParams();
+//            final ItemParameters<S, R, T> updatedParams = current.addBeta(expansion, val.getToState());
+//            final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, _grid, _settings, null);
+//
+//            try
+//            {
+//                final ParamFitResult<S, R, T> fitResult = fitter.fit();
+//                final double llValue = fitResult.getEndingLL();
+//                final ItemParameters<S, R, T> modParams = fitResult.getEndingParams();
+//
+//                final CurveFitResult<S, R, T> expResults = new CurveFitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), val.getToState(), llValue, bestResult.getLogLikelihood(), _grid.size());
+//                final double ppAic = expResults.aicPerParameter();
+//
+//                //Require some minimal level of goodness.
+//                if (ppAic > _settings.getAicCutoff())
+//                {
+//                    continue;
+//                }
+//
+//                bestResult = expResults;
+//                usedCount++;
+//
+//                if (usedCount >= maxFlags_)
+//                {
+//                    break;
+//                }
+//            }
+//            catch (final ConvergenceException e)
+//            {
+//                LOG.info("Convergence exception, moving on: " + e.toString());
+//                continue;
+//            }
+//        }
+//
+//        return bestResult;
+//    }
+//    private CurveFitResult<S, R, T> generateInteractionTerm(final ItemCurveParams<R, T> curveParams_, final S toStatus_, final double startingLL_)
+//    {
+//        final ItemParameters<S, R, T> params = _fitter.getParams();
+//        final int entryCount = params.getEntryCount();
+//
+//        //We can't have one entry depend on a single regressor twice. 
+//        final SortedSet<R> usedRegs = new TreeSet<>();
+//        final SortedSet<R> nullCurveRegs = new TreeSet<>();
+//
+//        for (int i = 0; i < curveParams_.getEntryDepth(); i++)
+//        {
+//            usedRegs.add(curveParams_.getRegressor(i));
+//        }
+//
+//        CurveFitResult<S, R, T> bestResult = null;
+//
+//        for (int i = 0; i < entryCount; i++)
+//        {
+//            if (i == params.getInterceptIndex())
+//            {
+//                //Intercept is an implicit interaction curve with everything, can't add it.
+//                continue;
+//            }
+//
+//            final int depth = params.getEntryDepth(i);
+//
+//            for (int w = 0; w < depth; w++)
+//            {
+//                final R reg = params.getEntryRegressor(i, w);
+//
+//                if (usedRegs.contains(reg))
+//                {
+//                    continue;
+//                }
+//
+//                final ItemCurve<T> curve = params.getEntryCurve(i, w);
+//
+//                if (null == curve)
+//                {
+//                    //This is a flag, don't try the same flag multiple times.
+//                    if (nullCurveRegs.contains(reg))
+//                    {
+//                        continue;
+//                    }
+//
+//                    nullCurveRegs.add(reg);
+//                }
+//
+//                final ItemCurveParams<R, T> testParams = appendToCurveParams(curveParams_, curve, reg);
+//
+//                try
+//                {
+//                    final CurveFitResult<S, R, T> expandedResult = _fitter.expandParameters(params, testParams, toStatus_, false, startingLL_);
+//
+//                    if (null == bestResult)
+//                    {
+//                        bestResult = expandedResult;
+//                    }
+//                    else
+//                    {
+//                        final double origPpAic = bestResult.aicPerParameter();
+//                        final double newPpAic = expandedResult.aicPerParameter();
+//
+//                        //LOG.info("Interaction term result: " + origPpAic + " -> " + newPpAic);
+//                        //AIC will be negative, better AIC is more negative.
+//                        if (newPpAic < origPpAic)
+//                        {
+//                            bestResult = expandedResult;
+//                            LOG.info("Found improved result[" + origPpAic + " -> " + newPpAic + "]: " + bestResult.getCurveParams());
+//                        }
+//                    }
+//                }
+//                catch (final ConvergenceException e)
+//                {
+//                    LOG.info("Convergence exception, moving on: " + e.toString());
+//                }
+//            }
+//        }
+//
+//        if (null == bestResult)
+//        {
+//            return bestResult;
+//        }
+//
+//        if (bestResult.aicPerParameter() >= _settings.getAicCutoff())
+//        {
+//            //This result didn't even meet the minimal standards needed for acceptance.
+//            return null;
+//        }
+//
+//        //Unable to make any improvements, just return the original results.
+//        return bestResult;
+//    }
+//
+//    private CurveFitResult<S, R, T> generateInteractionTerm(final CurveFitResult<S, R, T> currentResult_)
+//    {
+//        final double startingLL = currentResult_.getStartingLogLikelihood();
+//        //final ItemParameters<S, R, T> params = _fitter.getParams();
+//        final ItemCurveParams<R, T> expansionCurve = currentResult_.getCurveParams();
+//        final S toStatus = currentResult_.getToState();
+//
+//        final CurveFitResult<S, R, T> interactionResult = this.generateInteractionTerm(expansionCurve, toStatus, startingLL);
+//
+//        if (null == interactionResult)
+//        {
+//            LOG.info("No good interaction results.");
+//            return currentResult_;
+//        }
+//
+//        final double origPpAic = currentResult_.aicPerParameter();
+//        final double newPpAic = interactionResult.aicPerParameter();
+//
+//        //LOG.info("Interaction term result: " + origPpAic + " -> " + newPpAic);
+//        //AIC will be negative, better AIC is more negative.
+//        if (newPpAic < origPpAic)
+//        {
+//            LOG.info("Found improved result[" + origPpAic + " -> " + newPpAic + "]: " + interactionResult.getCurveParams());
+//            return interactionResult;
+//        }
+//        else
+//        {
+//            LOG.info("Best interaction term isn't better[" + origPpAic + " -> " + newPpAic + "]: " + interactionResult.getCurveParams());
+//            return currentResult_;
+//        }
+//
+//    }
     private CurveFitResult<S, R, T> findBest(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filters_)
     {
         final ItemParameters<S, R, T> params = _fitter.getParams();

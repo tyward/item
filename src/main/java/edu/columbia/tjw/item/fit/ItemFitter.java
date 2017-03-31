@@ -254,19 +254,18 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return ll;
     }
 
-    public ParamFitResult<S, R, T> generateFlagInteractions(final int interactionCount_)
-    {
-        final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, _chain.getBestParameters());
-        final CurveFitResult<S, R, T> result = fitter.generateFlagInteraction(_chain.getLogLikelihood(), interactionCount_);
-
-        if (null != result)
-        {
-            _chain.pushResults(result.getModelParams(), result.getLogLikelihood());
-        }
-
-        return _chain.getLatestResults();
-    }
-
+//    public ParamFitResult<S, R, T> generateFlagInteractions(final int entryNumber_)
+//    {
+//        final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, _chain.getBestParameters());
+//        final CurveFitResult<S, R, T> result = fitter.generateFlagInteractions(_chain.getLogLikelihood(), interactionCount_);
+//
+//        if (null != result)
+//        {
+//            _chain.pushResults(result.getModelParams(), result.getLogLikelihood());
+//        }
+//
+//        return _chain.getLatestResults();
+//    }
     /**
      * Add some new curves to this model.
      *

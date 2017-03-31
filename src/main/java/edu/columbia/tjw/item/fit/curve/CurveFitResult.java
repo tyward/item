@@ -24,6 +24,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.util.MathFunctions;
 
 /**
  *
@@ -100,6 +101,15 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
         final double scaledImprovement = _llImprovement * _rowCount;
         final double paramContribution = getEffectiveParamCount();
         final double aicDiff = 2.0 * (paramContribution - scaledImprovement);
+
+        final double check = MathFunctions.computeAicDifference(0, getEffectiveParamCount(), _startingLogL, _logL, _rowCount);
+
+        if (Math.abs(check - aicDiff) > 1.0e-7)
+        {
+            final double check2 = MathFunctions.computeAicDifference(0, getEffectiveParamCount(), _startingLogL, _logL, _rowCount);
+            throw new IllegalStateException("Impossible.");
+        }
+
         return aicDiff;
     }
 

@@ -679,7 +679,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             keep[i] = false;
         }
 
-        return dropEntries(field_, keep);
+        return dropEntries(keep);
     }
 
     public ItemParameters<S, R, T> dropIndex(final int index_)
@@ -689,10 +689,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         Arrays.fill(keep, true);
         keep[index_] = false;
 
-        return dropEntries(null, keep);
+        return dropEntries(keep);
     }
 
-    private ItemParameters<S, R, T> dropEntries(final R field_, final boolean[] keep_)
+    private ItemParameters<S, R, T> dropEntries(final boolean[] keep_)
     {
         int dropCount = 0;
 
