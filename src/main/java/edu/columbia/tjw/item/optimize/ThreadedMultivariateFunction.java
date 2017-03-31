@@ -149,7 +149,7 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
         final int numTasks = 1 + (numRows / _blockSize);
 
         final List<DerivativeTask> taskList = new ArrayList<>(numTasks);
-
+ 
         for (int i = 0; i < numTasks; i++)
         {
             final int thisStart = start + (i * _blockSize);

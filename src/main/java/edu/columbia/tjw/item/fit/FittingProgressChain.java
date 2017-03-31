@@ -83,6 +83,14 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         return this.pushResults(fitResult_.getEndingParams(), fitResult_.getEndingLL());
     }
 
+    public boolean pushVacuousResults(final ItemParameters<S, R, T> fitResult_)
+    {
+        final double currentBest = getLogLikelihood();
+        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(fitResult_, currentBest, getLatestFrame(), _rowCount);
+        _frameList.add(frame);
+        return true;
+    }
+
     public boolean pushResults(final ItemParameters<S, R, T> fitResult_, final double logLikelihood_)
     {
         final double currentBest = getLogLikelihood();
@@ -93,8 +101,11 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
         if (compare >= 0)
         {
+            LOG.info("Discarding results, likelihood did not improve: " + currentBest + " -> " + logLikelihood_);
             return false;
         }
+
+        LOG.info("Log Likelihood improvement: " + currentBest + " -> " + logLikelihood_);
 
         //This is an improvement. 
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(fitResult_, logLikelihood_, getLatestFrame(), _rowCount);

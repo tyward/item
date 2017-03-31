@@ -96,8 +96,13 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return ll;
     }
 
-    public final ItemParameters<S, R, T> calibrateCurves()
+    public final ItemParameters<S, R, T> calibrateCurves(final double improvementTarget_)
     {
+        if (!(improvementTarget_ >= 0.0))
+        {
+            throw new IllegalArgumentException("Improvement target must be nonnegative.");
+        }
+
         LOG.info("Starting curve calibration sweep.");
         final ItemParameters<S, R, T> initParams = _fitter.getParams();
 
@@ -116,8 +121,26 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             curveEntries.add(initParams.getEntryCurveParams(i));
         }
 
-        for (final ItemCurveParams<R, T> entry : curveEntries)
+        //Go through these in a random order.
+        Collections.shuffle(curveEntries, _settings.getRandom());
+        final int minCurves = Math.min(_settings.getCalibrateSize(), curveEntries.size());
+
+        //So long as average improvement is above the bound, we will continue...
+        //However, always do at least minCurves computations first...
+        final double improvementBound = improvementTarget_ * _settings.getImprovementRatio();
+        double totalImprovement = 0.0;
+
+        for (int i = 0; i < minCurves; i++)
         {
+            final double targetLevel = (totalImprovement / (i + 1));
+
+            if (i >= minCurves && (targetLevel < improvementBound))
+            {
+                //Not enough improvement, break out.
+                break;
+            }
+
+            final ItemCurveParams<R, T> entry = curveEntries.get(i);
             final ItemParameters<S, R, T> params = current;
             final int entryIndex = params.getEntryIndex(entry);
 
@@ -139,20 +162,20 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             {
                 final CurveFitResult<S, R, T> calibrated = calibrateCurve(entryIndex, status, startingLL);
 
-                if (null == calibrated)
+                if (null != calibrated)
                 {
-                    continue;
+                    current = calibrated.getModelParams();
                 }
-
-                current = calibrated.getModelParams();
             }
             catch (final ConvergenceException e)
             {
-                LOG.info("Trouble converging, moving on to next curve.");
+                LOG.info("Trouble converging, done calibrating.");
                 LOG.info(e.getMessage());
+                break;
             }
 
             final double endingLL = computeLogLikelihood(current, _grid);
+            final double improvement = startingLL - endingLL;
 
             if (MathFunctions.doubleCompareRounded(endingLL, startingLL) < 0)
             {
@@ -165,6 +188,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                 throw new IllegalStateException("Impossible.");
             }
 
+            totalImprovement += improvement;
         }
 
         LOG.info("Finished curve calibration sweep: " + _fitter.getParams());
@@ -268,32 +292,32 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         final ItemParameters<S, R, T> params = _fitter.getParams();
         final int entryCount = params.getEntryCount();
 
-        final SortedSet<R> flagRegs = getFlagRegs(params);
+        final List<R> flagRegs = new ArrayList<>(getFlagRegs(params));
 
-        //FitResult<S, R, T> bestResult = null;
+        Collections.shuffle(flagRegs, _settings.getRandom());
         final SortedMap<Double, CurveFitResult<S, R, T>> viableResults = new TreeMap<>(Collections.reverseOrder());
 
-        //Now, for each flag reg, attempt to interact it with each other regressor by simply adding one more entry...
-        for (int i = 0; i < entryCount; i++)
+        for (final R reg : flagRegs)
         {
-            final ItemCurveParams<R, T> curveParams = params.getEntryCurveParams(i, true);
-            final TreeSet<R> curveRegs = new TreeSet<>(curveParams.getRegressors());
-
-            if (i == params.getInterceptIndex())
+            //Now, for each flag reg, attempt to interact it with each other regressor by simply adding one more entry...
+            for (int i = 0; i < entryCount; i++)
             {
-                //Obviously interactions with the intercept are vacuous.
-                continue;
-            }
+                final ItemCurveParams<R, T> curveParams = params.getEntryCurveParams(i, true);
+                final SortedSet<R> curveRegs = new TreeSet<>(curveParams.getRegressors());
 
-            for (final R nextReg : flagRegs)
-            {
-                if (curveRegs.contains(nextReg))
+                if (i == params.getInterceptIndex())
                 {
+                    //Obviously interactions with the intercept are vacuous.
+                    continue;
+                }
+                if (curveRegs.contains(reg))
+                {
+                    //The entry already has this flag, skip.
                     continue;
                 }
 
                 if ((curveParams.getEntryDepth() == 1)
-                        && (curveParams.getRegressor(0).compareTo(nextReg) > 0)
+                        && (curveParams.getRegressor(0).compareTo(reg) > 0)
                         && (curveParams.getCurve(0) == null))
                 {
                     //This is a flag entry, but we don't want to add entries (a, b) 
@@ -302,8 +326,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                     continue;
                 }
 
-                final ItemCurveParams<R, T> testParams = appendToCurveParams(curveParams, null, nextReg);
-
+                final ItemCurveParams<R, T> testParams = appendToCurveParams(curveParams, null, reg);
                 final S toStatus = params.getEntryStatusRestrict(i);
 
                 CurveFitResult<S, R, T> expandedResult = null;
@@ -358,6 +381,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                 }
 
                 viableResults.put(newPpAic, expandedResult);
+
             }
         }
 

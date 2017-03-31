@@ -144,10 +144,6 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             throw new IllegalArgumentException("Impossible.");
         }
 
-        c.copy(b);
-        c.add(ab);
-        cRes.clear();
-
         double comparisonCB = comparator.compare(f_, c, b, cRes, bRes);
         double scale = 0.5;
 
@@ -448,6 +444,9 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             final AdaptiveComparator<V, F> comparator = this.getComparator();
             final double comparison = comparator.compare(f_, b, next, bRes, nextRes);
             evalCount++;
+
+            final double bMean = bRes.getMean();
+            final double nextMean = nextRes.getMean();
 
             final boolean nextLower = (comparison > 0);
             //final boolean dropA = (aSide ^ nextLower);

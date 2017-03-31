@@ -131,6 +131,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * N.B: The wrapped grid may cache, so if the underlying regressors are
      * changed, the resulting factory should be wrapped again.
      *
+     * @param <S>
+     * @param <R>
      * @param grid_ The grid to randomize
      * @return A randomized version of grid_
      */
@@ -143,25 +145,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         final ItemStatusGrid<S, R> wrapped = new RandomizedStatusGrid<>(grid_, settings_, grid_.getRegressorFamily());
         return wrapped;
-    }
-
-    private ParamFitResult<S, R, T> considerResult(final ParamFitResult<S, R, T> result_)
-    {
-        final boolean isBetter = _chain.pushResults(result_);
-
-        //Restate this in terms of the current best, just to be sure...
-        final ParamFitResult<S, R, T> result = _chain.getLatestResults();
-
-        if (isBetter)
-        {
-            LOG.info("Fitter improved result: " + result.getStartingLL() + " -> " + result.getEndingLL() + " (" + result.getAic() + ")s");
-        }
-        else
-        {
-            LOG.info("Fitter unable to improve result: " + result.getStartingLL());
-        }
-
-        return result;
     }
 
     /**
@@ -184,7 +167,14 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         }
 
         final ParamFitResult<S, R, T> fitResult = innerFitCoefficients(params, filters_);
-        return considerResult(fitResult);
+
+        if (fitResult.getEndingParams().getEffectiveParamCount() != params.getEffectiveParamCount())
+        {
+            //We weren't able to make any progress optimizing these values, push on zeros anyway.
+            _chain.pushVacuousResults(params);
+        }
+
+        return _chain.getLatestResults();
     }
 
     /**
@@ -286,54 +276,63 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @param curveFields_ The regressors on which to draw curves
      * @param filters_ Filters describing any curves that should not be drawn or
      * optimized
-     * @param curveCount_ The total number of curves that will be allowed.
+     * @param paramCount_ The total number of additional params that will be
+     * allowed.
      * @return A new model with additional curves added, and all coefficients
      * optimized.
      */
     public ParamFitResult<S, R, T> expandModel(final Set<R> curveFields_,
-            final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
+            final Collection<ParamFilter<S, R, T>> filters_, final int paramCount_)
     {
-        final ParamFitResult<S, R, T> result = expandModel(_chain.getBestParameters(), _chain.getLogLikelihood(), curveFields_, filters_, curveCount_);
-        return considerResult(result);
+        if (paramCount_ < 1)
+        {
+            throw new IllegalArgumentException("Param count must be positive.");
+        }
+
+        final ParamFitResult<S, R, T> result = expandModel(_chain.getBestParameters(), _chain.getLogLikelihood(), curveFields_, filters_, paramCount_);
+        _chain.pushResults(result);
+        return _chain.getLatestResults();
     }
 
     private ParamFitResult<S, R, T> expandModel(final ItemParameters<S, R, T> params_, final double startingLL_, final Set<R> curveFields_,
-            final Collection<ParamFilter<S, R, T>> filters_, final int curveCount_)
+            final Collection<ParamFilter<S, R, T>> filters_, final int paramCount_)
     {
         final long start = System.currentTimeMillis();
         final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(params_, startingLL_, _grid.size());
 
-        for (int i = 0; i < curveCount_; i++)
+        final int statingParamCount = subChain.getBestParameters().getEffectiveParamCount();
+        final int paramCountLimit = statingParamCount + paramCount_;
+        double improvement = 0.0;
+
+        //As a bare minimum, each expansion will consume at least one param, we'll break out before this most likely.
+        for (int i = 0; i < paramCount_; i++)
         {
             try
             {
                 final ParamFitResult<S, R, T> fitResult = innerFitCoefficients(subChain.getBestParameters(), filters_);
-
                 final boolean isBetter = subChain.pushResults(fitResult);
 
                 if (!isBetter)
                 {
-                    LOG.info("LL got worse: " + subChain.getLogLikelihood() + " -> " + fitResult.getEndingLL());
-                    LOG.info("Current parameters: " + fitResult.getEndingParams());
+                    LOG.warning("LL got worse: " + subChain.getLogLikelihood() + " -> " + fitResult.getEndingLL());
+                    LOG.warning("Current parameters: " + fitResult.getEndingParams());
                 }
             }
             catch (final ConvergenceException e)
             {
-                LOG.info("Unable to improve results in coefficient fit, moving on.");
+                LOG.warning("Unable to improve results in coefficient fit, moving on.");
             }
 
             final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, subChain.getBestParameters());
 
             //First, try to calibrate any existing curves to improve the fit. 
-            final ItemParameters<S, R, T> m3 = fitter.calibrateCurves();
+            final ItemParameters<S, R, T> m3 = fitter.calibrateCurves(improvement);
             final double test = computeLogLikelihood(m3);
             final boolean isBetter = subChain.pushResults(m3, test);
 
             if (!isBetter)
             {
-                LOG.info("LL got worse (or unchanged): " + subChain.getLogLikelihood() + " -> " + test);
-                LOG.info("Previous parameters: " + subChain.getBestParameters());
-                LOG.info("Current parameters: " + m3);
+                LOG.info("Curve calibration unable to improve results: " + subChain.getLogLikelihood() + " -> " + test);
             }
 
             try
@@ -341,14 +340,22 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 //Now, try to add a new curve. 
                 final CurveFitter<S, R, T> fitter2 = new CurveFitter<>(_factory, _settings, _grid, subChain.getBestParameters());
                 final CurveFitResult<S, R, T> m4 = fitter2.generateCurve(curveFields_, filters_);
+
+                improvement = Math.max(0.0, m4.getStartingLogLikelihood() - m4.getLogLikelihood());
                 final boolean isBetter2 = subChain.pushResults(m4);
 
                 if (!isBetter2)
                 {
-                    LOG.info("LL got worse (or unchanged): " + subChain.getLogLikelihood() + " -> " + test);
-                    LOG.info("Previous parameters: " + subChain.getBestParameters());
-                    LOG.info("Current parameters: " + m4);
+                    LOG.info("Curve expansion unable to improve results, breaking out.");
+                    break;
                 }
+
+                if (m4.getModelParams().getEffectiveParamCount() >= paramCountLimit)
+                {
+                    LOG.info("Param count limit reached, breaking out.");
+                    break;
+                }
+
             }
             catch (final ConvergenceException e)
             {
@@ -361,7 +368,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 LOG.info("Time marker: " + (System.currentTimeMillis() - start));
                 LOG.info("Heap used: " + Runtime.getRuntime().totalMemory() / (1024 * 1024));
             }
-
         }
 
         try

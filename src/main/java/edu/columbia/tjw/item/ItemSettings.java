@@ -62,6 +62,9 @@ public final class ItemSettings implements Serializable
     private final boolean _boundCentrality;
     private final int _polishMultStartPoints;
 
+    private final int _minCalibrationCount = 1;
+    private final double _improvementRatio = 0.2;
+
     private final double _aicCutoff;
 
     //The minimum Z-score such that we will consider two results different. 
@@ -111,6 +114,16 @@ public final class ItemSettings implements Serializable
 
         _zScoreCutoff = Z_SCORE_CUTOFF;
         _validate = DEFAULT_VALIDATE;
+    }
+
+    public int getCalibrateSize()
+    {
+        return _minCalibrationCount;
+    }
+
+    public double getImprovementRatio()
+    {
+        return _improvementRatio;
     }
 
     public boolean getBoundCentrality()
