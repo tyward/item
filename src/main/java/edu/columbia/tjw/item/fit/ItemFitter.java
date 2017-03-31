@@ -207,7 +207,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public ParamFitResult<S, R, T> runAnnealingPass(final Set<R> curveFields_,
             final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
-        final int regCount = _chain.getBestParameters().getEntryCount();
+        final int paramCount = _chain.getBestParameters().getEffectiveParamCount();
 
         final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(_chain);
 
@@ -215,15 +215,15 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             final ItemParameters<S, R, T> base = subChain.getBestParameters();
             final ItemParameters<S, R, T> reduced = base.dropRegressor(regressor);
-            final int reducedCount = reduced.getEntryCount();
-            final int reduction = regCount - reducedCount;
+            final int reducedCount = reduced.getEffectiveParamCount();
+            final int reduction = paramCount - reducedCount;
 
             if (reduction <= 0)
             {
                 continue;
             }
 
-            LOG.info("Annealing attempting to drop " + reduction + " curves from " + regressor + ", now rebuilding");
+            LOG.info("Annealing attempting to drop " + reduction + " params from " + regressor + ", now rebuilding");
 
             final ParamFitResult<S, R, T> rebuilt = expandModel(reduced, subChain.getLogLikelihood(), curveFields_, filters_, reduction);
             final boolean better = subChain.pushResults(rebuilt);
@@ -269,7 +269,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             final double logLikelihood = _chain.getLogLikelihood();
             final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, params);
-            final CurveFitResult<S, R, T> tmp = new CurveFitResult<>(params, params.getEntryCurveParams(i), params.getEntryStatusRestrict(i), logLikelihood, logLikelihood, _grid.size());
+            final CurveFitResult<S, R, T> tmp = new CurveFitResult<>(params, params.getEntryCurveParams(i, true), params.getEntryStatusRestrict(i), logLikelihood, logLikelihood, _grid.size());
             final CurveFitResult<S, R, T> result = fitter.generateInteractions(tmp, false);
 
             _chain.pushResults(result);
