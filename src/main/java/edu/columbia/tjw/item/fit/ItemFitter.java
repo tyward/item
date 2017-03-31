@@ -262,18 +262,22 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public ParamFitResult<S, R, T> generateFlagInteractions(final int entryNumber_)
     {
         ItemParameters<S, R, T> params = _chain.getBestParameters();
+        CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, params);
 
         //N.B: This loop can keep expanding as the params grows very large, if we are very successful.
         // Just make sure to cap it out at the entryNumber_
         for (int i = 0; i < Math.min(params.getEntryCount(), entryNumber_); i++)
         {
             final double logLikelihood = _chain.getLogLikelihood();
-            final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, params);
             final CurveFitResult<S, R, T> tmp = new CurveFitResult<>(params, params.getEntryCurveParams(i, true), params.getEntryStatusRestrict(i), logLikelihood, logLikelihood, _grid.size());
             final CurveFitResult<S, R, T> result = fitter.generateInteractions(tmp, false);
 
-            _chain.pushResults(result);
-            params = _chain.getBestParameters();
+            if (_chain.pushResults(result))
+            {
+                //Generating this fitter is very expensive, only do so when necessary.
+                params = _chain.getBestParameters();
+                fitter = new CurveFitter<>(_factory, _settings, _grid, params);
+            }
         }
 
         return _chain.getLatestResults();

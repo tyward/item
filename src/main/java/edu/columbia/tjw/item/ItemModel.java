@@ -22,6 +22,7 @@ package edu.columbia.tjw.item;
 import edu.columbia.tjw.item.fit.ItemParamGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
+import edu.columbia.tjw.item.util.MathFunctions;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import java.util.Arrays;
 import java.util.List;
@@ -250,6 +251,9 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final double[] rawReg = _rawRegWorkspace;
         final List<S> reachable = getParams().getStatus().getReachable();
         int count = 0;
+
+        //For safety
+        Arrays.fill(derivative_, 0.0);
 
         final int fromOrdinal = _params.getStatus().ordinal();
 
