@@ -64,6 +64,7 @@ public final class ItemSettings implements Serializable
 
     private final int _minCalibrationCount = 1;
     private final double _improvementRatio = 0.2;
+    private final double _exhaustiveImprovementLimit = 0.05;
 
     private final double _aicCutoff;
 
@@ -114,6 +115,11 @@ public final class ItemSettings implements Serializable
 
         _zScoreCutoff = Z_SCORE_CUTOFF;
         _validate = DEFAULT_VALIDATE;
+    }
+
+    public double getExhaustiveImprovementLimit()
+    {
+        return _exhaustiveImprovementLimit;
     }
 
     public int getCalibrateSize()
