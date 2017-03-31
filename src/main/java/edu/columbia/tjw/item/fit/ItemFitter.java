@@ -147,6 +147,13 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return wrapped;
     }
 
+    public ParamFitResult<S, R, T> pushParameters(ItemParameters<S, R, T> params_) throws ConvergenceException
+    {
+        final double logLikelihood = this.computeLogLikelihood(params_);
+        _chain.forcePushResults(params_, logLikelihood);
+        return _chain.getLatestResults();
+    }
+
     /**
      * Add a group of coefficients to the model, then refit all coefficients.
      *
@@ -173,6 +180,10 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             //We weren't able to make any progress optimizing these values, push on zeros anyway.
             _chain.pushVacuousResults(params);
         }
+        else
+        {
+            _chain.pushResults(fitResult);
+        }
 
         return _chain.getLatestResults();
     }
@@ -188,20 +199,18 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      */
     public ParamFitResult<S, R, T> fitCoefficients(final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
-        return innerFitCoefficients(_chain.getBestParameters(), filters_);
-    }
-
-    public ParamFitResult<S, R, T> fitCoefficients(final ItemParameters<S, R, T> params_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
-    {
-        return innerFitCoefficients(params_, filters_);
+        final ParamFitResult<S, R, T> fitResult = innerFitCoefficients(_chain.getBestParameters(), filters_);
+        _chain.pushResults(fitResult);
+        return _chain.getLatestResults();
     }
 
     private ParamFitResult<S, R, T> innerFitCoefficients(final ItemParameters<S, R, T> params_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
         final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, _grid, _settings, filters_);
         final ParamFitResult<S, R, T> fitResult = fitter.fit();
-        _chain.pushResults(fitResult);
-        return _chain.getLatestResults();
+        return fitResult;
+//        _chain.pushResults(fitResult);
+//        return _chain.getLatestResults();
     }
 
     public ParamFitResult<S, R, T> runAnnealingPass(final Set<R> curveFields_,

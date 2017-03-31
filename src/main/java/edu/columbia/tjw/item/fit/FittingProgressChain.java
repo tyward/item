@@ -75,12 +75,45 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
     public boolean pushResults(final CurveFitResult<S, R, T> curveResult_)
     {
+        final double currLL = this.getLogLikelihood();
+        final double incomingStartLL = curveResult_.getStartingLogLikelihood();
+
+        final int compare = MathFunctions.doubleCompareRounded(currLL, incomingStartLL);
+
+        if (compare != 0)
+        {
+            LOG.info("Unexpected incoming Log Likelihood.");
+        }
+
         return this.pushResults(curveResult_.getModelParams(), curveResult_.getLogLikelihood());
     }
 
     public boolean pushResults(final ParamFitResult<S, R, T> fitResult_)
     {
+        final double currLL = this.getLogLikelihood();
+        final double incomingStartLL = fitResult_.getStartingLL();
+
+        final int compare = MathFunctions.doubleCompareRounded(currLL, incomingStartLL);
+
+        if (compare != 0)
+        {
+            LOG.info("Unexpected incoming Log Likelihood.");
+        }
+
         return this.pushResults(fitResult_.getEndingParams(), fitResult_.getEndingLL());
+    }
+
+    /**
+     * Forces the given results onto the stack, regardless of quality...
+     *
+     * @param fitResult_
+     * @param logLikelihood_
+     */
+    public void forcePushResults(final ItemParameters<S, R, T> fitResult_, final double logLikelihood_)
+    {
+        LOG.info("Force pushing params onto chain[" + logLikelihood_ + "]: " + fitResult_);
+        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(fitResult_, logLikelihood_, getLatestFrame(), _rowCount);
+        _frameList.add(frame);
     }
 
     public boolean pushVacuousResults(final ItemParameters<S, R, T> fitResult_)
@@ -184,16 +217,17 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
             _current = current_;
             _currentLL = currentLL_;
-            _startingPoint = startingPoint_;
 
-            if (null == _startingPoint)
+            if (null == startingPoint_)
             {
                 //This is basically a loopback fit result, but it's properly formed, so should be OK.
                 _fitResult = new ParamFitResult<>(current_, current_, currentLL_, currentLL_, _rowCount);
+                _startingPoint = this;
             }
             else
             {
-                _fitResult = new ParamFitResult<>(_startingPoint.getCurrentParams(), current_, currentLL_, _startingPoint.getCurrentLogLikelihood(), _rowCount);
+                _fitResult = new ParamFitResult<>(startingPoint_.getCurrentParams(), current_, currentLL_, startingPoint_.getCurrentLogLikelihood(), _rowCount);
+                _startingPoint = startingPoint_;
             }
         }
 
