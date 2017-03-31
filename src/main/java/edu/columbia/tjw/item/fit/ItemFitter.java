@@ -254,18 +254,31 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return ll;
     }
 
-//    public ParamFitResult<S, R, T> generateFlagInteractions(final int entryNumber_)
-//    {
-//        final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, _chain.getBestParameters());
-//        final CurveFitResult<S, R, T> result = fitter.generateFlagInteractions(_chain.getLogLikelihood(), interactionCount_);
-//
-//        if (null != result)
-//        {
-//            _chain.pushResults(result.getModelParams(), result.getLogLikelihood());
-//        }
-//
-//        return _chain.getLatestResults();
-//    }
+    public ParamFitResult<S, R, T> generateFlagInteractions()
+    {
+        return generateFlagInteractions(_chain.getBestParameters().getEntryCount());
+    }
+
+    public ParamFitResult<S, R, T> generateFlagInteractions(final int entryNumber_)
+    {
+        ItemParameters<S, R, T> params = _chain.getBestParameters();
+
+        //N.B: This loop can keep expanding as the params grows very large, if we are very successful.
+        // Just make sure to cap it out at the entryNumber_
+        for (int i = 0; i < Math.min(params.getEntryCount(), entryNumber_); i++)
+        {
+            final double logLikelihood = _chain.getLogLikelihood();
+            final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, params);
+            final CurveFitResult<S, R, T> tmp = new CurveFitResult<>(params, params.getEntryCurveParams(i), params.getEntryStatusRestrict(i), logLikelihood, logLikelihood, _grid.size());
+            final CurveFitResult<S, R, T> result = fitter.generateInteractions(tmp, false);
+
+            _chain.pushResults(result);
+            params = _chain.getBestParameters();
+        }
+
+        return _chain.getLatestResults();
+    }
+
     /**
      * Add some new curves to this model.
      *
