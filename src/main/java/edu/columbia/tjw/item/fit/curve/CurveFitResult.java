@@ -44,7 +44,8 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
     private final ItemCurveParams<R, T> _curveParams;
     private final ItemParameters<S, R, T> _startingParams;
 
-    public CurveFitResult(final ItemParameters<S, R, T> startingParams_, final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> curveParams_, final S toState_, final double logLikelihood_, final double startingLL_, final int rowCount_)
+    public CurveFitResult(final ItemParameters<S, R, T> startingParams_, final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> curveParams_, final S toState_,
+            final double logLikelihood_, final double startingLL_, final int rowCount_)
     {
         _params = params_;
         _curveParams = curveParams_;
@@ -105,18 +106,8 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
 
     public double calculateAicDifference()
     {
-        final double scaledImprovement = _llImprovement * _rowCount;
-        final double paramContribution = getEffectiveParamCount();
-        final double aicDiff = 2.0 * (paramContribution - scaledImprovement);
-
-        final double check = MathFunctions.computeAicDifference(0, getEffectiveParamCount(), _startingLogL, _logL, _rowCount);
-
-        if (Math.abs(check - aicDiff) > 1.0e-7)
-        {
-            final double check2 = MathFunctions.computeAicDifference(0, getEffectiveParamCount(), _startingLogL, _logL, _rowCount);
-            throw new IllegalStateException("Impossible.");
-        }
-
+        final double aicDiff = MathFunctions.computeAicDifference(0,
+                getEffectiveParamCount(), _startingLogL, _logL, _rowCount);
         return aicDiff;
     }
 

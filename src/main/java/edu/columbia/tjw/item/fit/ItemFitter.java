@@ -36,6 +36,7 @@ import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
+import edu.columbia.tjw.item.util.MathFunctions;
 import java.util.Collection;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -133,19 +134,23 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * N.B: The wrapped grid may cache, so if the underlying regressors are
      * changed, the resulting factory should be wrapped again.
      *
-     * @param <S>
-     * @param <R>
+     * Also, keep in mind that only relevant rows will be retained, particularly
+     * those with the correct from state, and for which the next status is
+     * known.
+     *
      * @param grid_ The grid to randomize
+     * @param settings_
      * @return A randomized version of grid_
      */
-    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>> ItemStatusGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_, final ItemSettings settings_)
+    public final ItemStatusGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_,
+            final ItemSettings settings_)
     {
         if (grid_ instanceof RandomizedStatusGrid)
         {
             return grid_;
         }
 
-        final ItemStatusGrid<S, R> wrapped = new RandomizedStatusGrid<>(grid_, settings_, grid_.getRegressorFamily());
+        final ItemStatusGrid<S, R> wrapped = new RandomizedStatusGrid<>(grid_, settings_, grid_.getRegressorFamily(), _status);
         return wrapped;
     }
 
@@ -209,6 +214,19 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     {
         final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, _grid, _settings, filters_);
         final ParamFitResult<S, R, T> fitResult = fitter.fit();
+
+        //TODO: Take this back out...
+        final double expected = _calc.computeEntropy(params_).getEntropy();
+        final double actual = fitResult.getStartingLL();
+
+        final int comparison = MathFunctions.doubleCompareRounded(actual, expected);
+
+        if (comparison != 0)
+        {
+            final ParamFitResult<S, R, T> fitResult2 = fitter.fit();
+            LOG.info("Bad initial LL computation.");
+        }
+
         return fitResult;
 //        _chain.pushResults(fitResult);
 //        return _chain.getLatestResults();

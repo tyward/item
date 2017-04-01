@@ -29,6 +29,7 @@ import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
+import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
@@ -36,6 +37,7 @@ import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
+import edu.columbia.tjw.item.util.MathFunctions;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 import java.util.Arrays;
@@ -68,8 +70,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private final int[] _indexList;
     private final S _fromStatus;
 
-
     private final double _startingLL;
+    private final EntropyCalculator<S, R, T> _calc;
 
     /**
      * Create a new fitter that is a clone of the old, but using the new params.
@@ -78,7 +80,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
      * @param params_
      * @param startingLL_
      */
-    public CurveParamsFitter(final CurveParamsFitter<S, R, T> baseFitter_, final ItemParameters<S, R, T> params_, final double startingLL_)
+    public CurveParamsFitter(final CurveParamsFitter<S, R, T> baseFitter_, final ItemParameters<S, R, T> params_, final double startingLL_, final EntropyCalculator<S, R, T> calc_)
     {
         if (baseFitter_._fromStatus != params_.getStatus())
         {
@@ -109,6 +111,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             _powerScores = new RectangularDoubleArray(count, reachableCount);
             fillPowerScores();
             _startingLL = startingLL_;
+            _calc = calc_;
         }
     }
 
@@ -142,6 +145,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             _powerScores = new RectangularDoubleArray(count, reachableCount);
             fillPowerScores();
             _startingLL = chain_.getLogLikelihood();
+            _calc = chain_.getCalculator();
         }
     }
 
@@ -267,29 +271,45 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return func;
     }
 
-    public CurveFitResult<S, R, T> generateFit(final S toStatus_, final ItemParameters<S, R, T> baseParams_, final CurveOptimizerFunction<S, R, T> func_, final double startingLL_, final ItemCurveParams<R, T> starting_) throws ConvergenceException
+    public CurveFitResult<S, R, T> generateFit(final S toStatus_, final ItemParameters<S, R, T> baseParams_, final CurveOptimizerFunction<S, R, T> func_,
+            final double startingLL_, final ItemCurveParams<R, T> starting_) throws ConvergenceException
     {
         final double[] startingArray = starting_.generatePoint();
         final MultivariatePoint startingPoint = new MultivariatePoint(startingArray);
+        final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(func_, startingPoint);
 
-        OptimizationResult<MultivariatePoint> result = _optimizer.optimize(func_, startingPoint);
-
-        final double bestLL;
-
-        if (!result.converged() && result.minValue() <= 0.0)
-        {
-            bestLL = startingLL_;
-        }
-        else
-        {
-            bestLL = result.minValue();
-        }
-
+        //Convert the results into params.
         final MultivariatePoint best = result.getOptimum();
         final double[] bestVal = best.getElements();
         final ItemCurveParams<R, T> curveParams = new ItemCurveParams<>(starting_, _factory, bestVal);
         final ItemParameters<S, R, T> updated = baseParams_.addBeta(curveParams, toStatus_);
-        final CurveFitResult<S, R, T> output = new CurveFitResult<>(baseParams_, updated, curveParams, toStatus_, bestLL, startingLL_, result.dataElementCount());
+
+        //N.B: The optimizer will only run until it is sure that it has found the 
+        //best point, or that it can't make further progress. Its goal is not to 
+        //compute the log likelihood accurately, so recompute that now. 
+        final double recalcEntropy = _calc.computeEntropy(updated).getEntropy();
+
+//        //Now, if there was a numerical issue, 
+//        final double bestLL;
+//
+//        if (!result.converged() && result.minValue() <= 0.0)
+//        {
+//            bestLL = startingLL_;
+//        }
+//        else
+//        {
+//            bestLL = result.minValue();
+//        }
+        final CurveFitResult<S, R, T> output = new CurveFitResult<>(baseParams_, updated, curveParams, toStatus_, recalcEntropy, startingLL_, result.dataElementCount());
+
+//        final double recalcEntropy = _calc.computeEntropy(updated).getEntropy();
+//
+//        final int comp = MathFunctions.doubleCompareRounded(bestLL, recalcEntropy);
+//
+//        if (comp != 0)
+//        {
+//            LOG.info("Strange results in curve fitter.");
+//        }
         return output;
     }
 
@@ -311,11 +331,11 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
             if (statOrdinal != fromStatusOrdinal)
             {
-                continue;
+                throw new IllegalStateException("Impossible.");
             }
             if (!grid_.hasNextStatus(i))
             {
-                continue;
+                throw new IllegalStateException("Impossible.");
             }
 
             indexList[count++] = i;

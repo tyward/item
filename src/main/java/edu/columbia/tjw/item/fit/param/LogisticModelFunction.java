@@ -130,11 +130,11 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
             if (statOrdinal != fromStatusOrdinal)
             {
-                continue;
+                throw new IllegalStateException("Impossible.");
             }
             if (!_grid.hasNextStatus(i))
             {
-                continue;
+                throw new IllegalStateException("Impossible.");
             }
 
             final double ll = localModel.logLikelihood(_grid, i);

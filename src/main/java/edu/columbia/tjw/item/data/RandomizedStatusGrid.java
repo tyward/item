@@ -25,6 +25,7 @@ import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.random.RandomTool;
+import java.util.Arrays;
 
 /**
  *
@@ -40,19 +41,35 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
     private final float[][] _regressors;
     private final EnumFamily<R> _regFamily;
 
-    public RandomizedStatusGrid(final ItemStatusGrid<S, R> underlying_, final ItemSettings settings_, final EnumFamily<R> regFamily_)
+    public RandomizedStatusGrid(final ItemStatusGrid<S, R> underlying_, final ItemSettings settings_, final EnumFamily<R> regFamily_, final S fromStatus_)
     {
         synchronized (this)
         {
             _underlying = underlying_;
             _regFamily = regFamily_;
 
-            _mapping = new int[underlying_.size()];
+            final int fromOrdinal = fromStatus_.ordinal();
+            final int size = underlying_.size();
+            final int[] rawMapping = new int[size];
+            int count = 0;
 
-            for (int i = 0; i < _mapping.length; i++)
+            for (int i = 0; i < size; i++)
             {
-                _mapping[i] = i;
+                final int statOrdinal = underlying_.getStatus(i);
+
+                if (statOrdinal != fromOrdinal)
+                {
+                    continue;
+                }
+                if (!underlying_.hasNextStatus(i))
+                {
+                    continue;
+                }
+
+                rawMapping[count++] = i;
             }
+
+            _mapping = Arrays.copyOf(rawMapping, count);
 
             if (settings_.isRandomShuffle())
             {
@@ -61,7 +78,7 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
 
             final int familySize = regFamily_.size();
             _regressors = new float[familySize][];
-            _readers = new ItemRegressorReader[regFamily_.size()];
+            _readers = new ItemRegressorReader[familySize];
         }
     }
 
@@ -116,7 +133,7 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
     @Override
     public int size()
     {
-        return _underlying.size();
+        return _mapping.length;
     }
 
     @Override
@@ -137,7 +154,7 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
 
         public MappedReader(final R field_)
         {
-            _data = fetchRegressor(field_.ordinal(), _underlying);
+            _data = fetchRegressor(field_.ordinal());
         }
 
         @Override
@@ -167,7 +184,7 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
 
     }
 
-    private synchronized float[] fetchRegressor(final int ordinal_, final ItemStatusGrid<S, R> grid_)
+    private synchronized float[] fetchRegressor(final int ordinal_)
     {
         final float[] cached = _regressors[ordinal_];
 
@@ -176,9 +193,9 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
             return cached;
         }
 
-        final int tabSize = grid_.size();
+        final int tabSize = this.size();
         final R reg = _regFamily.getFromOrdinal(ordinal_);
-        final ItemRegressorReader reader = grid_.getRegressorReader(reg);
+        final ItemRegressorReader reader = _underlying.getRegressorReader(reg);
         _regressors[ordinal_] = new float[tabSize];
 
         for (int i = 0; i < tabSize; i++)

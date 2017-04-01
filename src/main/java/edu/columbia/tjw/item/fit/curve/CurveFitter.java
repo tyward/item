@@ -82,6 +82,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         _grid = grid_;
 
         _fitter = new CurveParamsFitter<>(_factory, _grid, _settings, chain_);
+        _calc = chain_.getCalculator();
     }
 
 //    private void setModel(final ItemModel<S, R, T> model_)
@@ -315,7 +316,8 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                 if (!fitResult.isUnchanged())
                 {
                     final ItemParameters<S, R, T> modParams = fitResult.getEndingParams();
-                    return new CurveFitResult<>(modParams, modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true), toStatus, llValue, starting_.getStartingLogLikelihood(), _grid.size());
+                    ItemCurveParams<R, T> modCurveParams = modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true);
+                    return new CurveFitResult<>(startingParams, modParams, modCurveParams, toStatus, llValue, starting_.getStartingLogLikelihood(), _grid.size());
                 }
                 else
                 {
@@ -540,7 +542,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             return null;
         }
 
-        _fitter = new CurveParamsFitter<>(_fitter, result.getModelParams(), result.getLogLikelihood());
+        _fitter = new CurveParamsFitter<>(_fitter, result.getModelParams(), result.getLogLikelihood(), this._calc);
         return result;
     }
 

@@ -60,7 +60,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         this(baseChain_.getBestParameters(), baseChain_.getLogLikelihood(), baseChain_.getRowCount(), baseChain_._calc, baseChain_.isValidate());
     }
 
-    public FittingProgressChain(final ItemParameters<S, R, T> fitResult_, final double startingLL_, final int rowCount_, final EntropyCalculator calc_, final boolean validating_)
+    public FittingProgressChain(final ItemParameters<S, R, T> fitResult_, final double startingLL_, final int rowCount_, final EntropyCalculator<S, R, T> calc_, final boolean validating_)
     {
         if (rowCount_ <= 0)
         {
@@ -143,6 +143,20 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     {
         final double currentBest = getLogLikelihood();
 
+        if (this.isValidate())
+        {
+            //Since the claim is that the LL improved, let's see if that's true...
+            final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
+            final double entropy = ea.getEntropy();
+
+            final int compare = MathFunctions.doubleCompareRounded(entropy, logLikelihood_);
+
+            if (compare != 0)
+            {
+                LOG.info("Found entropy mismatch.");
+            }
+        }
+
         // These are negative log likelihoods (positive numbers), a lower number is better.
         // So compare must be < 0, best must be more than the new value.
         final double compare = MathFunctions.doubleCompareRounded(currentBest, logLikelihood_);
@@ -154,21 +168,6 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         }
 
         LOG.info("Log Likelihood improvement: " + currentBest + " -> " + logLikelihood_);
-
-        if (this.isValidate())
-        {
-            //Since the claim is that the LL improved, let's see if that's true...
-            final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
-            final double entropy = ea.getEntropy();
-
-            final double entropyDiff = entropy - logLikelihood_;
-            final double zScore = entropyDiff / ea.getSigma();
-
-            if (Math.abs(zScore) > 5.0)
-            {
-                throw new IllegalArgumentException("Attempt to push invalid results onto frame!");
-            }
-        }
 
         //This is an improvement. 
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(fitResult_, logLikelihood_, getLatestFrame(), _rowCount);
