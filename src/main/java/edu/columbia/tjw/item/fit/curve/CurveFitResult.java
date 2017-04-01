@@ -42,8 +42,9 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
     private final S _toState;
     private final ItemParameters<S, R, T> _params;
     private final ItemCurveParams<R, T> _curveParams;
+    private final ItemParameters<S, R, T> _startingParams;
 
-    public CurveFitResult(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> curveParams_, final S toState_, final double logLikelihood_, final double startingLL_, final int rowCount_)
+    public CurveFitResult(final ItemParameters<S, R, T> startingParams_, final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> curveParams_, final S toState_, final double logLikelihood_, final double startingLL_, final int rowCount_)
     {
         _params = params_;
         _curveParams = curveParams_;
@@ -52,6 +53,7 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
         _llImprovement = (startingLL_ - _logL);
         _startingLogL = startingLL_;
         _rowCount = rowCount_;
+        _startingParams = startingParams_;
     }
 
     public S getToState()
@@ -62,6 +64,11 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
     public ItemCurveParams<R, T> getCurveParams()
     {
         return _curveParams;
+    }
+
+    public ItemParameters<S, R, T> getStartingParams()
+    {
+        return _startingParams;
     }
 
     public ItemParameters<S, R, T> getModelParams()

@@ -23,7 +23,6 @@ import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.ItemParameters;
@@ -31,6 +30,7 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
+import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
@@ -67,6 +67,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     private final ItemCurveFactory<R, T> _factory;
 
     private CurveParamsFitter<S, R, T> _fitter;
+    private final EntropyCalculator<S, R, T> _calc;
 
     public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_, final FittingProgressChain<S, R, T> chain_)
     {
@@ -91,6 +92,15 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     {
         final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, grid_, _settings, null);
         final double ll = fitter.computeLogLikelihood(params_);
+
+        final double ll2 = _calc.computeEntropy(params_).getEntropy();
+        final int compare = MathFunctions.doubleCompareRounded(ll, ll2);
+
+        if (0 != compare)
+        {
+            LOG.info("Strange issues with entropy computations.");
+        }
+
         return ll;
     }
 

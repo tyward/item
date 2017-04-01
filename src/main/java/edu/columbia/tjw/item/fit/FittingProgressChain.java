@@ -23,6 +23,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.fit.EntropyCalculator.EntropyAnalysis;
 import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -46,6 +47,8 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     private final List<ParamProgressFrame<S, R, T>> _frameList;
     private final List<ParamProgressFrame<S, R, T>> _frameListReadOnly;
     private final int _rowCount;
+    private final EntropyCalculator<S, R, T> _calc;
+    private final boolean _validate;
 
     /**
      * Start a new chain from the latest entry of the current chain.
@@ -54,10 +57,10 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
      */
     public FittingProgressChain(final FittingProgressChain<S, R, T> baseChain_)
     {
-        this(baseChain_.getBestParameters(), baseChain_.getLogLikelihood(), baseChain_.getRowCount());
+        this(baseChain_.getBestParameters(), baseChain_.getLogLikelihood(), baseChain_.getRowCount(), baseChain_._calc, baseChain_.isValidate());
     }
 
-    public FittingProgressChain(final ItemParameters<S, R, T> fitResult_, final double startingLL_, final int rowCount_)
+    public FittingProgressChain(final ItemParameters<S, R, T> fitResult_, final double startingLL_, final int rowCount_, final EntropyCalculator calc_, final boolean validating_)
     {
         if (rowCount_ <= 0)
         {
@@ -70,7 +73,8 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         _frameList = new ArrayList<>();
         _frameList.add(frame);
         _frameListReadOnly = Collections.unmodifiableList(_frameList);
-
+        _calc = calc_;
+        _validate = validating_;
     }
 
     public boolean pushResults(final CurveFitResult<S, R, T> curveResult_)
@@ -78,14 +82,21 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         final double currLL = this.getLogLikelihood();
         final double incomingStartLL = curveResult_.getStartingLogLikelihood();
 
+        final double incomingEntropy = curveResult_.getLogLikelihood();
+        final ItemParameters<S, R, T> incomingParams = curveResult_.getModelParams();
+
+        //This should always match, the curve result was built on top of this chain, right? 
         final int compare = MathFunctions.doubleCompareRounded(currLL, incomingStartLL);
 
         if (compare != 0)
         {
-            LOG.info("Unexpected incoming Log Likelihood.");
+            final EntropyAnalysis ea = _calc.computeEntropy(curveResult_.getStartingParams());
+
+            LOG.info("Unexpected incoming Log Likelihood: " + currLL + " != "
+                    + incomingStartLL + " (" + ea.getEntropy() + ")");
         }
 
-        return this.pushResults(curveResult_.getModelParams(), curveResult_.getLogLikelihood());
+        return this.pushResults(incomingParams, incomingEntropy);
     }
 
     public boolean pushResults(final ParamFitResult<S, R, T> fitResult_)
@@ -97,7 +108,10 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
         if (compare != 0)
         {
-            LOG.info("Unexpected incoming Log Likelihood.");
+            final EntropyAnalysis ea = _calc.computeEntropy(fitResult_.getStartingParams());
+
+            LOG.info("Unexpected incoming Log Likelihood: " + currLL + " != "
+                    + incomingStartLL + " (" + ea.getEntropy() + ")");
         }
 
         return this.pushResults(fitResult_.getEndingParams(), fitResult_.getEndingLL());
@@ -107,12 +121,13 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
      * Forces the given results onto the stack, regardless of quality...
      *
      * @param fitResult_
-     * @param logLikelihood_
      */
-    public void forcePushResults(final ItemParameters<S, R, T> fitResult_, final double logLikelihood_)
+    public void forcePushResults(final ItemParameters<S, R, T> fitResult_)
     {
-        LOG.info("Force pushing params onto chain[" + logLikelihood_ + "]: " + fitResult_);
-        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(fitResult_, logLikelihood_, getLatestFrame(), _rowCount);
+        final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
+        final double entropy = ea.getEntropy();
+        LOG.info("Force pushing params onto chain[" + entropy + "]: " + fitResult_);
+        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(fitResult_, entropy, getLatestFrame(), _rowCount);
         _frameList.add(frame);
     }
 
@@ -140,6 +155,21 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
         LOG.info("Log Likelihood improvement: " + currentBest + " -> " + logLikelihood_);
 
+        if (this.isValidate())
+        {
+            //Since the claim is that the LL improved, let's see if that's true...
+            final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
+            final double entropy = ea.getEntropy();
+
+            final double entropyDiff = entropy - logLikelihood_;
+            final double zScore = entropyDiff / ea.getSigma();
+
+            if (Math.abs(zScore) > 5.0)
+            {
+                throw new IllegalArgumentException("Attempt to push invalid results onto frame!");
+            }
+        }
+
         //This is an improvement. 
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(fitResult_, logLikelihood_, getLatestFrame(), _rowCount);
         _frameList.add(frame);
@@ -149,6 +179,16 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     public int getRowCount()
     {
         return _rowCount;
+    }
+
+    public boolean isValidate()
+    {
+        return _validate;
+    }
+
+    public EntropyCalculator<S, R, T> getCalculator()
+    {
+        return _calc;
     }
 
     public int size()

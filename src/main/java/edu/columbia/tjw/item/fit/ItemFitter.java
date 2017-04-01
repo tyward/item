@@ -28,6 +28,7 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
+import edu.columbia.tjw.item.fit.EntropyCalculator.EntropyAnalysis;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
@@ -61,6 +62,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private final EnumFamily<R> _family;
     private final S _status;
     private final ItemStatusGrid<S, R> _grid;
+    private final EntropyCalculator<S, R, T> _calc;
 
     private FittingProgressChain<S, R, T> _chain;
 
@@ -98,11 +100,11 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _family = intercept_.getFamily();
         _status = status_;
         _grid = randomizeGrid(grid_, _settings);
+        _calc = new EntropyCalculator<>(_grid);
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept);
         final double logLikelihood = this.computeLogLikelihood(starting);
-
-        _chain = new FittingProgressChain<>(starting, logLikelihood, _grid.size());
+        _chain = new FittingProgressChain<>(starting, logLikelihood, _grid.size(), _calc, _settings.getDoValidate());
     }
 
     public S getStatus()
@@ -149,8 +151,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     public ParamFitResult<S, R, T> pushParameters(ItemParameters<S, R, T> params_) throws ConvergenceException
     {
-        final double logLikelihood = this.computeLogLikelihood(params_);
-        _chain.forcePushResults(params_, logLikelihood);
+        _chain.forcePushResults(params_);
         return _chain.getLatestResults();
     }
 
@@ -257,10 +258,9 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     public double computeLogLikelihood(final ItemParameters<S, R, T> params_)
     {
-        //final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _grid);
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, _grid, _settings, null);
-        final double ll = fitter.computeLogLikelihood(params_);
-        return ll;
+        final EntropyAnalysis ea = _calc.computeEntropy(params_);
+        final double entropy = ea.getEntropy();
+        return entropy;
     }
 
     public ParamFitResult<S, R, T> generateFlagInteractions()
@@ -278,7 +278,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         for (int i = 0; i < Math.min(params.getEntryCount(), entryNumber_); i++)
         {
             final double logLikelihood = _chain.getLogLikelihood();
-            final CurveFitResult<S, R, T> tmp = new CurveFitResult<>(params, params.getEntryCurveParams(i, true), params.getEntryStatusRestrict(i), logLikelihood, logLikelihood, _grid.size());
+            final CurveFitResult<S, R, T> tmp = new CurveFitResult<>(params, params, params.getEntryCurveParams(i, true), params.getEntryStatusRestrict(i), logLikelihood, logLikelihood, _grid.size());
             final CurveFitResult<S, R, T> result = fitter.generateInteractions(tmp, false);
 
             if (_chain.pushResults(result))
@@ -323,7 +323,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final Collection<ParamFilter<S, R, T>> filters_, final int paramCount_)
     {
         final long start = System.currentTimeMillis();
-        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(params_, startingLL_, _grid.size());
+        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(params_, startingLL_, _grid.size(), _calc, _chain.isValidate());
 
         final int statingParamCount = subChain.getBestParameters().getEffectiveParamCount();
         final int paramCountLimit = statingParamCount + paramCount_;

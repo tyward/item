@@ -68,6 +68,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private final int[] _indexList;
     private final S _fromStatus;
 
+
     private final double _startingLL;
 
     /**
@@ -142,6 +143,11 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             fillPowerScores();
             _startingLL = chain_.getLogLikelihood();
         }
+    }
+
+    public double getEntropy()
+    {
+        return _startingLL;
     }
 
     public synchronized RectangularDoubleArray getPowerScores()
@@ -283,20 +289,9 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final double[] bestVal = best.getElements();
         final ItemCurveParams<R, T> curveParams = new ItemCurveParams<>(starting_, _factory, bestVal);
         final ItemParameters<S, R, T> updated = baseParams_.addBeta(curveParams, toStatus_);
-        final CurveFitResult<S, R, T> output = new CurveFitResult<>(updated, curveParams, toStatus_, bestLL, startingLL_, result.dataElementCount());
+        final CurveFitResult<S, R, T> output = new CurveFitResult<>(baseParams_, updated, curveParams, toStatus_, bestLL, startingLL_, result.dataElementCount());
         return output;
     }
-//
-//    private double computeStartingLogLikelihood(final CurveOptimizerFunction<S, R, T> func_)
-//    {
-//        final int dimension = func_.dimension();
-//        final MultivariatePoint startingPoint = new MultivariatePoint(dimension);
-//        final EvaluationResult res = func_.generateResult();
-//        func_.value(startingPoint, 0, func_.numRows(), res);
-//
-//        final double startingLL = res.getMean();
-//        return startingLL;
-//    }
 
     public ItemParameters<S, R, T> getParams()
     {

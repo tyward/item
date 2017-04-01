@@ -49,7 +49,7 @@ public final class ItemSettings implements Serializable
     private static final boolean DEFAULT_POLISH_STARTING_PARAMS = true;
     private static final boolean CENTRALITY_BOUND = true;
     private static final double Z_SCORE_CUTOFF = 1.0;
-    private static final boolean DEFAULT_VALIDATE = false;
+    private static final boolean DEFAULT_VALIDATE = true;
 
     private static final long serialVersionUID = 0x2bc96e9485221bf6L;
 
