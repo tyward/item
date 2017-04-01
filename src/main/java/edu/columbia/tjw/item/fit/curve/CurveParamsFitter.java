@@ -29,9 +29,9 @@ import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
+import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.optimize.EvaluationResult;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
@@ -53,7 +53,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private static final Logger LOG = LogUtil.getLogger(CurveParamsFitter.class);
 
     private final ItemCurveFactory<R, T> _factory;
-
     private final ItemSettings _settings;
 
     private final ItemStatusGrid<S, R> _grid;
@@ -69,13 +68,16 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private final int[] _indexList;
     private final S _fromStatus;
 
+    private final double _startingLL;
+
     /**
      * Create a new fitter that is a clone of the old, but using the new params.
      *
      * @param baseFitter_
      * @param params_
+     * @param startingLL_
      */
-    public CurveParamsFitter(final CurveParamsFitter<S, R, T> baseFitter_, final ItemParameters<S, R, T> params_)
+    public CurveParamsFitter(final CurveParamsFitter<S, R, T> baseFitter_, final ItemParameters<S, R, T> params_, final double startingLL_)
     {
         if (baseFitter_._fromStatus != params_.getStatus())
         {
@@ -105,19 +107,22 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
             _powerScores = new RectangularDoubleArray(count, reachableCount);
             fillPowerScores();
+            _startingLL = startingLL_;
         }
     }
 
-    public CurveParamsFitter(final ItemCurveFactory<R, T> factory_, final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_)
+    public CurveParamsFitter(final ItemCurveFactory<R, T> factory_,
+            final ItemStatusGrid<S, R> grid_, final ItemSettings settings_, final FittingProgressChain<S, R, T> chain_)
     {
         synchronized (this)
         {
+            final ItemParameters<S, R, T> params = chain_.getBestParameters();
             _settings = settings_;
             _factory = factory_;
-            _model = new ItemModel<>(params_);
+            _model = new ItemModel<>(params);
             _grid = grid_;
             _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
-            _fromStatus = params_.getStatus();
+            _fromStatus = params.getStatus();
 
             final int reachableCount = _fromStatus.getReachableCount();
 
@@ -135,6 +140,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
             _powerScores = new RectangularDoubleArray(count, reachableCount);
             fillPowerScores();
+            _startingLL = chain_.getLogLikelihood();
         }
     }
 
@@ -173,8 +179,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final ItemCurveParams<R, T> starting = _factory.generateStartingParameters(curveType_, field_, dist, _settings.getRandom());
 
         final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, false);
-        final double startingLL = computeStartingLogLikelihood(func);
-        final CurveFitResult<S, R, T> result = generateFit(toStatus_, _model.getParams(), func, startingLL, starting);
+        final CurveFitResult<S, R, T> result = generateFit(toStatus_, _model.getParams(), func, _startingLL, starting);
 
         //final FitResult<S, R, T> output = expandParameters(_model.getParams(), starting, toStatus_, false);
         if (_settings.getPolishStartingParams())
@@ -187,7 +192,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
                 {
                     //LOG.info("Have polished parameters, testing.");
 
-                    final CurveFitResult<S, R, T> output2 = generateFit(toStatus_, _model.getParams(), func, startingLL, polished);
+                    final CurveFitResult<S, R, T> output2 = generateFit(toStatus_, _model.getParams(), func, _startingLL, polished);
 
                     //LOG.info("Fit comparison: " + output.getLogLikelihood() + " <> " + output2.getLogLikelihood());
                     final double aic1 = result.calculateAicDifference();
@@ -236,8 +241,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             final boolean subtractStarting_) throws ConvergenceException
     {
         final CurveOptimizerFunction<S, R, T> func = generateFunction(initParams_, toStatus_, subtractStarting_);
-        final double startingLL = computeStartingLogLikelihood(func);
-        final CurveFitResult<S, R, T> result = generateFit(toStatus_, params_, func, startingLL, initParams_);
+        final CurveFitResult<S, R, T> result = generateFit(toStatus_, params_, func, _startingLL, initParams_);
         return result;
     }
 
@@ -282,17 +286,17 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final CurveFitResult<S, R, T> output = new CurveFitResult<>(updated, curveParams, toStatus_, bestLL, startingLL_, result.dataElementCount());
         return output;
     }
-
-    private double computeStartingLogLikelihood(final CurveOptimizerFunction<S, R, T> func_)
-    {
-        final int dimension = func_.dimension();
-        final MultivariatePoint startingPoint = new MultivariatePoint(dimension);
-        final EvaluationResult res = func_.generateResult();
-        func_.value(startingPoint, 0, func_.numRows(), res);
-
-        final double startingLL = res.getMean();
-        return startingLL;
-    }
+//
+//    private double computeStartingLogLikelihood(final CurveOptimizerFunction<S, R, T> func_)
+//    {
+//        final int dimension = func_.dimension();
+//        final MultivariatePoint startingPoint = new MultivariatePoint(dimension);
+//        final EvaluationResult res = func_.generateResult();
+//        func_.value(startingPoint, 0, func_.numRows(), res);
+//
+//        final double startingLL = res.getMean();
+//        return startingLL;
+//    }
 
     public ItemParameters<S, R, T> getParams()
     {

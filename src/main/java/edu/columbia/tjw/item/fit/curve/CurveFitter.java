@@ -31,6 +31,7 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
+import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
@@ -67,7 +68,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     private CurveParamsFitter<S, R, T> _fitter;
 
-    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_, final ItemParameters<S, R, T> params_)
+    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_, final FittingProgressChain<S, R, T> chain_)
     {
         if (null == settings_)
         {
@@ -79,15 +80,13 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         _settings = settings_;
         _grid = grid_;
 
-        _fitter = new CurveParamsFitter<>(_factory, params_, _grid, _settings);
-
+        _fitter = new CurveParamsFitter<>(_factory, _grid, _settings, chain_);
     }
 
-    public void setModel(final ItemModel<S, R, T> model_)
-    {
-        _fitter = new CurveParamsFitter<>(_fitter, model_.getParams());
-    }
-
+//    private void setModel(final ItemModel<S, R, T> model_)
+//    {
+//        _fitter = new CurveParamsFitter<>(_fitter, model_.getParams());
+//    }
     protected double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_)
     {
         final ParamFitter<S, R, T> fitter = new ParamFitter<>(params_, grid_, _settings, null);
@@ -531,9 +530,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             return null;
         }
 
-        final ItemModel<S, R, T> outputModel = new ItemModel<>(result.getModelParams());
-
-        this.setModel(outputModel);
+        _fitter = new CurveParamsFitter<>(_fitter, result.getModelParams(), result.getLogLikelihood());
         return result;
     }
 

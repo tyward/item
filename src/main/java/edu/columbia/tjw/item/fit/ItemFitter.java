@@ -271,7 +271,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public ParamFitResult<S, R, T> generateFlagInteractions(final int entryNumber_)
     {
         ItemParameters<S, R, T> params = _chain.getBestParameters();
-        CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, params);
+        CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, _chain);
 
         //N.B: This loop can keep expanding as the params grows very large, if we are very successful.
         // Just make sure to cap it out at the entryNumber_
@@ -285,7 +285,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             {
                 //Generating this fitter is very expensive, only do so when necessary.
                 params = _chain.getBestParameters();
-                fitter = new CurveFitter<>(_factory, _settings, _grid, params);
+                fitter = new CurveFitter<>(_factory, _settings, _grid, _chain);
             }
         }
 
@@ -348,7 +348,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 LOG.warning("Unable to improve results in coefficient fit, moving on.");
             }
 
-            final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, subChain.getBestParameters());
+            final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, subChain);
 
             //First, try to calibrate any existing curves to improve the fit. 
             final ItemParameters<S, R, T> m3 = fitter.calibrateCurves(improvement);
@@ -363,7 +363,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             try
             {
                 //Now, try to add a new curve. 
-                final CurveFitter<S, R, T> fitter2 = new CurveFitter<>(_factory, _settings, _grid, subChain.getBestParameters());
+                final CurveFitter<S, R, T> fitter2 = new CurveFitter<>(_factory, _settings, _grid, subChain);
                 final CurveFitResult<S, R, T> m4 = fitter2.generateCurve(curveFields_, filters_);
 
                 improvement = Math.max(0.0, m4.getStartingLogLikelihood() - m4.getLogLikelihood());
