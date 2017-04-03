@@ -243,6 +243,9 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             final ItemParameters<S, R, T> base = subChain.getBestParameters();
             final ItemParameters<S, R, T> reduced = base.dropRegressor(regressor);
+
+            final double reducedEntropy = _calc.computeEntropy(reduced).getEntropy();
+
             final int reducedCount = reduced.getEffectiveParamCount();
             final int reduction = paramCount - reducedCount;
 
@@ -253,8 +256,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             LOG.info("Annealing attempting to drop " + reduction + " params from " + regressor + ", now rebuilding");
 
-            final ParamFitResult<S, R, T> rebuilt = expandModel(reduced, subChain.getLogLikelihood(), curveFields_, filters_, reduction);
-            final boolean better = subChain.pushResults(rebuilt);
+            final ParamFitResult<S, R, T> rebuilt = expandModel(reduced, reducedEntropy, curveFields_, filters_, reduction);
+            final boolean better = subChain.pushResults(rebuilt.getEndingParams(), rebuilt.getEndingLL());
 
             if (better)
             {

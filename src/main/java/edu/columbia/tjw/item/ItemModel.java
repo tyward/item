@@ -21,11 +21,14 @@ package edu.columbia.tjw.item;
 
 import edu.columbia.tjw.item.fit.ItemParamGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.util.LogLikelihood;
+import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MathFunctions;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  *
@@ -41,6 +44,7 @@ import java.util.List;
  */
 public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Cloneable
 {
+    private static final Logger LOG = LogUtil.getLogger(ItemModel.class);
     private final double ROUNDING_TOLERANCE = 1.0e-8;
     private final LogLikelihood<S> _likelihood;
     private final ItemParameters<S, R, T> _params;
@@ -300,9 +304,11 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                     final double computedProb = computed[q];
                     final double contribution = actualProbability * betaDerivative / computedProb;
 
-                    if (Double.isNaN(contribution))
+                    if (Double.isNaN(contribution) || Double.isInfinite(contribution))
                     {
-                        throw new IllegalStateException("Contribution is NaN.");
+                        LOG.severe("Derivative term contribution is NaN or infinite, this should not be possible: " + contribution);
+                        LOG.severe("Trying to recover, derivative may be somewhat inaccurate.");
+                        break;
                     }
 
                     betaTerm += contribution;
