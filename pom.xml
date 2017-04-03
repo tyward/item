@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>edu.columbia.tjw</groupId>
     <artifactId>item</artifactId>
-    <version>1.2.0-beta8</version>
+    <version>1.2.0-beta9</version>
     <packaging>jar</packaging>
     <name>ITEM Model</name>
     <description>A statistical model for automatic fitting against large data sets.</description>
