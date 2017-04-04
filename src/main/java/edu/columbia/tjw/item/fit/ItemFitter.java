@@ -301,7 +301,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final ItemParameters<S, R, T> params = _chain.getBestParameters();
             final CurveFitResult<S, R, T> result = fitter.generateInteractions(_chain, params, params.getEntryCurveParams(i, true), params.getEntryStatusRestrict(i), 0.0, _chain.getLogLikelihood(), false, false);
 
-            if (_chain.pushResults("FlagInteractions", result))
+            if (result.aicPerParameter() < 0)
             {
                 //Generating this fitter is very expensive, only do so when necessary.
                 fitter = new CurveFitter<>(_factory, _settings, _grid, _chain);
