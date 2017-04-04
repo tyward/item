@@ -288,28 +288,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         //best point, or that it can't make further progress. Its goal is not to 
         //compute the log likelihood accurately, so recompute that now. 
         final double recalcEntropy = _calc.computeEntropy(updated).getEntropy();
-
-//        //Now, if there was a numerical issue, 
-//        final double bestLL;
-//
-//        if (!result.converged() && result.minValue() <= 0.0)
-//        {
-//            bestLL = startingLL_;
-//        }
-//        else
-//        {
-//            bestLL = result.minValue();
-//        }
         final CurveFitResult<S, R, T> output = new CurveFitResult<>(baseParams_, updated, curveParams, toStatus_, recalcEntropy, startingLL_, result.dataElementCount());
-
-//        final double recalcEntropy = _calc.computeEntropy(updated).getEntropy();
-//
-//        final int comp = MathFunctions.doubleCompareRounded(bestLL, recalcEntropy);
-//
-//        if (comp != 0)
-//        {
-//            LOG.info("Strange results in curve fitter.");
-//        }
         return output;
     }
 

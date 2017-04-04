@@ -51,6 +51,16 @@ public final class MathFunctions
         return output;
     }
 
+    /**
+     * If modelB is better, AIC diff will be less than 0.0.
+     *
+     * @param paramCountA_
+     * @param paramCountB_
+     * @param entropyA_
+     * @param entropyB_
+     * @param rowCount_
+     * @return
+     */
     public static double computeAicDifference(final int paramCountA_, final int paramCountB_, final double entropyA_, final double entropyB_, final int rowCount_)
     {
         final double llImprovement = entropyA_ - entropyB_;
