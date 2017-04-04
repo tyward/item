@@ -314,7 +314,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             // Try to append this to the given CurveParams
             try
             {
-                //First, we need to get rid of the existing entry. 
                 final CurveFitResult<S, R, T> result = _fitter.expandParameters(params_, testParams, toStatus, false, startingLL_);
 
                 final ParamFitter<S, R, T> fitter = new ParamFitter<>(result.getModelParams(), _grid, _settings, null);
@@ -415,7 +414,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             }
 
             calcCount++;
-            final CurveFitResult<S, R, T> result = generateSingleInteraction(reg, base_, best.getCurveParams(), curve, toStatus_, startingLL);
+            final CurveFitResult<S, R, T> result = generateSingleInteraction(reg, base_, best.getCurveParams(), curve, toStatus_, chain_.getLogLikelihood());
 
             if (null == result)
             {
@@ -433,7 +432,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             }
 
             //This result is sufficiently better that we can (maybe) add it to the chain.
-            if (chain_.pushResults("CurveInteractions", result))
+            if (chain_.pushResults("CurveInteractions", result.getModelParams(), result.getLogLikelihood()))
             {
                 best = result;
             }

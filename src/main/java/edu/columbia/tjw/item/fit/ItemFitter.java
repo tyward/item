@@ -299,7 +299,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         for (int i = 0; i < Math.min(_chain.getBestParameters().getEntryCount(), entryNumber_); i++)
         {
             final ItemParameters<S, R, T> params = _chain.getBestParameters();
-            final CurveFitResult<S, R, T> result = fitter.generateInteractions(_chain, params, params.getEntryCurveParams(i, true), null, 0.0, _chain.getLogLikelihood(), false, false);
+            final CurveFitResult<S, R, T> result = fitter.generateInteractions(_chain, params, params.getEntryCurveParams(i, true), params.getEntryStatusRestrict(i), 0.0, _chain.getLogLikelihood(), false, false);
 
             if (_chain.pushResults("FlagInteractions", result))
             {
