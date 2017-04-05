@@ -67,6 +67,8 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     private final ItemCurveFactory<R, T> _factory;
     private final EntropyCalculator<S, R, T> _calc;
 
+    private final ParamFitter<S, R, T> _paramFitter;
+
     private CurveParamsFitter<S, R, T> _fitter;
 
     public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_, final FittingProgressChain<S, R, T> chain_)
@@ -83,6 +85,8 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         _fitter = new CurveParamsFitter<>(_factory, _grid, _settings, chain_);
         _calc = chain_.getCalculator();
+
+        _paramFitter = new ParamFitter<>(_calc, _settings, null);
     }
 
     public final ItemParameters<S, R, T> calibrateCurves(final double improvementTarget_, final boolean exhaustive_)
@@ -273,17 +277,18 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             final ItemCurveParams<R, T> starting_, final ItemCurve<T> curve_, final S toStatus, final double startingLL_)
     {
         final ItemCurveParams<R, T> testParams = appendToCurveParams(starting_, curve_, reg_);
+        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("SingleInteraction", params_, startingLL_, _calc.size(), _calc, true);
 
         if (null == toStatus)
         {
             //This is a flag-flag interaction term...
             //This means, among other things, that we just add an additional entry with more flags
             final ItemParameters<S, R, T> updatedParams = params_.addBeta(testParams, null);
-            final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, _grid, _settings, null);
+            //final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, _grid, _settings, null);
 
             try
             {
-                final ParamFitResult<S, R, T> fitResult = fitter.fit();
+                final ParamFitResult<S, R, T> fitResult = _paramFitter.fit(subChain, updatedParams);
                 final double llValue = fitResult.getEndingLL();
                 final ItemParameters<S, R, T> modParams = fitResult.getEndingParams();
                 ItemCurveParams<R, T> modCurveParams = modParams.getEntryCurveParams(modParams.getEntryCount() - 1, true);
@@ -303,13 +308,23 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             {
                 final CurveFitResult<S, R, T> result = _fitter.expandParameters(params_, testParams, toStatus, false, startingLL_);
 
-                final ParamFitter<S, R, T> fitter = new ParamFitter<>(result.getModelParams(), _grid, _settings, null);
-                final ParamFitResult<S, R, T> calibrated = fitter.fit();
+                if (!subChain.pushResults("ParameterExpansion", result))
+                {
+                    return result;
+                }
 
-                final ItemParameters<S, R, T> updated = calibrated.getEndingParams();
-                final CurveFitResult<S, R, T> r2 = new CurveFitResult<>(params_, updated, updated.getEntryCurveParams(updated.getEntryCount() - 1), toStatus, calibrated.getEndingLL(), startingLL_, _grid.size());
+                final ParamFitResult<S, R, T> calibrated = _paramFitter.fit(subChain, result.getModelParams());
 
-                return r2;
+                if (calibrated.isBetter())
+                {
+                    final ItemParameters<S, R, T> updated = calibrated.getEndingParams();
+                    final CurveFitResult<S, R, T> r2 = new CurveFitResult<>(params_, updated, updated.getEntryCurveParams(updated.getEntryCount() - 1, true), toStatus, calibrated.getEndingLL(), startingLL_, _grid.size());
+                    return r2;
+                }
+                else
+                {
+                    return result;
+                }
             }
             catch (final ConvergenceException e)
             {

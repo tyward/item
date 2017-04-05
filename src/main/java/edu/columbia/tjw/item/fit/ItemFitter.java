@@ -66,7 +66,9 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private final ItemStatusGrid<S, R> _grid;
     private final EntropyCalculator<S, R, T> _calc;
 
-    private FittingProgressChain<S, R, T> _chain;
+    private final ParamFitter<S, R, T> _fitter;
+
+    private final FittingProgressChain<S, R, T> _chain;
 
     public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_, final ItemStatusGrid<S, R> grid_)
     {
@@ -102,11 +104,13 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _family = intercept_.getFamily();
         _status = status_;
         _grid = randomizeGrid(grid_, _settings);
-        _calc = new EntropyCalculator<>(_grid);
+        _calc = new EntropyCalculator<>(_grid, _status, _settings);
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept);
         final double logLikelihood = this.computeLogLikelihood(starting);
         _chain = new FittingProgressChain<>("Primary", starting, logLikelihood, _grid.size(), _calc, _settings.getDoValidate());
+
+        _fitter = new ParamFitter<>(_calc, _settings, null);
     }
 
     public S getStatus()
@@ -244,9 +248,9 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     private void innerFitCoefficients(final FittingProgressChain<S, R, T> chain_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
     {
-        final ParamFitter<S, R, T> fitter = new ParamFitter<>(chain_.getBestParameters(), _grid, _settings, filters_);
-        final ParamFitResult<S, R, T> fitResult = fitter.fit();
-        chain_.pushResults("FitCoefficients", fitResult);
+        //final ParamFitter<S, R, T> fitter = new ParamFitter<>(chain_.getBestParameters(), _grid, _settings, filters_);
+        _fitter.fit(chain_);
+        //chain_.pushResults("FitCoefficients", fitResult);
     }
 
     private void doSingleAnnealingOperation(final Set<R> curveFields_, final ItemParameters<S, R, T> base_, final ItemParameters<S, R, T> reduced_, final FittingProgressChain<S, R, T> subChain_)
@@ -319,7 +323,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         for (int i = 0; i < _chain.getBestParameters().getEntryCount(); i++)
         {
-            final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain", _chain);
+            final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain[" + i + "]", _chain);
             final ItemParameters<S, R, T> base = subChain.getBestParameters();
             final int index = i - offset;
 
@@ -345,6 +349,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             {
                 //Just step back, this entry has been removed, other entries slid up.
                 offset++;
+                _chain.pushResults(subChain.getName(), subChain.getConsolidatedResults());
             }
         }
 

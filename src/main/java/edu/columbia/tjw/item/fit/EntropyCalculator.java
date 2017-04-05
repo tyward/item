@@ -23,26 +23,61 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
+import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 
 /**
  *
  * @author tyler
  * @param <S>
  * @param <R>
+ * @param <T>
  */
 public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private final ItemStatusGrid<S, R> _grid;
+    private final S _fromStatus;
 
-    public EntropyCalculator(final ItemStatusGrid<S, R> grid_)
+    public EntropyCalculator(final ItemStatusGrid<S, R> grid_, final S fromStatus_, final ItemSettings settings_)
     {
-        _grid = grid_;
+        _fromStatus = fromStatus_;
+
+        if (grid_ instanceof RandomizedStatusGrid)
+        {
+            _grid = grid_;
+        }
+        else
+        {
+            final ItemStatusGrid<S, R> wrapped = new RandomizedStatusGrid<>(grid_, settings_, grid_.getRegressorFamily(), fromStatus_);
+            _grid = wrapped;
+        }
+
+    }
+
+    public ItemStatusGrid<S, R> getGrid()
+    {
+        return _grid;
+    }
+
+    public S getFromStatus()
+    {
+        return _fromStatus;
+    }
+
+    public int size()
+    {
+        return _grid.size();
     }
 
     public EntropyAnalysis computeEntropy(final ItemParameters<S, R, T> params_)
     {
+        if (params_.getStatus() != getFromStatus())
+        {
+            throw new IllegalArgumentException("Status mismatch.");
+        }
+
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _grid);
         final ItemModel<S, R, T> model = new ItemModel<>(params_);
 

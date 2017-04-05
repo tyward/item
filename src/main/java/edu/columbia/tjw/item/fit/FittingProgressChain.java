@@ -69,6 +69,8 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             throw new IllegalArgumentException("Data set cannot be empty.");
         }
 
+        this.validate(fitResult_, startingLL_);
+
         _chainName = chainName_;
         _rowCount = rowCount_;
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>("Initial", fitResult_, startingLL_, null, _rowCount);
@@ -105,6 +107,27 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         }
 
         return this.pushResults(frameName_, incomingParams, incomingEntropy);
+    }
+
+    private synchronized void validate(final ItemParameters<S, R, T> fitResult_, final double entropy_)
+    {
+        if (this.isValidate())
+        {
+
+            //Since the claim is that the LL improved, let's see if that's true...
+            final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
+            final double entropy = ea.getEntropy();
+
+            LOG.info("Params: " + fitResult_.hashCode() + " -> " + entropy);
+            LOG.info("Chain: " + this.toString());
+
+            final int compare = MathFunctions.doubleCompareRounded(entropy, entropy_);
+
+            if (compare != 0)
+            {
+                LOG.info("Found entropy mismatch.");
+            }
+        }
     }
 
     public boolean pushResults(final String frameName_, final ParamFitResult<S, R, T> fitResult_)
@@ -148,24 +171,31 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         return true;
     }
 
+    public boolean pushResults(final String frameName_, final ItemParameters<S, R, T> fitResult_)
+    {
+        final double entropy = _calc.computeEntropy(fitResult_).getEntropy();
+        return pushResults(frameName_, fitResult_, entropy);
+    }
+
     public boolean pushResults(final String frameName_, final ItemParameters<S, R, T> fitResult_, final double logLikelihood_)
     {
         final double currentBest = getLogLikelihood();
 
-        if (this.isValidate())
-        {
-            //Since the claim is that the LL improved, let's see if that's true...
-            final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
-            final double entropy = ea.getEntropy();
+        this.validate(fitResult_, logLikelihood_);
 
-            final int compare = MathFunctions.doubleCompareRounded(entropy, logLikelihood_);
-
-            if (compare != 0)
-            {
-                LOG.info("Found entropy mismatch.");
-            }
-        }
-
+//        if (this.isValidate())
+//        {
+//            //Since the claim is that the LL improved, let's see if that's true...
+//            final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
+//            final double entropy = ea.getEntropy();
+//
+//            final int compare = MathFunctions.doubleCompareRounded(entropy, logLikelihood_);
+//
+//            if (compare != 0)
+//            {
+//                LOG.info("Found entropy mismatch.");
+//            }
+//        }
         final int prevParamCount = this.getBestParameters().getEffectiveParamCount();
         final int proposedParamCount = fitResult_.getEffectiveParamCount();
 
