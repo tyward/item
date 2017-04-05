@@ -287,6 +287,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain", _chain);
             final ItemParameters<S, R, T> base = subChain.getBestParameters();
+
+            if (i == base.getInterceptIndex())
+            {
+                continue;
+            }
+
             final ItemParameters<S, R, T> reduced = base.dropIndex(i);
 
             subChain.forcePushResults("DropEntry", reduced);
@@ -309,11 +315,25 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     public ParamFitResult<S, R, T> runAnnealingByEntry(final Set<R> curveFields_) throws ConvergenceException
     {
+        int offset = 0;
+
         for (int i = 0; i < _chain.getBestParameters().getEntryCount(); i++)
         {
             final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain", _chain);
             final ItemParameters<S, R, T> base = subChain.getBestParameters();
-            final ItemParameters<S, R, T> reduced = base.dropIndex(i);
+            final int index = i - offset;
+
+            if (index == base.getInterceptIndex())
+            {
+                continue;
+            }
+            if (base.getEntryStatusRestrict(index) == null)
+            {
+                //Annealing is only applied to curve entries.
+                continue;
+            }
+
+            final ItemParameters<S, R, T> reduced = base.dropIndex(index);
             doSingleAnnealingOperation(curveFields_, base, reduced, subChain);
 
             final ParamFitResult<S, R, T> results = subChain.getConsolidatedResults();
@@ -324,7 +344,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             if (aic < _settings.getAicCutoff())
             {
                 //Just step back, this entry has been removed, other entries slid up.
-                i--;
+                offset++;
             }
         }
 
@@ -354,12 +374,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return entropy;
     }
 
-    public ParamFitResult<S, R, T> generateFlagInteractions()
+    public ParamFitResult<S, R, T> generateFlagInteractions(final boolean exhaustive_)
     {
-        return generateFlagInteractions(_chain.getBestParameters().getEntryCount());
+        return generateFlagInteractions(_chain.getBestParameters().getEntryCount(), exhaustive_);
     }
 
-    private ParamFitResult<S, R, T> generateFlagInteractions(final int entryNumber_)
+    private ParamFitResult<S, R, T> generateFlagInteractions(final int entryNumber_, final boolean exhaustive_)
     {
 
         CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, _chain);
@@ -375,7 +395,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 continue;
             }
 
-            final CurveFitResult<S, R, T> result = fitter.generateInteractions(_chain, params, params.getEntryCurveParams(i, true), params.getEntryStatusRestrict(i), 0.0, _chain.getLogLikelihood(), false);
+            final CurveFitResult<S, R, T> result = fitter.generateInteractions(_chain, params, params.getEntryCurveParams(i, true), params.getEntryStatusRestrict(i), 0.0, _chain.getLogLikelihood(), exhaustive_);
 
             if (result.aicPerParameter() < 0)
             {
