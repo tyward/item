@@ -85,13 +85,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         _calc = chain_.getCalculator();
     }
 
-    protected double computeLogLikelihood(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_)
-    {
-        final double ll2 = _calc.computeEntropy(params_).getEntropy();
-        return ll2;
-    }
-
-    public final ItemParameters<S, R, T> calibrateCurves(final double improvementTarget_)
+    public final ItemParameters<S, R, T> calibrateCurves(final double improvementTarget_, final boolean exhaustive_)
     {
         if (!(improvementTarget_ >= 0.0))
         {
@@ -131,7 +125,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         {
             final double targetLevel = (totalImprovement / (i + 1));
 
-            if (i >= minCurves && (targetLevel < improvementBound))
+            if (!exhaustive_ && i >= minCurves && (targetLevel < improvementBound))
             {
                 //Not enough improvement, break out.
                 break;
@@ -184,7 +178,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             totalImprovement += improvement;
         }
 
-        LOG.info("Finished curve calibration sweep: " + _fitter.getParams());
+        LOG.info("Finished curve calibration sweep: " + subChain.getBestParameters());
 
         return subChain.getBestParameters();
     }
@@ -211,7 +205,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         {
             LOG.info("Now calculating interactions.");
 
-            final CurveFitResult<S, R, T> interactionResult = this.generateInteractions(chain_, preExpansion, best.getCurveParams(), best.getToState(), best.aicPerParameter(), preExpansionEntropy, false, false);
+            final CurveFitResult<S, R, T> interactionResult = this.generateInteractions(chain_, preExpansion, best.getCurveParams(), best.getToState(), best.aicPerParameter(), preExpansionEntropy, true);
 
             final double bestAicPP = best.aicPerParameter();
             final double interAicPP = interactionResult.aicPerParameter();
@@ -227,13 +221,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             }
         }
 
-        //        if (aicPP > _settings.getAicCutoff())
-//        {
-//            //We demand that the AIC improvement is more than the bare minimum. 
-//            //We want this curve to be good enough to support at least N+5 parameters.
-//            LOG.info("AIC improvement is not large enough.");
-//            throw new ConvergenceException("No curves could be added with sufficient AIC improvement: " + aicPP);
-//        }
         LOG.info("New Parameters[" + best.getLogLikelihood() + "]: \n" + best.getModelParams().toString());
         return best;
     }
@@ -367,7 +354,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     }
 
     public CurveFitResult<S, R, T> generateInteractions(final FittingProgressChain<S, R, T> chain_, final ItemParameters<S, R, T> base_, final ItemCurveParams<R, T> curveParams_,
-            final S toStatus_, final double perParameterTarget_, final double baseLL_, final boolean additive_, final boolean exhaustive_)
+            final S toStatus_, final double perParameterTarget_, final double baseLL_, final boolean exhaustive_)
     {
         final List<Pair<R, ItemCurve<T>>> allRegs = extractRegs(base_, toStatus_);
         Collections.shuffle(allRegs, _settings.getRandom());
@@ -387,7 +374,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             final double actAic = best.calculateAicDifference();
             final double llTarget = startingLL - (startingLL * 0.001 * (calcCount + 1));
 
-            if (calcCount >= _settings.getCalibrateSize() && actAic >= aicTarget && actLL > llTarget)
+            if (!exhaustive_ && calcCount >= _settings.getCalibrateSize() && actAic >= aicTarget && actLL > llTarget)
             {
                 //We failed to make enough improvement...
                 break;

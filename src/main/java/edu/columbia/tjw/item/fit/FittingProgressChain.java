@@ -135,7 +135,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     {
         final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
         final double entropy = ea.getEntropy();
-        LOG.info("Force pushing params onto chain[" + entropy + "]: " + fitResult_);
+        LOG.info("Force pushing params onto chain[" + entropy + "]");
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, fitResult_, entropy, getLatestFrame(), _rowCount);
         _frameList.add(frame);
     }
