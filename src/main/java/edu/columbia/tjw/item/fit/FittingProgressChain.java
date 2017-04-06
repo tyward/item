@@ -214,7 +214,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
         if (aicDifference >= -5.0)
         {
-            LOG.info("Insufficient AIC, discarding results.");
+            LOG.info("Insufficient AIC, discarding results: " + aicDifference);
             return false;
         }
 

@@ -351,7 +351,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             {
                 //Just step back, this entry has been removed, other entries slid up.
                 offset++;
-                _chain.pushResults(subChain.getName(), subChain.getConsolidatedResults());
+                //_chain.pushResults(subChain.getName(), subChain.getConsolidatedResults());
             }
         }
 
@@ -362,7 +362,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     {
         for (final R regressor : curveFields_)
         {
-            final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain", _chain);
+            final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain[" + regressor.name() + "]", _chain);
             final ItemParameters<S, R, T> base = subChain.getBestParameters();
             final ItemParameters<S, R, T> reduced = base.dropRegressor(regressor);
 
