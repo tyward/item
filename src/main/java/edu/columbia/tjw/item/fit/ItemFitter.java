@@ -486,7 +486,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 //Now, try to add a new curve. 
                 final boolean expansionBetter = _curveFitter.generateCurve(chain_, curveFields_, filters_);
 
-                if (expansionBetter)
+                if (!expansionBetter)
                 {
                     LOG.info("Curve expansion unable to improve results, breaking out.");
                     break;
