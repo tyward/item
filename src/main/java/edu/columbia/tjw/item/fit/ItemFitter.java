@@ -29,8 +29,8 @@ import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator.EntropyAnalysis;
+import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
-import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
@@ -67,6 +67,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private final EntropyCalculator<S, R, T> _calc;
 
     private final ParamFitter<S, R, T> _fitter;
+    final CurveFitter<S, R, T> _curveFitter;
 
     private final FittingProgressChain<S, R, T> _chain;
 
@@ -111,6 +112,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _chain = new FittingProgressChain<>("Primary", starting, logLikelihood, _grid.size(), _calc, _settings.getDoValidate());
 
         _fitter = new ParamFitter<>(_calc, _settings, null);
+        _curveFitter = new CurveFitter<>(_factory, _settings, _grid, _calc);
     }
 
     public S getStatus()
@@ -386,9 +388,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     private ParamFitResult<S, R, T> generateFlagInteractions(final int entryNumber_, final boolean exhaustive_)
     {
-
-        CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, _chain);
-
         //N.B: This loop can keep expanding as the params grows very large, if we are very successful.
         // Just make sure to cap it out at the entryNumber_
         for (int i = 0; i < Math.min(_chain.getBestParameters().getEntryCount(), entryNumber_); i++)
@@ -400,13 +399,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 continue;
             }
 
-            final CurveFitResult<S, R, T> result = fitter.generateInteractions(_chain, params, params.getEntryCurveParams(i, true), params.getEntryStatusRestrict(i), 0.0, _chain.getLogLikelihood(), exhaustive_);
-
-            if (result.aicPerParameter() < 0)
-            {
-                //Generating this fitter is very expensive, only do so when necessary.
-                fitter = new CurveFitter<>(_factory, _settings, _grid, _chain);
-            }
+            _curveFitter.generateInteractions(_chain, params, params.getEntryCurveParams(i, true),
+                    params.getEntryStatusRestrict(i), 0.0, _chain.getLogLikelihood(), exhaustive_);
         }
 
         return _chain.getLatestResults();
@@ -441,10 +435,9 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public ParamFitResult<S, R, T> calibrateCurves()
     {
         final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("CalibrationChain", _chain);
-        final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, subChain);
 
         //First, try to calibrate any existing curves to improve the fit. 
-        fitter.calibrateCurves(0.0, true);
+        _curveFitter.calibrateCurves(0.0, true, subChain);
 
         final ParamFitResult<S, R, T> results = subChain.getConsolidatedResults();
 
@@ -461,7 +454,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         final int statingParamCount = chain_.getBestParameters().getEffectiveParamCount();
         final int paramCountLimit = statingParamCount + paramCount_;
-        double improvement = 0.0;
 
         //As a bare minimum, each expansion will consume at least one param, we'll break out before this most likely.
         for (int i = 0; i < paramCount_; i++)
@@ -475,31 +467,30 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 LOG.warning("Unable to improve results in coefficient fit, moving on.");
             }
 
-            final CurveFitter<S, R, T> fitter = new CurveFitter<>(_factory, _settings, _grid, chain_);
-
-            //First, try to calibrate any existing curves to improve the fit. 
-            final ItemParameters<S, R, T> m3 = fitter.calibrateCurves(improvement, false);
-            final double test = computeLogLikelihood(m3);
-            final boolean isBetter = chain_.pushResults("ExpandCurveCalibrate", m3, test);
-
-            if (!isBetter)
+            if (i > 0)
             {
-                LOG.info("Curve calibration unable to improve results: " + chain_.getLogLikelihood() + " -> " + test);
+                final ParamProgressFrame frame = chain_.getLatestFrame();
+                final double improvement = frame.getStartingPoint().getCurrentLogLikelihood() - frame.getCurrentLogLikelihood();
+
+                //First, try to calibrate any existing curves to improve the fit. 
+                final boolean isBetter = _curveFitter.calibrateCurves(improvement, false, chain_);
+
+                if (!isBetter)
+                {
+                    LOG.info("Curve calibration unable to improve results.");
+                }
             }
 
             try
             {
                 //Now, try to add a new curve. 
-                final CurveFitter<S, R, T> fitter2 = new CurveFitter<>(_factory, _settings, _grid, chain_);
-                final CurveFitResult<S, R, T> m4 = fitter2.generateCurve(chain_, curveFields_, filters_);
+                final boolean expansionBetter = _curveFitter.generateCurve(chain_, curveFields_, filters_);
 
-                if (m4.calculateAicDifference() >= _settings.getAicCutoff())
+                if (expansionBetter)
                 {
                     LOG.info("Curve expansion unable to improve results, breaking out.");
                     break;
                 }
-
-                improvement = Math.max(0.0, m4.getStartingLogLikelihood() - m4.getLogLikelihood());
 
                 if (chain_.getBestParameters().getEffectiveParamCount() >= paramCountLimit)
                 {

@@ -118,9 +118,8 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
             final double entropy = ea.getEntropy();
 
-            LOG.info("Params: " + fitResult_.hashCode() + " -> " + entropy);
-            LOG.info("Chain: " + this.toString());
-
+            //LOG.info("Params: " + fitResult_.hashCode() + " -> " + entropy);
+            //LOG.info("Chain: " + this.toString());
             final int compare = MathFunctions.doubleCompareRounded(entropy, entropy_);
 
             if (compare != 0)
