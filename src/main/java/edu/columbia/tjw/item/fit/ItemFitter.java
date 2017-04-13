@@ -255,11 +255,25 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         //chain_.pushResults("FitCoefficients", fitResult);
     }
 
-    private void doSingleAnnealingOperation(final Set<R> curveFields_, final ItemParameters<S, R, T> base_, final ItemParameters<S, R, T> reduced_, final FittingProgressChain<S, R, T> subChain_)
+    private void doSingleAnnealingOperation(final Set<R> curveFields_, final ItemParameters<S, R, T> base_, final ItemParameters<S, R, T> reduced_,
+            final FittingProgressChain<S, R, T> subChain_, final boolean exhaustiveCalibrate_)
     {
         final int paramCount = base_.getEffectiveParamCount();
 
         subChain_.forcePushResults("ReducedFrame", reduced_);
+
+        if (exhaustiveCalibrate_)
+        {
+            try
+            {
+                this.innerFitCoefficients(subChain_, null);
+                _curveFitter.calibrateCurves(0.0, true, subChain_);
+            }
+            catch (final ConvergenceException e)
+            {
+                e.printStackTrace();
+            }
+        }
 
         final int reducedCount = reduced_.getEffectiveParamCount();
         final int reduction = paramCount - reducedCount;
@@ -282,12 +296,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         }
     }
 
-    public ParamFitResult<S, R, T> trim()
+    public ParamFitResult<S, R, T> trim(final boolean exhaustiveCalibration_)
     {
-        return this.trim(-_settings.getAicCutoff());
+        return this.trim(-_settings.getAicCutoff(), exhaustiveCalibration_);
     }
 
-    public ParamFitResult<S, R, T> trim(final double aicCutoff_)
+    public ParamFitResult<S, R, T> trim(final double aicCutoff_, final boolean exhaustiveCalibration_)
     {
         for (int i = 0; i < _chain.getBestParameters().getEntryCount(); i++)
         {
@@ -302,6 +316,18 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final ItemParameters<S, R, T> reduced = base.dropIndex(i);
 
             subChain.forcePushResults("DropEntry", reduced);
+
+            if (exhaustiveCalibration_)
+            {
+                try
+                {
+                    _fitter.fit(subChain);
+                }
+                catch (final ConvergenceException e)
+                {
+                    LOG.info("Convergence Exception: " + e);
+                }
+            }
 
             final double aic = subChain.getLatestFrame().getAicDiff();
 
@@ -319,7 +345,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return _chain.getLatestResults();
     }
 
-    public ParamFitResult<S, R, T> runAnnealingByEntry(final Set<R> curveFields_) throws ConvergenceException
+    public ParamFitResult<S, R, T> runAnnealingByEntry(final Set<R> curveFields_, final boolean exhaustiveCalibration_) throws ConvergenceException
     {
         int offset = 0;
 
@@ -340,7 +366,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             }
 
             final ItemParameters<S, R, T> reduced = base.dropIndex(index);
-            doSingleAnnealingOperation(curveFields_, base, reduced, subChain);
+            doSingleAnnealingOperation(curveFields_, base, reduced, subChain, exhaustiveCalibration_);
 
             final ParamFitResult<S, R, T> results = subChain.getConsolidatedResults();
             final double aic = results.getAic();
@@ -358,7 +384,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return _chain.getLatestResults();
     }
 
-    public ParamFitResult<S, R, T> runAnnealingPass(final Set<R> curveFields_) throws ConvergenceException
+    public ParamFitResult<S, R, T> runAnnealingPass(final Set<R> curveFields_, final boolean exhaustiveCalibration_) throws ConvergenceException
     {
         for (final R regressor : curveFields_)
         {
@@ -367,7 +393,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final ItemParameters<S, R, T> reduced = base.dropRegressor(regressor);
 
             LOG.info("Annealing attempting to drop params from " + regressor);
-            doSingleAnnealingOperation(curveFields_, base, reduced, subChain);
+            doSingleAnnealingOperation(curveFields_, base, reduced, subChain, exhaustiveCalibration_);
             LOG.info("---->Finished rebuild after dropping regressor: " + regressor);
         }
 
@@ -396,6 +422,11 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             if (i == params.getInterceptIndex())
             {
+                continue;
+            }
+            if (params.getEntryStatusRestrict(i) != null)
+            {
+                //This would be a curve, but curves already get interactions when generated or annealed.
                 continue;
             }
 
