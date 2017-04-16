@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.algo;
 
 import edu.columbia.tjw.item.algo.QuantApprox.QuantileNode;
 import edu.columbia.tjw.item.data.InterpolatedCurve;
+import edu.columbia.tjw.item.util.MathFunctions;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -126,7 +127,6 @@ public final class QuantileDistribution implements Serializable
         _devX = new double[approxSize];
         _eY = new double[approxSize];
         _devY = new double[approxSize];
-
         _count = new long[approxSize];
 
         long totalCount = 0;
@@ -140,10 +140,36 @@ public final class QuantileDistribution implements Serializable
             _eY[pointer] = next.getMeanY();
             _devY[pointer] = next.getStdDevY();
 
-            final long count = next.getCount();
-            _count[pointer] = count;
-            totalCount += count;
+            final long lc = next.getCount();
+            _count[pointer] = lc;
+            totalCount += lc;
             pointer++;
+        }
+
+        for (int i = 0; i < approxSize - 1; i++)
+        {
+            final double a = _eX[i];
+            final double b = _eX[i + 1];
+
+            //Check that they have the same sign. 
+            boolean approxEqual = !(a * b <= 0);
+
+            if (approxEqual)
+            {
+                approxEqual = (MathFunctions.doubleCompareRounded(Math.abs(a), Math.abs(b)) == 0);
+            }
+
+            if (!approxEqual)
+            {
+                continue;
+            }
+
+            //Due to rounding, these buckets could actually be in the wrong order.
+            if (a > b)
+            {
+                _eX[i] = b;
+                _eX[i + 1] = a;
+            }
         }
 
         _totalCount = totalCount;

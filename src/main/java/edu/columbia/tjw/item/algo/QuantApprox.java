@@ -18,6 +18,7 @@ package edu.columbia.tjw.item.algo;
 import edu.columbia.tjw.item.util.random.RandomTool;
 import edu.columbia.tjw.item.algo.QuantApprox.QuantileNode;
 import edu.columbia.tjw.item.util.LogUtil;
+import edu.columbia.tjw.item.util.MathFunctions;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Random;
@@ -280,11 +281,6 @@ public final class QuantApprox extends DistStats2D implements Iterable<QuantileN
         private double _xMax;
         private double _xMin;
 
-//        private double _xSum;
-//        private double _x2Sum;
-//        private double _ySum;
-//        private double _y2Sum;
-//        private double _count;
         private int _height;
         private QuantileNode _leftChild;
         private QuantileNode _rightChild;
