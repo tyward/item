@@ -33,6 +33,7 @@ import edu.columbia.tjw.item.fit.ItemCalcGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import org.apache.commons.math3.distribution.NormalDistribution;
 
 /**
  *
@@ -181,6 +183,48 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
 
         return regMap.get(reg_);
+    }
+
+    public InterpolatedCurve generateQQPlot(final S to_, final R reg_)
+    {
+        final InterpolatedCurve modelCurve = this.graph(to_, reg_, CurveType.MODEL, 0.01);
+        final InterpolatedCurve actualCurve = this.graph(to_, reg_, CurveType.ACTUAL, 0.01);
+
+        final int size = modelCurve.size();
+
+        final double[] y = new double[size];
+
+        double eY2 = 0.0;
+
+        for (int i = 0; i < modelCurve.size(); i++)
+        {
+            final double currX = modelCurve.getX(i);
+            final double modY = modelCurve.getY(i);
+            final double actY = actualCurve.value(currX);
+            final double residual = actY - modY;
+            y[i] = residual;
+
+            eY2 += (residual * residual);
+        }
+
+        eY2 /= size;
+        Arrays.sort(y);
+
+        final double devY = Math.sqrt(eY2);
+
+        final double[] x = new double[size];
+        final NormalDistribution dist = new NormalDistribution(0, devY);
+        final double normLength = size * 1.02;
+
+        for (int i = 0; i < y.length; i++)
+        {
+            final double currX = (i + 0.01) / normLength;
+            final double expected = dist.inverseCumulativeProbability(currX);
+            x[i] = expected;
+        }
+
+        final InterpolatedCurve output = new InterpolatedCurve(x, y);
+        return output;
     }
 
     public QuantileDistribution getModelDistribution(final S to_, final R reg_)
