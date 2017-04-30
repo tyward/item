@@ -229,7 +229,7 @@ public final class ItemSettings implements Serializable
             this(DEFAULT);
         }
 
-        private ItemSettingsBuilder(final ItemSettings base_)
+        public ItemSettingsBuilder(final ItemSettings base_)
         {
             _rand = base_.getRandom();
             _randomShuffle = base_.isRandomShuffle();
