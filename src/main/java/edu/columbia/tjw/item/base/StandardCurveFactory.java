@@ -43,6 +43,7 @@ import org.apache.commons.math3.util.FastMath;
 public final class StandardCurveFactory<R extends ItemRegressor<R>> implements ItemCurveFactory<R, StandardCurveType>
 {
     private static final double SLOPE_MULT = 10.0;
+    private static final long serialVersionUID = 0xfa6df5b97c865a49L;
 
     public StandardCurveFactory()
     {

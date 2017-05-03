@@ -41,6 +41,21 @@ public class RandomTool
     {
     }
 
+    public synchronized static String randomString(final int length_)
+    {
+        final int longLength = 1 + (length_ / 8);
+
+        final StringBuilder builder = new StringBuilder();
+
+        for (int i = 0; i < longLength; i++)
+        {
+            builder.append(Long.toHexString(CORE.nextLong()));
+        }
+
+        final String output = builder.substring(0, length_);
+        return output;
+    }
+
     public synchronized static double nextDouble()
     {
         return CORE.nextDouble();

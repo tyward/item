@@ -335,8 +335,22 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     public int transitionProbability(final ItemParamGrid<S, R, T> grid_, final int index_, final double[] output_)
     {
         grid_.getRegressors(index_, _rawRegWorkspace);
-        multiLogisticFunction(_rawRegWorkspace, output_);
+        return transitionProbability(_rawRegWorkspace, output_);
+    }
 
+    /**
+     * Compute the transition probability from raw regressors. Be fairly careful
+     * here, it's not easy to know which order the regressors need to come in.
+     *
+     * @param regs_ The raw regressor values (ordered to match
+     * uniqueRegressors() from the ItemParams under this model)
+     * @param output_ A workspace to hold the resulting transition
+     * probabilities.
+     * @return The number of transition probabilities.
+     */
+    public int transitionProbability(final double[] regs_, final double[] output_)
+    {
+        multiLogisticFunction(regs_, output_);
         return _betas.length;
     }
 
