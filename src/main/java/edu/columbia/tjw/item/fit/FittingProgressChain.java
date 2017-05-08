@@ -124,7 +124,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
             if (compare != 0)
             {
-                LOG.info("Found entropy mismatch.");
+                throw new IllegalStateException("Found entropy mismatch: " + entropy + " != " + entropy_);
             }
         }
     }
