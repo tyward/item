@@ -45,6 +45,7 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
     private final SortedSet<V> _memberSet;
     private final Map<String, V> _nameMap;
     private final Class<? extends V> _componentClass;
+    private final boolean _distinctFamily;
 
     @SuppressWarnings("unchecked")
     public static <V extends EnumMember<V>> EnumFamily<V> getFamilyFromClass(final Class<V> familyClass_, final boolean throwOnMissing_)
@@ -89,6 +90,7 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
             }
         }
 
+        _distinctFamily = distinctFamily_;
         _members = values_.clone();
         _memberSet = Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(_members)));
 
@@ -195,6 +197,19 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
             if (null != fam)
             {
                 return fam;
+            }
+
+            if (_distinctFamily)
+            {
+                synchronized (FAMILY_MAP)
+                {
+                    if (FAMILY_MAP.containsKey(_componentClass))
+                    {
+                        return FAMILY_MAP.get(_componentClass);
+                    }
+
+                    FAMILY_MAP.put(_componentClass, this);
+                }
             }
         }
 
