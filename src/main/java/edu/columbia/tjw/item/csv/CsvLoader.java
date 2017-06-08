@@ -19,6 +19,11 @@
  */
 package edu.columbia.tjw.item.csv;
 
+import edu.columbia.tjw.item.base.SimpleRegressor;
+import edu.columbia.tjw.item.base.SimpleStatus;
+import edu.columbia.tjw.item.base.SimpleStringEnum;
+import edu.columbia.tjw.item.data.ItemStatusGrid;
+import edu.columbia.tjw.item.util.EnumFamily;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -58,12 +63,87 @@ public final class CsvLoader
         _format = format_;
     }
 
-    
-    
-    
-    
-    
-    
+    public ItemStatusGrid<SimpleStatus, SimpleRegressor> generateGrid(final CompiledDataDescriptor descriptor_, final SimpleStatus startStatus_) throws IOException
+    {
+        final ColumnDescriptorSet colDescriptor = descriptor_.getColDescriptorSet();
+
+        try (final InputStream fin = new FileInputStream(_inputFile); final BufferedReader buff = new BufferedReader(new InputStreamReader(fin)))
+        {
+            final CSVParser parser = _format.parse(buff);
+
+            final Map<String, Integer> header = parser.getHeaderMap();
+
+            final EnumFamily<SimpleStringEnum> rawFamily = colDescriptor.getAllColumns();
+            final int rawSize = rawFamily.size();
+
+            final String[] strings = new String[rawSize];
+            final int[] offsets = new int[rawSize];
+
+            for (int i = 0; i < rawSize; i++)
+            {
+                final String colName = rawFamily.getFromOrdinal(i).name();
+                offsets[i] = header.get(colName);
+            }
+
+            //Now, iterate over the rows and collect the required information.
+            final Iterator<CSVRecord> iter = parser.iterator();
+            final EnumFamily<SimpleRegressor> regFamily = descriptor_.getRegressorFamily();
+            final EnumFamily<SimpleStatus> statFamily = descriptor_.getStatusFamily();
+            final int regSize = regFamily.size();
+            final List<double[]> valList = new ArrayList<>();
+            final List<SimpleStatus> statList = new ArrayList<>();
+
+            final String endStatusColumn = colDescriptor.getEndStatusColumn();
+            final String startStatusColumn = colDescriptor.getStartStatusColumn();
+            final int toStatusOffset = header.get(endStatusColumn);
+            final int startStatusOffset;
+
+            if (null != startStatus_ && null != startStatusColumn)
+            {
+                startStatusOffset = header.get(startStatusColumn);
+            }
+            else
+            {
+                startStatusOffset = -1;
+            }
+
+            while (iter.hasNext())
+            {
+                final CSVRecord next = iter.next();
+
+                for (int i = 0; i < rawSize; i++)
+                {
+                    final String nextString = next.get(offsets[i]);
+                    strings[i] = nextString;
+                }
+
+                final double[] regressors = new double[regSize];
+
+                descriptor_.convertRow(strings, regressors);
+
+                final String endStatus = next.get(toStatusOffset);
+                final SimpleStatus endConverted = descriptor_.convertStatus(endStatus);
+
+                if (startStatusOffset >= 0)
+                {
+                    final String startStatus = next.get(startStatusOffset);
+                    final SimpleStatus startConverted = descriptor_.convertStatus(startStatus);
+
+                    if (startConverted != startStatus_)
+                    {
+                        continue;
+                    }
+                }
+
+                valList.add(regressors);
+                statList.add(endConverted);
+            }
+
+            final RawStatusGrid output = new RawStatusGrid(startStatus_, valList, statList, statFamily, regFamily);
+            return output;
+        }
+    }
+
     public CompiledDataDescriptor getCompiledDescriptor() throws IOException
     {
         try (final InputStream fin = new FileInputStream(_inputFile); final BufferedReader buff = new BufferedReader(new InputStreamReader(fin)))

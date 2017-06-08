@@ -190,6 +190,16 @@ public final class CompiledDataDescriptor implements Serializable
         return _numericData.get(numericColumn_);
     }
 
+    public EnumFamily<SimpleRegressor> getRegressorFamily()
+    {
+        return _regFamily;
+    }
+
+    public EnumFamily<SimpleStatus> getStatusFamily()
+    {
+        return _statusFamily;
+    }
+
     /**
      * Converts the given string values to the double values appropriate for
      * this regressor family.
@@ -280,6 +290,12 @@ public final class CompiledDataDescriptor implements Serializable
 
             if (converted)
             {
+                return 1.0;
+            }
+
+            if (input_.equalsIgnoreCase("t"))
+            {
+                //Sometimes this is used as the truth value...
                 return 1.0;
             }
 
