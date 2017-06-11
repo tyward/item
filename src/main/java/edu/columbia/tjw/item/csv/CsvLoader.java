@@ -76,6 +76,7 @@ public final class CsvLoader
 
             final ItemStatusGrid<SimpleStatus, SimpleRegressor> grid = loader.generateGrid(compiled, null);
 
+            System.out.println("Loaded grid!");
         }
         catch (final Exception e)
         {
@@ -89,7 +90,7 @@ public final class CsvLoader
 
         try (final InputStream fin = new FileInputStream(_inputFile); final BufferedReader buff = new BufferedReader(new InputStreamReader(fin)))
         {
-            final CSVParser parser = _format.parse(buff);
+            final CSVParser parser = _format.withHeader().parse(buff);
 
             final Map<String, Integer> header = parser.getHeaderMap();
 
