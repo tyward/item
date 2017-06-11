@@ -24,6 +24,7 @@ import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.SimpleStringEnum;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
+import edu.columbia.tjw.item.util.ListTool;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -53,7 +54,7 @@ public final class CsvLoader
 
     public CsvLoader(final File inputFile_, final ColumnDescriptorSet descriptor_)
     {
-        this(inputFile_, descriptor_, CSVFormat.DEFAULT);
+        this(inputFile_, descriptor_, CSVFormat.DEFAULT.withRecordSeparator("\n"));
     }
 
     public CsvLoader(final File inputFile_, final ColumnDescriptorSet descriptor_, final CSVFormat format_)
@@ -61,6 +62,25 @@ public final class CsvLoader
         _inputFile = inputFile_;
         _descriptor = descriptor_;
         _format = format_;
+    }
+
+    public static void main(final String[] args_)
+    {
+        try
+        {
+            final File testFile = new File("/Users/tyler/Documents/code/data/sampleData.csv");
+            final ColumnDescriptorSet descriptor = new ColumnDescriptorSet("adjstatus", ListTool.toSet("fico", "ltv", "dti"), ListTool.toSet("investor", "investor"), ListTool.toSet("state"));
+            final CsvLoader loader = new CsvLoader(testFile, descriptor);
+
+            final CompiledDataDescriptor compiled = loader.getCompiledDescriptor();
+
+            final ItemStatusGrid<SimpleStatus, SimpleRegressor> grid = loader.generateGrid(compiled, null);
+
+        }
+        catch (final Exception e)
+        {
+            e.printStackTrace();
+        }
     }
 
     public ItemStatusGrid<SimpleStatus, SimpleRegressor> generateGrid(final CompiledDataDescriptor descriptor_, final SimpleStatus startStatus_) throws IOException
@@ -148,8 +168,10 @@ public final class CsvLoader
     {
         try (final InputStream fin = new FileInputStream(_inputFile); final BufferedReader buff = new BufferedReader(new InputStreamReader(fin)))
         {
-            final CSVParser parser = _format.parse(buff);
+            final CSVParser parser = _format.withHeader().parse(buff);
 
+            //Now, iterate over the rows and collect the required information.
+            final Iterator<CSVRecord> iter = parser.iterator();
             final Map<String, Integer> header = parser.getHeaderMap();
 
             final int[] numericOffsets = extractOffsets(header, _descriptor.getNumericColumns());
@@ -171,9 +193,6 @@ public final class CsvLoader
                 enumValues.add(new TreeMap<>());
             }
 
-            //Now, iterate over the rows and collect the required information.
-            final Iterator<CSVRecord> iter = parser.iterator();
-
             while (iter.hasNext())
             {
                 final CSVRecord next = iter.next();
@@ -190,24 +209,15 @@ public final class CsvLoader
                     }
 
                     final String numberString = next.get(numericOffsets[i]);
+                    final double dVal = StringConvert.convertDouble(numberString);
 
-                    try
-                    {
-                        final double dVal = Double.parseDouble(numberString);
-
-                        if (Double.isNaN(dVal))
-                        {
-                            numericNaN[i] = true;
-                        }
-                        else
-                        {
-                            numericValid[i] = true;
-                        }
-
-                    }
-                    catch (final NumberFormatException e)
+                    if (Double.isNaN(dVal))
                     {
                         numericNaN[i] = true;
+                    }
+                    else
+                    {
+                        numericValid[i] = true;
                     }
                 }
 
@@ -220,7 +230,7 @@ public final class CsvLoader
                     }
 
                     final String booleanString = next.get(booleanOffsets[i]);
-                    final boolean bValue = Boolean.parseBoolean(booleanString);
+                    final boolean bValue = StringConvert.convertBoolean(booleanString);
 
                     if (bValue)
                     {

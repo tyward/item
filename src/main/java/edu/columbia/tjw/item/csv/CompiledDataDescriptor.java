@@ -243,22 +243,15 @@ public final class CompiledDataDescriptor implements Serializable
         @Override
         public double convert(String input_)
         {
-            try
-            {
-                final double converted = Double.parseDouble(input_);
+            final double converted = StringConvert.convertDouble(input_);
 
-                if (Double.isNaN(converted))
-                {
-                    return 1.0;
-                }
-                else
-                {
-                    return 0.0;
-                }
-            }
-            catch (final NumberFormatException e)
+            if (Double.isNaN(converted))
             {
                 return 1.0;
+            }
+            else
+            {
+                return 0.0;
             }
         }
 
@@ -269,15 +262,14 @@ public final class CompiledDataDescriptor implements Serializable
         @Override
         public double convert(String input_)
         {
-            try
-            {
-                final double converted = Double.parseDouble(input_);
-                return converted;
-            }
-            catch (final NumberFormatException e)
+            final double converted = StringConvert.convertDouble(input_);
+
+            if (Double.isNaN(converted))
             {
                 return 0.0;
             }
+
+            return converted;
         }
     }
 

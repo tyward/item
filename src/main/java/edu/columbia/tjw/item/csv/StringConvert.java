@@ -17,42 +17,47 @@
  * 
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
-package edu.columbia.tjw.item.util;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
+package edu.columbia.tjw.item.csv;
 
 /**
  *
  * @author tyler
  */
-public final class ListTool
+public final class StringConvert
 {
-    private ListTool()
+    private StringConvert()
     {
     }
 
-    @SafeVarargs
-    public static final <T> List<T> listify(final Class<T> type_, final T... data_)
+    public static double convertDouble(final String input_)
     {
-        if (data_.getClass().getComponentType() != type_)
+        try
         {
-            throw new IllegalArgumentException("Type mismatch.");
+            final double converted = Double.parseDouble(input_);
+            return converted;
+        }
+        catch (final NumberFormatException e)
+        {
+            return Double.NaN;
+        }
+    }
+
+    public static boolean convertBoolean(final String input_)
+    {
+        final boolean converted = Boolean.parseBoolean(input_);
+
+        if (converted)
+        {
+            return true;
         }
 
-        final List<T> raw = Arrays.asList(data_);
-        final List<T> output = Collections.unmodifiableList(raw);
-        return output;
-    }
+        if (input_.equalsIgnoreCase("t"))
+        {
+            //Sometimes this is used as the truth value...
+            return true;
+        }
 
-    public static final SortedSet<String> toSet(final String... data_)
-    {
-        final List<String> rawList = Arrays.asList(data_);
-        final SortedSet<String> output = Collections.unmodifiableSortedSet(new TreeSet<>(rawList));
-        return output;
+        return false;
     }
 
 }
