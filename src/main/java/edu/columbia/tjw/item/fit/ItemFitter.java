@@ -329,7 +329,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 }
             }
 
-            final double aic = subChain.getLatestFrame().getAicDiff();
+            final double aic = subChain.getChainAicDiff();
 
             //This entry is not good enough, so remove it.
             if (aic < aicCutoff_)
