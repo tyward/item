@@ -25,14 +25,16 @@ import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
+import java.io.Serializable;
 import java.util.List;
 
 /**
  *
  * @author tyler
  */
-public class RawStatusGrid implements ItemStatusGrid<SimpleStatus, SimpleRegressor>
+public class RawStatusGrid implements ItemStatusGrid<SimpleStatus, SimpleRegressor>, Serializable
 {
+    private static final long serialVersionUID = 0x870ca358f9b330e1L;
     final int _startingStatus;
     final int[] _endingStatus;
 

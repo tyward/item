@@ -20,13 +20,15 @@
 package edu.columbia.tjw.item.base;
 
 import edu.columbia.tjw.item.ItemRegressorReader;
+import java.io.Serializable;
 
 /**
  *
  * @author tyler
  */
-public final class RawReader implements ItemRegressorReader
+public final class RawReader implements ItemRegressorReader, Serializable
 {
+    private static final long serialVersionUID = 0x8107381da6a912a9L;
     private final double[] _data;
 
     public RawReader(final double[] data_)
