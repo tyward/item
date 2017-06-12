@@ -233,13 +233,15 @@ public final class CompiledDataDescriptor implements Serializable
         return _statusFamily.getFromName(statusName_);
     }
 
-    private interface RawConverter
+    private interface RawConverter extends Serializable
     {
         public double convert(final String input_);
     }
 
     private static final class IsNaNConverter implements RawConverter
     {
+        private static final long serialVersionUID = 0x99b305dc7797115eL;
+
         @Override
         public double convert(String input_)
         {
@@ -259,6 +261,8 @@ public final class CompiledDataDescriptor implements Serializable
 
     private static final class DoubleConverter implements RawConverter
     {
+        private static final long serialVersionUID = 0x91a1aa8dba6b1c66L;
+
         @Override
         public double convert(String input_)
         {
@@ -275,6 +279,8 @@ public final class CompiledDataDescriptor implements Serializable
 
     private static final class BooleanConverter implements RawConverter
     {
+        private static final long serialVersionUID = 0xc05a8519210498beL;
+
         @Override
         public double convert(String input_)
         {
@@ -297,6 +303,7 @@ public final class CompiledDataDescriptor implements Serializable
 
     private static final class StringMatchConverter implements RawConverter
     {
+        private static final long serialVersionUID = 0x49dd2f66c739b150L;
         private final String _target;
 
         private StringMatchConverter(final String target_)
