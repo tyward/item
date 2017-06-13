@@ -64,26 +64,6 @@ public final class CsvLoader
         _format = format_;
     }
 
-    public static void main(final String[] args_)
-    {
-        try
-        {
-            final File testFile = new File("/Users/tyler/Documents/code/data/sampleData.csv");
-            final ColumnDescriptorSet descriptor = new ColumnDescriptorSet("adjstatus", ListTool.toSet("fico", "ltv", "dti"), ListTool.toSet("investor", "investor"), ListTool.toSet("state"));
-            final CsvLoader loader = new CsvLoader(testFile, descriptor);
-
-            final CompiledDataDescriptor compiled = loader.getCompiledDescriptor();
-
-            final ItemStatusGrid<SimpleStatus, SimpleRegressor> grid = loader.generateGrid(compiled, null);
-
-            System.out.println("Loaded grid!");
-        }
-        catch (final Exception e)
-        {
-            e.printStackTrace();
-        }
-    }
-
     public ItemStatusGrid<SimpleStatus, SimpleRegressor> generateGrid(final CompiledDataDescriptor descriptor_, final SimpleStatus startStatus_) throws IOException
     {
         final ColumnDescriptorSet colDescriptor = descriptor_.getColDescriptorSet();

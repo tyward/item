@@ -100,6 +100,11 @@ public final class CompiledDataDescriptor implements Serializable
         final List<RawConverter> converters = new ArrayList<>();
         final List<SimpleStringEnum> targetRegressors = new ArrayList<>();
 
+        //The Intercept term.
+        names.add("INTERCEPT");
+        converters.add(null);
+        targetRegressors.add(null);
+
         final EnumFamily<SimpleStringEnum> rawFamily = _colDescriptor.getAllColumns();
 
         //Start with the really easy ones...
@@ -159,7 +164,15 @@ public final class CompiledDataDescriptor implements Serializable
 
         for (int i = 0; i < targetRegressors.size(); i++)
         {
-            _offsets[i] = targetRegressors.get(i).ordinal();
+            final SimpleStringEnum next = targetRegressors.get(i);
+
+            if (null == next)
+            {
+                _offsets[i] = -1;
+                continue;
+            }
+
+            _offsets[i] = next.ordinal();
         }
 
         _statusFamily = SimpleStatus.generateFamily(endStatusLabels_);
@@ -222,7 +235,16 @@ public final class CompiledDataDescriptor implements Serializable
 
         for (int i = 0; i < output_.length; i++)
         {
-            final String raw = stringValues_[_offsets[i]];
+            final int offset = _offsets[i];
+
+            if (offset == -1)
+            {
+                //Intercept term.
+                output_[i] = 1.0;
+                continue;
+            }
+
+            final String raw = stringValues_[offset];
             final double converted = _converters[i].convert(raw);
             output_[i] = converted;
         }
