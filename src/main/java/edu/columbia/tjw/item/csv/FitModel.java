@@ -150,6 +150,31 @@ public final class FitModel
                 fitter.pushParameters("Starting Params", params);
             }
 
+            fitter.fitCoefficients(null);
+            fitter.addCoefficients(null, compiled.getFlagRegs());
+            fitter.fitCoefficients(null);
+            fitter.calibrateCurves();
+            fitter.trim(true);
+
+            System.out.println("Initial fitting complete: " + fitter.getChain().toString());
+
+            if (curveCount > 0)
+            {
+                System.out.println("Expanding model, available regressors: " + curveCount);
+                fitter.expandModel(curveRegs, null, curveCount);
+                fitter.calibrateCurves();
+                fitter.trim(true);
+                System.out.println("Model Expansion complete: " + fitter.getChain().toString());
+            }
+
+            if (runAnnealing)
+            {
+                System.out.println("Running annealing");
+                fitter.runAnnealingByEntry(curveRegs, true);
+                System.out.println("Annealing complete: " + fitter.getChain().toString());
+            }
+
+            writeParams(output_file, fitter.getBestParameters());
         }
         catch (final ParseException e)
         {
