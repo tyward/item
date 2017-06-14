@@ -154,7 +154,7 @@ public final class FitModel
             fitter.addCoefficients(null, compiled.getFlagRegs());
             fitter.fitCoefficients(null);
             fitter.calibrateCurves();
-            fitter.trim(true);
+            fitter.trim(false);
 
             System.out.println("Initial fitting complete: " + fitter.getChain().toString());
 
