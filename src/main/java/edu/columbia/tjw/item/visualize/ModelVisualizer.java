@@ -29,9 +29,11 @@ import edu.columbia.tjw.item.algo.QuantApprox;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.data.InterpolatedCurve;
 import edu.columbia.tjw.item.data.ItemGrid;
+import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.ItemCalcGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
@@ -59,12 +61,12 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final SortedMap<S, SortedMap<R, QuantileDistribution>> _distMap;
     private final SortedMap<S, SortedMap<R, QuantileDistribution>> _modelMap;
 
-    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final SortedSet<R> extraRegressors_)
+    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final SortedSet<R> extraRegressors_)
     {
         this(params_, grid_, extraRegressors_, QuantApprox.DEFAULT_BUCKETS, QuantApprox.DEFAULT_LOAD);
     }
 
-    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final SortedSet<R> extraRegressors_, final int approxBuckets_, final int approxLoad_)
+    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final SortedSet<R> extraRegressors_, final int approxBuckets_, final int approxLoad_)
     {
         if (approxBuckets_ < 10)
         {
@@ -73,7 +75,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         _params = params_;
         final ItemModel<S, R, T> model = new ItemModel<>(params_);
-        final ParamFittingGrid<S, R, T> grid = grid_;
+        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
         final S from = params_.getStatus();
 
         final TreeSet<R> basic = new TreeSet<>(params_.getUniqueRegressors());
@@ -150,6 +152,37 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         _distMap = Collections.unmodifiableSortedMap(distMap);
         _modelMap = Collections.unmodifiableSortedMap(modelMap);
+    }
+
+    public synchronized void printResults(final PrintStream stream_)
+    {
+        stream_.flush();
+        stream_.println("Final Model: " + _params);
+        stream_.println("From, To, RegressorName, Value, Mass, Observed, Model, Theoretical");
+
+        for (final S to : this.getReachable())
+        {
+            for (final R reg : this.getRegressors())
+            {
+                final InterpolatedCurve actualCurve = this.graph(to, reg, ModelVisualizer.CurveType.ACTUAL);
+                final InterpolatedCurve modelCurve = this.graph(to, reg, ModelVisualizer.CurveType.MODEL);
+                final InterpolatedCurve theoCurve = this.graph(to, reg, ModelVisualizer.CurveType.THEORETICAL);
+                final InterpolatedCurve massCurve = this.graph(to, reg, ModelVisualizer.CurveType.MASS);
+
+                for (int i = 0; i < actualCurve.size(); i++)
+                {
+                    final double x = actualCurve.getX(i);
+                    final double actY = actualCurve.getY(i);
+                    final double modelY = modelCurve.value(x);
+                    final double theoY = theoCurve.value(x);
+                    final double mass = massCurve.value(x);
+
+                    stream_.println(this._params.getStatus() + ", " + to + ", " + reg + ", " + x + ", " + mass + ", " + actY + ", " + modelY + ", " + theoY);
+                }
+            }
+        }
+
+        stream_.flush();
     }
 
     public SortedSet<R> getRegressors()

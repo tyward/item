@@ -27,6 +27,7 @@ import edu.columbia.tjw.item.base.StandardCurveType;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.ItemFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
+import edu.columbia.tjw.item.visualize.ModelVisualizer;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -173,7 +174,16 @@ public final class FitModel
                 System.out.println("Annealing complete: " + fitter.getChain().toString());
             }
 
+            System.out.println("\n\n\n\nVisualizing model: ");
+            final ModelVisualizer<SimpleStatus, SimpleRegressor, StandardCurveType> vis = new ModelVisualizer<>(fitter.getBestParameters(), grid, compiled.getRegressorFamily().getMembers());
+            vis.printResults(System.out);
+
+            System.out.println("\n\n\n\nFinal Chain: " + fitter.getChain().toString());
+
             writeParams(output_file, fitter.getBestParameters());
+
+            System.out.println("Model written to file: " + output_file.getAbsolutePath());
+
         }
         catch (final ParseException e)
         {
