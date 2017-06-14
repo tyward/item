@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -49,6 +50,8 @@ public final class CompiledDataDescriptor implements Serializable
     private final Map<String, EnumDescriptor> _enumData;
     private final Map<String, NumericDescriptor> _numericData;
     private final Set<String> _endStatusLabels;
+    private final SortedSet<SimpleRegressor> _flags;
+    private final SortedSet<SimpleRegressor> _curves;
 
     private final EnumFamily<SimpleRegressor> _regFamily;
     private final EnumFamily<SimpleStatus> _statusFamily;
@@ -100,6 +103,9 @@ public final class CompiledDataDescriptor implements Serializable
         final List<RawConverter> converters = new ArrayList<>();
         final List<SimpleStringEnum> targetRegressors = new ArrayList<>();
 
+        final SortedSet<String> flagNames = new TreeSet<>();
+        final SortedSet<String> curveNames = new TreeSet<>();
+
         //The Intercept term.
         names.add("INTERCEPT");
         converters.add(null);
@@ -112,6 +118,7 @@ public final class CompiledDataDescriptor implements Serializable
         {
             final SimpleStringEnum underlying = rawFamily.getFromName(next);
 
+            flagNames.add(next);
             names.add(next);
             converters.add(BOOLEAN_CONVERTER);
             targetRegressors.add(underlying);
@@ -123,6 +130,7 @@ public final class CompiledDataDescriptor implements Serializable
             final SimpleStringEnum underlying = rawFamily.getFromName(next);
             final NumericDescriptor descriptor = this.getNumericDescriptor(next);
 
+            curveNames.add(next);
             names.add(next);
             converters.add(DOUBLE_CONVERTER);
             targetRegressors.add(underlying);
@@ -130,6 +138,7 @@ public final class CompiledDataDescriptor implements Serializable
             if (descriptor.getCanBeNaN())
             {
                 final String isNaNName = next + "[IsNaN]";
+                flagNames.add(next);
                 names.add(isNaNName);
                 converters.add(ISNAN_CONVERTER);
                 targetRegressors.add(underlying);
@@ -151,6 +160,7 @@ public final class CompiledDataDescriptor implements Serializable
                 }
 
                 final String targetName = next + "[" + nextVal + "]";
+                flagNames.add(next);
                 names.add(targetName);
                 converters.add(new StringMatchConverter(nextVal));
                 targetRegressors.add(underlying);
@@ -161,6 +171,28 @@ public final class CompiledDataDescriptor implements Serializable
         _regFamily = SimpleRegressor.generateFamily(names);
         _converters = converters.toArray(new RawConverter[converters.size()]);
         _offsets = new int[targetRegressors.size()];
+
+        final SortedSet<SimpleRegressor> regFlags = new TreeSet<>();
+        final SortedSet<SimpleRegressor> regCurves = new TreeSet<>();
+
+        for (final SimpleRegressor next : _regFamily.getMembers())
+        {
+            if (flagNames.contains(next.name()))
+            {
+                regFlags.add(next);
+            }
+            else if (curveNames.contains(next.name()))
+            {
+                regCurves.add(next);
+            }
+            else
+            {
+                throw new RuntimeException("Impossible.");
+            }
+        }
+
+        _flags = Collections.unmodifiableSortedSet(regFlags);
+        _curves = Collections.unmodifiableSortedSet(regCurves);
 
         for (int i = 0; i < targetRegressors.size(); i++)
         {
@@ -178,12 +210,22 @@ public final class CompiledDataDescriptor implements Serializable
         _statusFamily = SimpleStatus.generateFamily(endStatusLabels_);
     }
 
+    public SortedSet<SimpleRegressor> getCurveRegs()
+    {
+        return _curves;
+    }
+
+    public SortedSet<SimpleRegressor> getFlagRegs()
+    {
+        return _flags;
+    }
+
     public ColumnDescriptorSet getColDescriptorSet()
     {
         return _colDescriptor;
     }
 
-    public EnumDescriptor getEnumDescriptor(final String enumColumn_)
+    private EnumDescriptor getEnumDescriptor(final String enumColumn_)
     {
         if (!_enumData.containsKey(enumColumn_))
         {
@@ -193,7 +235,7 @@ public final class CompiledDataDescriptor implements Serializable
         return _enumData.get(enumColumn_);
     }
 
-    public NumericDescriptor getNumericDescriptor(final String numericColumn_)
+    private NumericDescriptor getNumericDescriptor(final String numericColumn_)
     {
         if (!_numericData.containsKey(numericColumn_))
         {
