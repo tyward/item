@@ -135,4 +135,10 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
         return this._base.compareTo(that_._base);
     }
 
+    @Override
+    public String toString()
+    {
+        return "SimpleRegressor[" + name() + "]";
+    }
+
 }

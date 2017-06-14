@@ -110,6 +110,7 @@ public final class CompiledDataDescriptor implements Serializable
         names.add("INTERCEPT");
         converters.add(null);
         targetRegressors.add(null);
+        flagNames.add("INTERCEPT");
 
         final EnumFamily<SimpleStringEnum> rawFamily = _colDescriptor.getAllColumns();
 
@@ -138,7 +139,7 @@ public final class CompiledDataDescriptor implements Serializable
             if (descriptor.getCanBeNaN())
             {
                 final String isNaNName = next + "[IsNaN]";
-                flagNames.add(next);
+                flagNames.add(isNaNName);
                 names.add(isNaNName);
                 converters.add(ISNAN_CONVERTER);
                 targetRegressors.add(underlying);
@@ -160,7 +161,7 @@ public final class CompiledDataDescriptor implements Serializable
                 }
 
                 final String targetName = next + "[" + nextVal + "]";
-                flagNames.add(next);
+                flagNames.add(targetName);
                 names.add(targetName);
                 converters.add(new StringMatchConverter(nextVal));
                 targetRegressors.add(underlying);
@@ -187,7 +188,7 @@ public final class CompiledDataDescriptor implements Serializable
             }
             else
             {
-                throw new RuntimeException("Impossible.");
+                throw new RuntimeException("Impossible: " + next + "[" + flagNames + "]\n[" + curveNames + "]");
             }
         }
 

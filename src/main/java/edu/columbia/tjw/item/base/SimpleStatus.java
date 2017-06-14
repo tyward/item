@@ -170,4 +170,10 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
 
         return _reachable;
     }
+
+    @Override
+    public String toString()
+    {
+        return "SimpleStatus[" + name() + "]";
+    }
 }

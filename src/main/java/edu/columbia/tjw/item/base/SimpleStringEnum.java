@@ -164,4 +164,10 @@ public final class SimpleStringEnum implements EnumMember<SimpleStringEnum>
         //Within a family, compare based on ordinal.
         return Integer.compare(this.ordinal(), that_.ordinal());
     }
+
+    @Override
+    public String toString()
+    {
+        return "SimpleStringEnum[" + name() + "]";
+    }
 }
