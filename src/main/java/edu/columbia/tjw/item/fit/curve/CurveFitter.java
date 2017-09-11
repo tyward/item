@@ -86,7 +86,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         //_fitter = new CurveParamsFitter<>(_factory, _grid, _settings, _chain);
         _calc = calc_;
 
-        _paramFitter = new ParamFitter<>(_calc, _settings, null);
+        _paramFitter = new ParamFitter<>(_calc, _settings);
     }
 
     private synchronized CurveParamsFitter<S, R, T> getFitter(final FittingProgressChain<S, R, T> chain_)
@@ -204,11 +204,11 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return isImproved;
     }
 
-    public final boolean generateCurve(final FittingProgressChain<S, R, T> chain_, final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filter_) throws ConvergenceException
+    public final boolean generateCurve(final FittingProgressChain<S, R, T> chain_, final Set<R> fields_) throws ConvergenceException
     {
         final ItemParameters<S, R, T> preExpansion = chain_.getBestParameters();
         final double preExpansionEntropy = chain_.getLogLikelihood();
-        CurveFitResult<S, R, T> best = findBest(fields_, filter_, getFitter(chain_));
+        CurveFitResult<S, R, T> best = findBest(fields_, getFitter(chain_));
 
         if (null == best)
         {
@@ -464,7 +464,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return hasInteraction;
     }
 
-    private CurveFitResult<S, R, T> findBest(final Set<R> fields_, final Collection<ParamFilter<S, R, T>> filters_, final CurveParamsFitter<S, R, T> fitter_)
+    private CurveFitResult<S, R, T> findBest(final Set<R> fields_, final CurveParamsFitter<S, R, T> fitter_)
     {
         final ItemParameters<S, R, T> params = fitter_.getParams();
         final S fromStatus = params.getStatus();
@@ -485,14 +485,14 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                         final ItemCurveParams<R, T> vacuousParams = new ItemCurveParams<>(0.0, 0.0, field,
                                 _factory.generateCurve(curveType, 0, new double[curveType.getParamCount()]));
 
-                        if (params.curveIsForbidden(toStatus, vacuousParams, filters_))
+                        if (params.curveIsForbidden(toStatus, vacuousParams, null))
                         {
                             continue;
                         }
 
                         final CurveFitResult<S, R, T> res = fitter_.calibrateCurveAddition(curveType, field, toStatus);
 
-                        if (params.curveIsForbidden(toStatus, res.getCurveParams(), filters_))
+                        if (params.curveIsForbidden(toStatus, res.getCurveParams(), null))
                         {
                             LOG.info("Generated curve, but it is forbidden by filters, dropping: " + res.getCurveParams());
                             continue;

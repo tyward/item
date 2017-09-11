@@ -21,7 +21,6 @@ package edu.columbia.tjw.item.fit.param;
 
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
-import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
@@ -35,7 +34,6 @@ import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.logging.Logger;
 
 /**
@@ -51,16 +49,14 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     private final MultivariateOptimizer _optimizer;
     private final ItemSettings _settings;
-    private final Collection<ParamFilter<S, R, T>> _filters;
     private final EntropyCalculator<S, R, T> _calc;
 
     ItemParameters<S, R, T> _cacheParams;
     LogisticModelFunction<S, R, T> _cacheFunction;
 
-    public ParamFitter(final EntropyCalculator<S, R, T> calc_, final ItemSettings settings_, final Collection<ParamFilter<S, R, T>> filters_)
+    public ParamFitter(final EntropyCalculator<S, R, T> calc_, final ItemSettings settings_)
     {
         _calc = calc_;
-        _filters = filters_;
         _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
         _settings = settings_;
     }
@@ -140,7 +136,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             for (int k = 0; k < entryCount; k++)
             {
-                if (params_.betaIsFrozen(to, k, _filters))
+                if (params_.betaIsFrozen(to, k, null))
                 {
                     continue;
                 }

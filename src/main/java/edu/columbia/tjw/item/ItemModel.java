@@ -21,10 +21,8 @@ package edu.columbia.tjw.item;
 
 import edu.columbia.tjw.item.fit.ItemParamGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
-import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.LogUtil;
-import edu.columbia.tjw.item.util.MathFunctions;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import java.util.Arrays;
 import java.util.List;

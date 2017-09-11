@@ -25,7 +25,6 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.ParamFilter;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator.EntropyAnalysis;
@@ -111,7 +110,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         final double logLikelihood = this.computeLogLikelihood(starting);
         _chain = new FittingProgressChain<>("Primary", starting, logLikelihood, _grid.size(), _calc, _settings.getDoValidate());
 
-        _fitter = new ParamFitter<>(_calc, _settings, null);
+        _fitter = new ParamFitter<>(_calc, _settings);
         _curveFitter = new CurveFitter<>(_factory, _settings, _grid, _calc);
     }
 
@@ -185,14 +184,11 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     /**
      * Add a group of coefficients to the model, then refit all coefficients.
      *
-     * @param filters_ Any filters that should be used to limit the allowed
-     * coefficients, else null
      * @param coefficients_ The set of coefficients to fit.
      * @return A model fit with all the additional allowed coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ParamFitResult<S, R, T> addCoefficients(final Collection<ParamFilter<S, R, T>> filters_,
-            final Collection<R> coefficients_) throws ConvergenceException
+    public ParamFitResult<S, R, T> addCoefficients(final Collection<R> coefficients_) throws ConvergenceException
     {
         ItemParameters<S, R, T> params = _chain.getBestParameters();
 
@@ -229,7 +225,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             _chain.pushVacuousResults("VacuousAddCoefficients", params);
         }
 
-        innerFitCoefficients(_chain, filters_);
+        innerFitCoefficients(_chain);
         return _chain.getLatestResults();
     }
 
@@ -242,13 +238,13 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A model with newly optimized coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ParamFitResult<S, R, T> fitCoefficients(final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    public ParamFitResult<S, R, T> fitCoefficients() throws ConvergenceException
     {
-        innerFitCoefficients(_chain, filters_);
+        innerFitCoefficients(_chain);
         return _chain.getLatestResults();
     }
 
-    private void innerFitCoefficients(final FittingProgressChain<S, R, T> chain_, final Collection<ParamFilter<S, R, T>> filters_) throws ConvergenceException
+    private void innerFitCoefficients(final FittingProgressChain<S, R, T> chain_) throws ConvergenceException
     {
         //final ParamFitter<S, R, T> fitter = new ParamFitter<>(chain_.getBestParameters(), _grid, _settings, filters_);
         _fitter.fit(chain_);
@@ -266,7 +262,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             try
             {
-                this.innerFitCoefficients(subChain_, null);
+                this.innerFitCoefficients(subChain_);
                 _curveFitter.calibrateCurves(0.0, true, subChain_);
             }
             catch (final ConvergenceException e)
@@ -283,7 +279,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             return;
         }
 
-        final ParamFitResult<S, R, T> rebuilt = expandModel(subChain_, curveFields_, null, reduction);
+        final ParamFitResult<S, R, T> rebuilt = expandModel(subChain_, curveFields_, reduction);
         final boolean better = _chain.pushResults("AnnealingExpansion", subChain_.getBestParameters(), subChain_.getLogLikelihood());
 
         if (better)
@@ -451,15 +447,14 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A new model with additional curves added, and all coefficients
      * optimized.
      */
-    public ParamFitResult<S, R, T> expandModel(final Set<R> curveFields_,
-            final Collection<ParamFilter<S, R, T>> filters_, final int paramCount_)
+    public ParamFitResult<S, R, T> expandModel(final Set<R> curveFields_, final int paramCount_)
     {
         if (paramCount_ < 1)
         {
             throw new IllegalArgumentException("Param count must be positive.");
         }
 
-        expandModel(_chain, curveFields_, filters_, paramCount_);
+        expandModel(_chain, curveFields_, paramCount_);
         return _chain.getLatestResults();
     }
 
@@ -477,8 +472,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return results;
     }
 
-    private ParamFitResult<S, R, T> expandModel(final FittingProgressChain<S, R, T> chain_, final Set<R> curveFields_,
-            final Collection<ParamFilter<S, R, T>> filters_, final int paramCount_)
+    private ParamFitResult<S, R, T> expandModel(final FittingProgressChain<S, R, T> chain_, final Set<R> curveFields_, final int paramCount_)
     {
         final long start = System.currentTimeMillis();
         //final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("ModelExpansionChain", chain_);
@@ -491,7 +485,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             try
             {
-                innerFitCoefficients(chain_, filters_);
+                innerFitCoefficients(chain_);
             }
             catch (final ConvergenceException e)
             {
@@ -515,7 +509,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             try
             {
                 //Now, try to add a new curve. 
-                final boolean expansionBetter = _curveFitter.generateCurve(chain_, curveFields_, filters_);
+                final boolean expansionBetter = _curveFitter.generateCurve(chain_, curveFields_);
 
                 if (!expansionBetter)
                 {
@@ -545,7 +539,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         try
         {
-            innerFitCoefficients(chain_, filters_);
+            innerFitCoefficients(chain_);
         }
         catch (final ConvergenceException e)
         {

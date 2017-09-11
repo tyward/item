@@ -150,9 +150,9 @@ public final class FitModel
                 fitter.pushParameters("Starting Params", params);
             }
 
-            fitter.fitCoefficients(null);
-            fitter.addCoefficients(null, compiled.getFlagRegs());
-            fitter.fitCoefficients(null);
+            fitter.fitCoefficients();
+            fitter.addCoefficients(compiled.getFlagRegs());
+            fitter.fitCoefficients();
             fitter.calibrateCurves();
             fitter.trim(false);
 
@@ -161,7 +161,7 @@ public final class FitModel
             if (curveCount > 0)
             {
                 System.out.println("Expanding model, available regressors: " + curveCount);
-                fitter.expandModel(curveRegs, null, curveCount);
+                fitter.expandModel(curveRegs, curveCount);
                 fitter.calibrateCurves();
                 fitter.trim(true);
                 System.out.println("Model Expansion complete: " + fitter.getChain().toString());
