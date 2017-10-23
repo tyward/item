@@ -233,8 +233,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      *
      * Optimize the coefficients.
      *
-     * @param filters_ Filters describing any coefficients that should not be
-     * adjusted
      * @return A model with newly optimized coefficients.
      * @throws ConvergenceException If no progress could be made
      */
@@ -440,8 +438,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * computational resources.
      *
      * @param curveFields_ The regressors on which to draw curves
-     * @param filters_ Filters describing any curves that should not be drawn or
-     * optimized
      * @param paramCount_ The total number of additional params that will be
      * allowed.
      * @return A new model with additional curves added, and all coefficients
