@@ -41,11 +41,13 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
     private final ItemRegressorReader[] _readers;
     private final float[][] _regressors;
     private final EnumFamily<R> _regFamily;
+    private final S _fromStatus;
 
     public RandomizedStatusGrid(final ItemStatusGrid<S, R> underlying_, final ItemSettings settings_, final EnumFamily<R> regFamily_, final S fromStatus_)
     {
         synchronized (this)
         {
+            _fromStatus = fromStatus_;
             _underlying = underlying_;
             _regFamily = regFamily_;
 
@@ -81,6 +83,10 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
             _regressors = new float[familySize][];
             _readers = new ItemRegressorReader[familySize];
         }
+    }
+
+    public S getFromStatus() {
+        return _fromStatus;
     }
 
     private int mapIndex(final int index_)
