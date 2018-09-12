@@ -27,6 +27,7 @@ import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
 import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -115,9 +116,11 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
     }
 
     @Override
-    public boolean hasRegressorReader(R field_)
-    {
-        return this.getUnderlying().hasRegressorReader(field_);
+    public final Set<R> getAvailableRegressors() {
+        return this.getUnderlying().getAvailableRegressors();
     }
+
+
+
 
 }

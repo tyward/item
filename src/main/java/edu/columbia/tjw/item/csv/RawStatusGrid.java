@@ -27,6 +27,7 @@ import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -111,9 +112,8 @@ public class RawStatusGrid implements ItemStatusGrid<SimpleStatus, SimpleRegress
     }
 
     @Override
-    public boolean hasRegressorReader(SimpleRegressor field_)
-    {
-        return true;
+    public final Set<SimpleRegressor> getAvailableRegressors() {
+        return getRegressorFamily().getMembers();
     }
 
     @Override

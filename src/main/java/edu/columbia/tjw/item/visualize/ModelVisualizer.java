@@ -27,6 +27,7 @@ import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.algo.QuantApprox;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
+import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.data.InterpolatedCurve;
 import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
@@ -35,14 +36,8 @@ import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
 import java.io.PrintStream;
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
+
 import org.apache.commons.math3.distribution.NormalDistribution;
 
 /**
@@ -425,9 +420,8 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
 
         @Override
-        public boolean hasRegressorReader(R field_)
-        {
-            return _readers[field_.ordinal()] != null;
+        public final Set<R> getAvailableRegressors() {
+            return getRegressorFamily().getMembers();
         }
 
     }

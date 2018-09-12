@@ -40,7 +40,8 @@ import java.util.WeakHashMap;
  */
 public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 {
-    private static final long serialVersionUID = 0x461722f9fc29060cL;
+    //private static final long serialVersionUID = 0x461722f9fc29060cL;
+    private static final long serialVersionUID = 2720474101494526203L;
 
     // This map last forever, mapping the class name to a GUID for the family.
     // This also serves as the internal state mutex.

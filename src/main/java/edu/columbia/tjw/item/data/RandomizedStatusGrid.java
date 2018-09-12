@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.random.RandomTool;
 import java.util.Arrays;
+import java.util.Set;
 
 /**
  *
@@ -142,10 +143,10 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
         return _underlying.getRegressorFamily();
     }
 
+
     @Override
-    public boolean hasRegressorReader(R field_)
-    {
-        return _underlying.hasRegressorReader(field_);
+    public final Set<R> getAvailableRegressors() {
+        return _underlying.getAvailableRegressors();
     }
 
     public final class MappedReader implements ItemRegressorReader

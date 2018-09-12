@@ -165,8 +165,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
      * Used to make a new set of parameters with a new entry.
      *
      * @param base_
-     * @param regs_
-     * @param curves_
      */
     private ItemParameters(final ItemParameters<S, R, T> base_, final ItemCurveParams<R, T> curveParams_, final S toStatus_)
     {

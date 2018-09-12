@@ -33,7 +33,7 @@ import edu.columbia.tjw.item.util.EnumFamily;
  * @param <R> The regressor type for this grid
  * @param <T> The curve type for this grid
  */
-public class ParamFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends ItemParamGrid<S, R, T> implements ItemStatusGrid<S, R>
+public final class ParamFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends ItemParamGrid<S, R, T> implements ItemStatusGrid<S, R>
 {
     private final ItemStatusGrid<S, R> _grid;
 
