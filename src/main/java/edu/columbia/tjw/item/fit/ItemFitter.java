@@ -25,8 +25,10 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
+import edu.columbia.tjw.item.data.RawFittingGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator.EntropyAnalysis;
 import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
@@ -62,7 +64,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private final R _intercept;
     private final EnumFamily<R> _family;
     private final S _status;
-    private final ItemStatusGrid<S, R> _grid;
+    private final ItemFittingGrid<S, R> _grid;
     private final EntropyCalculator<S, R, T> _calc;
 
     private final ParamFitter<S, R, T> _fitter;
@@ -72,10 +74,15 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_, final ItemStatusGrid<S, R> grid_)
     {
+        this(factory_, intercept_, status_, randomizeGrid(grid_, new ItemSettings(), status_), new ItemSettings());
+    }
+
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_, final ItemFittingGrid<S, R> grid_)
+    {
         this(factory_, intercept_, status_, grid_, new ItemSettings());
     }
 
-    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_, final ItemStatusGrid<S, R> grid_, ItemSettings settings_)
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_, final ItemFittingGrid<S, R> grid_, ItemSettings settings_)
     {
         if (null == factory_)
         {
@@ -103,7 +110,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _intercept = intercept_;
         _family = intercept_.getFamily();
         _status = status_;
-        _grid = randomizeGrid(grid_, _settings);
+        _grid = grid_;
         _calc = new EntropyCalculator<>(_grid, _status, _settings);
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept);
@@ -158,19 +165,14 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @param settings_
      * @return A randomized version of grid_
      */
-    public final ItemStatusGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_,
-            final ItemSettings settings_)
+    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>> ItemFittingGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_,
+            final ItemSettings settings_, final S status_)
     {
-        if (grid_ instanceof RandomizedStatusGrid)
-        {
-            return grid_;
-        }
-
-        final ItemStatusGrid<S, R> wrapped = new RandomizedStatusGrid<>(grid_, settings_, grid_.getRegressorFamily(), _status);
+        final ItemFittingGrid<S, R> wrapped = new RawFittingGrid<>(new RandomizedStatusGrid<>(grid_, settings_, grid_.getRegressorFamily(), status_));
         return wrapped;
     }
 
-    public ItemStatusGrid<S, R> getGrid()
+    public ItemFittingGrid<S, R> getGrid()
     {
         return _grid;
     }

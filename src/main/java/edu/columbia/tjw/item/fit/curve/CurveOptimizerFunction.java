@@ -53,7 +53,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final int _size;
     private final double[] _workspace;
     private final int _toIndex;
-    private final int[] _indexList;
 
     private final CurveParamsFitter<S, R, T> _curveFitter;
 
@@ -73,11 +72,10 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final float[][] _regData;
 
     public CurveOptimizerFunction(final ItemCurveParams<R, T> initParams_, final ItemCurveFactory<R, T> factory_, final S fromStatus_, final S toStatus_, final CurveParamsFitter<S, R, T> curveFitter_,
-            final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final int[] indexList_, final ItemSettings settings_, final boolean subtractStarting_)
+            final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final ItemSettings settings_, final boolean subtractStarting_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
-        _indexList = indexList_;
         _factory = factory_;
         _initParams = initParams_;
         _subtractStarting = subtractStarting_;
@@ -178,12 +176,11 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
             final int actualOffset = _actualOffsets[i];
 
-            final int mapped = _indexList[i];
             double weight = 1.0;
 
             for (int k = 0; k < depth; k++)
             {
-                final double regressor = _regData[k][mapped];
+                final double regressor = _regData[k][i];
                 final ItemCurve<T> trans = _params.getCurve(k);
                 final double transformed;
 
@@ -212,7 +209,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
                 for (int k = 0; k < depth; k++)
                 {
-                    final double regressor = _regData[k][mapped];
+                    final double regressor = _regData[k][i];
                     final ItemCurve<T> trans = _initParams.getCurve(k);
                     final double transformed;
 
@@ -310,12 +307,11 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
                 xDerivative += derivTerm;
             }
 
-            final int mapped = _indexList[i];
             double weight = 1.0;
 
             for (int k = 0; k < depth; k++)
             {
-                final double regressor = _regData[k][mapped];
+                final double regressor = _regData[k][i];
                 final ItemCurve<T> trans = _params.getCurve(k);
                 final double transformed;
 
@@ -364,7 +360,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
                 }
 
                 final int depthIndex = _params.indexToCurveIndex(w);
-                final double regressor = _regData[depthIndex][mapped];
+                final double regressor = _regData[depthIndex][i];
                 final ItemCurve<T> targetCurve = _params.getCurve(depthIndex);
                 final int curveOffset = _params.indexToCurveOffset(w);
                 final double paramDerivative = targetCurve.derivative(curveOffset, regressor);
@@ -374,12 +370,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
                 derivative[w] += deriv;
             }
 
-//            for (int w = 0; w < trans.getCurveType().getParamCount(); w++)
-//            {
-//                final double paramDerivative = trans.derivative(w, regressor);
-//                final double combined = xDerivative * beta * paramDerivative;
-//                derivative[w] += combined;
-//            }
             count++;
         }
 

@@ -7,7 +7,7 @@ import edu.columbia.tjw.item.util.EnumFamily;
 
 import java.util.Set;
 
-public final class RawFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements FittingGrid<S, R>
+public final class RawFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemFittingGrid<S, R>
 {
     private final RandomizedStatusGrid<S, R> _randGrid;
 

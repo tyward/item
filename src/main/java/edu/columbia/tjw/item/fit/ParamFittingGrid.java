@@ -23,8 +23,10 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 
 /**
  * 
@@ -33,11 +35,11 @@ import edu.columbia.tjw.item.util.EnumFamily;
  * @param <R> The regressor type for this grid
  * @param <T> The curve type for this grid
  */
-public final class ParamFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends ItemParamGrid<S, R, T> implements ItemStatusGrid<S, R>
+public final class ParamFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends ItemParamGrid<S, R, T> implements ItemFittingGrid<S, R>
 {
-    private final ItemStatusGrid<S, R> _grid;
+    private final ItemFittingGrid<S, R> _grid;
 
-    public ParamFittingGrid(ItemParameters<S, R, T> params_, ItemStatusGrid<S, R> grid_)
+    public ParamFittingGrid(ItemParameters<S, R, T> params_, ItemFittingGrid<S, R> grid_)
     {
         super(params_, grid_);
         
@@ -45,21 +47,15 @@ public final class ParamFittingGrid<S extends ItemStatus<S>, R extends ItemRegre
     }
 
     @Override
-    public ItemStatusGrid<S, R> getUnderlying()
+    public ItemFittingGrid<S, R> getUnderlying()
     {
         return _grid;
     }
 
     @Override
-    public EnumFamily<S> getStatusFamily()
+    public S getFromStatus()
     {
-        return _grid.getStatusFamily();
-    }
-
-    @Override
-    public int getStatus(int index_)
-    {
-        return _grid.getStatus(index_);
+        return _grid.getFromStatus();
     }
 
     @Override
@@ -67,11 +63,4 @@ public final class ParamFittingGrid<S extends ItemStatus<S>, R extends ItemRegre
     {
         return _grid.getNextStatus(index_);
     }
-
-    @Override
-    public boolean hasNextStatus(int index_)
-    {
-        return _grid.hasNextStatus(index_);
-    }
-    
 }

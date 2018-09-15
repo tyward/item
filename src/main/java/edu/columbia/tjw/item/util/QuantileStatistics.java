@@ -56,10 +56,11 @@ public final class QuantileStatistics
         final QuantApprox approx = new QuantApprox(bucketCount_, QuantApprox.DEFAULT_LOAD);
 
         final int size = xReader_.size();
+        final int ySize = yReader_.size();
 
-        if (yReader_.size() != size)
+        if (ySize != size)
         {
-            throw new IllegalArgumentException("Size mismatch.");
+            throw new IllegalArgumentException("Size mismatch: " + size + " != " + ySize);
         }
 
         boolean passes = false;

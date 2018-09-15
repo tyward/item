@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit;
@@ -25,38 +25,29 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
+import edu.columbia.tjw.item.data.RawFittingGrid;
 
 /**
- *
- * @author tyler
  * @param <S>
  * @param <R>
  * @param <T>
+ * @author tyler
  */
 public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
-    private final ItemStatusGrid<S, R> _grid;
+    private final ItemFittingGrid<S, R> _grid;
     private final S _fromStatus;
 
-    public EntropyCalculator(final ItemStatusGrid<S, R> grid_, final S fromStatus_, final ItemSettings settings_)
+    public EntropyCalculator(final ItemFittingGrid<S, R> grid_, final S fromStatus_, final ItemSettings settings_)
     {
         _fromStatus = fromStatus_;
-
-        if (grid_ instanceof RandomizedStatusGrid)
-        {
-            _grid = grid_;
-        }
-        else
-        {
-            final ItemStatusGrid<S, R> wrapped = new RandomizedStatusGrid<>(grid_, settings_, grid_.getRegressorFamily(), fromStatus_);
-            _grid = wrapped;
-        }
-
+        _grid = grid_;
     }
 
-    public ItemStatusGrid<S, R> getGrid()
+    public ItemFittingGrid<S, R> getGrid()
     {
         return _grid;
     }
@@ -90,17 +81,6 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
 
         for (int i = 0; i < grid.size(); i++)
         {
-            final int statOrdinal = _grid.getStatus(i);
-
-            if (statOrdinal != fromStatusOrdinal)
-            {
-                continue;
-            }
-            if (!_grid.hasNextStatus(i))
-            {
-                continue;
-            }
-
             final double entropy = model.logLikelihood(grid, i);
             final double e2 = entropy * entropy;
             entropySum += entropy;

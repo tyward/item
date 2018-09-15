@@ -28,6 +28,7 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
@@ -57,7 +58,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private final ItemCurveFactory<R, T> _factory;
     private final ItemSettings _settings;
 
-    private final ItemStatusGrid<S, R> _grid;
+    private final ItemFittingGrid<S, R> _grid;
     private final RectangularDoubleArray _powerScores;
 
     // Getting pretty messy, we can now reset our grids and models, recache the power scores, etc...
@@ -67,7 +68,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     //N.B: These are ordinals, not offsets.
     private final int[] _actualOutcomes;
     private final MultivariateOptimizer _optimizer;
-    private final int[] _indexList;
     private final S _fromStatus;
 
     private final double _startingLL;
@@ -99,12 +99,11 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
                 this._fromStatus = baseFitter_._fromStatus;
 
                 //These can save some resources by copying over.
-                this._indexList = baseFitter_._indexList;
                 this._actualOutcomes = baseFitter_._actualOutcomes;
             }
 
             //These we need to build each time...
-            final int count = _indexList.length;
+            final int count = _grid.size();
             final int reachableCount = _fromStatus.getReachableCount();
             this._model = new ItemModel<>(params_);
             _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
@@ -116,7 +115,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     }
 
     public CurveParamsFitter(final ItemCurveFactory<R, T> factory_,
-            final ItemStatusGrid<S, R> grid_, final ItemSettings settings_, final FittingProgressChain<S, R, T> chain_)
+                             final ItemFittingGrid<S, R> grid_, final ItemSettings settings_, final FittingProgressChain<S, R, T> chain_)
     {
         synchronized (this)
         {
@@ -130,15 +129,12 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
             final int reachableCount = _fromStatus.getReachableCount();
 
-            _indexList = generateIndexList(_grid, _fromStatus); //Arrays.copyOf(indexList, count);
-
-            final int count = _indexList.length;
+            final int count = _grid.size();
             _actualOutcomes = new int[count];
 
             for (int i = 0; i < count; i++)
             {
-                final int index = _indexList[i];
-                _actualOutcomes[i] = _grid.getNextStatus(index);
+                _actualOutcomes[i] = _grid.getNextStatus(i);
             }
 
             _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
@@ -242,7 +238,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
     private QuantileDistribution generateDistribution(R field_, S toStatus_)
     {
-        final ItemQuantileDistribution<S, R> quantGenerator = new ItemQuantileDistribution<>(_paramGrid, _powerScores, _fromStatus, field_, toStatus_, _indexList);
+        final ItemQuantileDistribution<S, R> quantGenerator = new ItemQuantileDistribution<>(_paramGrid, _powerScores, _fromStatus, field_, toStatus_);
         final QuantileDistribution dist = quantGenerator.getAdjusted();
         return dist;
     }
@@ -266,7 +262,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private CurveOptimizerFunction<S, R, T> generateFunction(final ItemCurveParams<R, T> initParams_, S toStatus_, final boolean subtractStarting_)
     {
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(initParams_, _factory, _fromStatus, toStatus_, this, _actualOutcomes,
-                _paramGrid, _indexList, _settings, subtractStarting_);
+                _paramGrid, _settings, subtractStarting_);
 
         return func;
     }
@@ -297,32 +293,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return _model.getParams();
     }
 
-    private static <S extends ItemStatus<S>, R extends ItemRegressor<R>> int[] generateIndexList(final ItemStatusGrid<S, R> grid_, final S fromStatus_)
-    {
-        final int gridSize = grid_.size();
-        final int fromStatusOrdinal = fromStatus_.ordinal();
-        final int[] indexList = new int[gridSize];
-        int count = 0;
 
-        for (int i = 0; i < gridSize; i++)
-        {
-            final int statOrdinal = grid_.getStatus(i);
-
-            if (statOrdinal != fromStatusOrdinal)
-            {
-                throw new IllegalStateException("Impossible.");
-            }
-            if (!grid_.hasNextStatus(i))
-            {
-                throw new IllegalStateException("Impossible.");
-            }
-
-            indexList[count++] = i;
-        }
-
-        final int[] output = Arrays.copyOf(indexList, count);
-        return output;
-    }
 
     private void fillPowerScores()
     {
@@ -333,9 +304,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
         for (int i = 0; i < count; i++)
         {
-            final int index = _indexList[i];
-
-            _model.transitionProbability(_paramGrid, index, probabilities);
+            _model.transitionProbability(_paramGrid, i, probabilities);
 
             MultiLogistic.multiLogitFunction(baseCase, probabilities, probabilities);
 

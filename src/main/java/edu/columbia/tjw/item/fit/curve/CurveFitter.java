@@ -24,6 +24,7 @@ import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ParamFilter;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
@@ -44,6 +45,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.math3.util.Pair;
 
@@ -60,7 +62,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     private final EnumFamily<T> _family;
     private final ItemSettings _settings;
-    private final ItemStatusGrid<S, R> _grid;
+    private final ItemFittingGrid<S, R> _grid;
     private final ItemCurveFactory<R, T> _factory;
     private final EntropyCalculator<S, R, T> _calc;
 
@@ -70,7 +72,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     private CurveParamsFitter<S, R, T> _fitter;
     private ItemParameters<S, R, T> _cacheParams;
 
-    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemStatusGrid<S, R> grid_, final EntropyCalculator<S, R, T> calc_)
+    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemFittingGrid<S, R> grid_, final EntropyCalculator<S, R, T> calc_)
     {
         if (null == settings_)
         {
@@ -514,8 +516,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                     }
                     catch (final IllegalArgumentException e)
                     {
-                        LOG.info("Argument trouble (" + field + "), moving on to next curve.");
-                        LOG.info(e.getMessage());
+                        LOG.log(Level.INFO,"Argument trouble (" + field + "), moving on to next curve.", e);
                     }
 
                 }

@@ -24,6 +24,7 @@ import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.StandardCurveFactory;
 import edu.columbia.tjw.item.base.StandardCurveType;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.ItemFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
@@ -107,11 +108,11 @@ public final class FitModel
             final boolean runAnnealing = Boolean.parseBoolean(runAnnealingString);
 
             final CompiledDataDescriptor compiled = getCompiled(descriptor);
-            final ItemStatusGrid<SimpleStatus, SimpleRegressor> grid = loadGrid(input_file);
+            final ItemFittingGrid<SimpleStatus, SimpleRegressor> grid = loadGrid(input_file);
             final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params = loadParams(starting_file);
 
             final SimpleRegressor intercept = grid.getRegressorFamily().getFromName("INTERCEPT");
-            final SimpleStatus stat = grid.getStatusFamily().getFromOrdinal(grid.getStatus(0));
+            final SimpleStatus stat = grid.getFromStatus();
 
             final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter
                     = new ItemFitter<>(new StandardCurveFactory(), intercept, stat, grid);
@@ -246,13 +247,13 @@ public final class FitModel
         }
     }
 
-    private static ItemStatusGrid<SimpleStatus, SimpleRegressor> loadGrid(final File inputFile_) throws IOException
+    private static ItemFittingGrid<SimpleStatus, SimpleRegressor> loadGrid(final File inputFile_) throws IOException
     {
         try (final FileInputStream fin = new FileInputStream(inputFile_);
                 final ObjectInputStream oin = new ObjectInputStream(fin))
         {
-            final ItemStatusGrid<SimpleStatus, SimpleRegressor> grid
-                    = (ItemStatusGrid<SimpleStatus, SimpleRegressor>) oin.readObject();
+            final ItemFittingGrid<SimpleStatus, SimpleRegressor> grid
+                    = (ItemFittingGrid<SimpleStatus, SimpleRegressor>) oin.readObject();
             return grid;
         }
         catch (final ClassNotFoundException e)

@@ -43,7 +43,8 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
     private final EnumFamily<R> _regFamily;
     private final S _fromStatus;
 
-    public RandomizedStatusGrid(final ItemStatusGrid<S, R> underlying_, final ItemSettings settings_, final EnumFamily<R> regFamily_, final S fromStatus_)
+    public RandomizedStatusGrid(final ItemStatusGrid<S, R> underlying_, final ItemSettings settings_,
+                                final EnumFamily<R> regFamily_, final S fromStatus_)
     {
         synchronized (this)
         {

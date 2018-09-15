@@ -106,19 +106,11 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      */
     public final double logLikelihood(final ParamFittingGrid<S, R, T> grid_, final int index_)
     {
-        if (!grid_.hasNextStatus(index_))
-        {
-            return 0.0;
-        }
-
         final double[] computed = _probWorkspace;
-        //final double[] actual = workspace_.getActualProbabilityWorkspace();
         transitionProbability(grid_, index_, computed);
 
-        //Arrays.fill(actual, 0.0);
         final int actualOutcome = grid_.getNextStatus(index_);
         final int mapped = _likelihood.ordinalToOffset(actualOutcome);
-        //actual[mapped] = 1.0;
 
         //If this item took a forbidden transition, ignore the data point.
         if (mapped < 0)
@@ -261,15 +253,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         for (int i = start_; i < end_; i++)
         {
-            if (grid_.getStatus(i) != fromOrdinal)
-            {
-                continue;
-            }
-            if (!grid_.hasNextStatus(i))
-            {
-                continue;
-            }
-
             //We inline a bunch of these calcs to reduce duplication of effort.
             grid_.getRegressors(i, rawReg);
             this.fillWorkspace(rawReg, regressors);

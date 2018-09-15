@@ -29,6 +29,7 @@ import edu.columbia.tjw.item.algo.QuantApprox;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.data.InterpolatedCurve;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.ItemCalcGrid;
@@ -56,12 +57,12 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final SortedMap<S, SortedMap<R, QuantileDistribution>> _distMap;
     private final SortedMap<S, SortedMap<R, QuantileDistribution>> _modelMap;
 
-    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final SortedSet<R> extraRegressors_)
+    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_, final SortedSet<R> extraRegressors_)
     {
         this(params_, grid_, extraRegressors_, QuantApprox.DEFAULT_BUCKETS, QuantApprox.DEFAULT_LOAD);
     }
 
-    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final SortedSet<R> extraRegressors_, final int approxBuckets_, final int approxLoad_)
+    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_, final SortedSet<R> extraRegressors_, final int approxBuckets_, final int approxLoad_)
     {
         if (approxBuckets_ < 10)
         {
@@ -108,15 +109,6 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
                 for (int i = 0; i < grid.size(); i++)
                 {
-                    if (fromOrdinal != grid.getStatus(i))
-                    {
-                        continue;
-                    }
-                    if (!grid.hasNextStatus(i))
-                    {
-                        continue;
-                    }
-
                     final int trueToOrdinal = grid.getNextStatus(i);
                     final double prob;
 
