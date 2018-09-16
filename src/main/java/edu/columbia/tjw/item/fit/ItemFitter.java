@@ -29,7 +29,7 @@ import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 import edu.columbia.tjw.item.data.RawFittingGrid;
-import edu.columbia.tjw.item.fit.calculator.FitCalculator.EntropyAnalysis;
+import edu.columbia.tjw.item.fit.calculator.EntropyAnalysis;
 import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;

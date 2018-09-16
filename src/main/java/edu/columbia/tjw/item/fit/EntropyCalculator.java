@@ -22,6 +22,7 @@ package edu.columbia.tjw.item.fit;
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.calculator.BaseFitCalculator;
+import edu.columbia.tjw.item.fit.calculator.EntropyAnalysis;
 import edu.columbia.tjw.item.fit.calculator.FitCalculator;
 
 /**
@@ -57,7 +58,7 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
         return _grid.size();
     }
 
-    public FitCalculator.EntropyAnalysis computeEntropy(final ItemParameters<S, R, T> params_)
+    public EntropyAnalysis computeEntropy(final ItemParameters<S, R, T> params_)
     {
         return _calc.computeEntropy(params_);
     }

@@ -35,7 +35,7 @@ public final class BaseFitCalculator<S extends ItemStatus<S>, R extends ItemRegr
 
         if (count <= 0)
         {
-            return VACUOUS_ENTROPY;
+            return EntropyAnalysis.VACUOUS_ENTROPY;
         }
 
         for (int i = 0; i < grid.size(); i++)
