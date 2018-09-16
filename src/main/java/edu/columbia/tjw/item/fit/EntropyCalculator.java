@@ -24,6 +24,7 @@ import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.calculator.BaseFitCalculator;
 import edu.columbia.tjw.item.fit.calculator.EntropyAnalysis;
 import edu.columbia.tjw.item.fit.calculator.FitCalculator;
+import edu.columbia.tjw.item.fit.calculator.ThreadedFitCalculator;
 
 /**
  * @param <S>
@@ -37,9 +38,9 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
     private final ItemFittingGrid<S, R> _grid;
 
 
-    public EntropyCalculator(final ItemFittingGrid<S, R> grid_, final ItemSettings settings_)
+    public EntropyCalculator(final ItemFittingGrid<S, R> grid_)
     {
-        _calc = new BaseFitCalculator<>(grid_);
+        _calc = new ThreadedFitCalculator<>(grid_, 10 * 1000);
         _grid = grid_;
     }
 

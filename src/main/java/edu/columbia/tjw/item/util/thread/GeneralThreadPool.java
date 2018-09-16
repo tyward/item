@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item.util.thread;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -52,6 +54,21 @@ public class GeneralThreadPool extends ThreadPoolExecutor
 
         this.setThreadFactory(new GeneralFactory());
 
+    }
+
+    public <V> List<V> runAll(final List<? extends GeneralTask<V>> tasks_) {
+        for(final GeneralTask<V> task : tasks_) {
+            this.execute(task);
+        }
+
+        final List<V> output = new ArrayList<>(tasks_.size());
+
+        for(final GeneralTask<V> task : tasks_) {
+            final V next = task.waitForCompletion();
+            output.add(next);
+        }
+
+        return output;
     }
 
     private static final class GeneralFactory implements ThreadFactory

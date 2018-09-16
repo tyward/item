@@ -64,14 +64,10 @@ public class ThreadedFitCalculator<S extends ItemStatus<S>, R extends ItemRegres
 
         for(final FitCalculator<S, R, T> calc : _blockCalculators) {
             final EntropyRunner runner = new EntropyRunner(calc, params_);
-            POOL.execute(runner);
+            runners.add(runner);
         }
 
-        final List<EntropyAnalysis> analysis = new ArrayList<>(_blockCalculators.size());
-
-        for(final EntropyRunner runner : runners) {
-            analysis.add(runner.waitForCompletion());
-        }
+        final List<EntropyAnalysis> analysis = POOL.runAll(runners);
 
         // Now process the entropy blocks.
         final EntropyAnalysis output = new EntropyAnalysis(analysis);

@@ -111,7 +111,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _family = intercept_.getFamily();
         _status = status_;
         _grid = grid_;
-        _calc = new EntropyCalculator<>(_grid, _settings);
+        _calc = new EntropyCalculator<>(_grid);
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept);
         final double logLikelihood = this.computeLogLikelihood(starting);
