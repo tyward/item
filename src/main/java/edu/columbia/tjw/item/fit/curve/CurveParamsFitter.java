@@ -283,7 +283,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         //N.B: The optimizer will only run until it is sure that it has found the 
         //best point, or that it can't make further progress. Its goal is not to 
         //compute the log likelihood accurately, so recompute that now. 
-        final double recalcEntropy = _calc.computeEntropy(updated).getEntropy();
+        final double recalcEntropy = _calc.computeEntropy(updated).getEntropyMean();
         final CurveFitResult<S, R, T> output = new CurveFitResult<>(baseParams_, updated, curveParams, toStatus_, recalcEntropy, startingLL_, result.dataElementCount());
         return output;
     }

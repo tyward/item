@@ -120,9 +120,6 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
         }
 
         final ItemModel<S, R, T> localModel = _model.clone();
-        final S fromStatus = this._model.getParams().getStatus();
-
-        final int fromStatusOrdinal = fromStatus.ordinal();
 
         for (int i = start_; i < end_; i++)
         {

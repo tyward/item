@@ -108,7 +108,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         {
             final ItemParameters<S, R, T> updated = function.generateParams(beta);
 
-            final double recalcEntropy = _calc.computeEntropy(updated).getEntropy();
+            final double recalcEntropy = _calc.computeEntropy(updated).getEntropyMean();
             output = new ParamFitResult<>(params_, updated, recalcEntropy, entropy, numRows);
             chain_.pushResults("ParamFit", output.getEndingParams(), output.getEndingLL());
         }

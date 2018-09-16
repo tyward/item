@@ -29,7 +29,7 @@ import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 import edu.columbia.tjw.item.data.RawFittingGrid;
-import edu.columbia.tjw.item.fit.EntropyCalculator.EntropyAnalysis;
+import edu.columbia.tjw.item.fit.calculator.FitCalculator.EntropyAnalysis;
 import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
@@ -111,7 +111,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _family = intercept_.getFamily();
         _status = status_;
         _grid = grid_;
-        _calc = new EntropyCalculator<>(_grid, _status, _settings);
+        _calc = new EntropyCalculator<>(_grid, _settings);
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept);
         final double logLikelihood = this.computeLogLikelihood(starting);
@@ -399,7 +399,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public double computeLogLikelihood(final ItemParameters<S, R, T> params_)
     {
         final EntropyAnalysis ea = _calc.computeEntropy(params_);
-        final double entropy = ea.getEntropy();
+        final double entropy = ea.getEntropyMean();
         return entropy;
     }
 

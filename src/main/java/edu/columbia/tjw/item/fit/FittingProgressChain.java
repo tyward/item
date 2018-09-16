@@ -23,7 +23,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.fit.EntropyCalculator.EntropyAnalysis;
+import edu.columbia.tjw.item.fit.calculator.FitCalculator.EntropyAnalysis;
 import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -103,7 +103,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             final EntropyAnalysis ea = _calc.computeEntropy(curveResult_.getStartingParams());
 
             LOG.info("Unexpected incoming Log Likelihood: " + currLL + " != "
-                    + incomingStartLL + " (" + ea.getEntropy() + ")");
+                    + incomingStartLL + " (" + ea.getEntropyMean() + ")");
         }
 
         return this.pushResults(frameName_, incomingParams, incomingEntropy);
@@ -116,7 +116,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
             //Since the claim is that the LL improved, let's see if that's true...
             final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
-            final double entropy = ea.getEntropy();
+            final double entropy = ea.getEntropyMean();
 
             //LOG.info("Params: " + fitResult_.hashCode() + " -> " + entropy);
             //LOG.info("Chain: " + this.toString());
@@ -141,7 +141,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             final EntropyAnalysis ea = _calc.computeEntropy(fitResult_.getStartingParams());
 
             LOG.info("Unexpected incoming Log Likelihood: " + currLL + " != "
-                    + incomingStartLL + " (" + ea.getEntropy() + ")");
+                    + incomingStartLL + " (" + ea.getEntropyMean() + ")");
         }
 
         return this.pushResults(frameName_, fitResult_.getEndingParams(), fitResult_.getEndingLL());
@@ -156,7 +156,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     public void forcePushResults(final String frameName_, final ItemParameters<S, R, T> fitResult_)
     {
         final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
-        final double entropy = ea.getEntropy();
+        final double entropy = ea.getEntropyMean();
         LOG.info("Force pushing params onto chain[" + entropy + "]");
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, fitResult_, entropy, getLatestFrame());
         _frameList.add(frame);
@@ -172,7 +172,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
     public boolean pushResults(final String frameName_, final ItemParameters<S, R, T> fitResult_)
     {
-        final double entropy = _calc.computeEntropy(fitResult_).getEntropy();
+        final double entropy = _calc.computeEntropy(fitResult_).getEntropyMean();
         return pushResults(frameName_, fitResult_, entropy);
     }
 
