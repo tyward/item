@@ -40,7 +40,7 @@ public class SplineFactory<R extends ItemRegressor<R>> implements ItemCurveFacto
      */
     public static final SplineFactory SINGLETON = new SplineFactory();
 
-    private SplineFactory()
+    public SplineFactory()
     {
     }
 

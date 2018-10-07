@@ -19,7 +19,9 @@
  */
 package edu.columbia.tjw.item.base;
 
+import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveType;
+import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
@@ -46,6 +48,12 @@ public enum StandardCurveType implements ItemCurveType<StandardCurveType>
     public int getParamCount()
     {
         return _paramCount;
+    }
+
+    @Override
+    public <R extends ItemRegressor<R>> ItemCurveFactory<R, StandardCurveType> getFactory()
+    {
+        return new StandardCurveFactory<>();
     }
 
     @Override

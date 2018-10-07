@@ -8,6 +8,7 @@ import edu.columbia.tjw.item.ItemStatus;
 public interface FitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
 
+
     public EntropyAnalysis computeEntropy(final ItemParameters<S, R, T> params_);
 
 

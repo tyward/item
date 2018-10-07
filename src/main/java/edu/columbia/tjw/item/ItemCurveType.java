@@ -26,9 +26,9 @@ import edu.columbia.tjw.item.util.EnumMember;
  * drawing.
  *
  * @author tyler
- * @param <V> The type of the item curve
+ * @param <T> The type of the item curve
  */
-public interface ItemCurveType<V extends ItemCurveType<V>> extends EnumMember<V>
+public interface ItemCurveType<T extends ItemCurveType<T>> extends EnumMember<T>
 {
 
     /**
@@ -38,4 +38,6 @@ public interface ItemCurveType<V extends ItemCurveType<V>> extends EnumMember<V>
      */
     public int getParamCount();
 
+
+    public <R extends ItemRegressor<R>> ItemCurveFactory<R, T> getFactory();
 }

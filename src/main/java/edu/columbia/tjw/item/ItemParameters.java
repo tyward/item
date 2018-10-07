@@ -12,12 +12,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item;
+
+import edu.columbia.tjw.item.fit.PackedParameters;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -31,11 +33,10 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 /**
- *
- * @author tyler
  * @param <S> The status type for this model
  * @param <R> The regressor type for this model
  * @param <T> The curve type for this model
+ * @author tyler
  */
 public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
 {
@@ -95,6 +96,106 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _selfIndex = _status.getReachable().indexOf(_status);
         _effectiveParamCount = calculateEffectiveParamCount();
     }
+
+    /**
+     * We will not change the structure of the params at all, merely changing the value of some betas.
+     *
+     * @param base_
+     * @param packed_
+     */
+    private ItemParameters(ItemParameters<S, R, T> base_, ItemParametersVector packed_)
+    {
+        _status = base_.getStatus();
+        _intercept = base_._intercept;
+        _selfIndex = base_._selfIndex;
+
+        _filters = base_._filters;
+        _uniqueFields = base_._uniqueFields;
+        _fieldOffsets = base_._fieldOffsets;
+        _transOffsets = base_._transOffsets;
+        _uniqueBeta = base_._uniqueBeta;
+        _effectiveParamCount = base_._effectiveParamCount;
+
+
+        // We will go through and replace each of these curves...
+        final List<ItemCurve<T>> trans = new ArrayList<>(base_._trans);
+        _betas = new double[_status.getReachableCount()][base_._uniqueBeta.length];
+
+        //Now we fill the data.
+        int pointer = 0;
+
+        final S fromStatus = this.getStatus();
+        final List<S> reachable = fromStatus.getReachable();
+
+        for (int i = 0; i < ItemParameters.this.getEntryCount(); i++)
+        {
+            final S statusRestrict = ItemParameters.this.getEntryStatusRestrict(i);
+
+            if (statusRestrict == null)
+            {
+                for (final S next : reachable)
+                {
+                    if (next == fromStatus)
+                    {
+                        continue;
+                    }
+
+                    final int nextIndex = this.toStatusIndex(next);
+                    _betas[nextIndex][i] = packed_.getParameter(pointer++);
+                }
+            }
+            else
+            {
+                final int nextIndex = this.toStatusIndex(statusRestrict);
+
+                if (!packed_.isBeta(pointer))
+                {
+                    throw new IllegalArgumentException("Impossible.");
+                }
+
+
+                _betas[nextIndex][i] = packed_.getParameter(pointer++);
+            }
+
+            for (int z = 0; z < ItemParameters.this.getEntryDepth(i); z++)
+            {
+                final ItemCurve<T> curve = base_.getEntryCurve(i, z);
+
+                if (null == curve)
+                {
+                    continue;
+                }
+
+                final T curveType = curve.getCurveType();
+                final int curveParamCount = curveType.getParamCount();
+                final ItemCurveFactory<R, T> factory = curveType.getFactory();
+
+                final double[] curveParams = new double[curveParamCount];
+
+                for (int w = 0; w < curveParamCount; w++)
+                {
+                    if (!packed_.isCurve(pointer) || packed_.getDepth(pointer) != z || packed_.getCurveIndex(pointer) != w)
+                    {
+                        throw new IllegalArgumentException("Impossible.");
+                    }
+
+                    curveParams[w] = packed_.getParameter(pointer++);
+                }
+
+                final int listIndex = base_.getEntryCurveOffset(i, z);
+                final ItemCurve<T> newCurve = factory.generateCurve(curveType, 0, curveParams);
+                trans.set(listIndex, newCurve);
+            }
+        }
+
+        if (pointer != base_.getEffectiveParamCount())
+        {
+            throw new IllegalArgumentException("Impossible: " + pointer + " != " + base_.getEffectiveParamCount());
+        }
+
+        _trans = Collections.unmodifiableList(trans);
+    }
+
 
     /**
      * The constructor used to change betas, or add filters.
@@ -203,12 +304,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
         else
         {
-            toIndex = _status.getReachable().indexOf(toStatus_);
-
-            if (toIndex == -1)
-            {
-                throw new IllegalArgumentException("Not reachable status: " + toStatus_);
-            }
+            toIndex = getToIndex(toStatus_);
         }
 
         _uniqueBeta[endIndex] = toIndex;
@@ -425,6 +521,19 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return _effectiveParamCount;
     }
 
+    public int getToIndex(final S toStatus_)
+    {
+        final int toIndex = _status.getReachable().indexOf(toStatus_);
+
+        if (toIndex == -1)
+        {
+            throw new IllegalArgumentException("Not reachable status: " + toStatus_);
+        }
+
+        return toIndex;
+    }
+
+
     public int getInterceptIndex()
     {
         return INTERCEPT_INDEX;
@@ -471,7 +580,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     /**
      * This function will find the entry corresponding to the given curve
      * parameters.
-     *
+     * <p>
      * HOWEVER, it is necessary for the entry to match exactly, meaning many of
      * the constituent objects must be the exact same object. This is most
      * useful for (for instance) finding the entry of some ItemCurveParams that
@@ -720,7 +829,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     /**
      * Adds an empty beta entry, with just the given field.
-     *
+     * <p>
      * Note, if these parameters already contain a raw flag for this beta, then
      * this is returned unchanged.
      *
@@ -752,7 +861,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
      *
      * @param curveParams_
      * @param toStatus_
-     *
      * @return A new set of parameters, with the given curve added and its beta
      * set to zero.
      */
@@ -944,4 +1052,150 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     }
 
+
+    private final class ItemParametersVector implements PackedParameters<S, R, T>
+    {
+        private final double[] _paramValues;
+        private final int[] _toStatus;
+        private final int[] _entryIndex;
+        private final int[] _curveDepth;
+        private final int[] _curveIndex;
+
+        public ItemParametersVector()
+        {
+            final int paramCount = ItemParameters.this.getEffectiveParamCount();
+
+            _paramValues = new double[paramCount];
+            _toStatus = new int[paramCount];
+            _entryIndex = new int[paramCount];
+            _curveDepth = new int[paramCount];
+            _curveIndex = new int[paramCount];
+
+            int pointer = 0;
+
+            final S fromStatus = ItemParameters.this.getStatus();
+            final List<S> reachable = fromStatus.getReachable();
+
+            for (int i = 0; i < ItemParameters.this.getEntryCount(); i++)
+            {
+                final S statusRestrict = ItemParameters.this.getEntryStatusRestrict(i);
+
+                if (statusRestrict == null)
+                {
+                    for (final S next : reachable)
+                    {
+                        if (next == fromStatus)
+                        {
+                            continue;
+                        }
+
+                        pointer = fillBeta(next, i, pointer);
+                    }
+                }
+                else
+                {
+                    pointer = fillBeta(statusRestrict, i, pointer);
+                }
+
+                for (int z = 0; z < ItemParameters.this.getEntryDepth(i); z++)
+                {
+                    final ItemCurve<T> curve = ItemParameters.this.getEntryCurve(i, z);
+
+                    if (null == curve)
+                    {
+                        continue;
+                    }
+
+                    final int curveParamCount = curve.getCurveType().getParamCount();
+
+                    for (int w = 0; w < curveParamCount; w++)
+                    {
+                        final double curveParam = curve.getParam(w);
+                        pointer = fillOne(curveParam, -1, i, z, w, pointer);
+                    }
+                }
+            }
+
+            if (pointer != paramCount)
+            {
+                throw new IllegalArgumentException("Impossible: " + pointer + " != " + paramCount);
+            }
+        }
+
+        private int fillBeta(final S toStatus_, final int entryIndex_, final int pointer_)
+        {
+            final int toIndex = ItemParameters.this.getToIndex(toStatus_);
+            return fillOne(ItemParameters.this.getBeta(toIndex, entryIndex_), toIndex, entryIndex_, -1, -1, pointer_);
+        }
+
+        private int fillOne(final double val_, final int toStatus_, final int entryIndex_, final int curveDepth_, final int curveIndex_, final int pointer_)
+        {
+            _paramValues[pointer_] = val_;
+            _toStatus[pointer_] = toStatus_;
+            _entryIndex[pointer_] = entryIndex_;
+            _curveDepth[pointer_] = curveDepth_;
+            _curveIndex[pointer_] = curveIndex_;
+            return pointer_ + 1;
+        }
+
+        @Override
+        public int size()
+        {
+            return _paramValues.length;
+        }
+
+        @Override
+        public double getParameter(int index_)
+        {
+            return _paramValues[index_];
+        }
+
+        @Override
+        public double setParameter(int index_, double value_)
+        {
+            return _paramValues[index_] = value_;
+        }
+
+        @Override
+        public boolean isBeta(int index_)
+        {
+            return _curveIndex[index_] == -1;
+        }
+
+        @Override
+        public boolean isCurve(int index_)
+        {
+            return !isBeta(index_);
+        }
+
+        @Override
+        public int getTransition(int index_)
+        {
+            return _toStatus[index_];
+        }
+
+        @Override
+        public int getEntry(int index_)
+        {
+            return _entryIndex[index_];
+        }
+
+        @Override
+        public int getDepth(int index_)
+        {
+            return _curveDepth[index_];
+        }
+
+        @Override
+        public int getCurveIndex(int index_)
+        {
+            return _curveIndex[index_];
+        }
+
+        @Override
+        public ItemParameters<S, R, T> generateParams()
+        {
+            return new ItemParameters(ItemParameters.this, this);
+        }
+    }
 }
