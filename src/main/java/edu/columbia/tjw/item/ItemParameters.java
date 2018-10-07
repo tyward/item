@@ -1162,6 +1162,24 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         @Override
+        public double[] getPacked()
+        {
+            return _paramValues.clone();
+        }
+
+        @Override
+        public void updatePacked(double[] newParams_)
+        {
+            if (newParams_.length != _paramValues.length)
+            {
+                throw new IllegalArgumentException("Params wrong length.");
+            }
+
+            System.arraycopy(newParams_, 0, _paramValues, 0, _paramValues.length);
+
+        }
+
+        @Override
         public double getParameter(int index_)
         {
             return _paramValues[index_];

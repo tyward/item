@@ -10,9 +10,9 @@ public interface PackedParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     public int size();
 
-//    public double[] getPacked();
-//
-//    public void updatePacked(final double[] newParams_);
+    public double[] getPacked();
+
+    public void updatePacked(final double[] newParams_);
 
     public double getParameter(final int index_);
 

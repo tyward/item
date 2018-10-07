@@ -55,6 +55,33 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     }
 
     @Override
+    public double[] getPacked()
+    {
+        final double[] output = new double[this.size()];
+
+        for (int i = 0; i < this.size(); i++)
+        {
+            output[i] = getParameter(i);
+        }
+
+        return output;
+    }
+
+    @Override
+    public void updatePacked(double[] newParams_)
+    {
+        if (newParams_.length != this.size())
+        {
+            throw new IllegalArgumentException("Size mismatch.");
+        }
+
+        for (int i = 0; i < newParams_.length; i++)
+        {
+            this.setParameter(i, newParams_[i]);
+        }
+    }
+
+    @Override
     public double getParameter(int index_)
     {
         return _underlying.getParameter(translate(index_));

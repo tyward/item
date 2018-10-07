@@ -135,59 +135,59 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         final PackedParameters<S, R, T> reduced = new ReducedParameterVector<>(active, packed);
 
-        final int reachableCount = params_.getStatus().getReachableCount();
-        final int entryCount = params_.getEntryCount();
-        final S from = params_.getStatus();
-
-        final int maxSize = reachableCount * entryCount;
-
-        int pointer = 0;
-        double[] beta = new double[maxSize];
-        int[] statusPointers = new int[maxSize];
-        int[] regPointers = new int[maxSize];
-
-        for (int i = 0; i < reachableCount; i++)
-        {
-            final S to = from.getReachable().get(i);
-
-            for (int k = 0; k < entryCount; k++)
-            {
-                if (params_.betaIsFrozen(to, k, null))
-                {
-                    continue;
-                }
-
-                beta[pointer] = params_.getBeta(i, k);
-                statusPointers[pointer] = i;
-                regPointers[pointer] = k;
-
-                if (reduced.getTransition(pointer) != i)
-                {
-                    throw new IllegalStateException("Impossible.");
-                }
-                if (reduced.getEntry(pointer) != k)
-                {
-                    throw new IllegalStateException("Impossible.");
-                }
-
-                pointer++;
-            }
-        }
-
-        beta = Arrays.copyOf(beta, pointer);
-        statusPointers = Arrays.copyOf(statusPointers, pointer);
-        regPointers = Arrays.copyOf(regPointers, pointer);
+//        final int reachableCount = params_.getStatus().getReachableCount();
+//        final int entryCount = params_.getEntryCount();
+//        final S from = params_.getStatus();
+//
+//        final int maxSize = reachableCount * entryCount;
+//
+//        int pointer = 0;
+//        double[] beta = new double[maxSize];
+//        int[] statusPointers = new int[maxSize];
+//        int[] regPointers = new int[maxSize];
+//
+//        for (int i = 0; i < reachableCount; i++)
+//        {
+//            final S to = from.getReachable().get(i);
+//
+//            for (int k = 0; k < entryCount; k++)
+//            {
+//                if (params_.betaIsFrozen(to, k, null))
+//                {
+//                    continue;
+//                }
+//
+//                beta[pointer] = params_.getBeta(i, k);
+//                statusPointers[pointer] = i;
+//                regPointers[pointer] = k;
+//
+//                if (reduced.getTransition(pointer) != i)
+//                {
+//                    throw new IllegalStateException("Impossible.");
+//                }
+//                if (reduced.getEntry(pointer) != k)
+//                {
+//                    throw new IllegalStateException("Impossible.");
+//                }
+//
+//                pointer++;
+//            }
+//        }
+//
+//        beta = Arrays.copyOf(beta, pointer);
+//        statusPointers = Arrays.copyOf(statusPointers, pointer);
+//        regPointers = Arrays.copyOf(regPointers, pointer);
 
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _calc.getGrid());
 
 
-        if (reduced.size() != pointer)
-        {
-            LOG.info("Unexpected!");
-        }
+//        if (reduced.size() != pointer)
+//        {
+//            LOG.info("Unexpected!");
+//        }
 
 
-        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(beta, statusPointers, regPointers, params_, grid, new ItemModel<>(params_), _settings, reduced);
+        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(params_, grid, new ItemModel<>(params_), _settings, reduced);
         return function;
     }
 
