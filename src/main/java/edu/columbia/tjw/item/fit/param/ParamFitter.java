@@ -49,8 +49,8 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     private final ItemSettings _settings;
     private final EntropyCalculator<S, R, T> _calc;
 
-    ItemParameters<S, R, T> _cacheParams;
-    LogisticModelFunction<S, R, T> _cacheFunction;
+//    ItemParameters<S, R, T> _cacheParams;
+//    LogisticModelFunction<S, R, T> _cacheFunction;
 
     public ParamFitter(final EntropyCalculator<S, R, T> calc_, final ItemSettings settings_)
     {
@@ -64,17 +64,17 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return fit(chain_, chain_.getBestParameters());
     }
 
-    public synchronized ParamFitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_) throws ConvergenceException
+    public ParamFitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_) throws ConvergenceException
     {
         final double entropy = chain_.getLogLikelihood();
 
-        if (params_ != _cacheParams)
-        {
-            _cacheParams = params_;
-            _cacheFunction = generateFunction(params_);
-        }
+//        if (params_ != _cacheParams)
+//        {
+//            _cacheParams = params_;
+//            _cacheFunction = generateFunction(params_);
+//        }
 
-        final LogisticModelFunction<S, R, T> function = _cacheFunction;
+        final LogisticModelFunction<S, R, T> function = generateFunction(params_);
         final double[] beta = function.getBeta();
         final MultivariatePoint point = new MultivariatePoint(beta);
         final int numRows = function.numRows();

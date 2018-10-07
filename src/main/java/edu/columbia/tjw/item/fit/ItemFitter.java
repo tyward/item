@@ -19,24 +19,20 @@
  */
 package edu.columbia.tjw.item.fit;
 
-import edu.columbia.tjw.item.ItemCurveFactory;
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemParameters;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemSettings;
-import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 import edu.columbia.tjw.item.data.RawFittingGrid;
-import edu.columbia.tjw.item.fit.calculator.EntropyAnalysis;
 import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
+import edu.columbia.tjw.item.fit.calculator.EntropyAnalysis;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
+
 import java.util.Collection;
 import java.util.Set;
 import java.util.SortedSet;
@@ -68,7 +64,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private final EntropyCalculator<S, R, T> _calc;
 
     private final ParamFitter<S, R, T> _fitter;
-    final CurveFitter<S, R, T> _curveFitter;
+    private final CurveFitter<S, R, T> _curveFitter;
 
     private final FittingProgressChain<S, R, T> _chain;
 
