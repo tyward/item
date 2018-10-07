@@ -127,13 +127,13 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         final S fromStatus = this.getStatus();
         final List<S> reachable = fromStatus.getReachable();
 
-        for (int i = 0; i < ItemParameters.this.getEntryCount(); i++)
+        for (final S next : reachable)
         {
-            final S statusRestrict = ItemParameters.this.getEntryStatusRestrict(i);
-
-            if (statusRestrict == null)
+            for (int i = 0; i < ItemParameters.this.getEntryCount(); i++)
             {
-                for (final S next : reachable)
+                final S statusRestrict = ItemParameters.this.getEntryStatusRestrict(i);
+
+                if (statusRestrict == null)
                 {
                     if (next == fromStatus)
                     {
@@ -143,48 +143,52 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                     final int nextIndex = this.toStatusIndex(next);
                     _betas[nextIndex][i] = packed_.getParameter(pointer++);
                 }
-            }
-            else
-            {
-                final int nextIndex = this.toStatusIndex(statusRestrict);
-
-                if (!packed_.isBeta(pointer))
+                else
                 {
-                    throw new IllegalArgumentException("Impossible.");
-                }
+                    final int nextIndex = this.toStatusIndex(statusRestrict);
 
+                    if (next != statusRestrict)
+                    {
+                        continue;
+                    }
 
-                _betas[nextIndex][i] = packed_.getParameter(pointer++);
-            }
-
-            for (int z = 0; z < ItemParameters.this.getEntryDepth(i); z++)
-            {
-                final ItemCurve<T> curve = base_.getEntryCurve(i, z);
-
-                if (null == curve)
-                {
-                    continue;
-                }
-
-                final T curveType = curve.getCurveType();
-                final int curveParamCount = curveType.getParamCount();
-                final ItemCurveFactory<R, T> factory = curveType.getFactory();
-
-                final double[] curveParams = new double[curveParamCount];
-
-                for (int w = 0; w < curveParamCount; w++)
-                {
-                    if (!packed_.isCurve(pointer) || packed_.getDepth(pointer) != z || packed_.getCurveIndex(pointer) != w)
+                    if (!packed_.isBeta(pointer))
                     {
                         throw new IllegalArgumentException("Impossible.");
                     }
 
-                    curveParams[w] = packed_.getParameter(pointer++);
+                    _betas[nextIndex][i] = packed_.getParameter(pointer++);
                 }
 
-                final int listIndex = base_.getEntryCurveOffset(i, z);
-                final ItemCurve<T> newCurve = factory.generateCurve(curveType, 0, curveParams);
-                trans.set(listIndex, newCurve);
+                for (int z = 0; z < ItemParameters.this.getEntryDepth(i); z++)
+                {
+                    final ItemCurve<T> curve = base_.getEntryCurve(i, z);
+
+                    if (null == curve)
+                    {
+                        continue;
+                    }
+
+                    final T curveType = curve.getCurveType();
+                    final int curveParamCount = curveType.getParamCount();
+                    final ItemCurveFactory<R, T> factory = curveType.getFactory();
+
+                    final double[] curveParams = new double[curveParamCount];
+
+                    for (int w = 0; w < curveParamCount; w++)
+                    {
+                        if (!packed_.isCurve(pointer) || packed_.getDepth(pointer) != z || packed_.getCurveIndex(pointer) != w)
+                        {
+                            throw new IllegalArgumentException("Impossible.");
+                        }
+
+                        curveParams[w] = packed_.getParameter(pointer++);
+                    }
+
+                    final int listIndex = base_.getEntryCurveOffset(i, z);
+                    final ItemCurve<T> newCurve = factory.generateCurve(curveType, 0, curveParams);
+                    trans.set(listIndex, newCurve);
+                }
             }
         }
 
@@ -1082,13 +1086,13 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             final S fromStatus = ItemParameters.this.getStatus();
             final List<S> reachable = fromStatus.getReachable();
 
-            for (int i = 0; i < ItemParameters.this.getEntryCount(); i++)
+            for (final S next : reachable)
             {
-                final S statusRestrict = ItemParameters.this.getEntryStatusRestrict(i);
-
-                if (statusRestrict == null)
+                for (int i = 0; i < ItemParameters.this.getEntryCount(); i++)
                 {
-                    for (final S next : reachable)
+                    final S statusRestrict = ItemParameters.this.getEntryStatusRestrict(i);
+
+                    if (statusRestrict == null)
                     {
                         if (next == fromStatus)
                         {
@@ -1097,27 +1101,32 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
                         pointer = fillBeta(next, i, pointer);
                     }
-                }
-                else
-                {
-                    pointer = fillBeta(statusRestrict, i, pointer);
-                }
-
-                for (int z = 0; z < ItemParameters.this.getEntryDepth(i); z++)
-                {
-                    final ItemCurve<T> curve = ItemParameters.this.getEntryCurve(i, z);
-
-                    if (null == curve)
+                    else
                     {
-                        continue;
+                        if (next != statusRestrict)
+                        {
+                            continue;
+                        }
+
+                        pointer = fillBeta(statusRestrict, i, pointer);
                     }
 
-                    final int curveParamCount = curve.getCurveType().getParamCount();
-
-                    for (int w = 0; w < curveParamCount; w++)
+                    for (int z = 0; z < ItemParameters.this.getEntryDepth(i); z++)
                     {
-                        final double curveParam = curve.getParam(w);
-                        pointer = fillOne(curveParam, -1, i, z, w, pointer);
+                        final ItemCurve<T> curve = ItemParameters.this.getEntryCurve(i, z);
+
+                        if (null == curve)
+                        {
+                            continue;
+                        }
+
+                        final int curveParamCount = curve.getCurveType().getParamCount();
+
+                        for (int w = 0; w < curveParamCount; w++)
+                        {
+                            final double curveParam = curve.getParam(w);
+                            pointer = fillOne(curveParam, -1, i, z, w, pointer);
+                        }
                     }
                 }
             }

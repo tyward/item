@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit.param;
@@ -31,15 +31,15 @@ import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
+
 import java.util.Arrays;
 import java.util.logging.Logger;
 
 /**
- *
- * @author tyler
  * @param <S> The status type for this fitter
  * @param <R> The regressor type for this fitter
  * @param <T> The curve type for this fitter
+ * @author tyler
  */
 public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
@@ -116,9 +116,27 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     private LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_)
     {
+        final PackedParameters<S, R, T> packed = params_.generatePacked();
+        final boolean[] active = new boolean[params_.getEffectiveParamCount()];
+
+        for (int i = 0; i < active.length; i++)
+        {
+            if (!packed.isBeta(i))
+            {
+                continue;
+            }
+            if (packed.betaIsFrozen(i))
+            {
+                continue;
+            }
+
+            active[i] = true;
+        }
+
+        final PackedParameters<S, R, T> reduced = new ReducedParameterVector<>(active, packed);
+
         final int reachableCount = params_.getStatus().getReachableCount();
         final int entryCount = params_.getEntryCount();
-
         final S from = params_.getStatus();
 
         final int maxSize = reachableCount * entryCount;
@@ -142,6 +160,16 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                 beta[pointer] = params_.getBeta(i, k);
                 statusPointers[pointer] = i;
                 regPointers[pointer] = k;
+
+                if (reduced.getTransition(pointer) != i)
+                {
+                    throw new IllegalStateException("Impossible.");
+                }
+                if (reduced.getEntry(pointer) != k)
+                {
+                    throw new IllegalStateException("Impossible.");
+                }
+
                 pointer++;
             }
         }
@@ -152,27 +180,11 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _calc.getGrid());
 
-        final PackedParameters<S, R, T> packed = params_.generatePacked();
 
-        final boolean[] active = new boolean[params_.getEffectiveParamCount()];
-
-        for(int i = 0; i < active.length; i++) {
-            if(!packed.isBeta(i)) {
-                continue;
-            }
-            if(packed.betaIsFrozen(i)) {
-                continue;
-            }
-
-            active[i] = true;
-        }
-
-        final PackedParameters<S, R, T> reduced = new ReducedParameterVector<>(active, packed);
-
-        if(reduced.size() != pointer) {
+        if (reduced.size() != pointer)
+        {
             LOG.info("Unexpected!");
         }
-
 
 
         final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(beta, statusPointers, regPointers, params_, grid, new ItemModel<>(params_), _settings, reduced);

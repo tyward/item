@@ -79,6 +79,16 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
         final ItemParameters<S, R, T> p2 = _packed.generateParams();
 
+        for (int i = 0; i < updated.getEntryCount(); i++)
+        {
+            for (int k = 0; k < updated.getReachableSize(); k++)
+            {
+                if (updated.getBeta(k, i) != p2.getBeta(k, i))
+                {
+                    throw new IllegalArgumentException("Impossible");
+                }
+            }
+        }
 
         return updated;
     }
