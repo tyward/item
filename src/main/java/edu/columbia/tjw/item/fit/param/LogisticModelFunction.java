@@ -42,33 +42,18 @@ import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
 public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
 {
-    //private final double[] _beta;
-    private final int[] _statusPointers;
-    private final int[] _regPointers;
     private final ParamFittingGrid<S, R, T> _grid;
-    private ItemParameters<S, R, T> _params;
-    private ItemModel<S, R, T> _model;
     private final PackedParameters<S, R, T> _packed;
+
+    private ItemModel<S, R, T> _model;
 
     public LogisticModelFunction(
             final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final ItemModel<S, R, T> model_, ItemSettings settings_, final PackedParameters<S, R, T> packed_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
-        //_beta = beta_.clone();
-        //_statusPointers = statusPointers_;
-        //_regPointers = regPointers_;
-        _params = params_;
         _grid = grid_;
         _model = model_;
         _packed = packed_;
-
-        _statusPointers = new int[packed_.size()];
-        _regPointers = new int[packed_.size()];
-
-        for(int i = 0; i < packed_.size(); i++) {
-            _statusPointers[i] = packed_.getTransition(i);
-            _regPointers[i] = packed_.getEntry(i);
-        }
     }
 
     public double[] getBeta()
@@ -78,27 +63,8 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
     public ItemParameters<S, R, T> generateParams(final double[] beta_)
     {
-//        final ItemParameters<S, R, T> updated = updateParams(_params, _statusPointers, _regPointers, beta_);
-//
-//        for (int i = 0; i < beta_.length; i++)
-//        {
-//            _packed.setParameter(i, beta_[i]);
-//        }
-
         _packed.updatePacked(beta_);
         final ItemParameters<S, R, T> p2 = _packed.generateParams();
-
-//        for (int i = 0; i < updated.getEntryCount(); i++)
-//        {
-//            for (int k = 0; k < updated.getReachableSize(); k++)
-//            {
-//                if (updated.getBeta(k, i) != p2.getBeta(k, i))
-//                {
-//                    throw new IllegalArgumentException("Impossible");
-//                }
-//            }
-//        }
-
         return p2;
     }
 
@@ -137,8 +103,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
         }
 
         final ItemParameters<S, R, T> updated = _packed.generateParams();
-        _params = updated;
-        _model = new ItemModel<>(_params);
+        _model = new ItemModel<>(updated);
     }
 
     @Override
@@ -176,7 +141,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
         final ItemModel<S, R, T> localModel = _model.clone();
 
-        final int count = localModel.computeDerivative(_grid, start_, end_, _regPointers, _statusPointers, derivative);
+        final int count = localModel.computeDerivative(_grid, start_, end_,_packed, derivative);
 
         if (count > 0)
         {

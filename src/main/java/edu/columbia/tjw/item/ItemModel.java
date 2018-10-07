@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item;
 
 import edu.columbia.tjw.item.fit.ItemParamGrid;
+import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -236,9 +237,9 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * regressorPointer_[i]'th regressor and the statusPointers_[i]'th status.
      * @return The total observation count used for this computation.
      */
-    public int computeDerivative(final ParamFittingGrid<S, R, T> grid_, final int start_, final int end_, final int[] regressorPointers_, final int[] statusPointers_, final double[] derivative_)
+    public int computeDerivative(final ParamFittingGrid<S, R, T> grid_, final int start_, final int end_, PackedParameters<S, R, T> packed_, final double[] derivative_)
     {
-        final int dimension = regressorPointers_.length;
+        final int dimension = packed_.size();
         final double[] computed = _probWorkspace;
         final double[] actual = _actualProbWorkspace;
         final double[] regressors = _regWorkspace;
@@ -276,11 +277,14 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             {
                 //looping over the betas.
                 double betaTerm = 0.0;
+                final int entryPointer = packed_.getEntry(z);
+                final int transitionPointer = packed_.getTransition(z);
+
 
                 for (int q = 0; q < reachable.size(); q++)
                 {
                     //looping over the to-states.
-                    final double betaDerivative = betaDerivative(regressors, computed, regressorPointers_[z], q, statusPointers_[z]);
+                    final double betaDerivative = betaDerivative(regressors, computed, entryPointer, q, transitionPointer);
                     final double actualProbability = actual[q];
                     final double computedProb = computed[q];
                     final double contribution = actualProbability * betaDerivative / computedProb;
