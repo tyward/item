@@ -1151,9 +1151,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         @Override
-        public double setParameter(int index_, double value_)
+        public void setParameter(int index_, double value_)
         {
-            return _paramValues[index_] = value_;
+            _paramValues[index_] = value_;
         }
 
         @Override
