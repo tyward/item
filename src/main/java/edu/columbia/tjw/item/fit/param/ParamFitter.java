@@ -25,9 +25,7 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.fit.EntropyCalculator;
-import edu.columbia.tjw.item.fit.FittingProgressChain;
-import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.fit.*;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
@@ -153,7 +151,31 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         regPointers = Arrays.copyOf(regPointers, pointer);
 
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _calc.getGrid());
-        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(beta, statusPointers, regPointers, params_, grid, new ItemModel<>(params_), _settings);
+
+        final PackedParameters<S, R, T> packed = params_.generatePacked();
+
+        final boolean[] active = new boolean[params_.getEffectiveParamCount()];
+
+        for(int i = 0; i < active.length; i++) {
+            if(!packed.isBeta(i)) {
+                continue;
+            }
+            if(packed.betaIsFrozen(i)) {
+                continue;
+            }
+
+            active[i] = true;
+        }
+
+        final PackedParameters<S, R, T> reduced = new ReducedParameterVector<>(active, packed);
+
+        if(reduced.size() != pointer) {
+            LOG.info("Unexpected!");
+        }
+
+
+
+        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(beta, statusPointers, regPointers, params_, grid, new ItemModel<>(params_), _settings, reduced);
         return function;
     }
 

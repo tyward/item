@@ -20,6 +20,8 @@ public interface PackedParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     public boolean isBeta(final int index_);
 
+    public boolean betaIsFrozen(final int index_);
+
     public boolean isCurve(final int index_);
 
     public int getTransition(final int index_);
@@ -31,4 +33,6 @@ public interface PackedParameters<S extends ItemStatus<S>, R extends ItemRegress
     public int getCurveIndex(final int index_);
 
     public ItemParameters<S, R, T> generateParams();
+
+    public ItemParameters<S, R, T> getOriginalParams();
 }

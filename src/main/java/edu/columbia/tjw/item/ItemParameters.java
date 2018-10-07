@@ -1052,6 +1052,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     }
 
+    public PackedParameters<S, R, T> generatePacked()
+    {
+        return new ItemParametersVector();
+    }
 
     private final class ItemParametersVector implements PackedParameters<S, R, T>
     {
@@ -1060,6 +1064,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         private final int[] _entryIndex;
         private final int[] _curveDepth;
         private final int[] _curveIndex;
+        private final boolean[] _betaIsFrozen;
 
         public ItemParametersVector()
         {
@@ -1070,6 +1075,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             _entryIndex = new int[paramCount];
             _curveDepth = new int[paramCount];
             _curveIndex = new int[paramCount];
+            _betaIsFrozen = new boolean[paramCount];
 
             int pointer = 0;
 
@@ -1125,7 +1131,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         private int fillBeta(final S toStatus_, final int entryIndex_, final int pointer_)
         {
             final int toIndex = ItemParameters.this.getToIndex(toStatus_);
+            _betaIsFrozen[pointer_] = ItemParameters.this.betaIsFrozen(toStatus_, entryIndex_, null);
             return fillOne(ItemParameters.this.getBeta(toIndex, entryIndex_), toIndex, entryIndex_, -1, -1, pointer_);
+
         }
 
         private int fillOne(final double val_, final int toStatus_, final int entryIndex_, final int curveDepth_, final int curveIndex_, final int pointer_)
@@ -1163,6 +1171,12 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         @Override
+        public boolean betaIsFrozen(int index_)
+        {
+            return _betaIsFrozen[index_];
+        }
+
+        @Override
         public boolean isCurve(int index_)
         {
             return !isBeta(index_);
@@ -1196,6 +1210,12 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         public ItemParameters<S, R, T> generateParams()
         {
             return new ItemParameters(ItemParameters.this, this);
+        }
+
+        @Override
+        public ItemParameters<S, R, T> getOriginalParams()
+        {
+            return ItemParameters.this;
         }
     }
 }

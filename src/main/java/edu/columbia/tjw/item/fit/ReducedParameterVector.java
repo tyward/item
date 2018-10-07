@@ -73,6 +73,12 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     }
 
     @Override
+    public boolean betaIsFrozen(int index_)
+    {
+        return _underlying.betaIsFrozen(translate(index_));
+    }
+
+    @Override
     public boolean isCurve(int index_)
     {
         return _underlying.isCurve(translate(index_));
@@ -106,6 +112,12 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     public ItemParameters<S, R, T> generateParams()
     {
         return _underlying.generateParams();
+    }
+
+    @Override
+    public ItemParameters<S, R, T> getOriginalParams()
+    {
+        return _underlying.getOriginalParams();
     }
 
     private int translate(final int index_)

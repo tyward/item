@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit.param;
@@ -25,6 +25,7 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.EvaluationResult;
 import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
@@ -33,11 +34,10 @@ import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
 
 /**
- *
- * @author tyler
  * @param <S> The status type for this grid
  * @param <R> The regressor type for this grid
  * @param <T> The curve type for this grid
+ * @author tyler
  */
 public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
@@ -48,9 +48,10 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     private final ParamFittingGrid<S, R, T> _grid;
     private ItemParameters<S, R, T> _params;
     private ItemModel<S, R, T> _model;
+    private final PackedParameters<S, R, T> _packed;
 
     public LogisticModelFunction(final double[] beta_, final int[] statusPointers_, final int[] regPointers_,
-            final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final ItemModel<S, R, T> model_, ItemSettings settings_)
+                                 final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final ItemModel<S, R, T> model_, ItemSettings settings_, final PackedParameters<S, R, T> packed_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
         _beta = beta_.clone();
@@ -59,6 +60,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
         _params = params_;
         _grid = grid_;
         _model = model_;
+        _packed = packed_;
     }
 
     public double[] getBeta()
@@ -69,6 +71,15 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     public ItemParameters<S, R, T> generateParams(final double[] beta_)
     {
         final ItemParameters<S, R, T> updated = updateParams(_params, _statusPointers, _regPointers, beta_);
+
+        for (int i = 0; i < beta_.length; i++)
+        {
+            _packed.setParameter(i, beta_[i]);
+        }
+
+        final ItemParameters<S, R, T> p2 = _packed.generateParams();
+
+
         return updated;
     }
 
