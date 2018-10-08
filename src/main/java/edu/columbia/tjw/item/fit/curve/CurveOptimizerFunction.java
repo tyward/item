@@ -171,7 +171,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             for (int k = 0; k < cols; k++)
             {
                 computed[k] = powerScores.get(i, k);
-                //actual[k] = _actualProbabilities.get(i, k);
             }
 
             final int actualOffset = _actualOffsets[i];
@@ -198,11 +197,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
             double contribution = beta * weight;
 
-//            final double regressor = _regData[0][mapped];
-//
-//            final double transformed = trans.transform(regressor);
-//            final double contribution = (beta * transformed);
-//            final double prevContribution;
             if (_subtractStarting)
             {
                 double prevWeight = 1.0;

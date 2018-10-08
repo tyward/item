@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item;
@@ -25,21 +25,21 @@ import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MultiLogistic;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
 /**
- *
  * A class representing an ITEM model.
- *
+ * <p>
  * Note that this class is not threadsafe. You need to synchronize on your own,
  * or clone this model and use the clone in other threads.
  *
- * @author tyler
  * @param <S> The status type for this model
  * @param <R> The regressor type for this model
  * @param <T> The curve type for this model
+ * @author tyler
  */
 public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Cloneable
 {
@@ -101,7 +101,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * N.B: This is NOT threadsafe! Generate a new model for each thread, there
      * is some internal workspace associated that can't be shared.
      *
-     * @param grid_ The grid holding the data
+     * @param grid_  The grid holding the data
      * @param index_ The row of the grid on which to apply the model
      * @return The log likelihood of the data point represented by this row
      */
@@ -123,42 +123,70 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return logLikelihood;
     }
 
-    private void fillWorkspace(final double[] rawRegressors_, final double[] regWorkspace_)
+    public double computeEntryWeight(final double[] rawRegressors_, final int entry_)
     {
         if (rawRegressors_.length != _rawRegWorkspace.length)
         {
             throw new IllegalArgumentException("Length mismatch.");
         }
 
+        final int depth = _params.getEntryDepth(entry_);
+        double weight = 1.0;
+
+        for (int w = 0; w < depth; w++)
+        {
+            final int regIndex = _params.getEntryRegressorOffset(entry_, w);
+            final double rawReg = rawRegressors_[regIndex];
+            final ItemCurve<T> curve = _params.getEntryCurve(entry_, w);
+
+            if (null == curve)
+            {
+                weight *= rawReg;
+            }
+            else
+            {
+                weight *= curve.transform(rawReg);
+            }
+        }
+
+        return weight;
+    }
+
+    /**
+     * Adds the entry power scores to the output_ vector. designed to make it easy to loop through entries. Set output_ to zero when needed.
+     *
+     * @param rawRegressors_
+     * @param entry_
+     * @param powerScoreOutput_
+     */
+    public void addEntryPowerScores(final double[] rawRegressors_, final int entry_, final double[] powerScoreOutput_)
+    {
+        if(powerScoreOutput_.length != _betas.length) {
+            throw new IllegalArgumentException("Mismatch.");
+        }
+
+        final double weight = computeEntryWeight(rawRegressors_, entry_);
+        for (int i = 0; i < _betas.length; i++)
+        {
+            final double beta = _betas[i][entry_];
+            final double score = weight * beta;
+            powerScoreOutput_[i] += score;
+        }
+    }
+
+
+    private void fillEntryWeights(final double[] rawRegressors_, final double[] weightOutput_)
+    {
         final int numEntries = _params.getEntryCount();
 
-        if (regWorkspace_.length != numEntries)
+        if (weightOutput_.length != numEntries)
         {
             throw new IllegalArgumentException("Length mismatch.");
         }
 
         for (int i = 0; i < numEntries; i++)
         {
-            final int depth = _params.getEntryDepth(i);
-            double weight = 1.0;
-
-            for (int w = 0; w < depth; w++)
-            {
-                final int regIndex = _params.getEntryRegressorOffset(i, w);
-                final double rawReg = rawRegressors_[regIndex];
-                final ItemCurve<T> curve = _params.getEntryCurve(i, w);
-
-                if (null == curve)
-                {
-                    weight *= rawReg;
-                }
-                else
-                {
-                    weight *= curve.transform(rawReg);
-                }
-            }
-
-            regWorkspace_[i] = weight;
+            weightOutput_[i] = computeEntryWeight(rawRegressors_, i);
         }
     }
 
@@ -167,9 +195,9 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * status), and fill out a vector of unpacked probabilities (all statuses
      * are represented).
      *
-     * @param packed_ The probabilities for reachable statuses. (input)
+     * @param packed_   The probabilities for reachable statuses. (input)
      * @param unpacked_ A vector to hold the probabilities for all statuses.
-     * Unreachable statuses will get 0.0.
+     *                  Unreachable statuses will get 0.0.
      */
     public void unpackProbabilities(final double[] packed_, final double[] unpacked_)
     {
@@ -216,25 +244,21 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     /**
      * Compute the derivative of the log likelihood with respect to the given
      * parameters, over the given data set.
-     *
+     * <p>
      * Note that this will be the SUM of the log likelihoods, meaning that
      * you'll need to normalize it on your own if you plan to do so.
-     *
+     * <p>
      * This function returns the count of the observations examined, so to
      * produce the average log likelihood, just divide each element of the
      * derivative by this number.
      *
-     * @param grid_ The data that will be used for this computation.
-     * @param start_ The row to start at.
-     * @param end_ The row to end at, half open interval (end_ is not included
-     * in the computation).
-     * @param regressorPointers_ An array of indices to the regressors you are
-     * interested in (may not be the full R x S matrix you want).
-     * @param statusPointers_ An array of indices to the statuses you are
-     * interested in.
+     * @param grid_       The data that will be used for this computation.
+     * @param start_      The row to start at.
+     * @param end_        The row to end at, half open interval (end_ is not included
+     *                    in the computation).
      * @param derivative_ The function's primary output, the derivative of the
-     * LL, the i'th element of which is with respect to the
-     * regressorPointer_[i]'th regressor and the statusPointers_[i]'th status.
+     *                    LL, the i'th element of which is with respect to the
+     *                    regressorPointer_[i]'th regressor and the statusPointers_[i]'th status.
      * @return The total observation count used for this computation.
      */
     public int computeDerivative(final ParamFittingGrid<S, R, T> grid_, final int start_, final int end_, PackedParameters<S, R, T> packed_, final double[] derivative_)
@@ -242,7 +266,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final int dimension = packed_.size();
         final double[] computed = _probWorkspace;
         final double[] actual = _actualProbWorkspace;
-        final double[] regressors = _regWorkspace;
+        final double[] entryWeights = _regWorkspace;
         final double[] rawReg = _rawRegWorkspace;
         final List<S> reachable = getParams().getStatus().getReachable();
         int count = 0;
@@ -256,8 +280,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         {
             //We inline a bunch of these calcs to reduce duplication of effort.
             grid_.getRegressors(i, rawReg);
-            this.fillWorkspace(rawReg, regressors);
-            rawPowerScores(regressors, computed);
+            this.fillEntryWeights(rawReg, entryWeights);
+            rawPowerScores(entryWeights, computed);
             MultiLogistic.multiLogisticFunction(computed, computed);
 
             final int actualTransition = grid_.getNextStatus(i);
@@ -284,7 +308,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 for (int q = 0; q < reachable.size(); q++)
                 {
                     //looping over the to-states.
-                    final double betaDerivative = betaDerivative(regressors, computed, entryPointer, q, transitionPointer);
+                    final double betaDerivative = betaDerivative(entryWeights, computed, entryPointer, q, transitionPointer);
                     final double actualProbability = actual[q];
                     final double computedProb = computed[q];
                     final double contribution = actualProbability * betaDerivative / computedProb;
@@ -312,8 +336,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * N.B: This is NOT threadsafe. It contains some use of internal state that
      * cannot be shared. Clone the model as needed.
      *
-     * @param grid_ The grid holding the data
-     * @param index_ The row in the grid representing this data point
+     * @param grid_   The grid holding the data
+     * @param index_  The row in the grid representing this data point
      * @param output_ The array to hold the output transition probabilities
      * @return The number of probabilities written into output_
      */
@@ -327,10 +351,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * Compute the transition probability from raw regressors. Be fairly careful
      * here, it's not easy to know which order the regressors need to come in.
      *
-     * @param regs_ The raw regressor values (ordered to match
-     * uniqueRegressors() from the ItemParams under this model)
+     * @param regs_   The raw regressor values (ordered to match
+     *                uniqueRegressors() from the ItemParams under this model)
      * @param output_ A workspace to hold the resulting transition
-     * probabilities.
+     *                probabilities.
      * @return The number of transition probabilities.
      */
     public int transitionProbability(final double[] regs_, final double[] output_)
@@ -341,17 +365,25 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     public void powerScores(final double[] regressors_, final double[] workspace_)
     {
-        if (regressors_.length != _rawRegWorkspace.length)
-        {
-            throw new IllegalArgumentException("Length mismatch: " + regressors_.length + " != " + _rawRegWorkspace.length);
-        }
-        if (workspace_.length != _betas.length)
-        {
-            throw new IllegalArgumentException("Length mismatch: " + workspace_.length + " != " + _reachableSize);
+        Arrays.fill(workspace_, 0.0);
+
+        for(int i = 0; i < _params.getEntryCount(); i++) {
+            addEntryPowerScores(regressors_, i, workspace_);
         }
 
-        fillWorkspace(regressors_, _regWorkspace);
-        rawPowerScores(_regWorkspace, workspace_);
+
+//
+//        if (regressors_.length != _rawRegWorkspace.length)
+//        {
+//            throw new IllegalArgumentException("Length mismatch: " + regressors_.length + " != " + _rawRegWorkspace.length);
+//        }
+//        if (workspace_.length != _betas.length)
+//        {
+//            throw new IllegalArgumentException("Length mismatch: " + workspace_.length + " != " + _reachableSize);
+//        }
+//
+//        fillEntryWeights(regressors_, _regWorkspace);
+//        rawPowerScores(_regWorkspace, workspace_);
     }
 
     private void rawPowerScores(final double[] regressors_, final double[] workspace_)

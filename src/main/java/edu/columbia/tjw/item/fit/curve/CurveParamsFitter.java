@@ -163,7 +163,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final ItemCurveParams<R, T> entryParams = params.getEntryCurveParams(entryIndex_);
         final ItemParameters<S, R, T> reduced = params.dropIndex(entryIndex_);
 
-        CurveFitResult<S, R, T> result = expandParameters(reduced, entryParams, toStatus_, true, startingLL_);
+        final CurveFitResult<S, R, T> result = expandParameters(reduced, entryParams, toStatus_, true, startingLL_);
         final double aicDiff = result.calculateAicDifference();
 
         if (aicDiff > _settings.getAicCutoff())
@@ -242,15 +242,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final QuantileDistribution dist = quantGenerator.getAdjusted();
         return dist;
     }
-
-    public CurveFitResult<S, R, T> expandParameters(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> initParams_, S toStatus_,
-            final boolean subtractStarting_) throws ConvergenceException
-    {
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(initParams_, toStatus_, subtractStarting_);
-        final CurveFitResult<S, R, T> result = generateFit(toStatus_, params_, func, _startingLL, initParams_);
-        return result;
-    }
-
+    
     public CurveFitResult<S, R, T> expandParameters(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> initParams_, S toStatus_,
             final boolean subtractStarting_, final double startingLL_) throws ConvergenceException
     {
