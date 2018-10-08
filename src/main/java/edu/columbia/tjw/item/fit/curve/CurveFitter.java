@@ -68,7 +68,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     private final ParamFitter<S, R, T> _paramFitter;
 
-    //private final FittingProgressChain<S, R, T> _chain;
     private CurveParamsFitter<S, R, T> _fitter;
     private ItemParameters<S, R, T> _cacheParams;
 
@@ -83,9 +82,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         _family = factory_.getFamily();
         _settings = settings_;
         _grid = grid_;
-
-        //_chain = chain_;
-        //_fitter = new CurveParamsFitter<>(_factory, _grid, _settings, _chain);
         _calc = calc_;
 
         _paramFitter = new ParamFitter<>(_calc, _settings);
@@ -115,7 +111,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         final ItemParameters<S, R, T> initParams = chain_.getBestParameters();
 
         final int entryCount = initParams.getEntryCount();
-        //ItemParameters<S, R, T> current = initParams;
 
         final List<ItemCurveParams<R, T>> curveEntries = new ArrayList<>();
 

@@ -173,6 +173,8 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
                 computed[k] = powerScores.get(i, k);
             }
 
+
+
             final int actualOffset = _actualOffsets[i];
 
             double weight = 1.0;

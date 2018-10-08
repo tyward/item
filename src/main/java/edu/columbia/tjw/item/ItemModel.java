@@ -370,20 +370,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         for(int i = 0; i < _params.getEntryCount(); i++) {
             addEntryPowerScores(regressors_, i, workspace_);
         }
-
-
-//
-//        if (regressors_.length != _rawRegWorkspace.length)
-//        {
-//            throw new IllegalArgumentException("Length mismatch: " + regressors_.length + " != " + _rawRegWorkspace.length);
-//        }
-//        if (workspace_.length != _betas.length)
-//        {
-//            throw new IllegalArgumentException("Length mismatch: " + workspace_.length + " != " + _reachableSize);
-//        }
-//
-//        fillEntryWeights(regressors_, _regWorkspace);
-//        rawPowerScores(_regWorkspace, workspace_);
     }
 
     private void rawPowerScores(final double[] regressors_, final double[] workspace_)
