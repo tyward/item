@@ -175,7 +175,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
 
 
-            final int actualOffset = _actualOffsets[i];
+
 
             double weight = 1.0;
 
@@ -233,6 +233,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             //Converte these power scores into probabilities.
             MultiLogistic.multiLogisticFunction(computed, computed);
 
+            final int actualOffset = _actualOffsets[i];
             final double logLikelihood = _likelihood.logLikelihood(computed, actualOffset);
 
             result_.add(logLikelihood, result_.getHighWater(), i + 1);
@@ -265,19 +266,17 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
         final double[] workspace1 = new double[reachableCount];
         final double[] output = new double[reachableCount];
-        //final double[] actual = new double[reachableCount];
 
         final int depth = _params.getEntryDepth();
         final double[] weights = new double[depth];
         final double[] knockoutWeights = new double[depth];
-        //final double[] componentDeriv = new double[depth];
 
         final int interceptIndex = _params.getInterceptIndex();
         final int betaIndex = _params.getBetaIndex();
 
         final RectangularDoubleArray powerScores = _curveFitter.getPowerScores();
 
-        //N.B: The derivative depes only on current params, not on _initParms, regardless of _subtractStarting.
+        //N.B: The derivative depends only on current params, not on _initParms, regardless of _subtractStarting.
         final double beta = _params.getBeta();
 
         for (int i = start_; i < end_; i++)
@@ -285,12 +284,10 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             for (int w = 0; w < reachableCount; w++)
             {
                 scores[w] = powerScores.get(i, w);
-                //actual[w] = _actualProbabilities.get(i, w);
             }
 
             //After this, workspace1 holds the model probabilities, output holds the xDerivatives of the probabilities.
             MultiLogistic.multiLogisticRegressorDerivatives(scores, betas, workspace1, output);
-            MultiLogistic.multiLogisticFunction(scores, workspace1);
 
             double xDerivative = 0.0;
 
