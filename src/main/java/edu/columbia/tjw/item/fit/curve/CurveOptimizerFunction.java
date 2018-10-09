@@ -12,20 +12,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit.curve;
 
-import edu.columbia.tjw.item.ItemCurve;
-import edu.columbia.tjw.item.ItemCurveFactory;
-import edu.columbia.tjw.item.ItemCurveParams;
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemSettings;
-import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid.MappedReader;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
@@ -36,14 +30,14 @@ import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
 import edu.columbia.tjw.item.optimize.MultivariateGradient;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
+
 import java.util.List;
 
 /**
- *
- * @author tyler
  * @param <S> The status type for this optimizer function
  * @param <R> The regressor type for this optimizer function
  * @param <T> THe curve type for this optimizer function
+ * @author tyler
  */
 public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
@@ -71,11 +65,15 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     //N.B: This is an unsafe reference to an array owned by someone else, be careful with it.
     private final float[][] _regData;
 
+    private final PackedCurveFunction<S, R, T> _packed;
+
+
     public CurveOptimizerFunction(final ItemCurveParams<R, T> initParams_, final ItemCurveFactory<R, T> factory_, final S fromStatus_, final S toStatus_, final CurveParamsFitter<S, R, T> curveFitter_,
-            final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final ItemSettings settings_, final boolean subtractStarting_)
+                                  final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final ItemSettings settings_, final boolean subtractStarting_, final ItemParameters<S, R, T> rawParams_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
+        _packed = new PackedCurveFunction<>(settings_, initParams_, toStatus_, rawParams_, grid_, curveFitter_, subtractStarting_);
         _factory = factory_;
         _initParams = initParams_;
         _subtractStarting = subtractStarting_;
@@ -141,6 +139,8 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         }
 
         _params = new ItemCurveParams<>(_initParams, _factory, _workspace);
+
+        _packed.prepare(input_);
     }
 
     @Override
@@ -172,10 +172,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             {
                 computed[k] = powerScores.get(i, k);
             }
-
-
-
-
 
             double weight = 1.0;
 
@@ -224,17 +220,39 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
                 contribution -= prevBeta * prevWeight;
             }
 
+
             //We are replacing one curve with another (if _prevCurve != null), so subtract off the 
             // curve we previously had before adding this new one.
             final double totalContribution = interceptAdjustment + contribution;
 
+            final double[] origPowerScores = computed.clone();
+
             computed[_toIndex] += totalContribution;
+
+            final double[] updatedPowerScores = computed.clone();
 
             //Converte these power scores into probabilities.
             MultiLogistic.multiLogisticFunction(computed, computed);
 
             final int actualOffset = _actualOffsets[i];
             final double logLikelihood = _likelihood.logLikelihood(computed, actualOffset);
+
+//            if (!_subtractStarting)
+//            {
+//                final double alt = _packed.calcValue(i);
+//
+//                final double diff = (alt - logLikelihood);
+//                final double d2 = diff * diff;
+//
+//                if (d2 > 0.000001)
+//                {
+//                    System.out.println("Unexpected: " + d2);
+//                    final double alt2 = _packed.calcValue(i);
+//                }
+//
+//
+//            }
+
 
             result_.add(logLikelihood, result_.getHighWater(), i + 1);
         }

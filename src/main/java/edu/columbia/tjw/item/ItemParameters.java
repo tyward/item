@@ -279,25 +279,19 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _filters = base_._filters;
 
         final SortedSet<R> newFields = new TreeSet<>();
-
-        //Workaround for issues with nulls.
-        final Set<ItemCurve<T>> newTrans = new HashSet<>();
-
         newFields.addAll(base_._uniqueFields);
         newFields.addAll(curveParams_.getRegressors());
 
-        newTrans.addAll(base_._trans);
-        newTrans.addAll(curveParams_.getCurves());
 
         //Always add the new entry to the end...
         final int baseEntryCount = base_.getEntryCount();
         final int newEntryCount = baseEntryCount + 1;
         final int endIndex = baseEntryCount;
 
-        //Just add the new entry to the end of the list.
-        _trans = Collections.unmodifiableList(new ArrayList<>(newTrans));
+
         _uniqueFields = Collections.unmodifiableList(new ArrayList<>(newFields));
 
+        //Just add the new entry to the end of the list.
         _uniqueBeta = Arrays.copyOf(base_._uniqueBeta, newEntryCount);
 
         final int toIndex;
@@ -322,6 +316,14 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             _betas[i] = Arrays.copyOf(base_._betas[i], newEntryCount);
         }
 
+
+        //Careful about null curves.....
+        final List<ItemCurve<T>> newTrans = new ArrayList<>();
+        newTrans.add(null);
+//        newTrans.addAll(base_._trans);
+//        newTrans.addAll(curveParams_.getCurves());
+
+
         //First, pull in all the old entries.
         for (int i = 0; i < baseEntryCount; i++)
         {
@@ -333,9 +335,21 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             {
                 final R field = base_.getEntryRegressor(i, w);
                 final ItemCurve<T> curve = base_.getEntryCurve(i, w);
+                final int transIndex;
+
+                if(null == curve) {
+                    transIndex = 0;
+                }
+                else {
+                    transIndex = newTrans.size();
+                    newTrans.add(curve);
+                }
+
+
+
 
                 _fieldOffsets[i][w] = _uniqueFields.indexOf(field);
-                _transOffsets[i][w] = _trans.indexOf(curve);
+                _transOffsets[i][w] = transIndex; //_trans.indexOf(curve);
             }
         }
 
@@ -349,9 +363,19 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         {
             final R field = curveParams_.getRegressor(i);
             final ItemCurve<T> curve = curveParams_.getCurve(i);
+            final int transIndex;
+
+            if(null == curve) {
+                transIndex = 0;
+            }
+            else {
+                transIndex = newTrans.size();
+                newTrans.add(curve);
+            }
+
 
             _fieldOffsets[endIndex][i] = _uniqueFields.indexOf(field);
-            _transOffsets[endIndex][i] = _trans.indexOf(curve);
+            _transOffsets[endIndex][i] = transIndex; //_trans.indexOf(curve);
         }
 
         if (toIndex != -1)
@@ -361,7 +385,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             _betas[toIndex][INTERCEPT_INDEX] += curveParams_.getIntercept();
         }
 
+        _trans = Collections.unmodifiableList(new ArrayList<>(newTrans));
         _effectiveParamCount = calculateEffectiveParamCount();
+
     }
 
     /**

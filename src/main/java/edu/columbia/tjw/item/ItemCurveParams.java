@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item;
@@ -25,10 +25,9 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- *
- * @author tyler
  * @param <R>
  * @param <T> The curve type defined by these params
+ * @author tyler
  */
 public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
 {
@@ -51,6 +50,7 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
     private final int[] _curveOffsets;
     private final int[] _curveIndices;
 
+
     public ItemCurveParams(final T type_, final R field_, ItemCurveFactory<R, T> factory_, final double[] curvePoint_)
     {
         this(Collections.singletonList(type_), Collections.singletonList(field_), factory_, curvePoint_[INTERCEPT_INDEX], curvePoint_[BETA_INDEX], NON_CURVE_PARAM_COUNT, curvePoint_);
@@ -69,6 +69,10 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         if (types_.size() != fields_.size())
         {
             throw new IllegalArgumentException("Size mismatch.");
+        }
+        if (types_.size() < 1)
+        {
+            throw new IllegalArgumentException("Vacuous curve parameters.");
         }
 
         _types = Collections.unmodifiableList(new ArrayList<>(types_));
@@ -136,6 +140,10 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         if (fields_.size() != curves_.size())
         {
             throw new IllegalArgumentException("List size mismatch: " + fields_.size() + " !+ " + curves_.size());
+        }
+        if (fields_.size() < 1)
+        {
+            throw new IllegalArgumentException("Vacuous curve parameters.");
         }
 
         final List<T> types = new ArrayList<>(curves_.size());
@@ -300,7 +308,7 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
 
     /**
      * How many parameters are we dealing with here.
-     *
+     * <p>
      * Including all curves, bet and intercept.
      *
      * @return

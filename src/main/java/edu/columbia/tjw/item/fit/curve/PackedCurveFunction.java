@@ -13,6 +13,7 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
     private final ItemParameters<S, R, T> _initParams;
     private final PackedParameters<S, R, T> _packed;
     private final ParamFittingGrid<S, R, T> _grid;
+    private final double _origIntercept;
 
     private ItemModel<S, R, T> _updatedModel;
 
@@ -21,18 +22,26 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
+        //N.B: We need to rebuild the curve params so that we don't end up with ItemParams where a curve being calibrated is
+        // shared with a pre-existing item because they point to the same physical instance.
+        final double[] curveVector = new double[curveParams_.size()];
+        curveParams_.extractPoint(curveVector);
+        final ItemCurveParams<R, T> repacked = new ItemCurveParams<>(curveParams_, curveParams_.getCurve(0).getCurveType().getFactory(), curveVector);
+
         _curveFitter = curveFitter_;
-        _initParams = initParams_.addBeta(curveParams_, toStatus_);
+        _initParams = initParams_.addBeta(repacked, toStatus_);
         _updatedModel = new ItemModel<>(_initParams);
         _grid = new ParamFittingGrid<>(_initParams, grid_.getUnderlying());
 
-        final int entryIndex = _initParams.getEntryIndex(curveParams_);
+        final int entryIndex = _initParams.getEntryCount() - 1;//_initParams.getEntryIndex(curveParams_);
         final int interceptIndex = _initParams.getInterceptIndex();
         final int toTransition = _initParams.getToIndex(toStatus_);
 
         final PackedParameters<S, R, T> rawPacked = _initParams.generatePacked();
 
         final boolean[] keep = new boolean[rawPacked.size()];
+
+        _origIntercept = initParams_.getBeta(toTransition, _initParams.getInterceptIndex());
 
         for (int i = 0; i < rawPacked.size(); i++)
         {
@@ -43,18 +52,14 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
                 continue;
             }
 
-            if (currentEntry == interceptIndex)
+
+            if (currentEntry == interceptIndex && toTransition == rawPacked.getTransition(i))
             {
                 keep[i] = true;
                 continue;
             }
 
             if (currentEntry != entryIndex)
-            {
-                continue;
-            }
-
-            if (toTransition != rawPacked.getTransition(i))
             {
                 continue;
             }
@@ -93,7 +98,13 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
 
         for (int i = 0; i < dimension; i++)
         {
-            final double value = input_.getElement(i);
+            double value = input_.getElement(i);
+
+            if (i == 0)
+            {
+                // Intercept term
+                value += _origIntercept;
+            }
 
             if (value != _packed.getParameter(i))
             {
@@ -110,6 +121,13 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
         final ItemParameters<S, R, T> updated = _packed.generateParams();
         _updatedModel = new ItemModel<>(updated);
     }
+
+    public double calcValue(final int index_)
+    {
+        final ItemModel<S, R, T> localModel = _updatedModel.clone();
+        return localModel.logLikelihood(_grid, index_);
+    }
+
 
     @Override
     protected void evaluate(int start_, int end_, EvaluationResult result_)

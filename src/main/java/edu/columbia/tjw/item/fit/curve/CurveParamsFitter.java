@@ -242,7 +242,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final QuantileDistribution dist = quantGenerator.getAdjusted();
         return dist;
     }
-    
+
     public CurveFitResult<S, R, T> expandParameters(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> initParams_, S toStatus_,
             final boolean subtractStarting_, final double startingLL_) throws ConvergenceException
     {
@@ -254,7 +254,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private CurveOptimizerFunction<S, R, T> generateFunction(final ItemCurveParams<R, T> initParams_, S toStatus_, final boolean subtractStarting_)
     {
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(initParams_, _factory, _fromStatus, toStatus_, this, _actualOutcomes,
-                _paramGrid, _settings, subtractStarting_);
+                _paramGrid, _settings, subtractStarting_, _model.getParams());
 
         return func;
     }
