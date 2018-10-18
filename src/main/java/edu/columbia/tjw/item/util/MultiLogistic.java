@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.util;
@@ -22,11 +22,15 @@ package edu.columbia.tjw.item.util;
 import org.apache.commons.math3.util.FastMath;
 
 /**
- *
  * @author tyler
  */
 public final class MultiLogistic
 {
+    // Power scores cannot be arbitrarily low. This is due to the fact that we only have limited data, there would never
+    // be any justification for saying the odds of an event are worse than 1/N for the N observations we have. In this
+    // case, use an N deep into the billions, but still low enough to avoid overflow issues.
+    private static final double MIN_POWER_SCORE = -30.0;
+
     private MultiLogistic()
     {
     }
@@ -36,7 +40,7 @@ public final class MultiLogistic
      * don't mind it being overwritten.
      *
      * @param powerScores_ An array of power scores
-     * @param output_ The power scores converted into probabilities
+     * @param output_      The power scores converted into probabilities
      * @return The normalizing factor for these power scores (essentially, the
      * sum of their exponentials)
      */
@@ -56,7 +60,8 @@ public final class MultiLogistic
         {
             final double raw = powerScores_[i];
             final double adjusted = raw - maxSum;
-            final double exp = FastMath.exp(adjusted);
+            final double floored = Math.max(MIN_POWER_SCORE, adjusted);
+            final double exp = FastMath.exp(floored);
             output_[i] = exp;
             expSum += exp;
         }
@@ -129,11 +134,10 @@ public final class MultiLogistic
      * It is safe to pass the same array to both arguments if you don't mind it
      * being overwritten.
      *
-     *
-     * @param baseCase_ Which power score will be set to zero.
+     * @param baseCase_      Which power score will be set to zero.
      * @param probabilities_ An array of probabilities
-     * @param output_ The corresponding power scores, with output_[baseCase_] =
-     * 0.0
+     * @param output_        The corresponding power scores, with output_[baseCase_] =
+     *                       0.0
      */
     public static void multiLogitFunction(final int baseCase_, final double[] probabilities_, final double[] output_)
     {
