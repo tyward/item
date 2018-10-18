@@ -250,8 +250,8 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         final List<ItemCurve<T>> curveList = new ArrayList<>(initParams_.getCurves());
         final List<R> regs = new ArrayList<>(initParams_.getRegressors());
 
-        curveList.add(curve_);
         regs.add(reg_);
+        curveList.add(curve_);
 
         final double intercept = initParams_.getIntercept();
         final double beta = initParams_.getBeta();

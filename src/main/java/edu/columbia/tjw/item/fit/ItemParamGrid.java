@@ -93,7 +93,8 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
 
         for (int i = 0; i < _readers.length; i++)
         {
-            output_[i] = _readers[i].asDouble(index_);
+            final double val =  _readers[i].asDouble(index_);
+            output_[i] = val;
         }
     }
 

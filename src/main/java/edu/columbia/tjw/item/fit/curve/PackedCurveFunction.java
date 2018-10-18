@@ -10,6 +10,7 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
 {
     private final CurveParamsFitter<S, R, T> _curveFitter;
+    private final ItemParameters<S, R, T> _unchangedParams;
     private final ItemParameters<S, R, T> _initParams;
     private final PackedParameters<S, R, T> _packed;
     private final ParamFittingGrid<S, R, T> _grid;
@@ -28,6 +29,7 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
         curveParams_.extractPoint(curveVector);
         final ItemCurveParams<R, T> repacked = new ItemCurveParams<>(curveParams_, curveParams_.getCurve(0).getCurveType().getFactory(), curveVector);
 
+        _unchangedParams = initParams_;
         _curveFitter = curveFitter_;
         _initParams = initParams_.addBeta(repacked, toStatus_);
         _updatedModel = new ItemModel<>(_initParams);
@@ -122,10 +124,31 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
         _updatedModel = new ItemModel<>(updated);
     }
 
+    public ItemParameters<S, R, T> getParams()
+    {
+        return _updatedModel.getParams();
+    }
+
+    public ItemParameters<S, R, T> getInitParams()
+    {
+        return _unchangedParams;
+    }
+
+
     public double calcValue(final int index_)
     {
         final ItemModel<S, R, T> localModel = _updatedModel.clone();
         return localModel.logLikelihood(_grid, index_);
+    }
+
+    public double[] calcGradient(final int index_)
+    {
+        final ItemModel<S, R, T> localModel = _updatedModel.clone();
+
+        final double[] gradient = new double[_packed.size()];
+
+        localModel.computeGradient(this._grid, _packed, index_, gradient, null);
+        return gradient;
     }
 
 
@@ -152,6 +175,42 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
     @Override
     protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_, EvaluationResult result_)
     {
-        return null;
+        final double[] itemDeriv = new double[_packed.size()];
+        final double[] totalDeriv = new double[_packed.size()];
+        final ItemModel<S, R, T> localModel = _updatedModel.clone();
+
+        for (int i = start_; i < end_; i++)
+        {
+            localModel.computeGradient(this._grid, _packed, i, itemDeriv, null);
+
+
+            for (int w = 0; w < itemDeriv.length; w++)
+            {
+                if (Double.isNaN(itemDeriv[w]) || Double.isInfinite(itemDeriv[w]))
+                {
+                    System.out.println("Unexpected.");
+                    localModel.computeGradient(this._grid, _packed, i, itemDeriv, null);
+                }
+
+
+                totalDeriv[w] += itemDeriv[w];
+            }
+        }
+
+        final int count = (end_ - start_);
+
+        //N.B: we are computing the negative log likelihood.
+        final double invCount = 1.0 / count;
+
+        for (int i = 0; i < totalDeriv.length; i++)
+        {
+            totalDeriv[i] = totalDeriv[i] * invCount;
+        }
+
+
+        final MultivariatePoint der = new MultivariatePoint(totalDeriv);
+
+        final MultivariateGradient grad = new MultivariateGradient(input_, der, null, 0.0);
+        return grad;
     }
 }

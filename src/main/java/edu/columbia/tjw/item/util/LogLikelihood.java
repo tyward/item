@@ -32,7 +32,7 @@ public final class LogLikelihood<S extends ItemStatus<S>>
 {
     //Nothing is less likely than 1 in a million, roughly. 
     private static final double LOG_CUTOFF = 14;
-    private final double EXP_CUTOFF = Math.exp(-LOG_CUTOFF);
+    private static final double EXP_CUTOFF = Math.exp(-LOG_CUTOFF);
 
     //This logic assumes all indistinguishable states are adjacent.
     //private final int[][] _mapping;
@@ -146,19 +146,23 @@ public final class LogLikelihood<S extends ItemStatus<S>>
             return 0.0;
         }
 
+        final double entropy = calcEntropy(computed_);
+        final double product = actual_ * entropy;
+        return product;
+    }
+
+    public static double calcEntropy(final double probability_) {
         final double negLL;
 
-        if (computed_ > EXP_CUTOFF)
+        if (probability_ > EXP_CUTOFF)
         {
-            negLL = -Math.log(computed_);
+            negLL = -Math.log(probability_);
         }
         else
         {
             negLL = LOG_CUTOFF;
         }
 
-        final double product = actual_ * negLL;
-        return product;
+        return negLL;
     }
-
 }

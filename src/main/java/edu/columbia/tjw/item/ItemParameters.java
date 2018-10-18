@@ -282,12 +282,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         newFields.addAll(base_._uniqueFields);
         newFields.addAll(curveParams_.getRegressors());
 
-
         //Always add the new entry to the end...
         final int baseEntryCount = base_.getEntryCount();
         final int newEntryCount = baseEntryCount + 1;
         final int endIndex = baseEntryCount;
-
 
         _uniqueFields = Collections.unmodifiableList(new ArrayList<>(newFields));
 
@@ -316,13 +314,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             _betas[i] = Arrays.copyOf(base_._betas[i], newEntryCount);
         }
 
-
         //Careful about null curves.....
         final List<ItemCurve<T>> newTrans = new ArrayList<>();
         newTrans.add(null);
-//        newTrans.addAll(base_._trans);
-//        newTrans.addAll(curveParams_.getCurves());
-
 
         //First, pull in all the old entries.
         for (int i = 0; i < baseEntryCount; i++)
@@ -337,15 +331,15 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                 final ItemCurve<T> curve = base_.getEntryCurve(i, w);
                 final int transIndex;
 
-                if(null == curve) {
+                if (null == curve)
+                {
                     transIndex = 0;
                 }
-                else {
+                else
+                {
                     transIndex = newTrans.size();
                     newTrans.add(curve);
                 }
-
-
 
 
                 _fieldOffsets[i][w] = _uniqueFields.indexOf(field);
@@ -365,10 +359,12 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             final ItemCurve<T> curve = curveParams_.getCurve(i);
             final int transIndex;
 
-            if(null == curve) {
+            if (null == curve)
+            {
                 transIndex = 0;
             }
-            else {
+            else
+            {
                 transIndex = newTrans.size();
                 newTrans.add(curve);
             }
@@ -1135,23 +1131,25 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                         }
 
                         pointer = fillBeta(statusRestrict, i, pointer);
-                    }
+                        final int toIndex = ItemParameters.this.getToIndex(statusRestrict);
 
-                    for (int z = 0; z < ItemParameters.this.getEntryDepth(i); z++)
-                    {
-                        final ItemCurve<T> curve = ItemParameters.this.getEntryCurve(i, z);
-
-                        if (null == curve)
+                        for (int z = 0; z < ItemParameters.this.getEntryDepth(i); z++)
                         {
-                            continue;
-                        }
+                            final ItemCurve<T> curve = ItemParameters.this.getEntryCurve(i, z);
 
-                        final int curveParamCount = curve.getCurveType().getParamCount();
+                            if (null == curve)
+                            {
+                                continue;
+                            }
 
-                        for (int w = 0; w < curveParamCount; w++)
-                        {
-                            final double curveParam = curve.getParam(w);
-                            pointer = fillOne(curveParam, -1, i, z, w, pointer);
+                            final int curveParamCount = curve.getCurveType().getParamCount();
+
+
+                            for (int w = 0; w < curveParamCount; w++)
+                            {
+                                final double curveParam = curve.getParam(w);
+                                pointer = fillOne(curveParam, toIndex, i, z, w, pointer);
+                            }
                         }
                     }
                 }
