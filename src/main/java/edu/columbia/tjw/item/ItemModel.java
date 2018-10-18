@@ -161,7 +161,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      */
     public void addEntryPowerScores(final double[] rawRegressors_, final int entry_, final double[] powerScoreOutput_)
     {
-        if(powerScoreOutput_.length != _betas.length) {
+        if (powerScoreOutput_.length != _betas.length)
+        {
             throw new IllegalArgumentException("Mismatch.");
         }
 
@@ -240,6 +241,97 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             throw new IllegalArgumentException("Rounding tolerance exceeded by probability vector: " + diff);
         }
     }
+
+    public void computeGradient(final ParamFittingGrid<S, R, T> grid_, PackedParameters<S, R, T> packed_, final int index_, final double[] derivative_, final double[][] secondDerivative_)
+    {
+        final int dimension = packed_.size();
+        final double[] computed = _probWorkspace;
+        final double[] actual = _actualProbWorkspace;
+        final double[] entryWeights = _regWorkspace;
+        final double[] rawReg = _rawRegWorkspace;
+        final List<S> reachable = getParams().getStatus().getReachable();
+
+        //We inline a bunch of these calcs to reduce duplication of effort.
+        grid_.getRegressors(index_, rawReg);
+        this.fillEntryWeights(rawReg, entryWeights);
+        rawPowerScores(entryWeights, computed);
+        MultiLogistic.multiLogisticFunction(computed, computed);
+
+        // don't loop over this stuff, just do the one transition we know happened.
+        final int actualTransition = grid_.getNextStatus(index_);
+        final int actualOffset = _likelihood.ordinalToOffset(actualTransition);
+
+        if (actualOffset < 0)
+        {
+            Arrays.fill(derivative_, 0.0);
+            return;
+        }
+
+        // d -ln(L) = - dL / L, so scale = -1/L
+        final double computedProbability = computed[actualOffset];
+        //final double entropy = LogLikelihood.calcEntropy(computedProbability);
+        final double scale = -1.0 / computedProbability;
+
+        for (int k = 0; k < packed_.size(); k++)
+        {
+            final int entry = packed_.getEntry(k);
+            final boolean isBetaDerivative = packed_.isBeta(k);
+            final int derivToStatus = packed_.getTransition(k);
+            final double delta;
+
+            if (derivToStatus == actualOffset)
+            {
+                delta = 1.0;
+            }
+            else
+            {
+                delta = 0.0;
+            }
+
+            // This is common whether we are taking deriv w.r.t. w or beta.
+            final double derivCore = (delta - computed[derivToStatus]) * computedProbability;
+            final double entryWeight = this.computeEntryWeight(rawReg, entry);
+            final double deriv;
+
+            if (isBetaDerivative)
+            {
+                deriv = entryWeight * derivCore;
+            }
+            else
+            {
+                // This is a derivative w.r.t. one of the elements of the weight.
+                // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
+                //final double entryBeta = packed_.getParameter(k);
+                final double entryBeta = this._params.getBeta(derivToStatus, entry);
+                final int curveDepth = packed_.getDepth(k);
+                final ItemCurve<T> curve = _params.getEntryCurve(entry, curveDepth);
+
+                final int regOffset = _params.getEntryRegressorOffset(entry, curveDepth);
+                final double reg = rawReg[regOffset];
+
+                final int curveParamIndex = packed_.getCurveIndex(k);
+
+                final double curveValue = curve.transform(reg);
+                final double curveDeriv = curve.derivative(curveParamIndex, reg);
+
+                if (curveDeriv == 0.0)
+                {
+                    // Dealing with some special over/underflow cases.
+                    deriv = 0.0;
+                }
+                else
+                {
+                    final double valRatio = curveDeriv / curveValue;
+
+                    final double dw = entryWeight * valRatio;
+                    deriv = entryBeta * derivCore * dw;
+                }
+            }
+
+            derivative_[k] = scale * deriv;
+        }
+    }
+
 
     /**
      * Compute the derivative of the log likelihood with respect to the given
@@ -367,7 +459,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     {
         Arrays.fill(workspace_, 0.0);
 
-        for(int i = 0; i < _params.getEntryCount(); i++) {
+        for (int i = 0; i < _params.getEntryCount(); i++)
+        {
             addEntryPowerScores(regressors_, i, workspace_);
         }
     }
