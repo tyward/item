@@ -194,6 +194,8 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
                 _curveOffsets[pointer + w] = w;
                 _curveIndices[pointer + w] = i;
             }
+
+            pointer += paramCount;
         }
 
     }
