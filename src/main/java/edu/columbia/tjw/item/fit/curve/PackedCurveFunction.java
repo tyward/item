@@ -70,6 +70,11 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
         }
 
         _packed = new ReducedParameterVector<>(keep, rawPacked);
+
+        if (_packed.size() != curveParams_.size())
+        {
+            throw new IllegalStateException("Impossible.");
+        }
     }
 
 
