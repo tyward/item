@@ -8,6 +8,11 @@ public final class VectorTools
 
     public static double dot(final double[] a_, final double[] b_)
     {
+        if (a_.length != b_.length)
+        {
+            throw new IllegalArgumentException("Mismatched length: " + a_.length + " != " + b_.length);
+        }
+
         double dot = 0.0;
 
         for (int i = 0; i < a_.length; i++)
