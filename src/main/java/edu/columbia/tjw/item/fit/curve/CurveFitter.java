@@ -12,49 +12,34 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit.curve;
 
-import edu.columbia.tjw.item.ItemCurve;
-import edu.columbia.tjw.item.ItemCurveFactory;
-import edu.columbia.tjw.item.ItemCurveParams;
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ParamFilter;
+import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.util.EnumFamily;
-import edu.columbia.tjw.item.ItemParameters;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemSettings;
-import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
+import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MathFunctions;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.commons.math3.util.Pair;
 
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
- *
- * @author tyler
  * @param <S> The status type for this fitter
  * @param <R> The regressor type for this fitter
  * @param <T> The curve type for this fitter
+ * @author tyler
  */
 public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
@@ -290,9 +275,17 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     }
 
     private CurveFitResult<S, R, T> generateSingleInteraction(final R reg_, final ItemParameters<S, R, T> params_,
-            final ItemCurveParams<R, T> starting_, final ItemCurve<T> curve_, final S toStatus, final double startingLL_)
+                                                              final ItemCurveParams<R, T> starting_, final ItemCurve<T> curve_, final S toStatus, final double startingLL_)
     {
         final ItemCurveParams<R, T> testParams = appendToCurveParams(starting_, curve_, reg_);
+
+        if (params_.curveIsForbidden(toStatus, testParams, null))
+        {
+            // Skip out, we aren't allowed to add a curve like this.
+            return null;
+        }
+
+
         final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("SingleInteraction", params_, startingLL_, _calc.size(), _calc, true);
 
         if (null == toStatus)
@@ -385,7 +378,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     }
 
     public boolean generateInteractions(final FittingProgressChain<S, R, T> chain_, final ItemParameters<S, R, T> base_, final ItemCurveParams<R, T> curveParams_,
-            final S toStatus_, final double perParameterTarget_, final double baseLL_, final boolean exhaustive_)
+                                        final S toStatus_, final double perParameterTarget_, final double baseLL_, final boolean exhaustive_)
     {
         final List<Pair<R, ItemCurve<T>>> allRegs = extractRegs(base_, toStatus_);
         Collections.shuffle(allRegs, _settings.getRandom());
@@ -437,7 +430,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             if (null == result)
             {
-                //Convergence error, just break out.
+                //Convergence error or forbidden curve, just break out.
                 continue;
             }
 
@@ -511,7 +504,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                     }
                     catch (final IllegalArgumentException e)
                     {
-                        LOG.log(Level.INFO,"Argument trouble (" + field + "), moving on to next curve.", e);
+                        LOG.log(Level.INFO, "Argument trouble (" + field + "), moving on to next curve.", e);
                     }
 
                 }
@@ -527,7 +520,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
      *
      * @param entryIndex_ The index of the entry to calibrate.
      * @param toStatus_
-     * @param startingLL_
      * @return
      * @throws ConvergenceException
      */
