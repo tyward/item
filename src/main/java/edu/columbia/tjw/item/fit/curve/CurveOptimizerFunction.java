@@ -22,14 +22,10 @@ package edu.columbia.tjw.item.fit.curve;
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid.MappedReader;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
-import edu.columbia.tjw.item.util.RectangularDoubleArray;
+import edu.columbia.tjw.item.optimize.*;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.MultiLogistic;
-import edu.columbia.tjw.item.optimize.EvaluationResult;
-import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
-import edu.columbia.tjw.item.optimize.MultivariateGradient;
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
-import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
+import edu.columbia.tjw.item.util.RectangularDoubleArray;
 
 import java.util.List;
 
@@ -51,6 +47,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final CurveParamsFitter<S, R, T> _curveFitter;
 
     private final S _status;
+    private final S _toStatus;
     private final int[] _actualOffsets;
 
     private MultivariatePoint _prevPoint;
@@ -66,6 +63,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final float[][] _regData;
 
     private final PackedCurveFunction<S, R, T> _packed;
+    private final ParamFittingGrid<S, R, T> _grid;
 
 
     public CurveOptimizerFunction(final ItemCurveParams<R, T> initParams_, final ItemCurveFactory<R, T> factory_, final S fromStatus_, final S toStatus_, final CurveParamsFitter<S, R, T> curveFitter_,
@@ -92,8 +90,10 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         _status = fromStatus_;
         _size = _actualOffsets.length;
         _workspace = new double[_initParams.size()];
+        _toStatus = toStatus_;
         _toIndex = fromStatus_.getReachable().indexOf(toStatus_);
 
+        _grid = grid_;
         final int depth = _initParams.getEntryDepth();
         _regData = new float[depth][];
 
@@ -249,8 +249,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 //                    System.out.println("Unexpected: " + d2);
 //                    final double alt2 = _packed.calcValue(i);
 //                }
-//
-//
 //            }
 
 
@@ -261,6 +259,12 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     @Override
     protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_, EvaluationResult result_)
     {
+        if (false)
+        {
+            final MultivariateGradient altGrad = _packed.evaluateDerivative(start_, end_, input_, result_);
+            return altGrad;
+        }
+
         final int dimension = input_.getDimension();
         final double[] derivative = new double[dimension];
 
@@ -392,10 +396,41 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             derivative[i] = derivative[i] * invCount;
         }
 
+
         final MultivariatePoint der = new MultivariatePoint(derivative);
 
         final MultivariateGradient grad = new MultivariateGradient(input_, der, null, 0.0);
+//        final MultivariateGradient altGrad = _packed.evaluateDerivative(start_, end_, input_, result_);
+//
+//        final double[] orig = grad.getGradient().getElements();
+//        final double[] alt = altGrad.getGradient().getElements();
+//
+//        final double magCheck = VectorTools.magnitude(alt);
+//        final double magOrig = VectorTools.magnitude(orig);
+//        final double cos = VectorTools.cos(alt, orig);
+//
+//        final double magDiff = 2.0 * (magCheck - magOrig) / (magCheck + magOrig);
+//
+////        final ItemParameters<S, R, T> p1 = _packed.getInitParams().addBeta(_params, _toStatus);
+////        final ItemParameters<S, R, T> p2 = _packed.getParams();
+//
+//        if (cos < 0.99)
+//        {
+//            System.out.println("Unexpected: " + magDiff + " : " + cos);
+//        }
+//
+//        if(Double.isNaN(cos)) {
+//            System.out.println("Nan cos: " + Arrays.toString(alt));
+//        }
+//
+//        if (true)
+//        {
+//            return altGrad;
+//        }
+//        else
+//        {
         return grad;
+//        }
     }
 
     @Override
