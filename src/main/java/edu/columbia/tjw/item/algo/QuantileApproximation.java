@@ -11,6 +11,7 @@ public final class QuantileApproximation
     private final double[] _meanValues;
     private final int[] _counts;
     private final boolean[] _identicalValues;
+    private final int _totalCount;
 
 
     private QuantileApproximation(final QuantileApproximationBuilder builder_)
@@ -22,13 +23,24 @@ public final class QuantileApproximation
         _counts = new int[size];
         _identicalValues = new boolean[size];
 
+        int totalCount = 0;
+
         for (int i = 0; i < size; i++)
         {
+            final QuantileApproximationBuilder.Bucket nextBucket = builder_._buckets[i];
             _cutoffValues[i] = builder_._minValues[i];
-            _meanValues[i] = builder_._buckets[i].getMean();
-            _counts[i] = builder_._buckets[i].getCount();
-            _identicalValues[i] = !builder_._buckets[i]._canSplit;
+            _meanValues[i] = nextBucket.getMean();
+            _counts[i] = nextBucket.getCount();
+            _identicalValues[i] = !nextBucket._canSplit;
+            totalCount += _counts[i];
         }
+
+        _totalCount = totalCount;
+    }
+
+    public int getTotalCount()
+    {
+        return _totalCount;
     }
 
     public int getSize()
@@ -36,9 +48,36 @@ public final class QuantileApproximation
         return _cutoffValues.length;
     }
 
+    public int getBucketCount(final int index_)
+    {
+        return _counts[index_];
+    }
+
+    public int findBucket(final double x_)
+    {
+        return calculateBucket(_cutoffValues, x_, _cutoffValues.length);
+    }
+
     public static QuantileApproximationBuilder builder()
     {
         return new QuantileApproximationBuilder(DEFAULT_LOAD, DEFAULT_BUCKETS);
+    }
+
+    private static int calculateBucket(final double[] vals, final double x_, final int count_)
+    {
+        final int findIndex = Arrays.binarySearch(vals, 0, count_, x_);
+
+        if (findIndex >= 0)
+        {
+            return findIndex;
+        }
+
+
+        // This is the first element greater than x_, we want previous one.
+        final int insertionPoint = (-findIndex) - 1;
+        final int actIndex = insertionPoint - 1;
+
+        return actIndex;
     }
 
 
@@ -123,30 +162,12 @@ public final class QuantileApproximation
                 return true;
             }
 
-            final int findIndex = Arrays.binarySearch(_minValues, 0, _bucketCount, x_);
-
-            final int actIndex;
-
-            if (findIndex >= 0)
-            {
-                actIndex = findIndex;
-            }
-            else
-            {
-                // This is the first element greater than x_, we want previous one.
-                final int insertionPoint = (-findIndex) - 1;
-                actIndex = insertionPoint - 1;
-            }
-
-            if (actIndex < 0)
-            {
-                System.out.println("Impossible.");
-            }
-
+            final int actIndex = calculateBucket(_minValues, x_, _bucketCount);
             _buckets[actIndex].addObservation(x_);
             maybeSplit(actIndex);
             return true;
         }
+
 
         private void maybeSplit(final int index_)
         {
@@ -182,17 +203,26 @@ public final class QuantileApproximation
             low._splitMass = (mass / 2);
             high._splitMass = (mass / 2);
 
-            for (int i = _bucketCount - 1; i > (index_ + 1); i++)
+            for (int i = _bucketCount; i > (index_ + 1); i--)
             {
                 _minValues[i] = _minValues[i - 1];
                 _buckets[i] = _buckets[i - 1];
             }
 
-            _minValues[index_] = preSplit._minValue;
+            //_minValues[index_] = preSplit._minValue;
             _buckets[index_] = low;
             _minValues[index_ + 1] = mean;
             _buckets[index_ + 1] = high;
             _bucketCount++;
+
+            for (int i = 0; i < _bucketCount; i++)
+            {
+                if (_buckets[i] == null)
+                {
+                    System.out.println("Boing.");
+                }
+            }
+
         }
 
 
