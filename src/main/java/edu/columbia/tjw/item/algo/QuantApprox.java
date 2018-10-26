@@ -436,7 +436,6 @@ public final class QuantApprox extends DistStats2D implements Iterable<QuantileN
                 case 0:
                 case -1:
                 case 1:
-
                     newRoot = this;
                     //Do nothing. 
                     break;
