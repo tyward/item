@@ -120,7 +120,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         final double startingEntropy = chain_.getLogLikelihood();
 
-        //final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("CurveCalibrateChain", initParams, getFitter(chain_).getEntropy(), this._grid.size(), _calc, true);
         for (int i = 0; i < curveEntries.size(); i++)
         {
             final double targetLevel = (totalImprovement / (i + 1));
@@ -137,7 +136,9 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             if (entryIndex == -1)
             {
-                throw new IllegalStateException("Impossible.");
+                System.out.println("Should not be possible, but skipping.");
+                continue;
+                //throw new IllegalStateException("Impossible.");
             }
 
             final S status = params.getEntryStatusRestrict(entryIndex);
@@ -308,8 +309,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                 LOG.info("Convergence exception, moving on: " + e.toString());
                 return null;
             }
-        }
-        else
+        } else
         {
             //This is a flag-curve interaction term.
             // Try to append this to the given CurveParams
@@ -329,8 +329,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                     final ItemParameters<S, R, T> updated = calibrated.getEndingParams();
                     final CurveFitResult<S, R, T> r2 = new CurveFitResult<>(params_, updated, updated.getEntryCurveParams(updated.getEntryCount() - 1, true), toStatus, calibrated.getEndingLL(), startingLL_, _grid.size());
                     return r2;
-                }
-                else
+                } else
                 {
                     return result;
                 }
