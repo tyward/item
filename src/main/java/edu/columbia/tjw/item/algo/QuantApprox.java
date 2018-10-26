@@ -330,21 +330,6 @@ public final class QuantApprox extends DistStats2D implements Iterable<QuantileN
                 //Do the split here. 
                 //First, just make a new left child, this will involve some approximation. 
                 final double eX = this.getMeanX();
-//                final double eX2 = _x2Sum / _count;
-//                final double varX = eX2 - (eX * eX);
-//
-//                //Let's approximate what the sums might look like. 
-//                //Ideally, we would try to make the variance match, using similar logic. For now, let's not bother. 
-//                final double leftX = _count * ((_xMin + eX) * 0.5);
-//                final double leftX2 = _count * (((_xMin * _xMin) + eX2) * 0.5);
-//                final double rightX = _count * ((eX + _xMax) * 0.5);
-//                final double rightX2 = _count * ((eX2 + (_xMax * _xMax)) * 0.5);
-//
-//                final double newY = _ySum * 0.5;
-//                final double newY2 = _y2Sum * 0.5;
-//                final double newCount = _count * 0.5;
-//
-//                final int thisBalance = this.calculateBalanceFactor();
 
                 //LOG.info("Exising balance factor: " + thisBalance);
                 final QuantileNode newNode = new QuantileNode(_start, eX, this, eX, _xMin);
