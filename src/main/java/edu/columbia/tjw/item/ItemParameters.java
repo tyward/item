@@ -142,8 +142,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
                     final int nextIndex = this.toStatusIndex(next);
                     _betas[nextIndex][i] = packed_.getParameter(pointer++);
-                }
-                else
+                } else
                 {
                     final int nextIndex = this.toStatusIndex(statusRestrict);
 
@@ -241,8 +240,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             }
 
             _betas = newBeta;
-        }
-        else
+        } else
         {
             _betas = base_._betas;
         }
@@ -250,8 +248,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         if (addedFilters_.size() < 1)
         {
             _filters = base_._filters;
-        }
-        else
+        } else
         {
             final List<ParamFilter<S, R, T>> newFilters = new ArrayList<>(base_._filters);
 
@@ -297,8 +294,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         if (null == toStatus_)
         {
             toIndex = -1;
-        }
-        else
+        } else
         {
             toIndex = getToIndex(toStatus_);
         }
@@ -334,8 +330,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                 if (null == curve)
                 {
                     transIndex = 0;
-                }
-                else
+                } else
                 {
                     transIndex = newTrans.size();
                     newTrans.add(curve);
@@ -362,8 +357,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             if (null == curve)
             {
                 transIndex = 0;
-            }
-            else
+            } else
             {
                 transIndex = newTrans.size();
                 newTrans.add(curve);
@@ -520,8 +514,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             if (isRestricted)
             {
                 paramCount += 1;
-            }
-            else
+            } else
             {
                 paramCount += effectiveTransSize;
             }
@@ -684,8 +677,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         if (toIndex != -1)
         {
             beta = _betas[toIndex][entryIndex_];
-        }
-        else
+        } else
         {
             beta = 0.0;
         }
@@ -710,7 +702,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return _trans;
     }
 
-    public boolean betaIsFrozen(S toStatus_, int paramEntry_, final Collection<ParamFilter<S, R, T>> otherFilters_)
+    public boolean betaIsFrozen(S toStatus_, int paramEntry_)
     {
         if (_uniqFilter.betaIsFrozen(this, toStatus_, paramEntry_))
         {
@@ -725,23 +717,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             }
         }
 
-        if (null == otherFilters_)
-        {
-            return false;
-        }
-
-        for (final ParamFilter<S, R, T> next : otherFilters_)
-        {
-            if (next.betaIsFrozen(this, toStatus_, paramEntry_))
-            {
-                return true;
-            }
-        }
-
         return false;
     }
 
-    public boolean curveIsForbidden(S toStatus_, ItemCurveParams<R, T> curveParams_, final Collection<ParamFilter<S, R, T>> otherFilters_)
+    public boolean curveIsForbidden(S toStatus_, ItemCurveParams<R, T> curveParams_)
     {
         if (_uniqFilter.curveIsForbidden(this, toStatus_, curveParams_))
         {
@@ -749,19 +728,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         for (final ParamFilter<S, R, T> next : getFilters())
-        {
-            if (next.curveIsForbidden(this, toStatus_, curveParams_))
-            {
-                return true;
-            }
-        }
-
-        if (null == otherFilters_)
-        {
-            return false;
-        }
-
-        for (final ParamFilter<S, R, T> next : otherFilters_)
         {
             if (next.curveIsForbidden(this, toStatus_, curveParams_))
             {
@@ -1122,8 +1088,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                         }
 
                         pointer = fillBeta(next, i, pointer);
-                    }
-                    else
+                    } else
                     {
                         if (next != statusRestrict)
                         {
@@ -1164,7 +1129,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         private int fillBeta(final S toStatus_, final int entryIndex_, final int pointer_)
         {
             final int toIndex = ItemParameters.this.getToIndex(toStatus_);
-            _betaIsFrozen[pointer_] = ItemParameters.this.betaIsFrozen(toStatus_, entryIndex_, null);
+            _betaIsFrozen[pointer_] = ItemParameters.this.betaIsFrozen(toStatus_, entryIndex_);
             return fillOne(ItemParameters.this.getBeta(toIndex, entryIndex_), toIndex, entryIndex_, -1, -1, pointer_);
 
         }

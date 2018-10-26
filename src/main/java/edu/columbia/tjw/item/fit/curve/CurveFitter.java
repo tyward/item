@@ -279,7 +279,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     {
         final ItemCurveParams<R, T> testParams = appendToCurveParams(starting_, curve_, reg_);
 
-        if (params_.curveIsForbidden(toStatus, testParams, null))
+        if (params_.curveIsForbidden(toStatus, testParams))
         {
             // Skip out, we aren't allowed to add a curve like this.
             return null;
@@ -476,14 +476,14 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                         final ItemCurveParams<R, T> vacuousParams = new ItemCurveParams<>(0.0, 0.0, field,
                                 _factory.generateCurve(curveType, 0, new double[curveType.getParamCount()]));
 
-                        if (params.curveIsForbidden(toStatus, vacuousParams, null))
+                        if (params.curveIsForbidden(toStatus, vacuousParams))
                         {
                             continue;
                         }
 
                         final CurveFitResult<S, R, T> res = fitter_.calibrateCurveAddition(curveType, field, toStatus);
 
-                        if (params.curveIsForbidden(toStatus, res.getCurveParams(), null))
+                        if (params.curveIsForbidden(toStatus, res.getCurveParams()))
                         {
                             LOG.info("Generated curve, but it is forbidden by filters, dropping: " + res.getCurveParams());
                             continue;
