@@ -34,21 +34,17 @@ public final class QuantileDistribution implements Serializable
 {
     private static final long serialVersionUID = 1116222802982789849L;
 
-    private final double[] _eX;
-    private final double[] _devX;
+    private final RegressorQuantile _rQuantile;
     private final double[] _eY;
     private final double[] _devY;
-    private final long[] _count;
-    private final long _totalCount;
 
-    //Some stats on the global distribution (across all buckets). 
-    private final double _meanX;
+    //Some stats on the global distribution (across all buckets).
     private final double _meanY;
-    private final double _meanDevX;
     private final double _meanDevY;
 
     public QuantileDistribution(final double[] eX_, final double[] eY_, final double[] devX_, final double[] devY_, final long[] count_, final boolean doCopy_)
     {
+        _rQuantile = new RegressorQuantile(eX_, devX_, count_, doCopy_);
         final int size = eX_.length;
 
         if (size != eY_.length || size != devX_.length || size != devY_.length || size != count_.length)
@@ -65,52 +61,36 @@ public final class QuantileDistribution implements Serializable
 
         if (doCopy_)
         {
-            _eX = eX_.clone();
             _eY = eY_.clone();
-            _devX = devX_.clone();
             _devY = devY_.clone();
-            _count = count_.clone();
         }
         else
         {
-            _eX = eX_;
             _eY = eY_;
-            _devX = devX_;
             _devY = devY_;
-            _count = count_;
         }
 
         for (int i = 0; i < size; i++)
         {
-            final long bucketCount = _count[i];
-            final double eXTerm = _eX[i];
+            final long bucketCount = _rQuantile.getCount(i);
             final double eYTerm = _eY[i];
 
-            final double termX = eXTerm * bucketCount;
             final double termY = eYTerm * bucketCount;
-            final double termX2 = bucketCount * eXTerm * eXTerm;
             final double termY2 = bucketCount * eYTerm * eYTerm;
-            final double bucketVarX = _devX[i] * _devX[i] * bucketCount;
 
-            sumX += termX;
-            sumX2 += termX2;
             sumY += termY;
             sumY2 += termY2;
 
             count += bucketCount;
         }
 
-        _meanX = sumX / count;
         _meanY = sumY / count;
-
-        _meanDevX = Math.sqrt(DistMath.computeMeanVariance(sumX, sumX2, count));
         _meanDevY = Math.sqrt(DistMath.computeMeanVariance(sumY, sumY2, count));
-
-        _totalCount = count;
     }
 
     public QuantileDistribution(final QuantApprox approx_)
     {
+        _rQuantile = new RegressorQuantile(approx_);
         final List<QuantileNode> nodes = new ArrayList<>(approx_.size());
 
         for (final QuantileNode next : approx_)
@@ -123,11 +103,8 @@ public final class QuantileDistribution implements Serializable
 
         final int approxSize = nodes.size();
 
-        _eX = new double[approxSize];
-        _devX = new double[approxSize];
         _eY = new double[approxSize];
         _devY = new double[approxSize];
-        _count = new long[approxSize];
 
         long totalCount = 0;
 
@@ -135,47 +112,15 @@ public final class QuantileDistribution implements Serializable
 
         for (final QuantileNode next : nodes)
         {
-            _eX[pointer] = next.getMeanX();
-            _devX[pointer] = next.getStdDevX();
             _eY[pointer] = next.getMeanY();
             _devY[pointer] = next.getStdDevY();
 
             final long lc = next.getCount();
-            _count[pointer] = lc;
             totalCount += lc;
             pointer++;
         }
 
-        for (int i = 0; i < approxSize - 1; i++)
-        {
-            final double a = _eX[i];
-            final double b = _eX[i + 1];
-
-            //Check that they have the same sign. 
-            boolean approxEqual = !(a * b <= 0);
-
-            if (approxEqual)
-            {
-                approxEqual = (MathFunctions.doubleCompareRounded(Math.abs(a), Math.abs(b)) == 0);
-            }
-
-            if (!approxEqual)
-            {
-                continue;
-            }
-
-            //Due to rounding, these buckets could actually be in the wrong order.
-            if (a > b)
-            {
-                _eX[i] = b;
-                _eX[i + 1] = a;
-            }
-        }
-
-        _totalCount = totalCount;
-        _meanX = approx_.getMeanX();
         _meanY = approx_.getMeanY();
-        _meanDevX = approx_.getStdDevX();
         _meanDevY = approx_.getStdDevY();
     }
 
@@ -225,15 +170,6 @@ public final class QuantileDistribution implements Serializable
         return reduced;
     }
 
-    public InterpolatedCurve getDevYCurve(final boolean linear_)
-    {
-        return new InterpolatedCurve(_eX, _devY, linear_, false);
-    }
-
-    public InterpolatedCurve getDevXCurve(final boolean linear_)
-    {
-        return new InterpolatedCurve(_eX, _devX, linear_, false);
-    }
 
     public InterpolatedCurve getCountCurve(final boolean linear_)
     {
@@ -245,17 +181,17 @@ public final class QuantileDistribution implements Serializable
             countDoubles[i] = (double) this.getCount(i);
         }
 
-        return new InterpolatedCurve(_eX, countDoubles, linear_, false);
+        return new InterpolatedCurve(_rQuantile.getX(), countDoubles, linear_, false);
     }
 
     public InterpolatedCurve getValueCurve(final boolean linear_)
     {
-        return new InterpolatedCurve(_eX, _eY, linear_, false);
+        return new InterpolatedCurve(_rQuantile.getX(), _eY, linear_, false);
     }
 
     public double getMeanX()
     {
-        return _meanX;
+        return _rQuantile.getMeanX();
     }
 
     public double getMeanY()
@@ -265,17 +201,17 @@ public final class QuantileDistribution implements Serializable
 
     public double getDevX()
     {
-        return _meanDevX * Math.sqrt(_totalCount);
+        return _rQuantile.getDevX();
     }
 
     public double getDevY()
     {
-        return _meanDevY * Math.sqrt(_totalCount);
+        return _meanDevY * Math.sqrt(getTotalCount());
     }
 
     public double getMeanDevX()
     {
-        return _meanDevX;
+        return _rQuantile.getMeanDevX();
     }
 
     public double getMeanDevY()
@@ -285,22 +221,22 @@ public final class QuantileDistribution implements Serializable
 
     public long getTotalCount()
     {
-        return _totalCount;
+        return _rQuantile.getTotalCount();
     }
 
     public int size()
     {
-        return _count.length;
+        return _rQuantile.size();
     }
 
     public long getCount(final int index_)
     {
-        return _count[index_];
+        return _rQuantile.getCount(index_);
     }
 
     public double getMeanX(final int index_)
     {
-        return _eX[index_];
+        return _rQuantile.getMeanX(index_);
     }
 
     public double getMeanY(final int index_)
@@ -310,7 +246,7 @@ public final class QuantileDistribution implements Serializable
 
     public double getDevX(final int index_)
     {
-        return _devX[index_];
+        return _rQuantile.getDevX(index_);
     }
 
     public double getDevY(final int index_)
