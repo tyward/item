@@ -29,17 +29,14 @@ import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.*;
 import edu.columbia.tjw.item.util.LogUtil;
-import edu.columbia.tjw.item.util.MathFunctions;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 
-import java.util.Arrays;
 import java.util.logging.Logger;
 
 /**
@@ -147,11 +144,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return _startingLL;
     }
 
-    public synchronized RectangularDoubleArray getPowerScores()
-    {
-        return _powerScores;
-    }
-
     public CurveFitResult<S, R, T> calibrateExistingCurve(final int entryIndex_, final S toStatus_, final double startingLL_) throws ConvergenceException
     {
         final ItemParameters<S, R, T> params = _model.getParams();
@@ -254,8 +246,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private CurveOptimizerFunction<S, R, T> generateFunction(final ItemCurveParams<R, T> initParams_, S toStatus_,
                                                              final boolean subtractStarting_, final ItemParameters<S, R, T> params_)
     {
-        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(initParams_, _factory, _fromStatus, toStatus_, this, _actualOutcomes,
-                _paramGrid, _settings, subtractStarting_, params_);
+        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(initParams_, _factory, toStatus_, this, _actualOutcomes,
+                _paramGrid, _settings, params_);
 
         return func;
     }
@@ -279,27 +271,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final double recalcEntropy = _calc.computeEntropy(updated).getEntropyMean();
         final CurveFitResult<S, R, T> output = new CurveFitResult<>(baseParams_, updated, curveParams, toStatus_, recalcEntropy, startingLL_, result.dataElementCount());
 
-        if (func_._subtractStarting)
-        {
-            // Check the starting LL we were given.
-            final EvaluationResult er = new EvaluationResult(this._grid.size());
-            func_.prepare(startingPoint);
-            func_.evaluate(0, this._grid.size(), er);
-            final double llCheck = er.getMean();
-
-            final double diff = llCheck - startingLL_;
-            final double d2 = diff * diff / (llCheck * startingLL_);
-
-            if (d2 > 0.00001)
-            {
-                final EvaluationResult er2 = new EvaluationResult(this._grid.size());
-                func_.prepare(startingPoint);
-                func_.evaluate(0, this._grid.size(), er2);
-                final double llCheck2 = er2.getMean();
-
-                System.out.println("Unexpected.");
-            }
-        }
 
         return output;
     }
