@@ -39,6 +39,10 @@ public final class EvaluationResult
         this.clear();
     }
 
+    public int size() {
+        return _results.length;
+    }
+
     public double getSum()
     {
         return _sum;
