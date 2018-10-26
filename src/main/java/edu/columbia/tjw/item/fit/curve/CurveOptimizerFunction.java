@@ -55,7 +55,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final ItemSettings _settings;
 
     private final ItemCurveParams<R, T> _initParams;
-    private final boolean _subtractStarting;
+    public final boolean _subtractStarting;
 
     private ItemCurveParams<R, T> _params;
 
@@ -71,7 +71,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
-        _packed = new PackedCurveFunction<>(settings_, initParams_, toStatus_, rawParams_, grid_, curveFitter_, subtractStarting_);
+        _packed = new PackedCurveFunction<>(settings_, initParams_, toStatus_, rawParams_, grid_, curveFitter_);
         _factory = factory_;
         _initParams = initParams_;
         _subtractStarting = subtractStarting_;
@@ -151,115 +151,137 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
             return;
         }
 
-        final RectangularDoubleArray powerScores = _curveFitter.getPowerScores();
-        final int cols = powerScores.getColumns();
-
-        final double[] computed = new double[cols];
-        //final double[] actual = new double[cols];
-
-        final int depth = _params.getEntryDepth();
-
-        // N.B: The intercept adjustment from the prev params has already been absorbed into 
-        // the intercept term. No need to redo it or adjust for it here, it's already part of 
-        // the baseline, we are fitting only an additive adjustment on top of that.
-        final double interceptAdjustment = _params.getIntercept();
-        final double beta = _params.getBeta();
-        final double prevBeta = _initParams.getBeta();
-
-        for (int i = start_; i < end_; i++)
-        {
-            for (int k = 0; k < cols; k++)
-            {
-                computed[k] = powerScores.get(i, k);
-            }
-
-            double weight = 1.0;
-
-            for (int k = 0; k < depth; k++)
-            {
-                final double regressor = _regData[k][i];
-                final ItemCurve<T> trans = _params.getCurve(k);
-                final double transformed;
-
-                if (null == trans)
-                {
-                    transformed = regressor;
-                }
-                else
-                {
-                    transformed = trans.transform(regressor);
-                }
-
-                weight *= transformed;
-            }
-
-            double contribution = beta * weight;
-
-            if (_subtractStarting)
-            {
-                double prevWeight = 1.0;
-
-                for (int k = 0; k < depth; k++)
-                {
-                    final double regressor = _regData[k][i];
-                    final ItemCurve<T> trans = _initParams.getCurve(k);
-                    final double transformed;
-
-                    if (null == trans)
-                    {
-                        transformed = regressor;
-                    }
-                    else
-                    {
-                        transformed = trans.transform(regressor);
-                    }
-
-                    prevWeight *= transformed;
-                }
-
-                contribution -= prevBeta * prevWeight;
-            }
-
-
-            //We are replacing one curve with another (if _prevCurve != null), so subtract off the 
-            // curve we previously had before adding this new one.
-            final double totalContribution = interceptAdjustment + contribution;
-
-            final double[] origPowerScores = computed.clone();
-
-            computed[_toIndex] += totalContribution;
-
-            final double[] updatedPowerScores = computed.clone();
-
-            //Converte these power scores into probabilities.
-            MultiLogistic.multiLogisticFunction(computed, computed);
-
-            final int actualOffset = _actualOffsets[i];
-            final double logLikelihood = _likelihood.logLikelihood(computed, actualOffset);
-
-//            if (!_subtractStarting)
+//        if (!_subtractStarting)
+//        {
+            //final EvaluationResult checkResult = new EvaluationResult(result_.size());
+            _packed.evaluate(start_, end_, result_);
+            return;
+//            final double s1 = result_.getSum();
+//            final double s2 = checkResult.getSum();
+//
+//            final double diff = s1 - s2;
+//            final double d2 = diff * diff / (s1 * s2);
+//
+//            if (d2 > 0.0001)
 //            {
-//                final double alt = _packed.calcValue(i);
-//
-//                final double diff = (alt - logLikelihood);
-//                final double d2 = diff * diff;
-//
-//                if (d2 > 0.000001)
-//                {
-//                    System.out.println("Unexpected: " + d2);
-//                    final double alt2 = _packed.calcValue(i);
-//                }
+//                System.out.println("Unexpected");
 //            }
+//        }
 
 
-            result_.add(logLikelihood, result_.getHighWater(), i + 1);
-        }
+//
+//        final RectangularDoubleArray powerScores = _curveFitter.getPowerScores();
+//        final int cols = powerScores.getColumns();
+//
+//        final double[] computed = new double[cols];
+//        //final double[] actual = new double[cols];
+//
+//        final int depth = _params.getEntryDepth();
+//
+//        // N.B: The intercept adjustment from the prev params has already been absorbed into
+//        // the intercept term. No need to redo it or adjust for it here, it's already part of
+//        // the baseline, we are fitting only an additive adjustment on top of that.
+//        final double interceptAdjustment = _params.getIntercept();
+//        final double beta = _params.getBeta();
+//        final double prevBeta = _initParams.getBeta();
+//        double sum = 0.0;
+//
+//        for (int i = start_; i < end_; i++)
+//        {
+//            for (int k = 0; k < cols; k++)
+//            {
+//                computed[k] = powerScores.get(i, k);
+//            }
+//
+//            double weight = 1.0;
+//
+//            for (int k = 0; k < depth; k++)
+//            {
+//                final double regressor = _regData[k][i];
+//                final ItemCurve<T> trans = _params.getCurve(k);
+//                final double transformed;
+//
+//                if (null == trans)
+//                {
+//                    transformed = regressor;
+//                } else
+//                {
+//                    transformed = trans.transform(regressor);
+//                }
+//
+//                weight *= transformed;
+//            }
+//
+//            double contribution = beta * weight;
+//
+//            if (_subtractStarting)
+//            {
+//                double prevWeight = 1.0;
+//
+//                for (int k = 0; k < depth; k++)
+//                {
+//                    final double regressor = _regData[k][i];
+//                    final ItemCurve<T> trans = _initParams.getCurve(k);
+//                    final double transformed;
+//
+//                    if (null == trans)
+//                    {
+//                        transformed = regressor;
+//                    } else
+//                    {
+//                        transformed = trans.transform(regressor);
+//                    }
+//
+//                    prevWeight *= transformed;
+//                }
+//
+//                contribution -= prevBeta * prevWeight;
+//            }
+//
+//
+//            //We are replacing one curve with another (if _prevCurve != null), so subtract off the
+//            // curve we previously had before adding this new one.
+//            final double totalContribution = interceptAdjustment + contribution;
+//
+//            final double[] origPowerScores = computed.clone();
+//
+//            computed[_toIndex] += totalContribution;
+//
+//            final double[] updatedPowerScores = computed.clone();
+//
+//            //Converte these power scores into probabilities.
+//            MultiLogistic.multiLogisticFunction(computed, computed);
+//
+//            final int actualOffset = _actualOffsets[i];
+//            final double logLikelihood = _likelihood.logLikelihood(computed, actualOffset);
+//
+//            sum += logLikelihood;
+//            result_.add(logLikelihood, result_.getHighWater(), i + 1);
+//        }
+
+//        if (!_subtractStarting)
+//        {
+//            final EvaluationResult checkResult = new EvaluationResult(result_.size());
+//            _packed.evaluate(start_, end_, checkResult);
+//
+//            final double s1 = result_.getSum();
+//            final double s2 = checkResult.getSum();
+//
+//            final double diff = s1 - s2;
+//            final double d2 = diff * diff / (s1 * s2);
+//
+//            if (d2 > 0.0001)
+//            {
+//                System.out.println("Unexpected");
+//            }
+//        }
+
     }
 
     @Override
     protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_, EvaluationResult result_)
     {
-        if (false)
+        if (true)
         {
             final MultivariateGradient altGrad = _packed.evaluateDerivative(start_, end_, input_, result_);
             return altGrad;
@@ -333,8 +355,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
                 if (null == trans)
                 {
                     transformed = regressor;
-                }
-                else
+                } else
                 {
                     transformed = trans.transform(regressor);
                 }

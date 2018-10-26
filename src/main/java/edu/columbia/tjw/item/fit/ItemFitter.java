@@ -422,7 +422,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 continue;
             }
 
-            _curveFitter.generateInteractions(_chain, params, params.getEntryCurveParams(i, true),
+            _curveFitter.generateInteractions(_chain, params.getEntryCurveParams(i, true),
                     params.getEntryStatusRestrict(i), 0.0, _chain.getLogLikelihood(), exhaustive_);
         }
 

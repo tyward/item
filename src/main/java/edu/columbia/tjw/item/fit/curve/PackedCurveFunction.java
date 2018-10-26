@@ -19,7 +19,7 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
     private ItemModel<S, R, T> _updatedModel;
 
     public PackedCurveFunction(final ItemSettings settings_, final ItemCurveParams<R, T> curveParams_, final S toStatus_, final ItemParameters<S, R, T> initParams_,
-                               final ParamFittingGrid<S, R, T> grid_, final CurveParamsFitter<S, R, T> curveFitter_, final boolean subtractStarting_)
+                               final ParamFittingGrid<S, R, T> grid_, final CurveParamsFitter<S, R, T> curveFitter_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 

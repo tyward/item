@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit.curve;
@@ -33,23 +33,20 @@ import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
-import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
-import edu.columbia.tjw.item.optimize.OptimizationResult;
+import edu.columbia.tjw.item.optimize.*;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MathFunctions;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
+
 import java.util.Arrays;
 import java.util.logging.Logger;
 
 /**
- *
- * @author tyler
  * @param <S>
  * @param <R>
  * @param <T>
+ * @author tyler
  */
 public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
@@ -166,6 +163,11 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final CurveFitResult<S, R, T> result = expandParameters(reduced, entryParams, toStatus_, true, startingLL_);
         final double aicDiff = result.calculateAicDifference();
 
+//        final CurveFitResult<S, R, T> result2 = expandParameters(reduced, entryParams, toStatus_, false, startingLL_);
+//        final double aicDiff2 = MathFunctions.computeAicDifference(0, 0, result2.getStartingLogLikelihood(),
+//                result2.getLogLikelihood(), result2.getRowCount());
+
+
         if (aicDiff > _settings.getAicCutoff())
         {
             //We demand that the AIC improvement is more than the bare minimum. 
@@ -184,7 +186,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final QuantileDistribution dist = generateDistribution(field_, toStatus_);
         final ItemCurveParams<R, T> starting = _factory.generateStartingParameters(curveType_, field_, dist, _settings.getRandom());
 
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, false);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, false, _model.getParams());
         final CurveFitResult<S, R, T> result = generateFit(toStatus_, _model.getParams(), func, _startingLL, starting);
 
         //final FitResult<S, R, T> output = expandParameters(_model.getParams(), starting, toStatus_, false);
@@ -208,12 +210,10 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
                     if (aic1 > aic2)
                     {
                         resString = "BETTER";
-                    }
-                    else if (aic2 > aic1)
+                    } else if (aic2 > aic1)
                     {
                         resString = "WORSE";
-                    }
-                    else
+                    } else
                     {
                         resString = "SAME";
                     }
@@ -244,23 +244,24 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     }
 
     public CurveFitResult<S, R, T> expandParameters(final ItemParameters<S, R, T> params_, final ItemCurveParams<R, T> initParams_, S toStatus_,
-            final boolean subtractStarting_, final double startingLL_) throws ConvergenceException
+                                                    final boolean subtractStarting_, final double startingLL_) throws ConvergenceException
     {
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(initParams_, toStatus_, subtractStarting_);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(initParams_, toStatus_, subtractStarting_, params_);
         final CurveFitResult<S, R, T> result = generateFit(toStatus_, params_, func, startingLL_, initParams_);
         return result;
     }
 
-    private CurveOptimizerFunction<S, R, T> generateFunction(final ItemCurveParams<R, T> initParams_, S toStatus_, final boolean subtractStarting_)
+    private CurveOptimizerFunction<S, R, T> generateFunction(final ItemCurveParams<R, T> initParams_, S toStatus_,
+                                                             final boolean subtractStarting_, final ItemParameters<S, R, T> params_)
     {
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(initParams_, _factory, _fromStatus, toStatus_, this, _actualOutcomes,
-                _paramGrid, _settings, subtractStarting_, _model.getParams());
+                _paramGrid, _settings, subtractStarting_, params_);
 
         return func;
     }
 
     public CurveFitResult<S, R, T> generateFit(final S toStatus_, final ItemParameters<S, R, T> baseParams_, final CurveOptimizerFunction<S, R, T> func_,
-            final double startingLL_, final ItemCurveParams<R, T> starting_) throws ConvergenceException
+                                               final double startingLL_, final ItemCurveParams<R, T> starting_) throws ConvergenceException
     {
         final double[] startingArray = starting_.generatePoint();
         final MultivariatePoint startingPoint = new MultivariatePoint(startingArray);
@@ -277,6 +278,29 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         //compute the log likelihood accurately, so recompute that now. 
         final double recalcEntropy = _calc.computeEntropy(updated).getEntropyMean();
         final CurveFitResult<S, R, T> output = new CurveFitResult<>(baseParams_, updated, curveParams, toStatus_, recalcEntropy, startingLL_, result.dataElementCount());
+
+        if (func_._subtractStarting)
+        {
+            // Check the starting LL we were given.
+            final EvaluationResult er = new EvaluationResult(this._grid.size());
+            func_.prepare(startingPoint);
+            func_.evaluate(0, this._grid.size(), er);
+            final double llCheck = er.getMean();
+
+            final double diff = llCheck - startingLL_;
+            final double d2 = diff * diff / (llCheck * startingLL_);
+
+            if (d2 > 0.00001)
+            {
+                final EvaluationResult er2 = new EvaluationResult(this._grid.size());
+                func_.prepare(startingPoint);
+                func_.evaluate(0, this._grid.size(), er2);
+                final double llCheck2 = er2.getMean();
+
+                System.out.println("Unexpected.");
+            }
+        }
+
         return output;
     }
 
@@ -284,7 +308,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     {
         return _model.getParams();
     }
-
 
 
     private void fillPowerScores()

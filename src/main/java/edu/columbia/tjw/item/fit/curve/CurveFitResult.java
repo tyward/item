@@ -77,6 +77,8 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
         return _params;
     }
 
+    public int getRowCount() { return _rowCount; }
+
     public double getStartingLogLikelihood()
     {
         return _startingLogL;
