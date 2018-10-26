@@ -34,16 +34,7 @@ public final class QuantileStatistics
     private static final double SIGMA_LIMIT = 3;
     private static final double RELATIVE_ERROR_THRESHOLD = 100.0;
 
-    //private final QuantApprox _approx;
-//    private final double[] _eX;
-//    private final double[] _eY;
-//    private final double[] _varY;
     private final boolean _varTestPassed;
-//    private final InterpolatedCurve _curve;
-//    private final double _meanX;
-//    private final double _meanY;
-//    private final double _devX;
-
     private final QuantileDistribution _dist;
 
     public QuantileStatistics(final ItemRegressorReader xReader_, final ItemRegressorReader yReader_)
