@@ -27,7 +27,6 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
@@ -35,7 +34,7 @@ import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.*;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MultiLogistic;
-import edu.columbia.tjw.item.util.QuantileStatistics;
+import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 
 import java.util.logging.Logger;

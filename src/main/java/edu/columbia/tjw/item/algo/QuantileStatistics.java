@@ -17,14 +17,9 @@
  *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
-package edu.columbia.tjw.item.util;
+package edu.columbia.tjw.item.algo;
 
 import edu.columbia.tjw.item.ItemRegressorReader;
-import edu.columbia.tjw.item.algo.QuantApprox;
-import edu.columbia.tjw.item.algo.QuantApprox.QuantileNode;
-import edu.columbia.tjw.item.algo.QuantileApproximation;
-import edu.columbia.tjw.item.algo.QuantileDistribution;
-import edu.columbia.tjw.item.algo.VarianceCalculator;
 
 /**
  * @author tyler

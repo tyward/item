@@ -19,9 +19,8 @@
  */
 package edu.columbia.tjw.item;
 
-import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.EnumFamily;
-import edu.columbia.tjw.item.util.QuantileStatistics;
+import edu.columbia.tjw.item.algo.QuantileStatistics;
 
 import java.io.Serializable;
 import java.util.Random;

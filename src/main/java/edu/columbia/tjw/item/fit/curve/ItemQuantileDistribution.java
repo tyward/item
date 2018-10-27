@@ -23,14 +23,12 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.algo.QuantileApproximation;
-import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.MultiLogistic;
-import edu.columbia.tjw.item.util.QuantileStatistics;
+import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**

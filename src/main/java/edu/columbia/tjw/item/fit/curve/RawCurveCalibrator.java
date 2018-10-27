@@ -26,12 +26,11 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.Arrays;
 
-import edu.columbia.tjw.item.util.QuantileStatistics;
+import edu.columbia.tjw.item.algo.QuantileStatistics;
 import org.apache.commons.math3.analysis.MultivariateFunction;
 
 import java.util.Random;
