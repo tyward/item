@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.base;
@@ -25,12 +25,13 @@ import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.EnumFamily;
+import edu.columbia.tjw.item.util.QuantileStatistics;
+
 import java.util.Random;
 
 /**
- *
- * @author tyler
  * @param <R>
+ * @author tyler
  */
 public class SplineFactory<R extends ItemRegressor<R>> implements ItemCurveFactory<R, SplineCurveType>
 {
@@ -47,11 +48,13 @@ public class SplineFactory<R extends ItemRegressor<R>> implements ItemCurveFacto
     @Override
     public ItemCurve<SplineCurveType> generateCurve(SplineCurveType type_, int offset_, double[] params_)
     {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose
+        // Tools | Templates.
     }
 
     @Override
-    public ItemCurveParams<R, SplineCurveType> generateStartingParameters(final SplineCurveType type_, final R field_, final QuantileDistribution dist_, final Random rand_)
+    public ItemCurveParams<R, SplineCurveType> generateStartingParameters(final SplineCurveType type_, final R field_
+            , final QuantileStatistics dist_, final Random rand_)
     {
         throw new UnsupportedOperationException("Not supported.");
 //
@@ -86,9 +89,11 @@ public class SplineFactory<R extends ItemRegressor<R>> implements ItemCurveFacto
     }
 
     @Override
-    public ItemCurve<SplineCurveType> boundCentrality(ItemCurve<SplineCurveType> inputCurve_, double lowerBound_, double upperBound_)
+    public ItemCurve<SplineCurveType> boundCentrality(ItemCurve<SplineCurveType> inputCurve_, double lowerBound_,
+                                                      double upperBound_)
     {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose
+        // Tools | Templates.
     }
 
     private static final class BasisSpline extends StandardCurve<SplineCurveType>

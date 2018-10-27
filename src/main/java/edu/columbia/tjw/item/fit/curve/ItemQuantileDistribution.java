@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit.curve;
@@ -22,58 +22,56 @@ package edu.columbia.tjw.item.fit.curve;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.QuantileApproximation;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.MultiLogistic;
 import edu.columbia.tjw.item.util.QuantileStatistics;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
+
 import java.util.Arrays;
 import java.util.List;
 
 /**
- *
- * @author tyler
  * @param <S> The status type for this quantile distribution
  * @param <R> The regressor type for this quantile distribution
+ * @author tyler
  */
 public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends ItemRegressor<R>>
 {
     private final LogLikelihood<S> _likelihood;
 
-    private final QuantileDistribution _orig;
-    private final QuantileDistribution _adjusted;
+    private final QuantileStatistics _orig;
+    private final QuantileStatistics _adjusted;
 
-    public ItemQuantileDistribution(final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_, final S fromStatus_, R field_, S toStatus_)
+    public ItemQuantileDistribution(final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_,
+                                    final S fromStatus_, R field_, S toStatus_)
     {
         this(grid_, powerScores_, fromStatus_, grid_.getRegressorReader(field_), toStatus_);
     }
 
-    public ItemQuantileDistribution(final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_, final S fromStatus_, final ItemRegressorReader reader_, S toStatus_)
+    public ItemQuantileDistribution(final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_,
+                                    final S fromStatus_, final ItemRegressorReader reader_, S toStatus_)
     {
         _likelihood = new LogLikelihood<>(fromStatus_);
 
         final ItemRegressorReader yReader = new InnerResponseReader<>(toStatus_, grid_, powerScores_, _likelihood);
 
-        final QuantileStatistics stats = new QuantileStatistics(reader_, yReader);
-        _orig = stats.getDistribution();
+        final QuantileStatistics stats = QuantileStatistics.generate(reader_, yReader);
+        final QuantileApproximation approx = stats.getQuantApprox();
 
-        final int size = _orig.size();
+        final int size = approx.getSize();
 
         double[] adjY = new double[size];
-        double[] eX = new double[size];
-        double[] devX = new double[size];
         double[] devAdjY = new double[size];
-        long[] bucketCounts = new long[size];
-
-        int pointer = 0;
 
         for (int i = 0; i < size; i++)
         {
             //We want next / exp(adjustment) = 1.0
-            final double next = _orig.getMeanY(i);
-            final double nextDev = _orig.getDevY(i);
-            final long nextCount = _orig.getCount(i);
+            final double next = stats.getMeanY(i);
+            final double nextDev = stats.getMeanDevY(i);
+            final long nextCount = stats.getCount(i);
 
             if (nextCount < 1)
             {
@@ -81,7 +79,8 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
             }
 
             //We are actually looking at something like E[actual / predicted]
-            final double nextMin = 0.5 / nextCount; //We can't justify a probability smaller than this given our observation count. 
+            final double nextMin = 0.5 / nextCount; //We can't justify a probability smaller than this given our
+            // observation count.
             final double nextMax = 1.0 / nextMin; //1.0 - nextMin;
             final double boundedNext = Math.max(nextMin, Math.min(nextMax, next));
 
@@ -90,39 +89,20 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
             //The operating theory here is that dev is small relative to the adjustment, so we can approximate this...
             final double adjDev = Math.log(nextDev + boundedNext) - adjustment;
 
-            adjY[pointer] = adjustment;
-            devAdjY[pointer] = adjDev;
-
-            eX[pointer] = _orig.getMeanX(i);
-            devX[pointer] = _orig.getDevX(i);
-
-            bucketCounts[pointer] = _orig.getCount(i);
-
-            pointer++;
+            adjY[i] = adjustment;
+            devAdjY[i] = adjDev;
         }
 
-        if (pointer < adjY.length)
-        {
-            adjY = Arrays.copyOf(adjY, pointer);
-            devAdjY = Arrays.copyOf(devAdjY, pointer);
-            eX = Arrays.copyOf(eX, pointer);
-            devX = Arrays.copyOf(devX, pointer);
-            bucketCounts = Arrays.copyOf(bucketCounts, pointer);
-        }
-
-        _adjusted = new QuantileDistribution(eX, adjY, devX, devAdjY, bucketCounts, false);
+        final QuantileStatistics adjStats = new QuantileStatistics(stats, adjY, devAdjY);
+        _orig = stats;
+        _adjusted = adjStats;
     }
 
-    public QuantileDistribution getOrig()
-    {
-        return _orig;
-    }
 
-    public QuantileDistribution getAdjusted()
+    public QuantileStatistics getAdjusted()
     {
         return _adjusted;
     }
-
 
 
     private static final class InnerResponseReader<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemRegressorReader
@@ -133,7 +113,8 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
         private final ParamFittingGrid<S, R, ?> _grid;
         private final LogLikelihood<S> _likelihood;
 
-        public InnerResponseReader(final S toStatus_, final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_, final LogLikelihood<S> likelihood_)
+        public InnerResponseReader(final S toStatus_, final ParamFittingGrid<S, R, ?> grid_,
+                                   final RectangularDoubleArray powerScores_, final LogLikelihood<S> likelihood_)
         {
             _grid = grid_;
             _powerScores = powerScores_;
@@ -184,8 +165,10 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
             //N.B: We know that we will never divide by zero here. 
             //Ideally, this ratio is approximately 1, or at least E[ratio] = 1. 
             //We can compute -ln(1/E[ratio]) and that will give us a power score adjustment we can
-            //use to improve our fit. Notice that we are ignoring the non-multiplcative nature of the logistic function. 
-            //We will need to run the optimizer over this thing eventually, but this should give us a good starting point. 
+            //use to improve our fit. Notice that we are ignoring the non-multiplcative nature of the logistic
+            // function.
+            //We will need to run the optimizer over this thing eventually, but this should give us a good starting
+            // point.
             final double ratio = (actValue / probSum);
 
             //final double residual = (actValue - probSum);

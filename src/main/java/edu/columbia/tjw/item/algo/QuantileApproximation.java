@@ -78,6 +78,11 @@ public final class QuantileApproximation
         return Math.sqrt(_variance);
     }
 
+    public double getMeanStdDev()
+    {
+        return Math.sqrt(_variance / _totalCount);
+    }
+
     public int findBucket(final double x_)
     {
         return calculateBucket(_cutoffValues, x_, _cutoffValues.length);
@@ -293,6 +298,11 @@ public final class QuantileApproximation
 
             public double getMean()
             {
+                if (_count < 1)
+                {
+                    return 0.0;
+                }
+
                 return _valSum / _count;
             }
 

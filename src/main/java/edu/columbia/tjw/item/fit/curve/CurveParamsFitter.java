@@ -35,6 +35,7 @@ import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.*;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MultiLogistic;
+import edu.columbia.tjw.item.util.QuantileStatistics;
 import edu.columbia.tjw.item.util.RectangularDoubleArray;
 
 import java.util.logging.Logger;
@@ -175,7 +176,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     {
         LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
 
-        final QuantileDistribution dist = generateDistribution(field_, toStatus_);
+        final QuantileStatistics dist = generateDistribution(field_, toStatus_);
         final ItemCurveParams<R, T> starting = _factory.generateStartingParameters(curveType_, field_, dist, _settings.getRandom());
 
         final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, false, _model.getParams());
@@ -228,10 +229,10 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return result;
     }
 
-    private QuantileDistribution generateDistribution(R field_, S toStatus_)
+    private QuantileStatistics generateDistribution(R field_, S toStatus_)
     {
         final ItemQuantileDistribution<S, R> quantGenerator = new ItemQuantileDistribution<>(_paramGrid, _powerScores, _fromStatus, field_, toStatus_);
-        final QuantileDistribution dist = quantGenerator.getAdjusted();
+        final QuantileStatistics dist = quantGenerator.getAdjusted();
         return dist;
     }
 

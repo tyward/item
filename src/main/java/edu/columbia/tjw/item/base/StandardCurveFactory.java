@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.base;
@@ -26,19 +26,21 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.MathFunctions;
+
 import java.util.Random;
+
+import edu.columbia.tjw.item.util.QuantileStatistics;
 import org.apache.commons.math3.util.FastMath;
 
 /**
  * This is the default implementation of the curve factory.
- *
+ * <p>
  * This provides curves for the standard curve types described in the paper
- *
+ * <p>
  * Unless there is good reason, use this as the curve factory.
  *
- *
- * @author tyler
  * @param <R>
+ * @author tyler
  */
 public final class StandardCurveFactory<R extends ItemRegressor<R>> implements ItemCurveFactory<R, StandardCurveType>
 {
@@ -67,14 +69,17 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
     }
 
     @Override
-    public ItemCurveParams<R, StandardCurveType> generateStartingParameters(final StandardCurveType type_, final R field_, final QuantileDistribution dist_, final Random rand_)
+    public ItemCurveParams<R, StandardCurveType> generateStartingParameters(final StandardCurveType type_,
+                                                                            final R field_,
+                                                                            final QuantileStatistics dist_,
+                                                                            final Random rand_)
     {
         final double[] curveParams = new double[2]; //== type_.getParamCount();
 
         //First, choose the mean uniformly....
-        final int size = dist_.size();
+        final int size = dist_.getSize();
         final double meanSelector = rand_.nextDouble();
-        final double invCount = 1.0 / dist_.getTotalCount();
+        final double invCount = 1.0 / dist_.getQuantApprox().getTotalCount();
         double runningSum = 0.0;
         double xVal = 0.0;
         int xIndex = 0;
@@ -83,7 +88,7 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
         {
             final long bucketCount = dist_.getCount(i);
             final double frac = bucketCount * invCount;
-            xVal = dist_.getMeanX(i);
+            xVal = dist_.getQuantApprox().getBucketMean(i);
             xIndex = i;
 
             runningSum += frac;
@@ -96,12 +101,14 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
 
         curveParams[0] = xVal;
 
-        final double distDev = dist_.getDevX();
+        final double distDev = dist_.getQuantApprox().getMeanStdDev();
 
         //This is a reasonable estimate of how low the std. dev can realistically be. 
         //Given that we have seen only finitely many observations, we could never say with confidence that it's zero.
-        //Also, in case the mean happens to be zero, and the dev is zero, then we add a tiny value to not divide by zero.
-        final double minDev = 1.0e-10 + Math.abs(dist_.getMeanX() / dist_.getTotalCount());
+        //Also, in case the mean happens to be zero, and the dev is zero, then we add a tiny value to not divide by
+        // zero.
+        final double minDev =
+                1.0e-10 + Math.abs(dist_.getQuantApprox().getMean() / dist_.getQuantApprox().getTotalCount());
 
         final double slopeParam;
         final double betaGuess;
@@ -114,29 +121,35 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
                 // However, randomize this a bit to give us more chances to get it right. 
                 final double slopeScale = (0.5 + rand_.nextDouble()) * Math.sqrt(size);
 
-                //The square root is because the slope is squared before being applied, to keep the logistic upward sloping.
+                //The square root is because the slope is squared before being applied, to keep the logistic upward
+                // sloping.
                 slopeParam = Math.sqrt(slopeScale / Math.max(minDev, distDev));
                 //slopeParam = Math.sqrt(1.0 / (distDev + 1.0e-10));
 
                 double xCorrelation = 0.0;
                 //double xVar = 0.0;
                 final double meanY = dist_.getMeanY();
-                final double meanX = dist_.getMeanX();
+                final double meanX = dist_.getQuantApprox().getMean();
 
                 for (int i = 0; i < size; i++)
                 {
                     final double yDev = dist_.getMeanY(i) - meanY;
-                    final double xDev = dist_.getMeanX(i) - meanX;
+                    final double xDev = dist_.getQuantApprox().getBucketMean(i) - meanX;
                     final double corr = yDev * xDev * dist_.getCount(i);
                     xCorrelation += corr;
                 }
 
-                final double xDev = dist_.getDevX();
-                final double yDev = dist_.getDevY();
-                final double obsCount = dist_.getTotalCount();
+                final double xDev = dist_.getQuantApprox().getMeanStdDev();
+                final double yDev = dist_.getMeanDevY();
+                final double obsCount = dist_.getQuantApprox().getTotalCount();
 
                 //Between -1.0 and 1.0, a reasonable guess for beta...
                 betaGuess = xCorrelation / (obsCount * xDev * yDev);
+
+                if (Double.isNaN(betaGuess))
+                {
+                    System.out.println("ping.");
+                }
 
                 break;
             case GAUSSIAN:
@@ -151,7 +164,8 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
 
         final double intercept = -0.5 * betaGuess;
 
-        final ItemCurveParams<R, StandardCurveType> output = new ItemCurveParams<>(type_, field_, this, intercept, betaGuess, curveParams);
+        final ItemCurveParams<R, StandardCurveType> output = new ItemCurveParams<>(type_, field_, this, intercept,
+                betaGuess, curveParams);
         return output;
 
     }
@@ -163,7 +177,8 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
     }
 
     @Override
-    public ItemCurve<StandardCurveType> boundCentrality(ItemCurve<StandardCurveType> inputCurve_, double lowerBound_, double upperBound_)
+    public ItemCurve<StandardCurveType> boundCentrality(ItemCurve<StandardCurveType> inputCurve_, double lowerBound_,
+                                                        double upperBound_)
     {
         if (null == inputCurve_)
         {

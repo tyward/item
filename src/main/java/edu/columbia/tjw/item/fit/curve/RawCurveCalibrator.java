@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit.curve;
@@ -28,10 +28,15 @@ import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.algo.QuantileDistribution;
 import edu.columbia.tjw.item.util.LogUtil;
+
 import java.util.Arrays;
+
+import edu.columbia.tjw.item.util.QuantileStatistics;
 import org.apache.commons.math3.analysis.MultivariateFunction;
+
 import java.util.Random;
 import java.util.logging.Logger;
+
 import org.apache.commons.math3.exception.TooManyEvaluationsException;
 import org.apache.commons.math3.optim.BaseMultivariateOptimizer;
 import org.apache.commons.math3.optim.InitialGuess;
@@ -46,18 +51,18 @@ import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.PowellOptimizer;
 import org.apache.commons.math3.random.RandomVectorGenerator;
 
 /**
- *
- * @author tyler
  * @param <S> The status type for this generator
  * @param <R> The regressor type for this generator
  * @param <T> The curve type for this generator
+ * @author tyler
  */
 public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private static final Logger LOG = LogUtil.getLogger(RawCurveCalibrator.class);
 
-    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> ItemCurveParams<R, T> polishCurveParameters(final ItemCurveFactory<R, T> factory_,
-            final ItemSettings settings_, final QuantileDistribution dist_, final R regressor_, final ItemCurveParams<R, T> params_)
+    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> ItemCurveParams<R
+            , T> polishCurveParameters(final ItemCurveFactory<R, T> factory_,
+                                                                                                                                                final ItemSettings settings_, final QuantileStatistics dist_, final R regressor_, final ItemCurveParams<R, T> params_)
     {
         if (params_.getEntryDepth() > 1)
         {
@@ -74,14 +79,16 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
         final int multiStarts = Math.max(1, settings_.getPolishMultiStartPoints());
 
         final MultivariateOptimizer baseOptimizer = new PowellOptimizer(1.0e-3, 1.0e-3);
-        final BaseMultivariateOptimizer<PointValuePair> optim = new MultiStartMultivariateOptimizer(baseOptimizer, multiStarts, gen);
+        final BaseMultivariateOptimizer<PointValuePair> optim = new MultiStartMultivariateOptimizer(baseOptimizer,
+                multiStarts, gen);
 
         final InitialGuess guess = new InitialGuess(rawParams);
         final double start = polishFunction.value(rawParams);
 
         try
         {
-            final PointValuePair result = optim.optimize(new ObjectiveFunction(polishFunction), GoalType.MINIMIZE, guess, new MaxIter(multiStarts * 100), new MaxEval(multiStarts * 300));
+            final PointValuePair result = optim.optimize(new ObjectiveFunction(polishFunction), GoalType.MINIMIZE,
+                    guess, new MaxIter(multiStarts * 100), new MaxEval(multiStarts * 300));
 
             final double end = result.getValue();
             final double[] endPoint = result.getPointRef();
@@ -93,11 +100,12 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
                 final ItemCurveParams<R, T> output = new ItemCurveParams<>(params_, factory_, endPoint);
 
                 //N.B: We can easily end up with fairly crazy curve parameters, so bound them as needed here...
-                //We will allow curves to "run off" a little bit, where it is supported by sufficient evidence, but we won't start a curve way out there...
+                //We will allow curves to "run off" a little bit, where it is supported by sufficient evidence, but
+                // we won't start a curve way out there...
                 if (settings_.getBoundCentrality())
                 {
-                    final double lowBound = dist_.getMeanX(0);
-                    final double highBound = dist_.getMeanX(dist_.size() - 1);
+                    final double lowBound = dist_.getQuantApprox().getBucketMean(0);
+                    final double highBound = dist_.getQuantApprox().getBucketMean(dist_.getSize() - 1);
 
                     final ItemCurve<T> curve = output.getCurve(0);
                     final ItemCurve<T> bounded = factory_.boundCentrality(curve, lowBound, highBound);
@@ -107,7 +115,8 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
                         return output;
                     }
 
-                    final ItemCurveParams<R, T> adjusted = new ItemCurveParams<>(output.getIntercept(), output.getBeta(), output.getRegressor(0), bounded);
+                    final ItemCurveParams<R, T> adjusted = new ItemCurveParams<>(output.getIntercept(),
+                            output.getBeta(), output.getRegressor(0), bounded);
                     return adjusted;
                 }
 
@@ -148,13 +157,15 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
 
     }
 
-    private static final class InnerFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements MultivariateFunction
+    private static final class InnerFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>,
+            T extends ItemCurveType<T>> implements MultivariateFunction
     {
-        private final QuantileDistribution _dist;
+        private final QuantileStatistics _dist;
         private final ItemCurveParams<R, T> _params;
         final ItemCurveFactory<R, T> _factory;
 
-        public InnerFunction(final ItemCurveFactory<R, T> factory_, final QuantileDistribution dist_, final ItemCurveParams<R, T> params_)
+        public InnerFunction(final ItemCurveFactory<R, T> factory_, final QuantileStatistics dist_,
+                             final ItemCurveParams<R, T> params_)
         {
             _factory = factory_;
             _dist = dist_;
@@ -173,7 +184,7 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
 
             final ItemCurve<T> curve = params.getCurve(0);
 
-            final double totalCount = _dist.getTotalCount();
+            final double totalCount = _dist.getQuantApprox().getTotalCount();
 
             if (totalCount < 1)
             {
@@ -184,9 +195,9 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
             //System.out.println("mass, x, y, predicted, mse");
             double residSum = 0.0;
 
-            for (int i = 0; i < _dist.size(); i++)
+            for (int i = 0; i < _dist.getSize(); i++)
             {
-                final double x = _dist.getMeanX(i);
+                final double x = _dist.getQuantApprox().getBucketMean(i);
                 final double y = _dist.getMeanY(i);
                 final double mass = _dist.getCount(i);
                 //final double devY = _dist.getDevY(i);
@@ -203,7 +214,8 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
                 //final double minDev = 1.0 / mass;
                 //final double adjDev = Math.max(devY, minDev);
                 //final double prob = FastMath.exp(y);
-                //This will not be a proper log likelihood calc, but instead will use weighted Least Squares, which is close to the same thing in this case. 
+                //This will not be a proper log likelihood calc, but instead will use weighted Least Squares, which
+                // is close to the same thing in this case.
                 final double resid = (y - predicted);
                 final double mse = mass * ((resid * resid)); // + (adjDev * adjDev));
                 residSum += mse;
