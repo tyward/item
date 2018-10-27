@@ -36,12 +36,50 @@ public final class QuantileApproximation
             _counts[i] = nextBucket.getCount();
             _identicalValues[i] = !nextBucket._canSplit;
             totalCount += _counts[i];
+
+
         }
+
+        if (totalCount <= 0)
+        {
+            throw new IllegalArgumentException("Total count cannot be zero.");
+        }
+
+        for (int i = 0; i < size; i++)
+        {
+            // Let's make sure this is sane where we may have zero count.
+            if (_counts[i] != 0)
+            {
+                continue;
+            }
+
+            // We know for sure that size is at least 2.
+            if (i == 0)
+            {
+                // The zeroth bucket would have a -infty cutoff value, let's not go crazy here.
+                _meanValues[i] = _cutoffValues[i + 1] - 1.0;
+            }
+            else if (i == size - 1)
+            {
+                // This is the last bucket, do  something similar.
+                _meanValues[i] = _cutoffValues[i] + 1.0;
+            }
+            else
+            {
+                // Let's assume the mean would have been halfway through this bucket.
+                final double floor = _cutoffValues[i];
+                final double ceiling = _cutoffValues[i + 1];
+                final double inferred = (ceiling + floor) * 0.5;
+                _meanValues[i] = inferred;
+            }
+        }
+
 
         _totalCount = totalCount;
         _mean = builder_._calc.getMean();
         _variance = builder_._calc.getVariance();
     }
+
 
     public int getTotalCount()
     {
@@ -110,6 +148,59 @@ public final class QuantileApproximation
         return actIndex;
     }
 
+    /**
+     * Returns the first bucket that would be valid for the given alpha trim.
+     *
+     * @param alpha_
+     * @return
+     */
+    public final int firstStep(final double alpha_)
+    {
+        if (alpha_ == 0)
+        {
+            return 0;
+        }
+        if (Double.isNaN(alpha_))
+        {
+            throw new IllegalArgumentException("NaN alpha.");
+        }
+
+        if (alpha_ < 0 || alpha_ >= 0.5)
+        {
+            throw new IllegalArgumentException("Alpha (for trimming) must be in [0, 0.5): " + alpha_);
+        }
+
+        final int steps = this.getSize();
+        final int firstStep = (int) Math.round(alpha_ * steps);
+
+        if (firstStep > (getSize() / 2))
+        {
+            throw new IllegalArgumentException("Alpha trim is too high, would discard all buckets.");
+        }
+
+        return firstStep;
+    }
+
+    /**
+     * Returns the bucket after the last bucket that would be valid for the given alpha trim.
+     * <p>
+     * This would be getSize() for an alpha trim of 0.0
+     *
+     * @param alpha_
+     * @return
+     */
+    public final int lastStep(final double alpha_)
+    {
+        final int firstStep = firstStep(alpha_);
+        final int steps = this.getSize();
+        final int lastStep = steps - firstStep;
+        return lastStep;
+    }
+
+    public final double[] getXValues()
+    {
+        return _meanValues.clone();
+    }
 
     public static final class QuantileApproximationBuilder
     {

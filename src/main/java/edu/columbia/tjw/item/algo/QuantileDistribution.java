@@ -133,7 +133,7 @@ public final class QuantileDistribution implements Serializable
 
         if (alpha_ < 0 || alpha_ >= 0.5)
         {
-            throw new IllegalArgumentException("Alpha (for trimming) must be in [0, 0.5]: " + alpha_);
+            throw new IllegalArgumentException("Alpha (for trimming) must be in [0, 0.5): " + alpha_);
         }
 
         final int steps = size();

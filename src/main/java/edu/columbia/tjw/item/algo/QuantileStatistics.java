@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.algo;
 
 import edu.columbia.tjw.item.ItemRegressorReader;
+import edu.columbia.tjw.item.data.InterpolatedCurve;
 
 /**
  * @author tyler
@@ -185,6 +186,14 @@ public final class QuantileStatistics
         return new QuantileStatisticsBuilder(approx_);
     }
 
+    public InterpolatedCurve getValueCurve(final boolean linear_, final double alpha_)
+    {
+        final int firstIndex = _approx.firstStep(alpha_);
+        final int lastIndex = _approx.lastStep(alpha_);
+        return new InterpolatedCurve(this._approx.getXValues(), _eY, linear_, true, firstIndex, lastIndex);
+    }
+
+
     public static final class QuantileStatisticsBuilder
     {
         private final QuantileApproximation _approx;
@@ -205,7 +214,7 @@ public final class QuantileStatistics
             _totalCalc = new VarianceCalculator();
         }
 
-        private boolean append(final double x_, final double y_)
+        public boolean append(final double x_, final double y_)
         {
             if (Double.isNaN(x_) || Double.isInfinite(x_))
             {
