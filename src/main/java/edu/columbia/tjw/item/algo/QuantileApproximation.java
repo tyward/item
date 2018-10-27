@@ -13,6 +13,9 @@ public final class QuantileApproximation
     private final boolean[] _identicalValues;
     private final int _totalCount;
 
+    private final double _mean;
+    private final double _variance;
+
 
     private QuantileApproximation(final QuantileApproximationBuilder builder_)
     {
@@ -36,6 +39,8 @@ public final class QuantileApproximation
         }
 
         _totalCount = totalCount;
+        _mean = builder_._calc.getMean();
+        _variance = builder_._calc.getVariance();
     }
 
     public int getTotalCount()
@@ -51,6 +56,26 @@ public final class QuantileApproximation
     public int getBucketCount(final int index_)
     {
         return _counts[index_];
+    }
+
+    public double getBucketMean(final int index_)
+    {
+        return _meanValues[index_];
+    }
+
+    public boolean isBucketUniform(final int index_)
+    {
+        return _identicalValues[index_];
+    }
+
+    public double getMean()
+    {
+        return _mean;
+    }
+
+    public double getStdDev()
+    {
+        return Math.sqrt(_variance);
     }
 
     public int findBucket(final double x_)
@@ -88,6 +113,7 @@ public final class QuantileApproximation
 
         private final double[] _minValues;
         private final Bucket[] _buckets;
+        private final VarianceCalculator _calc;
         private int _bucketCount;
 
         private QuantileApproximationBuilder(final QuantileApproximationBuilder base_)
@@ -97,6 +123,7 @@ public final class QuantileApproximation
             _bucketCount = base_._bucketCount;
             _minValues = base_._minValues.clone();
             _buckets = new Bucket[_maxBuckets];
+            _calc = new VarianceCalculator();
 
             for (int i = 0; i < _bucketCount; i++)
             {
@@ -120,6 +147,7 @@ public final class QuantileApproximation
             _minValues = new double[_maxBuckets];
             _buckets = new Bucket[_maxBuckets];
             _bucketCount = 0;
+            _calc = new VarianceCalculator();
             Arrays.fill(_minValues, Double.NaN);
         }
 
@@ -151,6 +179,8 @@ public final class QuantileApproximation
             {
                 return false;
             }
+
+            _calc.update(x_);
 
             if (_bucketCount < 1)
             {
