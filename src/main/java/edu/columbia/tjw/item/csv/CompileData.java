@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.csv;
@@ -22,23 +22,11 @@ package edu.columbia.tjw.item.csv;
 import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.*;
+
+import java.io.*;
 
 /**
- *
  * @author tyler
  */
 public final class CompileData
@@ -50,8 +38,9 @@ public final class CompileData
     private static final Option OUTPUT_FILE = new Option("output_file", true,
             "The output to hold the binary processed data");
     private static final Option START_STATUS = new Option("start_status", true,
-            "(Optional) If specified, then only rows starting in the given status will be considered, the descriptor must have been compiled with a from_status_col "
-            + "(still experimental, partition the data manually if this causes problems)");
+            "(Optional) If specified, then only rows starting in the given status will be considered, the descriptor " +
+                    "must have been compiled with a from_status_col "
+                    + "(still experimental, partition the data manually if this causes problems)");
 
     private CompileData()
     {
@@ -97,7 +86,7 @@ public final class CompileData
             final ItemStatusGrid<SimpleStatus, SimpleRegressor> grid = loader.generateGrid(compiled, startStatus);
 
             try (final FileOutputStream fOut = new FileOutputStream(output);
-                    final ObjectOutputStream oOut = new ObjectOutputStream(fOut))
+                 final ObjectOutputStream oOut = new ObjectOutputStream(fOut))
             {
                 oOut.writeObject(grid);
             }
@@ -118,7 +107,7 @@ public final class CompileData
     private static CompiledDataDescriptor getCompiled(final File inputFile_) throws IOException
     {
         try (final FileInputStream fin = new FileInputStream(inputFile_);
-                final ObjectInputStream oin = new ObjectInputStream(fin))
+             final ObjectInputStream oin = new ObjectInputStream(fin))
         {
             final CompiledDataDescriptor desc = (CompiledDataDescriptor) oin.readObject();
             return desc;

@@ -5,7 +5,8 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 
-public final class ReducedParameterVector<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements PackedParameters<S, R, T>
+public final class ReducedParameterVector<S extends ItemStatus<S>, R extends ItemRegressor<R>,
+        T extends ItemCurveType<T>> implements PackedParameters<S, R, T>
 {
     private final int[] _keepIndices;
     private final PackedParameters<S, R, T> _underlying;

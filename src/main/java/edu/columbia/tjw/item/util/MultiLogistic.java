@@ -76,7 +76,9 @@ public final class MultiLogistic
         return expSum;
     }
 
-    public static double multiLogisticBetaDerivative(final double[] regressors_, final double[] computedProbabilities_, final int regressorIndex_, final int toStateIndex_, final int toStateBetaIndex_)
+    public static double multiLogisticBetaDerivative(final double[] regressors_,
+                                                     final double[] computedProbabilities_, final int regressorIndex_
+            , final int toStateIndex_, final int toStateBetaIndex_)
     {
         final double reg = regressors_[regressorIndex_];
         final double computedProb = computedProbabilities_[toStateIndex_];
@@ -98,7 +100,8 @@ public final class MultiLogistic
         return result;
     }
 
-    public static void multiLogisticRegressorDerivatives(final double[] powerScores_, final double[] betaValues_, final double[] workspace_, final double[] output_)
+    public static void multiLogisticRegressorDerivatives(final double[] powerScores_, final double[] betaValues_,
+                                                         final double[] workspace_, final double[] output_)
     {
         final double expSum = multiLogisticFunction(powerScores_, workspace_);
 

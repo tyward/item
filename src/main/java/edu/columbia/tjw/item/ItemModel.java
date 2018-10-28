@@ -153,7 +153,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     }
 
     /**
-     * Adds the entry power scores to the output_ vector. designed to make it easy to loop through entries. Set output_ to zero when needed.
+     * Adds the entry power scores to the output_ vector. designed to make it easy to loop through entries. Set
+     * output_ to zero when needed.
      *
      * @param rawRegressors_
      * @param entry_
@@ -242,7 +243,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
-    public void computeGradient(final ParamFittingGrid<S, R, T> grid_, PackedParameters<S, R, T> packed_, final int index_, final double[] derivative_, final double[][] secondDerivative_)
+    public void computeGradient(final ParamFittingGrid<S, R, T> grid_, PackedParameters<S, R, T> packed_,
+                                final int index_, final double[] derivative_, final double[][] secondDerivative_)
     {
         final int dimension = packed_.size();
         final double[] computed = _probWorkspace;
@@ -353,7 +355,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      *                    regressorPointer_[i]'th regressor and the statusPointers_[i]'th status.
      * @return The total observation count used for this computation.
      */
-    public int computeDerivative(final ParamFittingGrid<S, R, T> grid_, final int start_, final int end_, PackedParameters<S, R, T> packed_, final double[] derivative_)
+    public int computeDerivative(final ParamFittingGrid<S, R, T> grid_, final int start_, final int end_,
+                                 PackedParameters<S, R, T> packed_, final double[] derivative_)
     {
         final int dimension = packed_.size();
         final double[] computed = _probWorkspace;
@@ -400,7 +403,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 for (int q = 0; q < reachable.size(); q++)
                 {
                     //looping over the to-states.
-                    final double betaDerivative = betaDerivative(entryWeights, computed, entryPointer, q, transitionPointer);
+                    final double betaDerivative = betaDerivative(entryWeights, computed, entryPointer, q,
+                            transitionPointer);
                     final double actualProbability = actual[q];
                     final double computedProb = computed[q];
                     final double contribution = actualProbability * betaDerivative / computedProb;
@@ -490,9 +494,11 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         MultiLogistic.multiLogisticFunction(workspace_, workspace_);
     }
 
-    public double betaDerivative(final double[] regressors_, final double[] computedProbabilities_, final int regressorIndex_, final int toStateIndex_, final int toStateBetaIndex_)
+    public double betaDerivative(final double[] regressors_, final double[] computedProbabilities_,
+                                 final int regressorIndex_, final int toStateIndex_, final int toStateBetaIndex_)
     {
-        final double output = MultiLogistic.multiLogisticBetaDerivative(regressors_, computedProbabilities_, regressorIndex_, toStateIndex_, toStateBetaIndex_);
+        final double output = MultiLogistic.multiLogisticBetaDerivative(regressors_, computedProbabilities_,
+                regressorIndex_, toStateIndex_, toStateBetaIndex_);
         return output;
     }
 

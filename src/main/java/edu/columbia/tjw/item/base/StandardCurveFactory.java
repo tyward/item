@@ -23,13 +23,12 @@ import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.MathFunctions;
+import org.apache.commons.math3.util.FastMath;
 
 import java.util.Random;
-
-import edu.columbia.tjw.item.algo.QuantileStatistics;
-import org.apache.commons.math3.util.FastMath;
 
 /**
  * This is the default implementation of the curve factory.

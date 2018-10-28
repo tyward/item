@@ -19,35 +19,22 @@
  */
 package edu.columbia.tjw.item.fit.curve;
 
-import edu.columbia.tjw.item.ItemCurve;
-import edu.columbia.tjw.item.ItemCurveFactory;
-import edu.columbia.tjw.item.ItemCurveParams;
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemSettings;
-import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.util.LogUtil;
-
-import java.util.Arrays;
-
+import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
+import edu.columbia.tjw.item.util.LogUtil;
 import org.apache.commons.math3.analysis.MultivariateFunction;
-
-import java.util.Random;
-import java.util.logging.Logger;
-
 import org.apache.commons.math3.exception.TooManyEvaluationsException;
-import org.apache.commons.math3.optim.BaseMultivariateOptimizer;
-import org.apache.commons.math3.optim.InitialGuess;
-import org.apache.commons.math3.optim.MaxEval;
-import org.apache.commons.math3.optim.MaxIter;
-import org.apache.commons.math3.optim.PointValuePair;
+import org.apache.commons.math3.optim.*;
 import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
 import org.apache.commons.math3.optim.nonlinear.scalar.MultiStartMultivariateOptimizer;
 import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer;
 import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunction;
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.PowellOptimizer;
 import org.apache.commons.math3.random.RandomVectorGenerator;
+
+import java.util.Arrays;
+import java.util.Random;
+import java.util.logging.Logger;
 
 /**
  * @param <S> The status type for this generator
@@ -61,7 +48,8 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
 
     public static <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> ItemCurveParams<R
             , T> polishCurveParameters(final ItemCurveFactory<R, T> factory_,
-                                                                                                                                                final ItemSettings settings_, final QuantileStatistics dist_, final R regressor_, final ItemCurveParams<R, T> params_)
+                                       final ItemSettings settings_, final QuantileStatistics dist_,
+                                       final R regressor_, final ItemCurveParams<R, T> params_)
     {
         if (params_.getEntryDepth() > 1)
         {
@@ -159,9 +147,9 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
     private static final class InnerFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>,
             T extends ItemCurveType<T>> implements MultivariateFunction
     {
+        final ItemCurveFactory<R, T> _factory;
         private final QuantileStatistics _dist;
         private final ItemCurveParams<R, T> _params;
-        final ItemCurveFactory<R, T> _factory;
 
         public InnerFunction(final ItemCurveFactory<R, T> factory_, final QuantileStatistics dist_,
                              final ItemCurveParams<R, T> params_)

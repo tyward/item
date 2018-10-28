@@ -11,8 +11,10 @@ public final class RawFittingGrid<S extends ItemStatus<S>, R extends ItemRegress
 {
     private final RandomizedStatusGrid<S, R> _randGrid;
 
-    public RawFittingGrid(final RandomizedStatusGrid<S, R> randGrid_) {
-        if(null == randGrid_) {
+    public RawFittingGrid(final RandomizedStatusGrid<S, R> randGrid_)
+    {
+        if (null == randGrid_)
+        {
             throw new NullPointerException("Rand grid cannot be null.");
         }
 

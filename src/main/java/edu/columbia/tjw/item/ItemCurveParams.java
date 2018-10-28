@@ -53,10 +53,13 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
 
     public ItemCurveParams(final T type_, final R field_, ItemCurveFactory<R, T> factory_, final double[] curvePoint_)
     {
-        this(Collections.singletonList(type_), Collections.singletonList(field_), factory_, curvePoint_[INTERCEPT_INDEX], curvePoint_[BETA_INDEX], NON_CURVE_PARAM_COUNT, curvePoint_);
+        this(Collections.singletonList(type_), Collections.singletonList(field_), factory_,
+                curvePoint_[INTERCEPT_INDEX], curvePoint_[BETA_INDEX], NON_CURVE_PARAM_COUNT, curvePoint_);
     }
 
-    public ItemCurveParams(final List<T> types_, final List<R> fields_, ItemCurveFactory<R, T> factory_, final double intercept_, final double beta_, final int arrayOffset_, final double[] curvePoint_)
+    public ItemCurveParams(final List<T> types_, final List<R> fields_, ItemCurveFactory<R, T> factory_,
+                           final double intercept_, final double beta_, final int arrayOffset_,
+                           final double[] curvePoint_)
     {
         if (Double.isNaN(intercept_))
         {
@@ -127,7 +130,8 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
         this(intercept_, beta_, Collections.singletonList(field_), Collections.singletonList(curve_));
     }
 
-    public ItemCurveParams(final double intercept_, final double beta_, final List<R> fields_, final List<ItemCurve<T>> curves_)
+    public ItemCurveParams(final double intercept_, final double beta_, final List<R> fields_,
+                           final List<ItemCurve<T>> curves_)
     {
         if (Double.isNaN(intercept_))
         {
@@ -200,12 +204,15 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
 
     }
 
-    public ItemCurveParams(final T type_, final R field_, ItemCurveFactory<R, T> factory_, final double intercept_, final double beta_, final double[] curveParams_)
+    public ItemCurveParams(final T type_, final R field_, ItemCurveFactory<R, T> factory_, final double intercept_,
+                           final double beta_, final double[] curveParams_)
     {
-        this(Collections.singletonList(type_), Collections.singletonList(field_), factory_, intercept_, beta_, 0, curveParams_);
+        this(Collections.singletonList(type_), Collections.singletonList(field_), factory_, intercept_, beta_, 0,
+                curveParams_);
     }
 
-    public ItemCurveParams(final ItemCurveParams<R, T> baseParams_, ItemCurveFactory<R, T> factory_, final double[] values_)
+    public ItemCurveParams(final ItemCurveParams<R, T> baseParams_, ItemCurveFactory<R, T> factory_,
+                           final double[] values_)
     {
         _size = baseParams_.size();
         _types = baseParams_._types;

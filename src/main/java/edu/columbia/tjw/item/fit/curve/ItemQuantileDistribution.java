@@ -21,9 +21,9 @@ package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.algo.QuantileApproximation;
+import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
-import edu.columbia.tjw.item.algo.QuantileStatistics;
 
 import java.util.List;
 

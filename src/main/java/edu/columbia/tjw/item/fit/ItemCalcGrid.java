@@ -12,25 +12,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.data.ItemGrid;
 
 /**
- *
- * @author tyler
  * @param <S> The status type of this grid
  * @param <R> The regressor type of this grid
  * @param <T> The curve type for this grid
+ * @author tyler
  */
 public final class ItemCalcGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends ItemParamGrid<S, R, T>
 {

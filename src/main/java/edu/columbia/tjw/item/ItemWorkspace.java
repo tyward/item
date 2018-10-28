@@ -12,21 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item;
 
 /**
  * A workspace appropriate for use with ItemStatus S.
- *
+ * <p>
  * The size of some of these vectors depends on the number of elements in the
  * family represented by the status type S.
  *
- * @author tyler
  * @param <S> The status type for this workspace.
+ * @author tyler
  */
 public final class ItemWorkspace<S extends ItemStatus<S>>
 {

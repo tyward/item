@@ -18,16 +18,19 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
 
     private ItemModel<S, R, T> _updatedModel;
 
-    public PackedCurveFunction(final ItemSettings settings_, final ItemCurveParams<R, T> curveParams_, final S toStatus_, final ItemParameters<S, R, T> initParams_,
+    public PackedCurveFunction(final ItemSettings settings_, final ItemCurveParams<R, T> curveParams_,
+                               final S toStatus_, final ItemParameters<S, R, T> initParams_,
                                final ParamFittingGrid<S, R, T> grid_, final CurveParamsFitter<S, R, T> curveFitter_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
-        //N.B: We need to rebuild the curve params so that we don't end up with ItemParams where a curve being calibrated is
+        //N.B: We need to rebuild the curve params so that we don't end up with ItemParams where a curve being
+        // calibrated is
         // shared with a pre-existing item because they point to the same physical instance.
         final double[] curveVector = new double[curveParams_.size()];
         curveParams_.extractPoint(curveVector);
-        final ItemCurveParams<R, T> repacked = new ItemCurveParams<>(curveParams_, curveParams_.getCurve(0).getCurveType().getFactory(), curveVector);
+        final ItemCurveParams<R, T> repacked = new ItemCurveParams<>(curveParams_,
+                curveParams_.getCurve(0).getCurveType().getFactory(), curveVector);
 
         _unchangedParams = initParams_;
         _curveFitter = curveFitter_;
@@ -178,7 +181,8 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
     }
 
     @Override
-    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_, EvaluationResult result_)
+    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_,
+                                                      EvaluationResult result_)
     {
         final double[] itemDeriv = new double[_packed.size()];
         final double[] totalDeriv = new double[_packed.size()];

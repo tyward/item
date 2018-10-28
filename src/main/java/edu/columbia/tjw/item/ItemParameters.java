@@ -22,15 +22,7 @@ package edu.columbia.tjw.item;
 import edu.columbia.tjw.item.fit.PackedParameters;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * @param <S> The status type for this model
@@ -142,7 +134,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
                     final int nextIndex = this.toStatusIndex(next);
                     _betas[nextIndex][i] = packed_.getParameter(pointer++);
-                } else
+                }
+                else
                 {
                     final int nextIndex = this.toStatusIndex(statusRestrict);
 
@@ -207,7 +200,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
      * @param betas_
      * @param addedFilters_
      */
-    private ItemParameters(final ItemParameters<S, R, T> base_, final double[][] betas_, final Collection<ParamFilter<S, R, T>> addedFilters_)
+    private ItemParameters(final ItemParameters<S, R, T> base_, final double[][] betas_,
+                           final Collection<ParamFilter<S, R, T>> addedFilters_)
     {
         _status = base_._status;
         _intercept = base_._intercept;
@@ -240,7 +234,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             }
 
             _betas = newBeta;
-        } else
+        }
+        else
         {
             _betas = base_._betas;
         }
@@ -248,7 +243,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         if (addedFilters_.size() < 1)
         {
             _filters = base_._filters;
-        } else
+        }
+        else
         {
             final List<ParamFilter<S, R, T>> newFilters = new ArrayList<>(base_._filters);
 
@@ -268,7 +264,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
      *
      * @param base_
      */
-    private ItemParameters(final ItemParameters<S, R, T> base_, final ItemCurveParams<R, T> curveParams_, final S toStatus_)
+    private ItemParameters(final ItemParameters<S, R, T> base_, final ItemCurveParams<R, T> curveParams_,
+                           final S toStatus_)
     {
         _status = base_._status;
         _intercept = base_._intercept;
@@ -294,7 +291,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         if (null == toStatus_)
         {
             toIndex = -1;
-        } else
+        }
+        else
         {
             toIndex = getToIndex(toStatus_);
         }
@@ -330,7 +328,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                 if (null == curve)
                 {
                     transIndex = 0;
-                } else
+                }
+                else
                 {
                     transIndex = newTrans.size();
                     newTrans.add(curve);
@@ -357,7 +356,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             if (null == curve)
             {
                 transIndex = 0;
-            } else
+            }
+            else
             {
                 transIndex = newTrans.size();
                 newTrans.add(curve);
@@ -514,7 +514,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             if (isRestricted)
             {
                 paramCount += 1;
-            } else
+            }
+            else
             {
                 paramCount += effectiveTransSize;
             }
@@ -677,7 +678,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         if (toIndex != -1)
         {
             beta = _betas[toIndex][entryIndex_];
-        } else
+        }
+        else
         {
             beta = 0.0;
         }
@@ -1008,6 +1010,11 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return output;
     }
 
+    public PackedParameters<S, R, T> generatePacked()
+    {
+        return new ItemParametersVector();
+    }
+
     private final class UniqueBetaFilter implements ParamFilter<S, R, T>
     {
         private static final long serialVersionUID = 0x49e89a36e4553a69L;
@@ -1036,17 +1043,13 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         @Override
-        public boolean curveIsForbidden(ItemParameters<S, R, T> params_, S toStatus_, ItemCurveParams<R, T> curveParams_)
+        public boolean curveIsForbidden(ItemParameters<S, R, T> params_, S toStatus_,
+                                        ItemCurveParams<R, T> curveParams_)
         {
             //We don't forbid any new additions, except where fromStatus_ == toStatus_
             return (params_.getStatus() == toStatus_);
         }
 
-    }
-
-    public PackedParameters<S, R, T> generatePacked()
-    {
-        return new ItemParametersVector();
     }
 
     private final class ItemParametersVector implements PackedParameters<S, R, T>
@@ -1088,7 +1091,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                         }
 
                         pointer = fillBeta(next, i, pointer);
-                    } else
+                    }
+                    else
                     {
                         if (next != statusRestrict)
                         {
@@ -1134,7 +1138,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
         }
 
-        private int fillOne(final double val_, final int toStatus_, final int entryIndex_, final int curveDepth_, final int curveIndex_, final int pointer_)
+        private int fillOne(final double val_, final int toStatus_, final int entryIndex_, final int curveDepth_,
+                            final int curveIndex_, final int pointer_)
         {
             _paramValues[pointer_] = val_;
             _toStatus[pointer_] = toStatus_;

@@ -19,12 +19,7 @@
  */
 package edu.columbia.tjw.item.visualize;
 
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
-import edu.columbia.tjw.item.ItemParameters;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemRegressorReader;
-import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.algo.QuantileApproximation;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.data.InterpolatedCurve;
@@ -33,12 +28,11 @@ import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.fit.ItemCalcGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
+import org.apache.commons.math3.distribution.NormalDistribution;
 
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.*;
-
-import org.apache.commons.math3.distribution.NormalDistribution;
 
 /**
  * @param <S> The status family for this visualizer
@@ -157,6 +151,25 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _modelMap = Collections.unmodifiableSortedMap(modelMap);
     }
 
+    private static <S extends ItemStatus<S>, R extends ItemRegressor<R>>
+    QuantileStatistics extractDistribution(final S to_, final R reg_, SortedMap<S, SortedMap<R,
+            QuantileStatistics>> map_)
+    {
+        if (!map_.containsKey(to_))
+        {
+            throw new IllegalArgumentException("Invalid to state.");
+        }
+
+        final SortedMap<R, QuantileStatistics> regMap = map_.get(to_);
+
+        if (!regMap.containsKey(reg_))
+        {
+            throw new IllegalArgumentException("Invalid to regressor.");
+        }
+
+        return regMap.get(reg_);
+    }
+
     public synchronized void printResults(final PrintStream stream_)
     {
         stream_.flush();
@@ -201,25 +214,6 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
     public SortedSet<S> getReachable()
     {
         return _reachable;
-    }
-
-    private static <S extends ItemStatus<S>, R extends ItemRegressor<R>>
-    QuantileStatistics extractDistribution(final S to_, final R reg_, SortedMap<S, SortedMap<R,
-            QuantileStatistics>> map_)
-    {
-        if (!map_.containsKey(to_))
-        {
-            throw new IllegalArgumentException("Invalid to state.");
-        }
-
-        final SortedMap<R, QuantileStatistics> regMap = map_.get(to_);
-
-        if (!regMap.containsKey(reg_))
-        {
-            throw new IllegalArgumentException("Invalid to regressor.");
-        }
-
-        return regMap.get(reg_);
     }
 
     public InterpolatedCurve generateQQPlot(final S to_, final R reg_)
@@ -389,54 +383,12 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return output;
     }
 
-    private final class InnerGrid implements ItemGrid<R>
+    public enum CurveType
     {
-        private final int _steps;
-        private final R _regressor;
-        private final ItemRegressorReader[] _readers;
-
-        public InnerGrid(final int steps_, final double minValue_, final double stepSize_, final R regressor_,
-                         final Map<R, Double> regValues_)
-        {
-            _steps = steps_;
-            _regressor = regressor_;
-
-            _readers = new ItemRegressorReader[regressor_.getFamily().size()];
-
-            for (final Map.Entry<R, Double> entry : regValues_.entrySet())
-            {
-                final R next = entry.getKey();
-                final Double value = entry.getValue();
-                _readers[next.ordinal()] = new ConstantRegressorReader(_steps, value);
-            }
-
-            _readers[regressor_.ordinal()] = new SteppedRegressorReader(_steps, minValue_, stepSize_);
-        }
-
-        @Override
-        public int size()
-        {
-            return _steps;
-        }
-
-        @Override
-        public ItemRegressorReader getRegressorReader(R field_)
-        {
-            return _readers[field_.ordinal()];
-        }
-
-        @Override
-        public EnumFamily<R> getRegressorFamily()
-        {
-            return _regressor.getFamily();
-        }
-
-        @Override
-        public final Set<R> getAvailableRegressors()
-        {
-            return getRegressorFamily().getMembers();
-        }
-
+        THEORETICAL,
+        ACTUAL,
+        MODEL,
+        MASS
     }
 
     private static final class ConstantRegressorReader implements ItemRegressorReader
@@ -493,12 +445,54 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     }
 
-    public enum CurveType
+    private final class InnerGrid implements ItemGrid<R>
     {
-        THEORETICAL,
-        ACTUAL,
-        MODEL,
-        MASS
+        private final int _steps;
+        private final R _regressor;
+        private final ItemRegressorReader[] _readers;
+
+        public InnerGrid(final int steps_, final double minValue_, final double stepSize_, final R regressor_,
+                         final Map<R, Double> regValues_)
+        {
+            _steps = steps_;
+            _regressor = regressor_;
+
+            _readers = new ItemRegressorReader[regressor_.getFamily().size()];
+
+            for (final Map.Entry<R, Double> entry : regValues_.entrySet())
+            {
+                final R next = entry.getKey();
+                final Double value = entry.getValue();
+                _readers[next.ordinal()] = new ConstantRegressorReader(_steps, value);
+            }
+
+            _readers[regressor_.ordinal()] = new SteppedRegressorReader(_steps, minValue_, stepSize_);
+        }
+
+        @Override
+        public int size()
+        {
+            return _steps;
+        }
+
+        @Override
+        public ItemRegressorReader getRegressorReader(R field_)
+        {
+            return _readers[field_.ordinal()];
+        }
+
+        @Override
+        public EnumFamily<R> getRegressorFamily()
+        {
+            return _regressor.getFamily();
+        }
+
+        @Override
+        public final Set<R> getAvailableRegressors()
+        {
+            return getRegressorFamily().getMembers();
+        }
+
     }
 
 }

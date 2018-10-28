@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit;
@@ -40,16 +40,14 @@ import java.util.TreeSet;
 import java.util.logging.Logger;
 
 /**
- *
  * A class designed to expand the model by adding curves.
- *
+ * <p>
  * In addition, it may be used to fit only coefficients if needed.
  *
- *
- * @author tyler
  * @param <S> The status type for this model
  * @param <R> The regressor type for this model
  * @param <T> The curve type for this model
+ * @author tyler
  */
 public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
@@ -68,17 +66,20 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     private final FittingProgressChain<S, R, T> _chain;
 
-    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_, final ItemStatusGrid<S, R> grid_)
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
+                      final ItemStatusGrid<S, R> grid_)
     {
         this(factory_, intercept_, status_, randomizeGrid(grid_, new ItemSettings(), status_), new ItemSettings());
     }
 
-    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_, final ItemFittingGrid<S, R> grid_)
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
+                      final ItemFittingGrid<S, R> grid_)
     {
         this(factory_, intercept_, status_, grid_, new ItemSettings());
     }
 
-    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_, final ItemFittingGrid<S, R> grid_, ItemSettings settings_)
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
+                      final ItemFittingGrid<S, R> grid_, ItemSettings settings_)
     {
         if (null == factory_)
         {
@@ -111,10 +112,38 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept);
         final double logLikelihood = this.computeLogLikelihood(starting);
-        _chain = new FittingProgressChain<>("Primary", starting, logLikelihood, _grid.size(), _calc, _settings.getDoValidate());
+        _chain = new FittingProgressChain<>("Primary", starting, logLikelihood, _grid.size(), _calc,
+                _settings.getDoValidate());
 
         _fitter = new ParamFitter<>(_calc, _settings);
         _curveFitter = new CurveFitter<>(_factory, _settings, _grid, _calc);
+    }
+
+    /**
+     * This function will wrap the provided grid factory. The goal here is to
+     * handle the randomization needed for accurate calculation, and also to
+     * cache some data for efficiency.
+     * <p>
+     * It is strongly recommended that all grid factories are wrapped before
+     * use.
+     * <p>
+     * N.B: The wrapped grid may cache, so if the underlying regressors are
+     * changed, the resulting factory should be wrapped again.
+     * <p>
+     * Also, keep in mind that only relevant rows will be retained, particularly
+     * those with the correct from state, and for which the next status is
+     * known.
+     *
+     * @param grid_     The grid to randomize
+     * @param settings_
+     * @return A randomized version of grid_
+     */
+    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>> ItemFittingGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_,
+                                                                                                            final ItemSettings settings_, final S status_)
+    {
+        final ItemFittingGrid<S, R> wrapped = new RawFittingGrid<>(new RandomizedStatusGrid<>(grid_, settings_,
+                grid_.getRegressorFamily(), status_));
+        return wrapped;
     }
 
     public S getStatus()
@@ -140,32 +169,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public ItemParameters<S, R, T> getBestParameters()
     {
         return _chain.getBestParameters();
-    }
-
-    /**
-     * This function will wrap the provided grid factory. The goal here is to
-     * handle the randomization needed for accurate calculation, and also to
-     * cache some data for efficiency.
-     *
-     * It is strongly recommended that all grid factories are wrapped before
-     * use.
-     *
-     * N.B: The wrapped grid may cache, so if the underlying regressors are
-     * changed, the resulting factory should be wrapped again.
-     *
-     * Also, keep in mind that only relevant rows will be retained, particularly
-     * those with the correct from state, and for which the next status is
-     * known.
-     *
-     * @param grid_ The grid to randomize
-     * @param settings_
-     * @return A randomized version of grid_
-     */
-    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>> ItemFittingGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_,
-            final ItemSettings settings_, final S status_)
-    {
-        final ItemFittingGrid<S, R> wrapped = new RawFittingGrid<>(new RandomizedStatusGrid<>(grid_, settings_, grid_.getRegressorFamily(), status_));
-        return wrapped;
     }
 
     public ItemFittingGrid<S, R> getGrid()
@@ -228,7 +231,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     }
 
     /**
-     *
      * Optimize the coefficients.
      *
      * @return A model with newly optimized coefficients.
@@ -247,8 +249,10 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         //chain_.pushResults("FitCoefficients", fitResult);
     }
 
-    private void doSingleAnnealingOperation(final Set<R> curveFields_, final ItemParameters<S, R, T> base_, final ItemParameters<S, R, T> reduced_,
-            final FittingProgressChain<S, R, T> subChain_, final boolean exhaustiveCalibrate_)
+    private void doSingleAnnealingOperation(final Set<R> curveFields_, final ItemParameters<S, R, T> base_,
+                                            final ItemParameters<S, R, T> reduced_,
+                                            final FittingProgressChain<S, R, T> subChain_,
+                                            final boolean exhaustiveCalibrate_)
     {
         final int paramCount = base_.getEffectiveParamCount();
 
@@ -276,7 +280,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         }
 
         final ParamFitResult<S, R, T> rebuilt = expandModel(subChain_, curveFields_, reduction);
-        final boolean better = _chain.pushResults("AnnealingExpansion", subChain_.getBestParameters(), subChain_.getLogLikelihood());
+        final boolean better = _chain.pushResults("AnnealingExpansion", subChain_.getBestParameters(),
+                subChain_.getLogLikelihood());
 
         if (better)
         {
@@ -337,13 +342,15 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return _chain.getLatestResults();
     }
 
-    public ParamFitResult<S, R, T> runAnnealingByEntry(final Set<R> curveFields_, final boolean exhaustiveCalibration_) throws ConvergenceException
+    public ParamFitResult<S, R, T> runAnnealingByEntry(final Set<R> curveFields_,
+                                                       final boolean exhaustiveCalibration_) throws ConvergenceException
     {
         int offset = 0;
 
         for (int i = 0; i < _chain.getBestParameters().getEntryCount(); i++)
         {
-            final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain[" + i + "]", _chain);
+            final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain[" + i + "]",
+                    _chain);
             final ItemParameters<S, R, T> base = subChain.getBestParameters();
             final int index = i - offset;
 
@@ -380,7 +387,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     {
         for (final R regressor : curveFields_)
         {
-            final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain[" + regressor.name() + "]", _chain);
+            final FittingProgressChain<S, R, T> subChain =
+                    new FittingProgressChain<>("AnnealingSubChain[" + regressor.name() + "]", _chain);
             final ItemParameters<S, R, T> base = subChain.getBestParameters();
             final ItemParameters<S, R, T> reduced = base.dropRegressor(regressor);
 
@@ -431,13 +439,13 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     /**
      * Add some new curves to this model.
-     *
+     * <p>
      * This function is the heart of the ITEM system, and uses most of the
      * computational resources.
      *
      * @param curveFields_ The regressors on which to draw curves
-     * @param paramCount_ The total number of additional params that will be
-     * allowed.
+     * @param paramCount_  The total number of additional params that will be
+     *                     allowed.
      * @return A new model with additional curves added, and all coefficients
      * optimized.
      */
@@ -466,7 +474,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return results;
     }
 
-    private ParamFitResult<S, R, T> expandModel(final FittingProgressChain<S, R, T> chain_, final Set<R> curveFields_, final int paramCount_)
+    private ParamFitResult<S, R, T> expandModel(final FittingProgressChain<S, R, T> chain_, final Set<R> curveFields_
+            , final int paramCount_)
     {
         final long start = System.currentTimeMillis();
         //final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("ModelExpansionChain", chain_);
@@ -489,7 +498,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             if (i > 0)
             {
                 final ParamProgressFrame frame = chain_.getLatestFrame();
-                final double improvement = frame.getStartingPoint().getCurrentLogLikelihood() - frame.getCurrentLogLikelihood();
+                final double improvement =
+                        frame.getStartingPoint().getCurrentLogLikelihood() - frame.getCurrentLogLikelihood();
 
                 //First, try to calibrate any existing curves to improve the fit. 
                 final boolean isBetter = _curveFitter.calibrateCurves(improvement, false, chain_);

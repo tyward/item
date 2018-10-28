@@ -7,11 +7,11 @@ package edu.columbia.tjw.item.util.random;
 
 import edu.columbia.tjw.item.util.ByteTool;
 import edu.columbia.tjw.item.util.HashTool;
+
 import java.security.SecureRandom;
 import java.util.Random;
 
 /**
- *
  * @author tyler
  */
 public class RandomTool
@@ -20,11 +20,16 @@ public class RandomTool
 
     static
     {
-        //Should fix the occasional hang on start glitch. Caused by the linux /dev/random blocking (I still say this is a bug in Linux). 
+        //Should fix the occasional hang on start glitch. Caused by the linux /dev/random blocking (I still say this
+        // is a bug in Linux).
         System.setProperty("securerandom.source", "file:/dev/urandom");
 
         CORE = new SecureRandom();
         CORE.setSeed(CORE.generateSeed(32));
+    }
+
+    private RandomTool()
+    {
     }
 
     public static void main(final String[] args_)
@@ -35,10 +40,6 @@ public class RandomTool
 
             System.out.println(next + "L, 0x" + Long.toHexString(next) + "L");
         }
-    }
-
-    private RandomTool()
-    {
     }
 
     public synchronized static String randomString(final int length_)
@@ -62,7 +63,6 @@ public class RandomTool
     }
 
     /**
-     *
      * @param max_ The max (exclusive) of the range
      * @return An integer in the range [0, max_), uniformly distributed
      */
@@ -72,10 +72,9 @@ public class RandomTool
     }
 
     /**
-     *
      * Generates an integer in the range [0, max_)
      *
-     * @param max_ The max (exclusive) of the range
+     * @param max_  The max (exclusive) of the range
      * @param rand_ The PRNG used to generate these random numbers
      * @return An integer in the range [0, max_), uniformly distributed
      */
@@ -92,8 +91,6 @@ public class RandomTool
     }
 
     /**
-     *
-     *
      * @param input_ The array to be shuffled
      */
     public static void shuffle(final int[] input_)
@@ -102,9 +99,8 @@ public class RandomTool
     }
 
     /**
-     *
      * @param input_ The array to be shuffled
-     * @param rand_ The PRNG to use for the shuffle
+     * @param rand_  The PRNG to use for the shuffle
      */
     public static void shuffle(final int[] input_, final Random rand_)
     {

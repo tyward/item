@@ -12,30 +12,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.fred;
 
 import edu.columbia.tjw.item.util.HashUtil;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.net.HttpURLConnection;
-import java.net.Proxy;
-import java.net.URL;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -43,12 +27,22 @@ import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringReader;
+import java.net.HttpURLConnection;
+import java.net.Proxy;
+import java.net.URL;
+import java.util.*;
+
 /**
- *
  * This class is designed to fetch data from the FRED XML API.
- *
+ * <p>
  * You can find the API docs here: https://api.stlouisfed.org/docs/fred/
- *
+ * <p>
  * FRED itself is here: https://research.stlouisfed.org/fred2/
  *
  * @author tyler
@@ -126,7 +120,8 @@ public final class FredLink
         return node;
     }
 
-    private synchronized SortedMap<String, FredSeries> getChildSeries(final FredCategory cat_) throws IOException, FredException
+    private synchronized SortedMap<String, FredSeries> getChildSeries(final FredCategory cat_) throws IOException,
+            FredException
     {
         final String catQuery = "category_id=" + cat_.getId();
 
@@ -153,7 +148,8 @@ public final class FredLink
         return nodes;
     }
 
-    private synchronized SortedSet<FredNavigationNode> getChildren(final FredCategory cat_) throws IOException, FredException
+    private synchronized SortedSet<FredNavigationNode> getChildren(final FredCategory cat_) throws IOException,
+            FredException
     {
         final String catQuery = "category_id=" + cat_.getId();
 

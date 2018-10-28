@@ -12,21 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.util.LogUtil;
+
 import java.util.logging.Logger;
 
 /**
- *
- * @author tyler
  * @param <V> The type of points over which this can optimize
  * @param <F> The type of function this can optimize
+ * @author tyler
  */
 public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>> extends Optimizer<V, F>
 {
@@ -73,7 +73,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
     }
 
     public OptimizationResult<V> optimize(final F f_, final V a_, final EvaluationResult aRes_,
-            final V b_, final EvaluationResult bRes_) throws ConvergenceException
+                                          final V b_, final EvaluationResult bRes_) throws ConvergenceException
     {
         //Just need to fill this in.....
         final double comparison = this.getComparator().compare(f_, a_, b_, aRes_, bRes_);
@@ -106,11 +106,11 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
     /**
      * We start with a bracket where we know that a > b (to at least
      * comparator.sigmaTarget())
-     *
+     * <p>
      * We then need only to compute a C that is known to be greater than b (we
      * may also adjust b).
      *
-     * @param f_ The function to bracket
+     * @param f_       The function to bracket
      * @param bracket_ The initial guess for the bracket, with f(a) > f(b)
      * @return A new bracket [a, b, c] with f(a) > f(b) and f(c) > f(b)
      * @throws ConvergenceException If no such bracket can be constructed
@@ -202,7 +202,8 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
 
             final double presumedMinimum;
 
-            //Alpha is the 2nd derivative of this function, let's see if it's positive (indicating we will find a minimum). 
+            //Alpha is the 2nd derivative of this function, let's see if it's positive (indicating we will find a
+            // minimum).
             if (alpha <= 0.0)
             {
                 //Drat, this has the wrong convexity.
@@ -498,7 +499,8 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
         private final EvaluationResult _bRes;
         private final EvaluationResult _cRes;
 
-        public Bracket(final V a_, final V b_, final V c_, final EvaluationResult aRes_, final EvaluationResult bRes_, final EvaluationResult cRes_)
+        public Bracket(final V a_, final V b_, final V c_, final EvaluationResult aRes_, final EvaluationResult bRes_
+                , final EvaluationResult cRes_)
         {
             _a = a_;
             _b = b_;

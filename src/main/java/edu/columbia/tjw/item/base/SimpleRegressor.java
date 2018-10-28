@@ -18,6 +18,7 @@ package edu.columbia.tjw.item.base;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.HashUtil;
+
 import java.util.Collection;
 
 /**
@@ -27,7 +28,7 @@ import java.util.Collection;
  * However, for simplicity, this will make a regressor set from a collection of
  * strings. Ordering of the collection matters (it determines ordering of the
  * results).
- *
+ * <p>
  * One of these regressors (of your choice) will be used as an intercept term
  * later on in the modeling process, so be sure to add such a term if one isn't
  * already present.
@@ -41,6 +42,11 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
 
     private final SimpleStringEnum _base;
     private EnumFamily<SimpleRegressor> _family;
+
+    private SimpleRegressor(final SimpleStringEnum base_)
+    {
+        _base = base_;
+    }
 
     public static EnumFamily<SimpleRegressor> generateFamily(final Collection<String> regressorNames_)
     {
@@ -65,16 +71,6 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
         return family;
     }
 
-    private SimpleRegressor(final SimpleStringEnum base_)
-    {
-        _base = base_;
-    }
-
-    private void setFamily(final EnumFamily<SimpleRegressor> family_)
-    {
-        _family = family_;
-    }
-
     @Override
     public String name()
     {
@@ -91,6 +87,11 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
     public EnumFamily<SimpleRegressor> getFamily()
     {
         return _family;
+    }
+
+    private void setFamily(final EnumFamily<SimpleRegressor> family_)
+    {
+        _family = family_;
     }
 
     @Override

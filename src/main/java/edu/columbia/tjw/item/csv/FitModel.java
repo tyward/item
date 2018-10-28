@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.csv;
@@ -25,29 +25,16 @@ import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.StandardCurveFactory;
 import edu.columbia.tjw.item.base.StandardCurveType;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.ItemFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.visualize.ModelVisualizer;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import org.apache.commons.cli.*;
+
+import java.io.*;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 
 /**
- *
  * @author tyler
  */
 public final class FitModel
@@ -176,7 +163,8 @@ public final class FitModel
             }
 
             System.out.println("\n\n\n\nVisualizing model: ");
-            final ModelVisualizer<SimpleStatus, SimpleRegressor, StandardCurveType> vis = new ModelVisualizer<>(fitter.getBestParameters(), grid, compiled.getRegressorFamily().getMembers());
+            final ModelVisualizer<SimpleStatus, SimpleRegressor, StandardCurveType> vis =
+                    new ModelVisualizer<>(fitter.getBestParameters(), grid, compiled.getRegressorFamily().getMembers());
             vis.printResults(System.out);
 
             System.out.println("\n\n\n\nFinal Chain: " + fitter.getChain().toString());
@@ -204,10 +192,10 @@ public final class FitModel
     }
 
     private static void writeParams(final File outputFile_,
-            final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params_) throws IOException
+                                    final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params_) throws IOException
     {
         try (final FileOutputStream fOut = new FileOutputStream(outputFile_);
-                final ObjectOutputStream oOut = new ObjectOutputStream(fOut))
+             final ObjectOutputStream oOut = new ObjectOutputStream(fOut))
         {
             oOut.writeObject(params_);
         }
@@ -216,7 +204,7 @@ public final class FitModel
     private static CompiledDataDescriptor getCompiled(final File inputFile_) throws IOException
     {
         try (final FileInputStream fin = new FileInputStream(inputFile_);
-                final ObjectInputStream oin = new ObjectInputStream(fin))
+             final ObjectInputStream oin = new ObjectInputStream(fin))
         {
             final CompiledDataDescriptor desc = (CompiledDataDescriptor) oin.readObject();
             return desc;
@@ -235,7 +223,7 @@ public final class FitModel
         }
 
         try (final FileInputStream fin = new FileInputStream(inputFile_);
-                final ObjectInputStream oin = new ObjectInputStream(fin))
+             final ObjectInputStream oin = new ObjectInputStream(fin))
         {
             final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> model
                     = (ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType>) oin.readObject();
@@ -250,7 +238,7 @@ public final class FitModel
     private static ItemFittingGrid<SimpleStatus, SimpleRegressor> loadGrid(final File inputFile_) throws IOException
     {
         try (final FileInputStream fin = new FileInputStream(inputFile_);
-                final ObjectInputStream oin = new ObjectInputStream(fin))
+             final ObjectInputStream oin = new ObjectInputStream(fin))
         {
             final ItemFittingGrid<SimpleStatus, SimpleRegressor> grid
                     = (ItemFittingGrid<SimpleStatus, SimpleRegressor>) oin.readObject();

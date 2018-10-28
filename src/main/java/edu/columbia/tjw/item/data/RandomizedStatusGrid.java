@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.data;
@@ -25,14 +25,14 @@ import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.random.RandomTool;
+
 import java.util.Arrays;
 import java.util.Set;
 
 /**
- *
- * @author tyler
  * @param <S> The status type for this grid
  * @param <R> The regressor type for this grid
+ * @author tyler
  */
 public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemStatusGrid<S, R>
 {
@@ -86,7 +86,8 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
         }
     }
 
-    public S getFromStatus() {
+    public S getFromStatus()
+    {
         return _fromStatus;
     }
 
@@ -152,44 +153,9 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
 
 
     @Override
-    public final Set<R> getAvailableRegressors() {
-        return _underlying.getAvailableRegressors();
-    }
-
-    public final class MappedReader implements ItemRegressorReader
+    public final Set<R> getAvailableRegressors()
     {
-        private final float[] _data;
-
-        public MappedReader(final R field_)
-        {
-            _data = fetchRegressor(field_.ordinal());
-        }
-
-        @Override
-        public double asDouble(int index_)
-        {
-            return _data[index_];
-        }
-
-        /**
-         * N.B: This is extremely dangerous, to give out our underlying array.
-         *
-         * However, it is very useful for performance reasons, so it is allowed,
-         * but hidden.
-         *
-         * @return
-         */
-        public float[] getUnderlyingArray()
-        {
-            return _data;
-        }
-
-        @Override
-        public int size()
-        {
-            return _data.length;
-        }
-
+        return _underlying.getAvailableRegressors();
     }
 
     private synchronized float[] fetchRegressor(final int ordinal_)
@@ -213,6 +179,42 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         return _regressors[ordinal_];
+    }
+
+    public final class MappedReader implements ItemRegressorReader
+    {
+        private final float[] _data;
+
+        public MappedReader(final R field_)
+        {
+            _data = fetchRegressor(field_.ordinal());
+        }
+
+        @Override
+        public double asDouble(int index_)
+        {
+            return _data[index_];
+        }
+
+        /**
+         * N.B: This is extremely dangerous, to give out our underlying array.
+         * <p>
+         * However, it is very useful for performance reasons, so it is allowed,
+         * but hidden.
+         *
+         * @return
+         */
+        public float[] getUnderlyingArray()
+        {
+            return _data;
+        }
+
+        @Override
+        public int size()
+        {
+            return _data.length;
+        }
+
     }
 
 }

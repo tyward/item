@@ -19,19 +19,10 @@
  */
 package edu.columbia.tjw.item.fit.param;
 
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
-import edu.columbia.tjw.item.ItemParameters;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemSettings;
-import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
-import edu.columbia.tjw.item.optimize.EvaluationResult;
-import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
-import edu.columbia.tjw.item.optimize.MultivariateGradient;
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
-import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
+import edu.columbia.tjw.item.optimize.*;
 
 /**
  * @param <S> The status type for this grid
@@ -48,7 +39,8 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     private ItemModel<S, R, T> _model;
 
     public LogisticModelFunction(
-            final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final ItemModel<S, R, T> model_, ItemSettings settings_, final PackedParameters<S, R, T> packed_)
+            final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_,
+            final ItemModel<S, R, T> model_, ItemSettings settings_, final PackedParameters<S, R, T> packed_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
         _grid = grid_;
@@ -128,7 +120,8 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
 
     @Override
-    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_, EvaluationResult result_)
+    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_,
+                                                      EvaluationResult result_)
     {
         final int dimension = input_.getDimension();
         final double[] derivative = new double[dimension];
@@ -141,7 +134,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
         final ItemModel<S, R, T> localModel = _model.clone();
 
-        final int count = localModel.computeDerivative(_grid, start_, end_,_packed, derivative);
+        final int count = localModel.computeDerivative(_grid, start_, end_, _packed, derivative);
 
         if (count > 0)
         {

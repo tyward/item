@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.csv;
@@ -30,26 +30,14 @@ import edu.columbia.tjw.item.fit.ItemCalcGrid;
 import edu.columbia.tjw.item.fit.ItemParamGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.PrintWriter;
-import java.util.logging.Logger;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.*;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 
+import java.io.*;
+import java.util.logging.Logger;
+
 /**
- *
  * @author tyler
  */
 public final class ApplyModel
@@ -102,7 +90,8 @@ public final class ApplyModel
             final int size = grid.size();
 
             final double[][] predictions = new double[reachableCount][size];
-            final ItemParamGrid<SimpleStatus, SimpleRegressor, StandardCurveType> paramGrid = new ItemCalcGrid<>(params, grid);
+            final ItemParamGrid<SimpleStatus, SimpleRegressor, StandardCurveType> paramGrid =
+                    new ItemCalcGrid<>(params, grid);
 
             LOG.info("Running calculations.");
             final double[] workspace = new double[reachableCount];
@@ -187,7 +176,7 @@ public final class ApplyModel
     private static CompiledDataDescriptor getCompiled(final File inputFile_) throws IOException
     {
         try (final FileInputStream fin = new FileInputStream(inputFile_);
-                final ObjectInputStream oin = new ObjectInputStream(fin))
+             final ObjectInputStream oin = new ObjectInputStream(fin))
         {
             final CompiledDataDescriptor desc = (CompiledDataDescriptor) oin.readObject();
             return desc;
@@ -206,7 +195,7 @@ public final class ApplyModel
         }
 
         try (final FileInputStream fin = new FileInputStream(inputFile_);
-                final ObjectInputStream oin = new ObjectInputStream(fin))
+             final ObjectInputStream oin = new ObjectInputStream(fin))
         {
             final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> model
                     = (ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType>) oin.readObject();
@@ -221,7 +210,7 @@ public final class ApplyModel
     private static ItemStatusGrid<SimpleStatus, SimpleRegressor> loadGrid(final File inputFile_) throws IOException
     {
         try (final FileInputStream fin = new FileInputStream(inputFile_);
-                final ObjectInputStream oin = new ObjectInputStream(fin))
+             final ObjectInputStream oin = new ObjectInputStream(fin))
         {
             final ItemStatusGrid<SimpleStatus, SimpleRegressor> grid
                     = (ItemStatusGrid<SimpleStatus, SimpleRegressor>) oin.readObject();

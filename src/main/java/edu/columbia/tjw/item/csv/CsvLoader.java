@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.csv;
@@ -24,26 +24,14 @@ import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.SimpleStringEnum;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
-import edu.columbia.tjw.item.util.ListTool;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
+import java.io.*;
+import java.util.*;
+
 /**
- *
  * @author tyler
  */
 public final class CsvLoader
@@ -64,11 +52,33 @@ public final class CsvLoader
         _format = format_;
     }
 
-    public ItemStatusGrid<SimpleStatus, SimpleRegressor> generateGrid(final CompiledDataDescriptor descriptor_, final SimpleStatus startStatus_) throws IOException
+    private static int[] extractOffsets(final Map<String, Integer> header_, final Set<String> regressors_)
+    {
+        final int[] offsets = new int[regressors_.size()];
+
+        int pointer = 0;
+
+        for (final String next : regressors_)
+        {
+            if (!header_.containsKey(next))
+            {
+                throw new IllegalArgumentException("Column not found: " + next);
+            }
+
+            final int offset = header_.get(next);
+            offsets[pointer++] = offset;
+        }
+
+        return offsets;
+    }
+
+    public ItemStatusGrid<SimpleStatus, SimpleRegressor> generateGrid(final CompiledDataDescriptor descriptor_,
+                                                                      final SimpleStatus startStatus_) throws IOException
     {
         final ColumnDescriptorSet colDescriptor = descriptor_.getColDescriptorSet();
 
-        try (final InputStream fin = new FileInputStream(_inputFile); final BufferedReader buff = new BufferedReader(new InputStreamReader(fin)))
+        try (final InputStream fin = new FileInputStream(_inputFile); final BufferedReader buff =
+                new BufferedReader(new InputStreamReader(fin)))
         {
             final CSVParser parser = _format.withHeader().parse(buff);
 
@@ -147,7 +157,8 @@ public final class CsvLoader
 
     public CompiledDataDescriptor getCompiledDescriptor() throws IOException
     {
-        try (final InputStream fin = new FileInputStream(_inputFile); final BufferedReader buff = new BufferedReader(new InputStreamReader(fin)))
+        try (final InputStream fin = new FileInputStream(_inputFile); final BufferedReader buff =
+                new BufferedReader(new InputStreamReader(fin)))
         {
             final CSVParser parser = _format.withHeader().parse(buff);
 
@@ -302,30 +313,11 @@ public final class CsvLoader
                 pointer++;
             }
 
-            final CompiledDataDescriptor compiled = new CompiledDataDescriptor(_descriptor, endStatusLabels, enumDescriptors, numericDescriptors);
+            final CompiledDataDescriptor compiled = new CompiledDataDescriptor(_descriptor, endStatusLabels,
+                    enumDescriptors, numericDescriptors);
             return compiled;
         }
 
-    }
-
-    private static int[] extractOffsets(final Map<String, Integer> header_, final Set<String> regressors_)
-    {
-        final int[] offsets = new int[regressors_.size()];
-
-        int pointer = 0;
-
-        for (final String next : regressors_)
-        {
-            if (!header_.containsKey(next))
-            {
-                throw new IllegalArgumentException("Column not found: " + next);
-            }
-
-            final int offset = header_.get(next);
-            offsets[pointer++] = offset;
-        }
-
-        return offsets;
     }
 
 }

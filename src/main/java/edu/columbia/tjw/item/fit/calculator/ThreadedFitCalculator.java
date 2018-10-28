@@ -62,7 +62,8 @@ public class ThreadedFitCalculator<S extends ItemStatus<S>, R extends ItemRegres
     {
         final List<EntropyRunner> runners = new ArrayList<>(_blockCalculators.size());
 
-        for(final FitCalculator<S, R, T> calc : _blockCalculators) {
+        for (final FitCalculator<S, R, T> calc : _blockCalculators)
+        {
             final EntropyRunner runner = new EntropyRunner(calc, params_);
             runners.add(runner);
         }

@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.csv;
@@ -25,12 +25,12 @@ import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
 /**
- *
  * @author tyler
  */
 public class RawStatusGrid implements ItemStatusGrid<SimpleStatus, SimpleRegressor>, Serializable
@@ -43,7 +43,9 @@ public class RawStatusGrid implements ItemStatusGrid<SimpleStatus, SimpleRegress
     final EnumFamily<SimpleStatus> _statFamily;
     final EnumFamily<SimpleRegressor> _regFamily;
 
-    public RawStatusGrid(final SimpleStatus startingStatus_, final List<double[]> data_, final List<SimpleStatus> endingStatus_, final EnumFamily<SimpleStatus> statFamily_, final EnumFamily<SimpleRegressor> regFamily_)
+    public RawStatusGrid(final SimpleStatus startingStatus_, final List<double[]> data_,
+                         final List<SimpleStatus> endingStatus_, final EnumFamily<SimpleStatus> statFamily_,
+                         final EnumFamily<SimpleRegressor> regFamily_)
     {
         if (endingStatus_.size() != data_.size())
         {
@@ -112,7 +114,8 @@ public class RawStatusGrid implements ItemStatusGrid<SimpleStatus, SimpleRegress
     }
 
     @Override
-    public final Set<SimpleRegressor> getAvailableRegressors() {
+    public final Set<SimpleRegressor> getAvailableRegressors()
+    {
         return getRegressorFamily().getMembers();
     }
 

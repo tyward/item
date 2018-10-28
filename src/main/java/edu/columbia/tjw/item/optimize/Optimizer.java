@@ -12,18 +12,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.optimize;
 
 /**
- *
- * @author tyler
  * @param <V> The type of points over which this can optimize
  * @param <F> The type of function this can optimize
+ * @author tyler
  */
 public abstract class Optimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>>
 {
@@ -43,8 +42,6 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         this(DEFAULT_XTOL, DEFAULT_YTOL, blockSize_, maxEvalCount_);
     }
 
-    public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_) throws ConvergenceException;
-
     public Optimizer(final double xTol_, final double yTol_, final int blockSize_, final int maxEvalCount_)
     {
         _blockSize = blockSize_;
@@ -54,6 +51,8 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
 
         _comparator = new BasicAdaptiveComparator<>(_blockSize, _stdDevThreshold);
     }
+
+    public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_) throws ConvergenceException;
 
     public double getXTolerance()
     {
@@ -108,7 +107,8 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         return output;
     }
 
-    protected boolean checkYTolerance(final EvaluationResult aResult_, final EvaluationResult bResult_, final EvaluationResult cResult_)
+    protected boolean checkYTolerance(final EvaluationResult aResult_, final EvaluationResult bResult_,
+                                      final EvaluationResult cResult_)
     {
         final boolean checkA = checkYTolerance(aResult_, bResult_);
         final boolean checkB = checkYTolerance(bResult_, cResult_);

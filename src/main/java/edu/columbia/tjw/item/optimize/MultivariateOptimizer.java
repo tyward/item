@@ -12,18 +12,18 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.util.LogUtil;
+
 import java.util.logging.Logger;
 
 /**
- *
  * @author tyler
  */
 public class MultivariateOptimizer extends Optimizer<MultivariatePoint, MultivariateDifferentiableFunction>
@@ -36,7 +36,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
     private final double _thetaPrecision;
     private final GoldenSectionOptimizer<MultivariatePoint, MultivariateDifferentiableFunction> _optimizer;
 
-    public MultivariateOptimizer(final int blockSize_, int maxEvalCount_, final int loopEvalCount_, final double thetaPrecision_)
+    public MultivariateOptimizer(final int blockSize_, int maxEvalCount_, final int loopEvalCount_,
+                                 final double thetaPrecision_)
     {
         super(blockSize_, maxEvalCount_);
 
@@ -55,13 +56,16 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
     }
 
     @Override
-    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_, MultivariatePoint startingPoint_, MultivariatePoint direction_) throws ConvergenceException
+    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_,
+                                                          MultivariatePoint startingPoint_,
+                                                          MultivariatePoint direction_) throws ConvergenceException
     {
         final EvaluationResult result = f_.generateResult();
         return optimize(f_, startingPoint_, result, direction_);
     }
 
-    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_, MultivariatePoint startingPoint_) throws ConvergenceException
+    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_,
+                                                          MultivariatePoint startingPoint_) throws ConvergenceException
     {
         final EvaluationResult result = f_.generateResult();
         final MultivariateGradient gradient = f_.calculateDerivative(startingPoint_, result, _thetaPrecision);
@@ -72,7 +76,10 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
         return optimize(f_, startingPoint_, result, direction);
     }
 
-    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_, MultivariatePoint startingPoint_, final EvaluationResult result_, MultivariatePoint direction_) throws ConvergenceException
+    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_,
+                                                          MultivariatePoint startingPoint_,
+                                                          final EvaluationResult result_,
+                                                          MultivariatePoint direction_) throws ConvergenceException
     {
         final MultivariatePoint direction = new MultivariatePoint(direction_);
         final MultivariatePoint currentPoint = new MultivariatePoint(startingPoint_);
@@ -97,7 +104,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
                 if (!firstLoop)
                 {
-                    final MultivariateGradient gradient = f_.calculateDerivative(currentPoint, currentResult, this._thetaPrecision);
+                    final MultivariateGradient gradient = f_.calculateDerivative(currentPoint, currentResult,
+                            this._thetaPrecision);
                     evaluationCount += (2 * dimension);
 
                     final MultivariatePoint trialPoint;
@@ -114,7 +122,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
                         //We need to control the magnitude of the root bracketing....
                         //We want this small enough that we are searching in a small interval, but not so small that
-                        //we need to spend a lot of time to expand the interval. Err on the side of smallness, since expanding
+                        //we need to spend a lot of time to expand the interval. Err on the side of smallness, since
+                        // expanding
                         //and contracting the interval are about the same cost and typically we won't need much.
                         final double directionMagnitude = trialPoint.getMagnitude();
                         final double desiredMagnitude = stepMagnitude * SCALE_MULTIPLE;
@@ -162,11 +171,13 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         }
                         else
                         {
-                            final double comp2 = this.getComparator().compare(f_, currentPoint, pointB, currentResult, resB);
+                            final double comp2 = this.getComparator().compare(f_, currentPoint, pointB, currentResult
+                                    , resB);
 
                             if (comp2 <= -this.getComparator().getSigmaTarget())
                             {
-                                //The second derivative point is no better than the current point, use the standard derivative.
+                                //The second derivative point is no better than the current point, use the standard
+                                // derivative.
                                 trialPoint = pointA;
                                 trialRes = resA;
                             }
@@ -191,7 +202,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 nextPoint.copy(result.getOptimum());
                 final EvaluationResult nextResult = result.minResult();
 
-                final double zScore = this.getComparator().compare(f_, currentPoint, nextPoint, currentResult, nextResult);
+                final double zScore = this.getComparator().compare(f_, currentPoint, nextPoint, currentResult,
+                        nextResult);
 
 //                final double currentVal = currentResult.getMean();
 //                final double nextVal = nextResult.getMean();
@@ -224,7 +236,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
         //Did we converge, or did we run out of iterations. 
         final boolean converged = (!xTolFailed || !yTolFailed);
-        final MultivariateOptimizationResult output = new MultivariateOptimizationResult(currentPoint, currentResult, converged, evaluationCount);
+        final MultivariateOptimizationResult output = new MultivariateOptimizationResult(currentPoint, currentResult,
+                converged, evaluationCount);
         return output;
     }
 

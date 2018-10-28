@@ -18,19 +18,18 @@ package edu.columbia.tjw.item.base;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.EnumMember;
 import edu.columbia.tjw.item.util.HashUtil;
+
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
- *
  * Constructs a proper EnumFamily from a collection of strings.
- *
+ * <p>
  * It is slightly better to define the EnumMembers as an actual java enum (see
  * BinaryStatus), because that ensures that each family is a singleton. As is,
  * this code makes reasonable attempts to make the family a fairly coherent
  * singleton but it can't be guaranteed.
- *
  *
  * @author tyler
  */
@@ -43,6 +42,16 @@ public final class SimpleStringEnum implements EnumMember<SimpleStringEnum>
     private final String _name;
     private final int _hashCode;
     private EnumFamily<SimpleStringEnum> _family;
+
+    private SimpleStringEnum(final int ordinal_, final String name_, final int hashBase_)
+    {
+        _ordinal = ordinal_;
+        _name = name_;
+
+        int hash = HashUtil.mix(CLASS_HASH, hashBase_);
+        hash = HashUtil.mix(hash, name_.hashCode());
+        _hashCode = HashUtil.mix(hash, ordinal_);
+    }
 
     public static EnumFamily<SimpleStringEnum> generateFamily(final Collection<String> regressorNames_)
     {
@@ -79,21 +88,6 @@ public final class SimpleStringEnum implements EnumMember<SimpleStringEnum>
         return family;
     }
 
-    private SimpleStringEnum(final int ordinal_, final String name_, final int hashBase_)
-    {
-        _ordinal = ordinal_;
-        _name = name_;
-
-        int hash = HashUtil.mix(CLASS_HASH, hashBase_);
-        hash = HashUtil.mix(hash, name_.hashCode());
-        _hashCode = HashUtil.mix(hash, ordinal_);
-    }
-
-    private void setFamily(final EnumFamily<SimpleStringEnum> family_)
-    {
-        _family = family_;
-    }
-
     @Override
     public String name()
     {
@@ -110,6 +104,11 @@ public final class SimpleStringEnum implements EnumMember<SimpleStringEnum>
     public EnumFamily<SimpleStringEnum> getFamily()
     {
         return _family;
+    }
+
+    private void setFamily(final EnumFamily<SimpleStringEnum> family_)
+    {
+        _family = family_;
     }
 
     @Override

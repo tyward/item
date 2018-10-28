@@ -12,20 +12,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.util.thread.GeneralTask;
 import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
  * @author tyler
  */
 public abstract class ThreadedMultivariateFunction implements MultivariateFunction
@@ -135,7 +135,8 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
         return output;
     }
 
-    public synchronized final MultivariateGradient calculateDerivative(MultivariatePoint input_, EvaluationResult result_, double precision_)
+    public synchronized final MultivariateGradient calculateDerivative(MultivariatePoint input_,
+                                                                       EvaluationResult result_, double precision_)
     {
         synchronized (_prepLock)
         {
@@ -149,7 +150,7 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
         final int numTasks = 1 + (numRows / _blockSize);
 
         final List<DerivativeTask> taskList = new ArrayList<>(numTasks);
- 
+
         for (int i = 0; i < numTasks; i++)
         {
             final int thisStart = start + (i * _blockSize);
@@ -219,7 +220,8 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
 
     protected abstract void evaluate(final int start_, final int end_, EvaluationResult result_);
 
-    protected abstract MultivariateGradient evaluateDerivative(final int start_, final int end_, MultivariatePoint input_, EvaluationResult result_);
+    protected abstract MultivariateGradient evaluateDerivative(final int start_, final int end_,
+                                                               MultivariatePoint input_, EvaluationResult result_);
 
     @Override
     public EvaluationResult generateResult(int start_, int end_)
@@ -243,7 +245,8 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
         private final MultivariatePoint _input;
         private final EvaluationResult _result;
 
-        public DerivativeTask(final int start_, final int end_, MultivariatePoint input_, EvaluationResult result_, int rowCount_)
+        public DerivativeTask(final int start_, final int end_, MultivariatePoint input_, EvaluationResult result_,
+                              int rowCount_)
         {
             if (end_ <= start_)
             {

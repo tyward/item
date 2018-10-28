@@ -12,21 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.util.LogUtil;
+
 import java.util.logging.Logger;
 
 /**
- *
- * @author tyler
  * @param <V> The type of points on which this can be evaluated
  * @param <F> The type of optimization function which will be called
+ * @author tyler
  */
 public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>> implements AdaptiveComparator<V, F>
 {
@@ -49,7 +49,8 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
     }
 
     @Override
-    public double compare(final F function_, final V a_, final V b_, final EvaluationResult aResult_, final EvaluationResult bResult_)
+    public double compare(final F function_, final V a_, final V b_, final EvaluationResult aResult_,
+                          final EvaluationResult bResult_)
     {
         if (a_.distance(b_) == 0.0)
         {

@@ -7,13 +7,11 @@
 package edu.columbia.tjw.item.util.random;
 
 /**
- *
  * @author tyler
  */
 public enum PrngType
 {
     STANDARD, SECURE;
-    
-    
-    
+
+
 }

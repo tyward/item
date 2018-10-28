@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.util;
@@ -22,7 +22,6 @@ package edu.columbia.tjw.item.util;
 import org.apache.commons.math3.util.FastMath;
 
 /**
- *
  * @author tyler
  */
 public final class MathFunctions
@@ -61,7 +60,8 @@ public final class MathFunctions
      * @param rowCount_
      * @return
      */
-    public static double computeAicDifference(final int paramCountA_, final int paramCountB_, final double entropyA_, final double entropyB_, final int rowCount_)
+    public static double computeAicDifference(final int paramCountA_, final int paramCountB_, final double entropyA_,
+                                              final double entropyB_, final int rowCount_)
     {
         final double llImprovement = entropyA_ - entropyB_;
         final double scaledImprovement = llImprovement * rowCount_;
@@ -73,7 +73,7 @@ public final class MathFunctions
     /**
      * Compares the two doubles, see if they are different beyond a level that
      * would be typical of rounding error.
-     *
+     * <p>
      * Both numbers must be well defined (not infinite, not NaN) for this to
      * work. Also, both must be positive.
      *

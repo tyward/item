@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.csv;
@@ -23,20 +23,11 @@ import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.SimpleStringEnum;
 import edu.columbia.tjw.item.util.EnumFamily;
+
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
- *
  * @author tyler
  */
 public final class CompiledDataDescriptor implements Serializable
@@ -58,7 +49,9 @@ public final class CompiledDataDescriptor implements Serializable
     private final RawConverter[] _converters;
     private final int[] _offsets;
 
-    public CompiledDataDescriptor(final ColumnDescriptorSet colDescriptor_, final Set<String> endStatusLabels_, final Collection<EnumDescriptor> enumData_, final Collection<NumericDescriptor> numericData_)
+    public CompiledDataDescriptor(final ColumnDescriptorSet colDescriptor_, final Set<String> endStatusLabels_,
+                                  final Collection<EnumDescriptor> enumData_,
+                                  final Collection<NumericDescriptor> numericData_)
     {
         _colDescriptor = colDescriptor_;
 

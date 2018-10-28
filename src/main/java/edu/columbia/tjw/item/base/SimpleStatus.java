@@ -18,16 +18,14 @@ package edu.columbia.tjw.item.base;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.HashUtil;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 /**
- *
  * This is a simple fully connected status family generated from a set of names.
- *
- *
  *
  * @author tyler
  */
@@ -42,6 +40,12 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
     //These two must be filled out after construction.
     private EnumFamily<SimpleStatus> _family;
     private List<SimpleStatus> _reachable = null;
+
+    private SimpleStatus(final SimpleStringEnum base_)
+    {
+        _base = base_;
+        _indistinguishable = Collections.singletonList(this);
+    }
 
     public static EnumFamily<SimpleStatus> generateFamily(final Collection<String> regressorNames_)
     {
@@ -66,17 +70,6 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
         return family;
     }
 
-    private SimpleStatus(final SimpleStringEnum base_)
-    {
-        _base = base_;
-        _indistinguishable = Collections.singletonList(this);
-    }
-
-    private void setFamily(final EnumFamily<SimpleStatus> family_)
-    {
-        _family = family_;
-    }
-
     @Override
     public String name()
     {
@@ -93,6 +86,11 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
     public EnumFamily<SimpleStatus> getFamily()
     {
         return _family;
+    }
+
+    private void setFamily(final EnumFamily<SimpleStatus> family_)
+    {
+        _family = family_;
     }
 
     @Override

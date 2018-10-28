@@ -19,23 +19,17 @@
  */
 package edu.columbia.tjw.item.fit.curve;
 
-import edu.columbia.tjw.item.ItemCurveFactory;
-import edu.columbia.tjw.item.ItemCurveParams;
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
-import edu.columbia.tjw.item.ItemParameters;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemSettings;
-import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
-import edu.columbia.tjw.item.optimize.*;
+import edu.columbia.tjw.item.optimize.ConvergenceException;
+import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
+import edu.columbia.tjw.item.optimize.MultivariatePoint;
+import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
-import edu.columbia.tjw.item.util.MultiLogistic;
-import edu.columbia.tjw.item.algo.QuantileStatistics;
-import edu.columbia.tjw.item.util.RectangularDoubleArray;
 
 import java.util.logging.Logger;
 
@@ -290,7 +284,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     {
         return _model.getParams();
     }
-
 
 
 }

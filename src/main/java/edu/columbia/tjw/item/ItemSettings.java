@@ -12,26 +12,26 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item;
 
 import edu.columbia.tjw.item.util.random.RandomTool;
+
 import java.io.Serializable;
 import java.util.Random;
 
 /**
- *
  * Some general settings that control how curves are constructed and fit.
- *
+ * <p>
  * Generally, don't change these unless you know what you're doing.
- *
+ * <p>
  * Also, all the members are final so that this thing is threadsafe. Use the
  * builder to make adjusted versions of this class.
- *
+ * <p>
  * One word of warning, these will share a single Random, typically this will
  * still be threadsafe, but not always. Be careful about that.
  *
@@ -72,7 +72,8 @@ public final class ItemSettings implements Serializable
     //The minimum Z-score such that we will consider two results different. 
     // i.e. two points must differ by at least _zScoreCutoff std deviations to 
     // be considered meaningfully different. Use a number between 1 - 5 here. 1.0 
-    // for minimal certainty, 5.0 for proof strong enough to be considered a scientific discovery... (less than 1 in a million to happen by chance)
+    // for minimal certainty, 5.0 for proof strong enough to be considered a scientific discovery... (less than 1 in
+    // a million to happen by chance)
     private final double _zScoreCutoff;
 
     private final int _blockSize;
@@ -259,85 +260,15 @@ public final class ItemSettings implements Serializable
             return _rand;
         }
 
-        public boolean isRandomShuffle()
-        {
-            return _randomShuffle;
-        }
-
-        public boolean isUseThreading()
-        {
-            return _useThreading;
-        }
-
-        public boolean isApproximateDerivatives()
-        {
-            return _approximateDerivatives;
-        }
-
-        public boolean isPolishStartingParams()
-        {
-            return _polishStartingParams;
-        }
-
-        public boolean isAllowInteractionCurves()
-        {
-            return _allowInteractionCurves;
-        }
-
-        public boolean isBoundCentrality()
-        {
-            return _boundCentrality;
-        }
-
-        public int getPolishMultStartPoints()
-        {
-            return _polishMultStartPoints;
-        }
-
-        public int getMinCalibrationCount()
-        {
-            return _minCalibrationCount;
-        }
-
-        public double getImprovementRatio()
-        {
-            return _improvementRatio;
-        }
-
-        public double getExhaustiveImprovementLimit()
-        {
-            return _exhaustiveImprovementLimit;
-        }
-
-        public double getAicCutoff()
-        {
-            return _aicCutoff;
-        }
-
-        public double getzScoreCutoff()
-        {
-            return _zScoreCutoff;
-        }
-
-        public int getBlockSize()
-        {
-            return _blockSize;
-        }
-
-        public int getThreadBlockSize()
-        {
-            return _threadBlockSize;
-        }
-
-        public boolean isValidate()
-        {
-            return _validate;
-        }
-
         public ItemSettingsBuilder setRand(Random _rand)
         {
             this._rand = _rand;
             return this;
+        }
+
+        public boolean isRandomShuffle()
+        {
+            return _randomShuffle;
         }
 
         public ItemSettingsBuilder setRandomShuffle(boolean _randomShuffle)
@@ -346,10 +277,20 @@ public final class ItemSettings implements Serializable
             return this;
         }
 
+        public boolean isUseThreading()
+        {
+            return _useThreading;
+        }
+
         public ItemSettingsBuilder setUseThreading(boolean _useThreading)
         {
             this._useThreading = _useThreading;
             return this;
+        }
+
+        public boolean isApproximateDerivatives()
+        {
+            return _approximateDerivatives;
         }
 
         public ItemSettingsBuilder setApproximateDerivatives(boolean _approximateDerivatives)
@@ -358,10 +299,20 @@ public final class ItemSettings implements Serializable
             return this;
         }
 
+        public boolean isPolishStartingParams()
+        {
+            return _polishStartingParams;
+        }
+
         public ItemSettingsBuilder setPolishStartingParams(boolean _polishStartingParams)
         {
             this._polishStartingParams = _polishStartingParams;
             return this;
+        }
+
+        public boolean isAllowInteractionCurves()
+        {
+            return _allowInteractionCurves;
         }
 
         public ItemSettingsBuilder setAllowInteractionCurves(boolean _allowInteractionCurves)
@@ -370,10 +321,20 @@ public final class ItemSettings implements Serializable
             return this;
         }
 
+        public boolean isBoundCentrality()
+        {
+            return _boundCentrality;
+        }
+
         public ItemSettingsBuilder setBoundCentrality(boolean _boundCentrality)
         {
             this._boundCentrality = _boundCentrality;
             return this;
+        }
+
+        public int getPolishMultStartPoints()
+        {
+            return _polishMultStartPoints;
         }
 
         public ItemSettingsBuilder setPolishMultStartPoints(int _polishMultStartPoints)
@@ -382,10 +343,20 @@ public final class ItemSettings implements Serializable
             return this;
         }
 
+        public int getMinCalibrationCount()
+        {
+            return _minCalibrationCount;
+        }
+
         public ItemSettingsBuilder setMinCalibrationCount(int _minCalibrationCount)
         {
             this._minCalibrationCount = _minCalibrationCount;
             return this;
+        }
+
+        public double getImprovementRatio()
+        {
+            return _improvementRatio;
         }
 
         public ItemSettingsBuilder setImprovementRatio(double _improvementRatio)
@@ -394,10 +365,20 @@ public final class ItemSettings implements Serializable
             return this;
         }
 
+        public double getExhaustiveImprovementLimit()
+        {
+            return _exhaustiveImprovementLimit;
+        }
+
         public ItemSettingsBuilder setExhaustiveImprovementLimit(double _exhaustiveImprovementLimit)
         {
             this._exhaustiveImprovementLimit = _exhaustiveImprovementLimit;
             return this;
+        }
+
+        public double getAicCutoff()
+        {
+            return _aicCutoff;
         }
 
         public ItemSettingsBuilder setAicCutoff(double aicCutoff_)
@@ -411,16 +392,31 @@ public final class ItemSettings implements Serializable
             return this;
         }
 
+        public double getzScoreCutoff()
+        {
+            return _zScoreCutoff;
+        }
+
         public ItemSettingsBuilder setzScoreCutoff(double zScoreCutoff_)
         {
             this._zScoreCutoff = zScoreCutoff_;
             return this;
         }
 
+        public int getBlockSize()
+        {
+            return _blockSize;
+        }
+
         public ItemSettingsBuilder setBlockSize(int blockSize_)
         {
             this._blockSize = blockSize_;
             return this;
+        }
+
+        public int getThreadBlockSize()
+        {
+            return _threadBlockSize;
         }
 
         public ItemSettingsBuilder setThreadBlockSize(int threadBlockSize_)
@@ -437,6 +433,11 @@ public final class ItemSettings implements Serializable
 
             this._threadBlockSize = threadBlockSize_;
             return this;
+        }
+
+        public boolean isValidate()
+        {
+            return _validate;
         }
 
         public ItemSettingsBuilder setValidate(boolean _validate)

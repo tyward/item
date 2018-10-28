@@ -12,32 +12,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.csv;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import org.apache.commons.cli.*;
+
+import java.io.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 
 /**
- *
  * @author tyler
  */
 public final class CompileDescriptor
@@ -51,7 +41,8 @@ public final class CompileDescriptor
     private static final Option BOOLEAN_COLUMNS = new Option("boolean_columns", true,
             "(Optional) Comma separated list of columns holding boolean (i.e. TRUE/FALSE) values");
     private static final Option ENUM_COLUMNS = new Option("enum_columns", true,
-            "(Optional) Comma separated list of columns holding enum (i.e. strings from a limited set: {A, B, C}) values");
+            "(Optional) Comma separated list of columns holding enum (i.e. strings from a limited set: {A, B, C}) " +
+                    "values");
     private static final Option INPUT_FILE = new Option("input_file", true,
             "The CSV data used to generate the descriptors.");
     private static final Option OUTPUT_FILE = new Option("output_file", true,
@@ -107,14 +98,15 @@ public final class CompileDescriptor
                 throw new IOException("Output file already exists, refusing to overwrite: " + input.getCanonicalPath());
             }
 
-            final ColumnDescriptorSet desc = new ColumnDescriptorSet(fromStatCol, toStatCol, numeric, boolCols, enumCols);
+            final ColumnDescriptorSet desc = new ColumnDescriptorSet(fromStatCol, toStatCol, numeric, boolCols,
+                    enumCols);
 
             final CsvLoader loader = new CsvLoader(input, desc);
 
             final CompiledDataDescriptor compiled = loader.getCompiledDescriptor();
 
             try (final FileOutputStream fOut = new FileOutputStream(output);
-                    final ObjectOutputStream oOut = new ObjectOutputStream(fOut))
+                 final ObjectOutputStream oOut = new ObjectOutputStream(fOut))
             {
                 oOut.writeObject(compiled);
             }

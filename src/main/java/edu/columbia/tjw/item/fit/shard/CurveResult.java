@@ -1,6 +1,5 @@
 package edu.columbia.tjw.item.fit.shard;
 
-import edu.columbia.tjw.item.ItemCurve;
 import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemRegressor;
@@ -15,12 +14,11 @@ public final class CurveResult<R extends ItemRegressor<R>, T extends ItemCurveTy
     private final double _entropy;
 
 
-
-    public CurveResult(final ItemCurveParams<R, T> params_, final double entropy_) {
+    public CurveResult(final ItemCurveParams<R, T> params_, final double entropy_)
+    {
         _params = params_;
         _entropy = entropy_;
     }
-
 
 
 }

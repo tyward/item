@@ -19,13 +19,13 @@
  */
 package edu.columbia.tjw.item.data;
 
-import java.io.Serializable;
-import java.util.Arrays;
-
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.interpolation.UnivariateInterpolator;
+
+import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * @author tyler

@@ -17,6 +17,7 @@ package edu.columbia.tjw.item.base;
 
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,6 +38,7 @@ public enum BinaryStatus implements ItemStatus<BinaryStatus>
     STATUS_A,
     STATUS_B;
 
+    public static final EnumFamily<BinaryStatus> FAMILY = new EnumFamily<>(values());
     private final List<BinaryStatus> _indistinguishable;
     private List<BinaryStatus> _reachable = null;
 
@@ -44,8 +46,6 @@ public enum BinaryStatus implements ItemStatus<BinaryStatus>
     {
         _indistinguishable = Collections.singletonList(this);
     }
-
-    public static final EnumFamily<BinaryStatus> FAMILY = new EnumFamily<>(values());
 
     @Override
     public EnumFamily<BinaryStatus> getFamily()

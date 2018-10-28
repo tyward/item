@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item;
@@ -25,8 +25,8 @@ import edu.columbia.tjw.item.util.EnumMember;
  * A base interface for descriptions of the curves to be used by ITEM curve
  * drawing.
  *
- * @author tyler
  * @param <T> The type of the item curve
+ * @author tyler
  */
 public interface ItemCurveType<T extends ItemCurveType<T>> extends EnumMember<T>
 {

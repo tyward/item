@@ -12,18 +12,18 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.base;
 
 import edu.columbia.tjw.item.ItemRegressorReader;
+
 import java.io.Serializable;
 
 /**
- *
  * @author tyler
  */
 public final class RawReader implements ItemRegressorReader, Serializable

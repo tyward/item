@@ -80,6 +80,27 @@ public final class QuantileApproximation
         _variance = builder_._calc.getVariance();
     }
 
+    public static QuantileApproximationBuilder builder()
+    {
+        return new QuantileApproximationBuilder(DEFAULT_LOAD, DEFAULT_BUCKETS);
+    }
+
+    private static int calculateBucket(final double[] vals, final double x_, final int count_)
+    {
+        final int findIndex = Arrays.binarySearch(vals, 0, count_, x_);
+
+        if (findIndex >= 0)
+        {
+            return findIndex;
+        }
+
+
+        // This is the first element greater than x_, we want previous one.
+        final int insertionPoint = (-findIndex) - 1;
+        final int actIndex = insertionPoint - 1;
+
+        return actIndex;
+    }
 
     public int getTotalCount()
     {
@@ -124,28 +145,6 @@ public final class QuantileApproximation
     public int findBucket(final double x_)
     {
         return calculateBucket(_cutoffValues, x_, _cutoffValues.length);
-    }
-
-    public static QuantileApproximationBuilder builder()
-    {
-        return new QuantileApproximationBuilder(DEFAULT_LOAD, DEFAULT_BUCKETS);
-    }
-
-    private static int calculateBucket(final double[] vals, final double x_, final int count_)
-    {
-        final int findIndex = Arrays.binarySearch(vals, 0, count_, x_);
-
-        if (findIndex >= 0)
-        {
-            return findIndex;
-        }
-
-
-        // This is the first element greater than x_, we want previous one.
-        final int insertionPoint = (-findIndex) - 1;
-        final int actIndex = insertionPoint - 1;
-
-        return actIndex;
     }
 
     /**

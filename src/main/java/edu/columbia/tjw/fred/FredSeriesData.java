@@ -12,23 +12,23 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.fred;
+
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.TreeMap;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
 
 /**
- *
  * @author tyler
  */
 public final class FredSeriesData implements Serializable

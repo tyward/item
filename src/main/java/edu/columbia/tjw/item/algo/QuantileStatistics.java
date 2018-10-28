@@ -127,6 +127,11 @@ public final class QuantileStatistics
         return builder.build();
     }
 
+    public static QuantileStatisticsBuilder builder(final QuantileApproximation approx_)
+    {
+        return new QuantileStatisticsBuilder(approx_);
+    }
+
     public int getSize()
     {
         return _approx.getSize();
@@ -175,15 +180,9 @@ public final class QuantileStatistics
         return _meanDevY;
     }
 
-
     public boolean getVarTestPassed()
     {
         return _varTestPassed;
-    }
-
-    public static QuantileStatisticsBuilder builder(final QuantileApproximation approx_)
-    {
-        return new QuantileStatisticsBuilder(approx_);
     }
 
     public InterpolatedCurve getValueCurve(final boolean linear_, final double alpha_)

@@ -19,12 +19,7 @@
  */
 package edu.columbia.tjw.item.fit.param;
 
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
-import edu.columbia.tjw.item.ItemParameters;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemSettings;
-import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.fit.*;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
@@ -32,7 +27,6 @@ import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
 
-import java.util.Arrays;
 import java.util.logging.Logger;
 
 /**
@@ -99,7 +93,8 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         if (newLL > entropy)
         {
-            output = new ParamFitResult<>(chain_.getBestParameters(), chain_.getBestParameters(), entropy, entropy, numRows);
+            output = new ParamFitResult<>(chain_.getBestParameters(), chain_.getBestParameters(), entropy, entropy,
+                    numRows);
             chain_.pushResults("ParamFit", output.getEndingParams(), output.getEndingLL());
         }
         else
@@ -136,7 +131,8 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         final PackedParameters<S, R, T> reduced = new ReducedParameterVector<>(active, packed);
 
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _calc.getGrid());
-        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(params_, grid, new ItemModel<>(params_), _settings, reduced);
+        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(params_, grid,
+                new ItemModel<>(params_), _settings, reduced);
         return function;
     }
 

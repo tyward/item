@@ -6,10 +6,10 @@
 package edu.columbia.tjw.item.util.random;
 
 import edu.columbia.tjw.item.util.ByteTool;
+
 import java.util.Random;
 
 /**
- *
  * @author tyler
  */
 public abstract class AbstractRandom extends Random

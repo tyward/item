@@ -1,8 +1,7 @@
 package edu.columbia.tjw.item.fit.shard;
 
-import edu.columbia.tjw.item.*;
-
-import java.util.List;
+import edu.columbia.tjw.item.ItemCurveType;
+import edu.columbia.tjw.item.ItemRegressor;
 
 public final class ShardCalibrator<R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {

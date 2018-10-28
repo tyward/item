@@ -12,21 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.util;
 
 import edu.columbia.tjw.item.ItemStatus;
+
 import java.util.Arrays;
 import java.util.List;
 
 /**
- *
- * @author tyler
  * @param <S> The status type on which to apply this function
+ * @author tyler
  */
 public final class LogLikelihood<S extends ItemStatus<S>>
 {
@@ -72,7 +72,8 @@ public final class LogLikelihood<S extends ItemStatus<S>>
             int indPointer = 0;
 
             //N.B: Watch carefully. If two (or more) states are indistinguishable, and we can get to both of them...
-            //Then for every one we can reach, add it to the indistinguishable set. This set will always contain at least one
+            //Then for every one we can reach, add it to the indistinguishable set. This set will always contain at
+            // least one
             //state (namely, the state itself). 
             for (int w = 0; w < indCount; w++)
             {
@@ -89,9 +90,25 @@ public final class LogLikelihood<S extends ItemStatus<S>>
         }
     }
 
+    public static double calcEntropy(final double probability_)
+    {
+        final double negLL;
+
+        if (probability_ > EXP_CUTOFF)
+        {
+            negLL = -Math.log(probability_);
+        }
+        else
+        {
+            negLL = LOG_CUTOFF;
+        }
+
+        return negLL;
+    }
+
     /**
      * Computes the ordinal corresponding to the given offset.
-     *
+     * <p>
      * Not every status can transition to every other status. The available
      * transitions are packed tightly, omitting any impossible transitions.
      * Therefore, an offset into the output array won't necessarily be the
@@ -107,7 +124,7 @@ public final class LogLikelihood<S extends ItemStatus<S>>
 
     /**
      * Returns the expected offset into the computed array of the given ordinal.
-     *
+     * <p>
      * Returns -1 if this ordinal is not reachable from this state.
      *
      * @param ordinal_ the ordinal
@@ -149,20 +166,5 @@ public final class LogLikelihood<S extends ItemStatus<S>>
         final double entropy = calcEntropy(computed_);
         final double product = actual_ * entropy;
         return product;
-    }
-
-    public static double calcEntropy(final double probability_) {
-        final double negLL;
-
-        if (probability_ > EXP_CUTOFF)
-        {
-            negLL = -Math.log(probability_);
-        }
-        else
-        {
-            negLL = LOG_CUTOFF;
-        }
-
-        return negLL;
     }
 }

@@ -12,29 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit;
 
-import edu.columbia.tjw.item.ItemCurveType;
+import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemGrid;
-import edu.columbia.tjw.item.ItemParameters;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemRegressorReader;
-import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
+
 import java.util.List;
 import java.util.Set;
 
 /**
- *
- * @author tyler
  * @param <S> The status type for this param grid
  * @param <R> The regressor type for this param grid
  * @param <T> The curve type for this param grid
+ * @author tyler
  */
 public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements ItemGrid<R>
 {
@@ -76,13 +72,13 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
 
     /**
      * Get the regressors for this observation.
-     *
+     * <p>
      * Note that the results will be transformed (according to the curves from
      * getTransformation)
      *
-     * @param index_ The row index of the regressors
+     * @param index_  The row index of the regressors
      * @param output_ The array of regressors, ordered as per the transformation
-     * set.
+     *                set.
      */
     public void getRegressors(final int index_, final double[] output_)
     {
@@ -93,7 +89,7 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
 
         for (int i = 0; i < _readers.length; i++)
         {
-            final double val =  _readers[i].asDouble(index_);
+            final double val = _readers[i].asDouble(index_);
             output_[i] = val;
         }
     }
@@ -117,11 +113,10 @@ public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegre
     }
 
     @Override
-    public final Set<R> getAvailableRegressors() {
+    public final Set<R> getAvailableRegressors()
+    {
         return this.getUnderlying().getAvailableRegressors();
     }
-
-
 
 
 }

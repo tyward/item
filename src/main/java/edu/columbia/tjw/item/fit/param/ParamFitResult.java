@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit.param;
@@ -26,11 +26,10 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.MathFunctions;
 
 /**
- *
- * @author tyler
  * @param <S>
  * @param <R>
  * @param <T>
+ * @author tyler
  */
 public final class ParamFitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
@@ -41,7 +40,8 @@ public final class ParamFitResult<S extends ItemStatus<S>, R extends ItemRegress
     private final ItemParameters<S, R, T> _starting;
     private final ItemParameters<S, R, T> _endingParams;
 
-    public ParamFitResult(final ItemParameters<S, R, T> starting_, final ItemParameters<S, R, T> ending_, final double logLikelihood_, final double startingLL_, final int rowCount_)
+    public ParamFitResult(final ItemParameters<S, R, T> starting_, final ItemParameters<S, R, T> ending_,
+                          final double logLikelihood_, final double startingLL_, final int rowCount_)
     {
         if (null == starting_ || null == ending_)
         {
