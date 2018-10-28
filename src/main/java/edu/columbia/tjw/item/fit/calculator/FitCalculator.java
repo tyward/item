@@ -11,14 +11,15 @@ import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ThreadedFitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public class FitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private static final GeneralThreadPool POOL = GeneralThreadPool.singleton();
+    private final boolean _doThreaded;
     private final ItemFittingGrid<S, R> _grid;
     private final int _blockSize;
     private final List<BlockResultCalculator<S, R, T>> _blockCalculators;
 
-    public ThreadedFitCalculator(final ItemFittingGrid<S, R> grid_, final int blockSize_)
+    public FitCalculator(final ItemFittingGrid<S, R> grid_, final int blockSize_)
     {
         if (null == grid_)
         {
@@ -29,6 +30,8 @@ public class ThreadedFitCalculator<S extends ItemStatus<S>, R extends ItemRegres
             throw new IllegalArgumentException("Grid must not be vacuous.");
         }
 
+        // Eventually allow this as an option.
+        _doThreaded = true;
         _grid = grid_;
         _blockSize = blockSize_;
 

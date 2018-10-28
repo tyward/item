@@ -25,7 +25,7 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
-import edu.columbia.tjw.item.fit.calculator.ThreadedFitCalculator;
+import edu.columbia.tjw.item.fit.calculator.FitCalculator;
 
 /**
  * @param <S>
@@ -35,13 +35,13 @@ import edu.columbia.tjw.item.fit.calculator.ThreadedFitCalculator;
  */
 public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
-    private final ThreadedFitCalculator<S, R, T> _calc;
+    private final FitCalculator<S, R, T> _calc;
     private final ItemFittingGrid<S, R> _grid;
 
 
     public EntropyCalculator(final ItemFittingGrid<S, R> grid_)
     {
-        _calc = new ThreadedFitCalculator<>(grid_, 10 * 1000);
+        _calc = new FitCalculator<>(grid_, 10 * 1000);
         _grid = grid_;
     }
 
