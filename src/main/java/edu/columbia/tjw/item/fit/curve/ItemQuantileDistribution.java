@@ -23,9 +23,7 @@ import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.algo.QuantileApproximation;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
-import edu.columbia.tjw.item.util.MultiLogistic;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
-import edu.columbia.tjw.item.util.RectangularDoubleArray;
 
 import java.util.List;
 
@@ -40,23 +38,21 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
     private final LogLikelihood<S> _likelihood;
     private final QuantileStatistics _orig;
     private final QuantileStatistics _adjusted;
-    private final RectangularDoubleArray _powerScores;
 
-    public ItemQuantileDistribution(final ParamFittingGrid<S, R, T> grid_, final RectangularDoubleArray powerScores_,
+    public ItemQuantileDistribution(final ParamFittingGrid<S, R, T> grid_,
                                     final ItemModel<S, R, T> model_,
                                     final S fromStatus_, R field_, S toStatus_)
     {
-        this(grid_, powerScores_, model_, fromStatus_, grid_.getRegressorReader(field_), toStatus_);
+        this(grid_, model_, fromStatus_, grid_.getRegressorReader(field_), toStatus_);
     }
 
-    public ItemQuantileDistribution(final ParamFittingGrid<S, R, T> grid_, final RectangularDoubleArray powerScores_,
+    public ItemQuantileDistribution(final ParamFittingGrid<S, R, T> grid_,
                                     final ItemModel<S, R, T> model_,
                                     final S fromStatus_, final ItemRegressorReader reader_, S toStatus_)
     {
         _likelihood = new LogLikelihood<>(fromStatus_);
-        _powerScores = powerScores_;
 
-        final ItemRegressorReader yReader = new InnerResponseReader<>(toStatus_, grid_, powerScores_, model_,
+        final ItemRegressorReader yReader = new InnerResponseReader<>(toStatus_, grid_, model_,
                 _likelihood);
 
         final QuantileStatistics stats = QuantileStatistics.generate(reader_, yReader);
@@ -113,22 +109,15 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
         private final ItemModel<S, R, T> _model;
 
 
-        private final double[] _workspace;
         private final int[] _toStatusOrdinals;
-        private final RectangularDoubleArray _powerScores;
         private final ParamFittingGrid<S, R, T> _grid;
         private final LogLikelihood<S> _likelihood;
 
         public InnerResponseReader(final S toStatus_, final ParamFittingGrid<S, R, T> grid_,
-                                   final RectangularDoubleArray powerScores_,
                                    final ItemModel<S, R, T> model_, final LogLikelihood<S> likelihood_)
         {
             _grid = grid_;
-            _powerScores = powerScores_;
             _likelihood = likelihood_;
-
-            _workspace = new double[_powerScores.getColumns()];
-
             _model = model_;
             _probabilities = new double[_model.getStatus().getReachableCount()];
 
@@ -146,29 +135,6 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
         {
             _model.transitionProbability(_grid, index_, _probabilities);
             final int statusIndex = _grid.getNextStatus(index_);
-
-            for (int k = 0; k < _workspace.length; k++)
-            {
-                _workspace[k] = _powerScores.get(index_, k);
-            }
-
-            //final int offset = _likelihood.ordinalToOffset(statusIndex);
-            MultiLogistic.multiLogisticFunction(_workspace, _workspace);
-
-            // In theory, workspace = _probabilities.
-            for (int i = 0; i < _probabilities.length; i++)
-            {
-                final double a = _probabilities[i];
-                final double b = _workspace[i];
-                final double diff = (a - b);
-                final double d2 = diff * diff;
-                final double err = d2 / (a * b);
-
-                if (err > 1.0e-5)
-                {
-                    System.out.println("Unexpected.");
-                }
-            }
 
             double probSum = 0.0;
             double actValue = 0.0;

@@ -53,7 +53,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private final ItemSettings _settings;
 
     private final ItemFittingGrid<S, R> _grid;
-    private final RectangularDoubleArray _powerScores;
 
     // Getting pretty messy, we can now reset our grids and models, recache the power scores, etc...
     private final ParamFittingGrid<S, R, T> _paramGrid;
@@ -102,8 +101,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             final int reachableCount = _fromStatus.getReachableCount();
             this._model = new ItemModel<>(params_);
             _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
-            _powerScores = new RectangularDoubleArray(count, reachableCount);
-            fillPowerScores();
             _startingLL = startingLL_;
             _calc = calc_;
         }
@@ -134,8 +131,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             }
 
             _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
-            _powerScores = new RectangularDoubleArray(count, reachableCount);
-            fillPowerScores();
             _startingLL = chain_.getLogLikelihood();
             _calc = chain_.getCalculator();
         }
@@ -239,7 +234,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private QuantileStatistics generateDistribution(R field_, S toStatus_)
     {
         final ItemQuantileDistribution<S, R, T> quantGenerator = new ItemQuantileDistribution<>(_paramGrid,
-                _powerScores, _model,
+                _model,
                 _fromStatus, field_, toStatus_);
         final QuantileStatistics dist = quantGenerator.getAdjusted();
         return dist;
@@ -297,24 +292,5 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     }
 
 
-    private void fillPowerScores()
-    {
-        final int reachableCount = _fromStatus.getReachableCount();
-        final double[] probabilities = new double[reachableCount];
-        final int baseCase = _fromStatus.getReachable().indexOf(_fromStatus);
-        final int count = _actualOutcomes.length;
 
-        for (int i = 0; i < count; i++)
-        {
-            _model.transitionProbability(_paramGrid, i, probabilities);
-
-            MultiLogistic.multiLogitFunction(baseCase, probabilities, probabilities);
-
-            for (int w = 0; w < reachableCount; w++)
-            {
-                final double next = probabilities[w];
-                _powerScores.set(i, w, next);
-            }
-        }
-    }
 }
