@@ -24,7 +24,7 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.fit.calculator.EntropyAnalysis;
+import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.calculator.FitCalculator;
 import edu.columbia.tjw.item.fit.calculator.ThreadedFitCalculator;
 
@@ -61,7 +61,7 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
         return _grid.size();
     }
 
-    public EntropyAnalysis computeEntropy(final ItemParameters<S, R, T> params_)
+    public BlockResult computeEntropy(final ItemParameters<S, R, T> params_)
     {
         return _calc.computeEntropy(params_);
     }

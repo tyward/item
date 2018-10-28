@@ -6,9 +6,9 @@ import java.util.List;
 
 public final class FitPoint
 {
-    private final List<EntropyAnalysis> _analysisList;
+    private final List<BlockResult> _analysisList;
 
-    public FitPoint(final List<EntropyAnalysis> analysisList_)
+    public FitPoint(final List<BlockResult> analysisList_)
     {
         _analysisList = Collections.unmodifiableList(new ArrayList<>(analysisList_));
     }

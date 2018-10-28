@@ -2,15 +2,15 @@ package edu.columbia.tjw.item.fit.calculator;
 
 import java.util.Collection;
 
-public final class EntropyAnalysis
+public final class BlockResult
 {
-    public static final EntropyAnalysis VACUOUS_ENTROPY = new EntropyAnalysis(0.0, 0.0, 0);
+    public static final BlockResult VACUOUS_ENTROPY = new BlockResult(0.0, 0.0, 0);
 
     private final double _sumEntropy;
     private final double _sumEntropy2;
     private final int _size;
 
-    public EntropyAnalysis(final double sumEntropy_, final double sumEntropy2_, final int size_)
+    public BlockResult(final double sumEntropy_, final double sumEntropy2_, final int size_)
     {
         if (!(sumEntropy_ >= 0.0) || Double.isInfinite(sumEntropy_))
         {
@@ -30,13 +30,13 @@ public final class EntropyAnalysis
         _size = size_;
     }
 
-    public EntropyAnalysis(final Collection<EntropyAnalysis> analysisList_)
+    public BlockResult(final Collection<BlockResult> analysisList_)
     {
         double h = 0.0;
         double h2 = 0.0;
         int count = 0;
 
-        for (final EntropyAnalysis next : analysisList_)
+        for (final BlockResult next : analysisList_)
         {
             h += next._sumEntropy;
             h2 += next._sumEntropy2;

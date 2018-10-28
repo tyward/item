@@ -58,7 +58,7 @@ public class ThreadedFitCalculator<S extends ItemStatus<S>, R extends ItemRegres
 
 
     @Override
-    public EntropyAnalysis computeEntropy(ItemParameters<S, R, T> params_)
+    public BlockResult computeEntropy(ItemParameters<S, R, T> params_)
     {
         final List<EntropyRunner> runners = new ArrayList<>(_blockCalculators.size());
 
@@ -68,14 +68,14 @@ public class ThreadedFitCalculator<S extends ItemStatus<S>, R extends ItemRegres
             runners.add(runner);
         }
 
-        final List<EntropyAnalysis> analysis = POOL.runAll(runners);
+        final List<BlockResult> analysis = POOL.runAll(runners);
 
         // Now process the entropy blocks.
-        final EntropyAnalysis output = new EntropyAnalysis(analysis);
+        final BlockResult output = new BlockResult(analysis);
         return output;
     }
 
-    private final class EntropyRunner extends GeneralTask<EntropyAnalysis>
+    private final class EntropyRunner extends GeneralTask<BlockResult>
     {
         private final FitCalculator<S, R, T> _calc;
         private final ItemParameters<S, R, T> _params;
@@ -88,7 +88,7 @@ public class ThreadedFitCalculator<S extends ItemStatus<S>, R extends ItemRegres
 
 
         @Override
-        protected EntropyAnalysis subRun() throws Exception
+        protected BlockResult subRun() throws Exception
         {
             return _calc.computeEntropy(_params);
         }

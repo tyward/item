@@ -51,12 +51,6 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
     private final int[] _curveIndices;
 
 
-    public ItemCurveParams(final T type_, final R field_, ItemCurveFactory<R, T> factory_, final double[] curvePoint_)
-    {
-        this(Collections.singletonList(type_), Collections.singletonList(field_), factory_,
-                curvePoint_[INTERCEPT_INDEX], curvePoint_[BETA_INDEX], NON_CURVE_PARAM_COUNT, curvePoint_);
-    }
-
     public ItemCurveParams(final List<T> types_, final List<R> fields_, ItemCurveFactory<R, T> factory_,
                            final double intercept_, final double beta_, final int arrayOffset_,
                            final double[] curvePoint_)
@@ -337,16 +331,6 @@ public final class ItemCurveParams<R extends ItemRegressor<R>, T extends ItemCur
     {
         final int curveOffset = _curveOffsets[index_];
         return curveOffset;
-    }
-
-    public int getInterceptIndex()
-    {
-        return INTERCEPT_INDEX;
-    }
-
-    public int getBetaIndex()
-    {
-        return BETA_INDEX;
     }
 
     public void extractPoint(final double[] point_)

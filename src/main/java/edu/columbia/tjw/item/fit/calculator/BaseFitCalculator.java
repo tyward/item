@@ -19,7 +19,7 @@ public final class BaseFitCalculator<S extends ItemStatus<S>, R extends ItemRegr
     }
 
 
-    public EntropyAnalysis computeEntropy(final ItemParameters<S, R, T> params_)
+    public BlockResult computeEntropy(final ItemParameters<S, R, T> params_)
     {
         if (params_.getStatus() != _grid.getFromStatus())
         {
@@ -35,7 +35,7 @@ public final class BaseFitCalculator<S extends ItemStatus<S>, R extends ItemRegr
 
         if (count <= 0)
         {
-            return EntropyAnalysis.VACUOUS_ENTROPY;
+            return BlockResult.VACUOUS_ENTROPY;
         }
 
         for (int i = 0; i < grid.size(); i++)
@@ -46,7 +46,7 @@ public final class BaseFitCalculator<S extends ItemStatus<S>, R extends ItemRegr
             x2 += e2;
         }
 
-        return new EntropyAnalysis(entropySum, x2, count);
+        return new BlockResult(entropySum, x2, count);
     }
 
 

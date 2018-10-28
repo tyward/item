@@ -25,7 +25,7 @@ import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 import edu.columbia.tjw.item.data.RawFittingGrid;
 import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
-import edu.columbia.tjw.item.fit.calculator.EntropyAnalysis;
+import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
@@ -402,7 +402,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     public double computeLogLikelihood(final ItemParameters<S, R, T> params_)
     {
-        final EntropyAnalysis ea = _calc.computeEntropy(params_);
+        final BlockResult ea = _calc.computeEntropy(params_);
         final double entropy = ea.getEntropyMean();
         return entropy;
     }

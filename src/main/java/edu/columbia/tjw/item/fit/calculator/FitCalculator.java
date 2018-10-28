@@ -9,7 +9,7 @@ public interface FitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<
 {
 
 
-    public EntropyAnalysis computeEntropy(final ItemParameters<S, R, T> params_);
+    public BlockResult computeEntropy(final ItemParameters<S, R, T> params_);
 
 
 }

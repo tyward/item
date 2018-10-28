@@ -23,7 +23,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.fit.calculator.EntropyAnalysis;
+import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -103,7 +103,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
         if (compare != 0)
         {
-            final EntropyAnalysis ea = _calc.computeEntropy(curveResult_.getStartingParams());
+            final BlockResult ea = _calc.computeEntropy(curveResult_.getStartingParams());
 
             LOG.info("Unexpected incoming Log Likelihood: " + currLL + " != "
                     + incomingStartLL + " (" + ea.getEntropyMean() + ")");
@@ -118,7 +118,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         {
 
             //Since the claim is that the LL improved, let's see if that's true...
-            final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
+            final BlockResult ea = _calc.computeEntropy(fitResult_);
             final double entropy = ea.getEntropyMean();
 
             //LOG.info("Params: " + fitResult_.hashCode() + " -> " + entropy);
@@ -141,7 +141,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
         if (compare != 0)
         {
-            final EntropyAnalysis ea = _calc.computeEntropy(fitResult_.getStartingParams());
+            final BlockResult ea = _calc.computeEntropy(fitResult_.getStartingParams());
 
             LOG.info("Unexpected incoming Log Likelihood: " + currLL + " != "
                     + incomingStartLL + " (" + ea.getEntropyMean() + ")");
@@ -158,7 +158,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
      */
     public void forcePushResults(final String frameName_, final ItemParameters<S, R, T> fitResult_)
     {
-        final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
+        final BlockResult ea = _calc.computeEntropy(fitResult_);
         final double entropy = ea.getEntropyMean();
         LOG.info("Force pushing params onto chain[" + entropy + "]");
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, fitResult_, entropy,
@@ -191,7 +191,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 //        if (this.isValidate())
 //        {
 //            //Since the claim is that the LL improved, let's see if that's true...
-//            final EntropyAnalysis ea = _calc.computeEntropy(fitResult_);
+//            final BlockResult ea = _calc.computeEntropy(fitResult_);
 //            final double entropy = ea.getEntropy();
 //
 //            final int compare = MathFunctions.doubleCompareRounded(entropy, logLikelihood_);
