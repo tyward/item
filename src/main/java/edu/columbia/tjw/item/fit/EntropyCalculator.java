@@ -41,7 +41,7 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
 
     public EntropyCalculator(final ItemFittingGrid<S, R> grid_)
     {
-        _calc = new FitCalculator<>(grid_, 10 * 1000);
+        _calc = new FitCalculator<>(grid_);
         _grid = grid_;
     }
 

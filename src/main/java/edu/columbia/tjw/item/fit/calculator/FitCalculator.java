@@ -13,11 +13,18 @@ import java.util.List;
 
 public class FitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
+    public static final int DEFAULT_BLOCK_SIZE = 1000;
+
     private static final GeneralThreadPool POOL = GeneralThreadPool.singleton();
     private final boolean _doThreaded;
     private final ItemFittingGrid<S, R> _grid;
     private final int _blockSize;
     private final List<BlockResultCalculator<S, R, T>> _blockCalculators;
+
+    public FitCalculator(final ItemFittingGrid<S, R> grid_)
+    {
+        this(grid_, DEFAULT_BLOCK_SIZE);
+    }
 
     public FitCalculator(final ItemFittingGrid<S, R> grid_, final int blockSize_)
     {
