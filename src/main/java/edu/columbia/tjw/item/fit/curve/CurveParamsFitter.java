@@ -60,74 +60,32 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private final double _startingLL;
     private final EntropyCalculator<S, R, T> _calc;
 
-    /**
-     * Create a new fitter that is a clone of the old, but using the new params.
-     *
-     * @param baseFitter_
-     * @param params_
-     * @param startingLL_
-     */
-    public CurveParamsFitter(final CurveParamsFitter<S, R, T> baseFitter_, final ItemParameters<S, R, T> params_,
-                             final double startingLL_, final EntropyCalculator<S, R, T> calc_)
-    {
-        if (baseFitter_._fromStatus != params_.getStatus())
-        {
-            throw new IllegalArgumentException("From status mismatch.");
-        }
-
-        //The synchronization doesn't cost much, and improves the correctness.
-        synchronized (this)
-        {
-            synchronized (baseFitter_)
-            {
-                this._settings = baseFitter_._settings;
-                this._factory = baseFitter_._factory;
-                this._grid = baseFitter_._grid;
-                this._optimizer = baseFitter_._optimizer;
-                this._fromStatus = baseFitter_._fromStatus;
-
-                //These can save some resources by copying over.
-                this._actualOutcomes = baseFitter_._actualOutcomes;
-            }
-
-            //These we need to build each time...
-            final int count = _grid.size();
-            final int reachableCount = _fromStatus.getReachableCount();
-            this._model = new ItemModel<>(params_);
-            _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
-            _startingLL = startingLL_;
-            _calc = calc_;
-        }
-    }
 
     public CurveParamsFitter(final ItemCurveFactory<R, T> factory_,
                              final ItemFittingGrid<S, R> grid_, final ItemSettings settings_,
                              final FittingProgressChain<S, R, T> chain_)
     {
-        synchronized (this)
+        final ItemParameters<S, R, T> params = chain_.getBestParameters();
+        _settings = settings_;
+        _factory = factory_;
+        _model = new ItemModel<>(params);
+        _grid = grid_;
+        _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
+        _fromStatus = params.getStatus();
+
+        final int reachableCount = _fromStatus.getReachableCount();
+
+        final int count = _grid.size();
+        _actualOutcomes = new int[count];
+
+        for (int i = 0; i < count; i++)
         {
-            final ItemParameters<S, R, T> params = chain_.getBestParameters();
-            _settings = settings_;
-            _factory = factory_;
-            _model = new ItemModel<>(params);
-            _grid = grid_;
-            _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
-            _fromStatus = params.getStatus();
-
-            final int reachableCount = _fromStatus.getReachableCount();
-
-            final int count = _grid.size();
-            _actualOutcomes = new int[count];
-
-            for (int i = 0; i < count; i++)
-            {
-                _actualOutcomes[i] = _grid.getNextStatus(i);
-            }
-
-            _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
-            _startingLL = chain_.getLogLikelihood();
-            _calc = chain_.getCalculator();
+            _actualOutcomes[i] = _grid.getNextStatus(i);
         }
+
+        _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
+        _startingLL = chain_.getLogLikelihood();
+        _calc = chain_.getCalculator();
     }
 
     public double getEntropy()
@@ -146,11 +104,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
         final CurveFitResult<S, R, T> result = expandParameters(reduced, entryParams, toStatus_, true, startingLL_);
         final double aicDiff = result.calculateAicDifference();
-
-//        final CurveFitResult<S, R, T> result2 = expandParameters(reduced, entryParams, toStatus_, false, startingLL_);
-//        final double aicDiff2 = MathFunctions.computeAicDifference(0, 0, result2.getStartingLogLikelihood(),
-//                result2.getLogLikelihood(), result2.getRowCount());
-
 
         if (aicDiff > _settings.getAicCutoff())
         {
@@ -174,7 +127,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, false, _model.getParams());
         final CurveFitResult<S, R, T> result = generateFit(toStatus_, _model.getParams(), func, _startingLL, starting);
 
-        //final FitResult<S, R, T> output = expandParameters(_model.getParams(), starting, toStatus_, false);
         if (_settings.getPolishStartingParams())
         {
             try
