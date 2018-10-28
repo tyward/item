@@ -4,11 +4,12 @@ import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 
-public final class BaseFitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements FitCalculator<S, R, T>
+public final class BlockResultCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>,
+        T extends ItemCurveType<T>>
 {
     private final ItemFittingGrid<S, R> _grid;
 
-    public BaseFitCalculator(final ItemFittingGrid<S, R> grid_)
+    public BlockResultCalculator(final ItemFittingGrid<S, R> grid_)
     {
         _grid = grid_;
     }
@@ -17,7 +18,6 @@ public final class BaseFitCalculator<S extends ItemStatus<S>, R extends ItemRegr
     {
         return _grid;
     }
-
 
     public BlockResult computeEntropy(final ItemParameters<S, R, T> params_)
     {
@@ -48,6 +48,4 @@ public final class BaseFitCalculator<S extends ItemStatus<S>, R extends ItemRegr
 
         return new BlockResult(0, count, entropySum, x2);
     }
-
-
 }
