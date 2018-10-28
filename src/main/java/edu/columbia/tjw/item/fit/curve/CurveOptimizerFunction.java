@@ -50,7 +50,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
-        _packed = new PackedCurveFunction<>(settings_, initParams_, toStatus_, rawParams_, grid_, curveFitter_);
+        _packed = new PackedCurveFunction<>(settings_, initParams_, toStatus_, rawParams_, grid_);
         _factory = factory_;
         _initParams = initParams_;
 

@@ -9,7 +9,6 @@ import edu.columbia.tjw.item.optimize.*;
 public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
 {
-    private final CurveParamsFitter<S, R, T> _curveFitter;
     private final ItemParameters<S, R, T> _unchangedParams;
     private final ItemParameters<S, R, T> _initParams;
     private final PackedParameters<S, R, T> _packed;
@@ -20,7 +19,7 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
 
     public PackedCurveFunction(final ItemSettings settings_, final ItemCurveParams<R, T> curveParams_,
                                final S toStatus_, final ItemParameters<S, R, T> initParams_,
-                               final ParamFittingGrid<S, R, T> grid_, final CurveParamsFitter<S, R, T> curveFitter_)
+                               final ParamFittingGrid<S, R, T> grid_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
@@ -33,7 +32,6 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
                 curveParams_.getCurve(0).getCurveType().getFactory(), curveVector);
 
         _unchangedParams = initParams_;
-        _curveFitter = curveFitter_;
         _initParams = initParams_.addBeta(repacked, toStatus_);
         _updatedModel = new ItemModel<>(_initParams);
         _grid = new ParamFittingGrid<>(_initParams, grid_.getUnderlying());
