@@ -35,15 +35,18 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final ItemCurveFactory<R, T> _factory;
     private final int _size;
     private final double[] _workspace;
-    private MultivariatePoint _prevPoint;
     private final ItemCurveParams<R, T> _initParams;
-    private ItemCurveParams<R, T> _params;
     private final PackedCurveFunction<S, R, T> _packed;
     private final ParamFittingGrid<S, R, T> _grid;
 
+    private ItemCurveParams<R, T> _params;
+    private MultivariatePoint _prevPoint;
 
-    public CurveOptimizerFunction(final ItemCurveParams<R, T> initParams_, final ItemCurveFactory<R, T> factory_, final S toStatus_, final CurveParamsFitter<S, R, T> curveFitter_,
-                                  final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_, final ItemSettings settings_, final ItemParameters<S, R, T> rawParams_)
+
+    public CurveOptimizerFunction(final ItemCurveParams<R, T> initParams_, final ItemCurveFactory<R, T> factory_,
+                                  final S toStatus_, final CurveParamsFitter<S, R, T> curveFitter_,
+                                  final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_,
+                                  final ItemSettings settings_, final ItemParameters<S, R, T> rawParams_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
@@ -104,7 +107,8 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     }
 
     @Override
-    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_, EvaluationResult result_)
+    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_,
+                                                      EvaluationResult result_)
     {
         final MultivariateGradient altGrad = _packed.evaluateDerivative(start_, end_, input_, result_);
         return altGrad;
