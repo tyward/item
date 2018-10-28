@@ -19,9 +19,7 @@
  */
 package edu.columbia.tjw.item.fit.curve;
 
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemRegressorReader;
-import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.algo.QuantileApproximation;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
@@ -36,25 +34,30 @@ import java.util.List;
  * @param <R> The regressor type for this quantile distribution
  * @author tyler
  */
-public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends ItemRegressor<R>>
+public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends ItemRegressor<R>,
+        T extends ItemCurveType<T>>
 {
     private final LogLikelihood<S> _likelihood;
-
     private final QuantileStatistics _orig;
     private final QuantileStatistics _adjusted;
+    private final RectangularDoubleArray _powerScores;
 
-    public ItemQuantileDistribution(final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_,
+    public ItemQuantileDistribution(final ParamFittingGrid<S, R, T> grid_, final RectangularDoubleArray powerScores_,
+                                    final ItemModel<S, R, T> model_,
                                     final S fromStatus_, R field_, S toStatus_)
     {
-        this(grid_, powerScores_, fromStatus_, grid_.getRegressorReader(field_), toStatus_);
+        this(grid_, powerScores_, model_, fromStatus_, grid_.getRegressorReader(field_), toStatus_);
     }
 
-    public ItemQuantileDistribution(final ParamFittingGrid<S, R, ?> grid_, final RectangularDoubleArray powerScores_,
+    public ItemQuantileDistribution(final ParamFittingGrid<S, R, T> grid_, final RectangularDoubleArray powerScores_,
+                                    final ItemModel<S, R, T> model_,
                                     final S fromStatus_, final ItemRegressorReader reader_, S toStatus_)
     {
         _likelihood = new LogLikelihood<>(fromStatus_);
+        _powerScores = powerScores_;
 
-        final ItemRegressorReader yReader = new InnerResponseReader<>(toStatus_, grid_, powerScores_, _likelihood);
+        final ItemRegressorReader yReader = new InnerResponseReader<>(toStatus_, grid_, powerScores_, model_,
+                _likelihood);
 
         final QuantileStatistics stats = QuantileStatistics.generate(reader_, yReader);
         final QuantileApproximation approx = stats.getQuantApprox();
@@ -103,23 +106,31 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
     }
 
 
-    private static final class InnerResponseReader<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemRegressorReader
+    private static final class InnerResponseReader<S extends ItemStatus<S>, R extends ItemRegressor<R>,
+            T extends ItemCurveType<T>> implements ItemRegressorReader
     {
+        private final double[] _probabilities;
+        private final ItemModel<S, R, T> _model;
+
+
         private final double[] _workspace;
         private final int[] _toStatusOrdinals;
         private final RectangularDoubleArray _powerScores;
-        private final ParamFittingGrid<S, R, ?> _grid;
+        private final ParamFittingGrid<S, R, T> _grid;
         private final LogLikelihood<S> _likelihood;
 
-        public InnerResponseReader(final S toStatus_, final ParamFittingGrid<S, R, ?> grid_,
-                                   final RectangularDoubleArray powerScores_, final LogLikelihood<S> likelihood_)
+        public InnerResponseReader(final S toStatus_, final ParamFittingGrid<S, R, T> grid_,
+                                   final RectangularDoubleArray powerScores_,
+                                   final ItemModel<S, R, T> model_, final LogLikelihood<S> likelihood_)
         {
             _grid = grid_;
             _powerScores = powerScores_;
             _likelihood = likelihood_;
 
             _workspace = new double[_powerScores.getColumns()];
-            //_toStatusOrdinal = toStatus_.ordinal();
+
+            _model = model_;
+            _probabilities = new double[_model.getStatus().getReachableCount()];
 
             final List<S> indi = toStatus_.getIndistinguishable();
             _toStatusOrdinals = new int[indi.size()];
@@ -133,14 +144,31 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
         @Override
         public double asDouble(int index_)
         {
+            _model.transitionProbability(_grid, index_, _probabilities);
+            final int statusIndex = _grid.getNextStatus(index_);
+
             for (int k = 0; k < _workspace.length; k++)
             {
                 _workspace[k] = _powerScores.get(index_, k);
             }
 
-            final int statusIndex = _grid.getNextStatus(index_);
             //final int offset = _likelihood.ordinalToOffset(statusIndex);
             MultiLogistic.multiLogisticFunction(_workspace, _workspace);
+
+            // In theory, workspace = _probabilities.
+            for (int i = 0; i < _probabilities.length; i++)
+            {
+                final double a = _probabilities[i];
+                final double b = _workspace[i];
+                final double diff = (a - b);
+                final double d2 = diff * diff;
+                final double err = d2 / (a * b);
+
+                if (err > 1.0e-5)
+                {
+                    System.out.println("Unexpected.");
+                }
+            }
 
             double probSum = 0.0;
             double actValue = 0.0;
@@ -148,7 +176,7 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
             for (int i = 0; i < _toStatusOrdinals.length; i++)
             {
                 final int nextOffset = _likelihood.ordinalToOffset(_toStatusOrdinals[i]);
-                probSum += _workspace[nextOffset];
+                probSum += _probabilities[nextOffset];
 
                 if (_toStatusOrdinals[i] == statusIndex)
                 {
@@ -168,15 +196,13 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
             //We will need to run the optimizer over this thing eventually, but this should give us a good starting
             // point.
             final double ratio = (actValue / probSum);
-
-            //final double residual = (actValue - probSum);
             return ratio;
         }
 
         @Override
         public int size()
         {
-            return _powerScores.getRows();
+            return _grid.size();
         }
 
     }
