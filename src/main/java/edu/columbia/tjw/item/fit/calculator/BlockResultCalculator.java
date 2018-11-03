@@ -2,6 +2,7 @@ package edu.columbia.tjw.item.fit.calculator;
 
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
+import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 
 public final class BlockResultCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>,
@@ -19,7 +20,14 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         return _grid;
     }
 
-    public BlockResult computeEntropy(final ItemParameters<S, R, T> params_)
+    public BlockResult compute(final ItemParameters<S, R, T> params_)
+    {
+        return compute(params_, null, BlockCalculationType.VALUE);
+    }
+
+
+    public BlockResult compute(final ItemParameters<S, R, T> params_, final PackedParameters<S, R, T> packed_,
+                               final BlockCalculationType type_)
     {
         if (params_.getStatus() != _grid.getFromStatus())
         {

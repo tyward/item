@@ -99,7 +99,7 @@ public class FitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, 
         @Override
         protected BlockResult subRun() throws Exception
         {
-            return _calc.computeEntropy(_params);
+            return _calc.compute(_params);
         }
     }
 

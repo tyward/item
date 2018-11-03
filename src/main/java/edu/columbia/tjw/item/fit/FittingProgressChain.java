@@ -191,7 +191,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 //        if (this.isValidate())
 //        {
 //            //Since the claim is that the LL improved, let's see if that's true...
-//            final BlockResult ea = _calc.computeEntropy(fitResult_);
+//            final BlockResult ea = _calc.compute(fitResult_);
 //            final double entropy = ea.getEntropy();
 //
 //            final int compare = MathFunctions.doubleCompareRounded(entropy, logLikelihood_);

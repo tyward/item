@@ -193,13 +193,6 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
 
             for (int w = 0; w < itemDeriv.length; w++)
             {
-                if (Double.isNaN(itemDeriv[w]) || Double.isInfinite(itemDeriv[w]))
-                {
-                    System.out.println("Unexpected.");
-                    localModel.computeGradient(this._grid, _packed, i, itemDeriv, null);
-                }
-
-
                 totalDeriv[w] += itemDeriv[w];
             }
         }
