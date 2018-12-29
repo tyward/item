@@ -3,6 +3,7 @@ package edu.columbia.tjw.item.fit.calculator;
 import edu.columbia.tjw.item.algo.VarianceCalculator;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public final class BlockResultCompound
@@ -17,6 +18,17 @@ public final class BlockResultCompound
         _results = new ArrayList<>();
         _nextStart = 0;
     }
+
+    public BlockResultCompound(final Collection<BlockResult> results_)
+    {
+        this();
+
+        for (final BlockResult next : results_)
+        {
+            this.appendResult(next);
+        }
+    }
+
 
     public void appendResult(final BlockResult next_)
     {

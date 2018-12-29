@@ -9,10 +9,26 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         T extends ItemCurveType<T>>
 {
     private final ItemFittingGrid<S, R> _grid;
+    private final int _rowOffset;
 
     public BlockResultCalculator(final ItemFittingGrid<S, R> grid_)
     {
+        this(grid_, 0);
+    }
+
+    public BlockResultCalculator(final ItemFittingGrid<S, R> grid_, final int rowOffset_)
+    {
+        if (null == grid_)
+        {
+            throw new NullPointerException("Grid cannot be null.");
+        }
+        if (rowOffset_ < 0)
+        {
+            throw new IllegalArgumentException("Row offset must be nonnegative: " + rowOffset_);
+        }
+
         _grid = grid_;
+        _rowOffset = rowOffset_;
     }
 
     public ItemFittingGrid<S, R> getGrid()
@@ -54,6 +70,6 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             x2 += e2;
         }
 
-        return new BlockResult(0, count, entropySum, x2);
+        return new BlockResult(_rowOffset, _rowOffset + count, entropySum, x2);
     }
 }

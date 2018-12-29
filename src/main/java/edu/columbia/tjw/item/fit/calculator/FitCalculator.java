@@ -50,15 +50,15 @@ public class FitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, 
         for (int i = 0; i < numBlocks - 1; i++)
         {
             final FittingGridShard<S, R> shard = new FittingGridShard<>(grid_, start, blockSize_);
+            final BlockResultCalculator<S, R, T> nextCalc = new BlockResultCalculator<>(shard, start);
             start += blockSize_;
-            final BlockResultCalculator<S, R, T> nextCalc = new BlockResultCalculator<>(shard);
             blockCalculators.add(nextCalc);
         }
 
         //Now add the last block, which may be larger than normal.
         final int lastSize = _grid.size() - start;
         final FittingGridShard<S, R> shard = new FittingGridShard<>(grid_, start, lastSize);
-        final BlockResultCalculator<S, R, T> nextCalc = new BlockResultCalculator<>(shard);
+        final BlockResultCalculator<S, R, T> nextCalc = new BlockResultCalculator<>(shard, start);
         blockCalculators.add(nextCalc);
 
 
@@ -67,7 +67,7 @@ public class FitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, 
     }
 
 
-    public BlockResult computeEntropy(ItemParameters<S, R, T> params_)
+    public BlockResultCompound computeEntropy(ItemParameters<S, R, T> params_)
     {
         final List<EntropyRunner> runners = new ArrayList<>(_blockCalculators.size());
 
@@ -80,7 +80,7 @@ public class FitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, 
         final List<BlockResult> analysis = POOL.runAll(runners);
 
         // Now process the entropy blocks.
-        final BlockResult output = new BlockResult(analysis);
+        final BlockResultCompound output = new BlockResultCompound(analysis);
         return output;
     }
 

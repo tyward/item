@@ -25,6 +25,7 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
+import edu.columbia.tjw.item.fit.calculator.BlockResultCompound;
 import edu.columbia.tjw.item.fit.calculator.FitCalculator;
 
 /**
@@ -62,7 +63,8 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
 
     public BlockResult computeEntropy(final ItemParameters<S, R, T> params_)
     {
-        return _calc.computeEntropy(params_);
+        final BlockResultCompound compound = _calc.computeEntropy(params_);
+        return compound.getAggregated();
     }
 
 
