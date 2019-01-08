@@ -5,7 +5,7 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 
-public interface PackedParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public interface PackedParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> extends Cloneable
 {
 
     public int size();
@@ -35,4 +35,6 @@ public interface PackedParameters<S extends ItemStatus<S>, R extends ItemRegress
     public ItemParameters<S, R, T> generateParams();
 
     public ItemParameters<S, R, T> getOriginalParams();
+
+    public PackedParameters<S, R, T> clone();
 }

@@ -5,28 +5,27 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.util.thread.GeneralTask;
-import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
+import edu.columbia.tjw.item.fit.PackedParameters;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class FitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public class FitPointGenerator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     public static final int DEFAULT_BLOCK_SIZE = 1000;
 
-    private static final GeneralThreadPool POOL = GeneralThreadPool.singleton();
     private final boolean _doThreaded;
     private final ItemFittingGrid<S, R> _grid;
     private final int _blockSize;
     private final List<BlockResultCalculator<S, R, T>> _blockCalculators;
 
-    public FitCalculator(final ItemFittingGrid<S, R> grid_)
+    public FitPointGenerator(final ItemFittingGrid<S, R> grid_)
     {
         this(grid_, DEFAULT_BLOCK_SIZE);
     }
 
-    public FitCalculator(final ItemFittingGrid<S, R> grid_, final int blockSize_)
+    public FitPointGenerator(final ItemFittingGrid<S, R> grid_, final int blockSize_)
     {
         if (null == grid_)
         {
@@ -61,47 +60,32 @@ public class FitCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, 
         final BlockResultCalculator<S, R, T> nextCalc = new BlockResultCalculator<>(shard, start);
         blockCalculators.add(nextCalc);
 
-
         // Could make this synchronized or something, but probably not needed.
-        _blockCalculators = blockCalculators;
+        _blockCalculators = Collections.unmodifiableList(blockCalculators);
     }
 
-
-    public BlockResultCompound computeEntropy(ItemParameters<S, R, T> params_)
+    public FitPoint<S, R, T> generatePoint(final ItemParameters<S, R, T> params_)
     {
-        final List<EntropyRunner> runners = new ArrayList<>(_blockCalculators.size());
-
-        for (final BlockResultCalculator<S, R, T> calc : _blockCalculators)
-        {
-            final EntropyRunner runner = new EntropyRunner(calc, params_);
-            runners.add(runner);
-        }
-
-        final List<BlockResult> analysis = POOL.runAll(runners);
-
-        // Now process the entropy blocks.
-        final BlockResultCompound output = new BlockResultCompound(analysis);
-        return output;
+        return generatePoint(params_.generatePacked());
     }
 
-    private final class EntropyRunner extends GeneralTask<BlockResult>
+    public FitPoint<S, R, T> generatePoint(final PackedParameters<S, R, T> packed_)
     {
-        private final BlockResultCalculator<S, R, T> _calc;
-        private final ItemParameters<S, R, T> _params;
-
-        public EntropyRunner(final BlockResultCalculator<S, R, T> calc_, final ItemParameters<S, R, T> params_)
-        {
-            _calc = calc_;
-            _params = params_;
-        }
-
-
-        @Override
-        protected BlockResult subRun() throws Exception
-        {
-            return _calc.compute(_params);
-        }
+        return new FitPoint<>(this, packed_);
     }
 
+    public int getBlockCount()
+    {
+        return _blockCalculators.size();
+    }
 
+    public int getBlockSize()
+    {
+        return _blockSize;
+    }
+
+    public List<BlockResultCalculator<S, R, T>> getCalculators()
+    {
+        return _blockCalculators;
+    }
 }

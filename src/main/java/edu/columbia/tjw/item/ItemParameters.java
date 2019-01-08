@@ -1061,6 +1061,17 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         private final int[] _curveIndex;
         private final boolean[] _betaIsFrozen;
 
+        private ItemParameters<S, R, T> _generated = null;
+
+        public ItemParametersVector(final ItemParametersVector vec_) {
+            _paramValues = vec_._paramValues.clone();
+            _toStatus = vec_._toStatus;
+            _entryIndex = vec_._entryIndex;
+            _curveDepth = vec_._curveDepth;
+            _curveIndex = vec_._curveIndex;
+            _betaIsFrozen = vec_._betaIsFrozen;
+        }
+
         public ItemParametersVector()
         {
             final int paramCount = ItemParameters.this.getEffectiveParamCount();
@@ -1162,7 +1173,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         @Override
-        public void updatePacked(double[] newParams_)
+        public synchronized void updatePacked(double[] newParams_)
         {
             if (newParams_.length != _paramValues.length)
             {
@@ -1170,7 +1181,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             }
 
             System.arraycopy(newParams_, 0, _paramValues, 0, _paramValues.length);
-
+            _generated = null;
         }
 
         @Override
@@ -1180,8 +1191,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         @Override
-        public void setParameter(int index_, double value_)
+        public synchronized void setParameter(int index_, double value_)
         {
+            _generated = null;
             _paramValues[index_] = value_;
         }
 
@@ -1228,15 +1240,24 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         @Override
-        public ItemParameters<S, R, T> generateParams()
+        public synchronized ItemParameters<S, R, T> generateParams()
         {
-            return new ItemParameters(ItemParameters.this, this);
+            if(null != _generated) {
+                return _generated;
+            }
+
+            _generated = new ItemParameters(ItemParameters.this, this);
+            return _generated;
         }
 
         @Override
         public ItemParameters<S, R, T> getOriginalParams()
         {
             return ItemParameters.this;
+        }
+
+        public PackedParameters<S, R, T> clone() {
+            return new ItemParametersVector(this);
         }
     }
 }

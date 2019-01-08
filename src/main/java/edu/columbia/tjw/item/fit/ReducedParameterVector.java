@@ -11,10 +11,14 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     private final int[] _keepIndices;
     private final PackedParameters<S, R, T> _underlying;
 
+    private ReducedParameterVector(final ReducedParameterVector<S, R, T> cloneFrom_) {
+        _keepIndices = cloneFrom_._keepIndices;
+        _underlying = cloneFrom_._underlying.clone();
+    }
 
     public ReducedParameterVector(final boolean[] keep_, final PackedParameters<S, R, T> underlying_)
     {
-        _underlying = underlying_;
+        _underlying = underlying_.clone();
 
         if (keep_.length != underlying_.size())
         {
@@ -47,7 +51,6 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
             }
         }
     }
-
 
     @Override
     public int size()
@@ -151,5 +154,9 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     private int translate(final int index_)
     {
         return _keepIndices[index_];
+    }
+
+    public PackedParameters<S, R, T> clone() {
+        return new ReducedParameterVector<S, R, T>(this);
     }
 }

@@ -25,8 +25,8 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
-import edu.columbia.tjw.item.fit.calculator.BlockResultCompound;
-import edu.columbia.tjw.item.fit.calculator.FitCalculator;
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+import edu.columbia.tjw.item.fit.calculator.FitPointGenerator;
 
 /**
  * @param <S>
@@ -36,13 +36,13 @@ import edu.columbia.tjw.item.fit.calculator.FitCalculator;
  */
 public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
-    private final FitCalculator<S, R, T> _calc;
+    private final FitPointGenerator<S, R, T> _calc;
     private final ItemFittingGrid<S, R> _grid;
 
 
     public EntropyCalculator(final ItemFittingGrid<S, R> grid_)
     {
-        _calc = new FitCalculator<>(grid_);
+        _calc = new FitPointGenerator<>(grid_);
         _grid = grid_;
     }
 
@@ -63,8 +63,9 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
 
     public BlockResult computeEntropy(final ItemParameters<S, R, T> params_)
     {
-        final BlockResultCompound compound = _calc.computeEntropy(params_);
-        return compound.getAggregated();
+        final FitPoint<S, R, T> point = _calc.generatePoint(params_);
+        point.computeAll();
+        return point.getAggregated();
     }
 
 
