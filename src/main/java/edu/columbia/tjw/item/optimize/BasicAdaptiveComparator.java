@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.logging.Logger;
@@ -33,15 +35,18 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
     private static final Logger LOG = LogUtil.getLogger(BasicAdaptiveComparator.class);
     private final int _blockSize;
     private final double _stdDevThreshold;
+    private final FitPointAnalyzer _analyzer;
 
     private EvaluationResult _a;
     private EvaluationResult _b;
     private ResultComparator _comp;
 
+
     public BasicAdaptiveComparator(final int blockSize_, final double stdDevThreshold_)
     {
         _blockSize = blockSize_;
         _stdDevThreshold = stdDevThreshold_;
+        _analyzer = new FitPointAnalyzer();
 
         _a = null;
         _b = null;
@@ -94,8 +99,7 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
                 final int end = Math.min(aCount + _blockSize, numRows);
                 function_.value(a_, aCount, end, aResult_);
                 aCount = aResult_.getHighRow();
-            }
-            else
+            } else
             {
                 final int end = Math.min(bCount + _blockSize, numRows);
                 function_.value(b_, bCount, end, bResult_);
@@ -112,6 +116,15 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
         {
             LOG.warning("Bad comparison.");
         }
+
+//        final FitPoint pointA = function_.evaluate(a_);
+//        final FitPoint pointB = function_.evaluate(b_);
+//        final double check = _analyzer.compareEntropies(pointA, pointB, _stdDevThreshold);
+//
+//        if (Math.abs(check - output) >= _stdDevThreshold && (check * output) < 0.0)
+//        {
+//            LOG.info("Bad check!");
+//        }
 
         return output;
     }

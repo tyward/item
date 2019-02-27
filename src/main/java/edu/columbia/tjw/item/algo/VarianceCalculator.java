@@ -57,6 +57,11 @@ public final class VarianceCalculator
         return getVariance() / _count;
     }
 
+    public double getMeanDev()
+    {
+        return Math.sqrt(getMeanVariance());
+    }
+
     public double getVariance()
     {
         if (_count <= 1)

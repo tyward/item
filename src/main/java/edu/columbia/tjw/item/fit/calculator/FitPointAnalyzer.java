@@ -56,12 +56,17 @@ public final class FitPointAnalyzer
         {
             if (i >= a_.getNextBlock())
             {
-                final double dev = vcalc.getDev() * sqrtBlockSize;
-
-                if (Math.abs(dev) >= minStdDev_)
+                if (i >= _superBlockSize && vcalc.getMean() != 0.0)
                 {
-                    // We are done, no further calculations needed.
-                    break;
+                    // Only look at the std. dev. if i is large enough, and we've seen at
+                    // least a few differences so far.
+                    final double dev = vcalc.getDev() * sqrtBlockSize;
+
+                    if (Math.abs(dev) >= minStdDev_)
+                    {
+                        // We are done, no further calculations needed.
+                        break;
+                    }
                 }
 
                 final int target = Math.min(i + _superBlockSize, a_.getBlockCount());
@@ -95,7 +100,7 @@ public final class FitPointAnalyzer
         }
 
         final double meanDiff = vcalc.getMean();
-        double dev = sqrtBlockSize * vcalc.getDev();
+        double dev = vcalc.getMeanDev();
 
         if (vcalc.getCount() < 3 || 0.0 == dev)
         {
