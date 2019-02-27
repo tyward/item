@@ -22,6 +22,7 @@ package edu.columbia.tjw.item.fit.curve;
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
 import edu.columbia.tjw.item.optimize.*;
 
 /**
@@ -56,6 +57,12 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
         _size = actualOrdinals_.length;
         _workspace = new double[_initParams.size()];
+    }
+
+    public ItemFitPoint<S, R, T> evaluate(final MultivariatePoint input_)
+    {
+        prepare(input_);
+        return _packed.evaluate(input_);
     }
 
     @Override

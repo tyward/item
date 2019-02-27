@@ -26,7 +26,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     public ItemFitPoint(final FitPointGenerator<S, R, T> calculator_, final PackedParameters<S, R, T> packed_)
     {
         _blockCalculators = calculator_.getCalculators();
-        _packed = packed_;
+        _packed = packed_.clone(); // May be able to avoid, for now, for safety.
         _params = _packed.generateParams();
         _compound = new BlockResultCompound();
         _blockSize = calculator_.getBlockSize();

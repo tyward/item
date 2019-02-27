@@ -5,11 +5,14 @@ import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.ReducedParameterVector;
+import edu.columbia.tjw.item.fit.calculator.FitPointGenerator;
+import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
 import edu.columbia.tjw.item.optimize.*;
 
 public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
 {
+    private final FitPointGenerator<S, R, T> _generator;
     private final ItemParameters<S, R, T> _unchangedParams;
     private final ItemParameters<S, R, T> _initParams;
     private final PackedParameters<S, R, T> _packed;
@@ -23,6 +26,8 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
                                final ItemFittingGrid<S, R> grid_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
+
+        _generator = new FitPointGenerator<S, R, T>(grid_);
 
         //N.B: We need to rebuild the curve params so that we don't end up with ItemParams where a curve being
         // calibrated is
@@ -79,6 +84,11 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
         }
     }
 
+    public ItemFitPoint<S, R, T> evaluate(final MultivariatePoint input_)
+    {
+        prepare(input_);
+        return _generator.generatePoint(_packed);
+    }
 
     @Override
     public int dimension()
@@ -147,17 +157,6 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
         final ItemModel<S, R, T> localModel = _updatedModel.clone();
         return localModel.logLikelihood(_grid, index_);
     }
-
-    public double[] calcGradient(final int index_)
-    {
-        final ItemModel<S, R, T> localModel = _updatedModel.clone();
-
-        final double[] gradient = new double[_packed.size()];
-
-        localModel.computeGradient(this._grid, _packed, index_, gradient, null);
-        return gradient;
-    }
-
 
     @Override
     protected void evaluate(int start_, int end_, EvaluationResult result_)

@@ -23,6 +23,9 @@ import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+import edu.columbia.tjw.item.fit.calculator.FitPointGenerator;
+import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
 import edu.columbia.tjw.item.optimize.*;
 
 /**
@@ -34,6 +37,7 @@ import edu.columbia.tjw.item.optimize.*;
 public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
 {
+    private final FitPointGenerator<S, R, T> _generator;
     private final ParamFittingGrid<S, R, T> _grid;
     private final PackedParameters<S, R, T> _packed;
 
@@ -47,9 +51,16 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
 
+        _generator = new FitPointGenerator<S, R, T>(grid_);
         _grid = grid;
         _model = model_;
         _packed = packed_;
+    }
+
+    public ItemFitPoint<S, R, T> evaluate(final MultivariatePoint input_)
+    {
+        prepare(input_);
+        return _generator.generatePoint(_packed);
     }
 
     public double[] getBeta()

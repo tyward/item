@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+
 /**
  * @param <V>
  * @author tyler
@@ -33,8 +35,7 @@ public interface OptimizationFunction<V extends EvaluationPoint<V>>
 
     public EvaluationResult generateResult();
 
-   // public ItemFitPoint<S, R, T>
-
+    public FitPoint evaluate(final V input_);
 
 
 }

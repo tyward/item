@@ -24,6 +24,7 @@ import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.LogUtil;
+import edu.columbia.tjw.item.util.MathTools;
 import edu.columbia.tjw.item.util.MultiLogistic;
 
 import java.util.Arrays;
@@ -142,8 +143,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (null == curve)
             {
                 weight *= rawReg;
-            }
-            else
+            } else
             {
                 weight *= curve.transform(rawReg);
             }
@@ -284,8 +284,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (derivToStatus == actualOffset)
             {
                 delta = 1.0;
-            }
-            else
+            } else
             {
                 delta = 0.0;
             }
@@ -298,8 +297,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (isBetaDerivative)
             {
                 deriv = entryWeight * derivCore;
-            }
-            else
+            } else
             {
                 // This is a derivative w.r.t. one of the elements of the weight.
                 // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
@@ -320,8 +318,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 {
                     // Dealing with some special over/underflow cases.
                     deriv = 0.0;
-                }
-                else
+                } else
                 {
                     final double valRatio = curveDeriv / curveValue;
 
@@ -332,6 +329,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             derivative_[k] = scale * deriv;
         }
+
+
     }
 
 
@@ -423,6 +422,27 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             }
 
             count++;
+        }
+
+        // Now validate.
+        final double[] check = new double[derivative_.length];
+        final double[] check2 = new double[derivative_.length];
+
+        for (int i = start_; i < end_; i++)
+        {
+            computeGradient(grid_, packed_, i, check2, null);
+
+            for (int k = 0; k < check.length; k++)
+            {
+                check[k] += check2[k];
+            }
+        }
+
+        final double cos = MathTools.cos(check, derivative_);
+
+        if (cos < 0.99)
+        {
+            LOG.info("Bad Cosine: " + cos);
         }
 
         return count;
