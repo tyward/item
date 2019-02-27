@@ -357,95 +357,32 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     public int computeDerivative(final ParamFittingGrid<S, R, T> grid_, final int start_, final int end_,
                                  PackedParameters<S, R, T> packed_, final double[] derivative_)
     {
-        final int dimension = packed_.size();
-        final double[] computed = _probWorkspace;
-        final double[] actual = _actualProbWorkspace;
-        final double[] entryWeights = _regWorkspace;
-        final double[] rawReg = _rawRegWorkspace;
-        final List<S> reachable = getParams().getStatus().getReachable();
-        int count = 0;
+        if (end_ < start_)
+        {
+            throw new IllegalArgumentException("Count must be nonnegative.");
+        }
 
-        //For safety
         Arrays.fill(derivative_, 0.0);
 
-        final int fromOrdinal = _params.getStatus().ordinal();
+        if (end_ == start_)
+        {
+            return 0;
+        }
+
+        // Calculate.
+        final double[] tmp = new double[derivative_.length];
 
         for (int i = start_; i < end_; i++)
         {
-            //We inline a bunch of these calcs to reduce duplication of effort.
-            grid_.getRegressors(i, rawReg);
-            this.fillEntryWeights(rawReg, entryWeights);
-            rawPowerScores(entryWeights, computed);
-            MultiLogistic.multiLogisticFunction(computed, computed);
+            computeGradient(grid_, packed_, i, tmp, null);
 
-            final int actualTransition = grid_.getNextStatus(i);
-
-            final int actualOffset = _likelihood.ordinalToOffset(actualTransition);
-
-            if (actualOffset < 0)
+            for (int k = 0; k < tmp.length; k++)
             {
-                //This is a supposedly impossible transition, skip it.
-                continue;
-            }
-
-            Arrays.fill(actual, 0.0);
-            actual[actualOffset] = 1.0;
-
-            for (int z = 0; z < dimension; z++)
-            {
-                //looping over the betas.
-                double betaTerm = 0.0;
-                final int entryPointer = packed_.getEntry(z);
-                final int transitionPointer = packed_.getTransition(z);
-
-
-                for (int q = 0; q < reachable.size(); q++)
-                {
-                    //looping over the to-states.
-                    final double betaDerivative = betaDerivative(entryWeights, computed, entryPointer, q,
-                            transitionPointer);
-                    final double actualProbability = actual[q];
-                    final double computedProb = computed[q];
-                    final double contribution = actualProbability * betaDerivative / computedProb;
-
-                    if (Double.isNaN(contribution) || Double.isInfinite(contribution))
-                    {
-                        LOG.severe("Derivative term contribution is NaN or infinite, this should not be possible: " + contribution);
-                        LOG.severe("Trying to recover, derivative may be somewhat inaccurate.");
-                        break;
-                    }
-
-                    betaTerm += contribution;
-                }
-
-                derivative_[z] += betaTerm;
-            }
-
-            count++;
-        }
-
-        // Now validate.
-        final double[] check = new double[derivative_.length];
-        final double[] check2 = new double[derivative_.length];
-
-        for (int i = start_; i < end_; i++)
-        {
-            computeGradient(grid_, packed_, i, check2, null);
-
-            for (int k = 0; k < check.length; k++)
-            {
-                check[k] += check2[k];
+                derivative_[k] += tmp[k];
             }
         }
 
-        final double cos = MathTools.cos(check, derivative_);
-
-        if (cos < 0.99)
-        {
-            LOG.info("Bad Cosine: " + cos);
-        }
-
-        return count;
+        return (end_ - start_);
     }
 
     /**

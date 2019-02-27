@@ -154,7 +154,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
         if (count > 0)
         {
             //N.B: we are computing the negative log likelihood. 
-            final double invCount = -1.0 / count;
+            final double invCount = 1.0 / count;
 
             for (int i = 0; i < dimension; i++)
             {
