@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+
 /**
  * @param <V> The type of points on which this can be evaluated
  * @param <F> The type of optimization function which will be called
@@ -37,7 +39,7 @@ public interface AdaptiveComparator<V extends EvaluationPoint<V>, F extends Opti
      * @return The difference between these two points, as a z-score
      */
     public double compare(final F function_, final V a_, final V b_, final EvaluationResult aResult_,
-                          final EvaluationResult bResult_);
+                          final EvaluationResult bResult_, final FitPoint pointA_, final FitPoint pointB_);
 
     public double getSigmaTarget();
 

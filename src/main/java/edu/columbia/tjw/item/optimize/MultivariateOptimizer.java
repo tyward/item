@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.logging.Logger;
@@ -159,9 +160,11 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         pointB.add(currentPoint);
 
                         final EvaluationResult resB = f_.generateResult();
+                        final FitPoint fitPointA = f_.evaluate(pointA);
+                        final FitPoint fitPointB = f_.evaluate(pointB);
 
                         //Only take it if it is clearly better.....
-                        final double comparison = this.getComparator().compare(f_, pointA, pointB, resA, resB);
+                        final double comparison = this.getComparator().compare(f_, pointA, pointB, resA, resB, fitPointA, fitPointB);
 
                         if (comparison <= -this.getComparator().getSigmaTarget())
                         {
@@ -171,8 +174,9 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         }
                         else
                         {
+                            final FitPoint fitPointCurrent = f_.evaluate(currentPoint);
                             final double comp2 = this.getComparator().compare(f_, currentPoint, pointB, currentResult
-                                    , resB);
+                                    , resB, fitPointCurrent, fitPointB);
 
                             if (comp2 <= -this.getComparator().getSigmaTarget())
                             {
@@ -202,8 +206,10 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 nextPoint.copy(result.getOptimum());
                 final EvaluationResult nextResult = result.minResult();
 
+                final FitPoint fitPointCurrent = f_.evaluate(currentPoint);
+                final FitPoint fitPointNext = f_.evaluate(nextPoint);
                 final double zScore = this.getComparator().compare(f_, currentPoint, nextPoint, currentResult,
-                        nextResult);
+                        nextResult, fitPointCurrent, fitPointNext);
 
 //                final double currentVal = currentResult.getMean();
 //                final double nextVal = nextResult.getMean();

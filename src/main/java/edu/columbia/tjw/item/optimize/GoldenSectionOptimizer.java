@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.logging.Logger;
@@ -76,7 +77,9 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                                           final V b_, final EvaluationResult bRes_) throws ConvergenceException
     {
         //Just need to fill this in.....
-        final double comparison = this.getComparator().compare(f_, a_, b_, aRes_, bRes_);
+        final FitPoint pointA = f_.evaluate(a_);
+        final FitPoint pointB = f_.evaluate(b_);
+        final double comparison = this.getComparator().compare(f_, a_, b_, aRes_, bRes_, pointA, pointB);
 
         if (comparison < 0)
         {
@@ -136,7 +139,11 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
         EvaluationResult bRes = bracket_.getbRes();
         EvaluationResult cRes = bracket_.getcRes();
 
-        double comparisonAB = comparator.compare(f_, a, b, aRes, bRes);
+        FitPoint pointA = f_.evaluate(a);
+        FitPoint pointB = f_.evaluate(b);
+        FitPoint pointC = f_.evaluate(c);
+
+        double comparisonAB = comparator.compare(f_, a, b, aRes, bRes, pointA, pointB);
         final double sigmaScale = comparator.getSigmaTarget();
 
         if (comparisonAB < sigmaScale)
@@ -144,7 +151,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             throw new IllegalArgumentException("Impossible.");
         }
 
-        double comparisonCB = comparator.compare(f_, c, b, cRes, bRes);
+        double comparisonCB = comparator.compare(f_, c, b, cRes, bRes, pointC, pointB);
         double scale = 0.5;
 
         while (comparisonCB < sigmaScale)
@@ -159,6 +166,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                 c.add(ab);
                 ab.scale(2.0);
                 cRes.clear();
+                pointC = f_.evaluate(c);
                 scale *= 2.0;
 
                 if (scale > 2000.0)
@@ -166,7 +174,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                     throw new ConvergenceException("Unable to bracket root.");
                 }
 
-                comparisonCB = comparator.compare(f_, c, b, cRes, bRes);
+                comparisonCB = comparator.compare(f_, c, b, cRes, bRes, pointC, pointB);
             }
 
             if (comparisonCB >= sigmaScale)
@@ -248,7 +256,9 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
 
             EvaluationResult tmp = aRes;
             aRes = bRes;
+            pointA = pointB;
             bRes = cRes;
+            pointB = pointC;
             cRes = tmp;
             cRes.clear();
 
@@ -257,7 +267,8 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                 c.copy(aClone);
                 c.add(ab);
                 cRes.clear();
-                comparisonCB = comparator.compare(f_, c, b, cRes, bRes);
+                pointC = f_.evaluate(c);
+                comparisonCB = comparator.compare(f_, c, b, cRes, bRes, pointC, pointB);
 
                 //Assumed minimum higher than previous value of b. We are done.
                 if (comparisonCB > sigmaScale)
@@ -277,9 +288,12 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                     c.add(ab);
                     tmp = aRes;
                     aRes = bRes;
+                    pointA = pointB;
                     bRes = cRes;
+                    pointB = pointC;
                     cRes = tmp;
                     cRes.clear();
+                    pointC = f_.evaluate(c);
                 }
                 else
                 {
@@ -288,7 +302,9 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                     c.add(ab);
                     tmp = bRes;
                     bRes = cRes;
+                    pointB = pointC;
                     cRes = tmp;
+                    pointC = f_.evaluate(c);
                     cRes.clear();
                 }
             }
@@ -297,10 +313,11 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                 //Compute new value of c, the old value got assigned to b. 
                 c.add(ab);
                 cRes.clear();
+                pointC = f_.evaluate(c);
             }
 
             //Now we know that a > b, and we think that c is probably higher than b, but haven't checked. 
-            comparisonCB = comparator.compare(f_, c, b, cRes, bRes);
+            comparisonCB = comparator.compare(f_, c, b, cRes, bRes, pointC, pointB);
         }
 
         final Bracket<V> output = new Bracket<>(a, b, c, aRes, bRes, cRes);
@@ -322,8 +339,12 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
         EvaluationResult bRes = bracket_.getbRes();
         EvaluationResult cRes = bracket_.getcRes();
 
+        FitPoint pointA = f_.evaluate(a);
+        FitPoint pointB = f_.evaluate(b);
+        FitPoint pointC = f_.evaluate(c);
+
         //A negative value here indicates that a is lower than b. 
-        double comparisonAB = comparator.compare(f_, a, b, aRes, bRes);
+        double comparisonAB = comparator.compare(f_, a, b, aRes, bRes, pointA, pointB);
         final double sigmaScale = comparator.getSigmaTarget();
         double scale = 0.5;
 
@@ -331,7 +352,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
         {
             //We will move both endpoints out trying to find one that is materially different from b. 
             //Perhaps B and C are sufficiently different, let's try that. 
-            final double comparisonBC = comparator.compare(f_, b, c, bRes, cRes);
+            final double comparisonBC = comparator.compare(f_, b, c, bRes, cRes, pointB, pointC);
 
             if (Math.abs(comparisonBC) > sigmaScale)
             {
@@ -343,7 +364,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             if (Math.abs(comparisonBC + comparisonAB) > sigmaScale)
             {
                 //Both endpoints failed, but we think they differ enough from each other. 
-                final double comparisonAC = comparator.compare(f_, a, c, aRes, cRes);
+                final double comparisonAC = comparator.compare(f_, a, c, aRes, cRes, pointA, pointC);
 
                 if (Math.abs(comparisonAC) > sigmaScale)
                 {
@@ -351,6 +372,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                     b.copy(c);
                     b.add(ac);
                     bRes.clear();
+                    pointB = f_.evaluate(b);
                     final Bracket<V> expanded = new Bracket<>(a, c, b, aRes, cRes, bRes);
                     return bracket(f_, expanded);
                 }
@@ -364,13 +386,15 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             scale *= 2.0;
             aRes.clear();
             cRes.clear();
+            pointA = f_.evaluate(a);
+            pointC = f_.evaluate(c);
 
             if (scale > MAX_BRACKET_SCALE)
             {
                 throw new ConvergenceException("Unable to bracket root.");
             }
 
-            comparisonAB = comparator.compare(f_, a, b, aRes, bRes);
+            comparisonAB = comparator.compare(f_, a, b, aRes, bRes, pointA, pointB);
         }
 
         //OK, we know that a and b are significantly different. 
@@ -404,6 +428,12 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
         EvaluationResult aRes = bracket_.getaRes();
         EvaluationResult bRes = bracket_.getbRes();
         EvaluationResult cRes = bracket_.getcRes();
+
+        FitPoint pointA = f_.evaluate(a);
+        FitPoint pointB = f_.evaluate(b);
+        FitPoint pointC = f_.evaluate(c);
+
+
         int evalCount = 0;
 
         //While either tolerance condition fails, continue to loop.
@@ -431,6 +461,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
 
                 b = next;
                 bRes = nextRes;
+                pointB = f_.evaluate(b);
                 next = temp;
                 nextRes = tempRes;
             }
@@ -443,7 +474,8 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             }
 
             final AdaptiveComparator<V, F> comparator = this.getComparator();
-            final double comparison = comparator.compare(f_, b, next, bRes, nextRes);
+            final FitPoint nextPoint = f_.evaluate(next);
+            final double comparison = comparator.compare(f_, b, next, bRes, nextRes, pointB, nextPoint);
             evalCount++;
 
             final double bMean = bRes.getMean();
@@ -458,21 +490,24 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                 //B is greater than next, so keep b, next, c.
                 a = b;
                 aRes = bRes;
+                pointA = pointB;
                 b = next;
                 bRes = nextRes;
+                pointB = nextPoint;
             }
             else
             {
                 //B is less than next, keep a, b, next
                 c = next;
                 cRes = nextRes;
+                pointC = nextPoint;
             }
 
             //System.out.println("Best point: " + b);
             //Make sure our new middle point is meaningfully better than one of the end points
             //otherwise, get out. This probably won't require any actual calculation...
-            final double aCompare = comparator.compare(f_, a, b, aRes, bRes);
-            final double cCompare = comparator.compare(f_, c, b, cRes, bRes);
+            final double aCompare = comparator.compare(f_, a, b, aRes, bRes, pointA, pointB);
+            final double cCompare = comparator.compare(f_, c, b, cRes, bRes, pointC, pointB);
 
             if ((aCompare < STD_DEV_CUTOFF) && (cCompare < STD_DEV_CUTOFF))
             {
