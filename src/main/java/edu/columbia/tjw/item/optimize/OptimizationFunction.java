@@ -33,4 +33,8 @@ public interface OptimizationFunction<V extends EvaluationPoint<V>>
 
     public EvaluationResult generateResult();
 
+   // public ItemFitPoint<S, R, T>
+
+
+
 }

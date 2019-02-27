@@ -1,26 +1,26 @@
 package edu.columbia.tjw.item.fit.calculator;
 
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.algo.VarianceCalculator;
 
-public final class FitPointAnalyzer<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public final class FitPointAnalyzer
 {
     // How many blocks do we calculate at a time (to take advantage of threading). This should be several times the number of cores in the computer.
     private static final int DEFAULT_SUPERBLOCK_SIZE = 100;
+    private static final double DEFAULT_MIN_STD_DEV = 3.0;
 
     private final int _superBlockSize;
+    private final double _minStdDev;
 
 
     public FitPointAnalyzer()
     {
         _superBlockSize = DEFAULT_SUPERBLOCK_SIZE;
+        _minStdDev = DEFAULT_MIN_STD_DEV;
     }
 
-    public double compareEntropies(final FitPoint<S, R, T> a_, final FitPoint<S, R, T> b_)
+    public double compareEntropies(final FitPoint a_, final FitPoint b_)
     {
-        return compareEntropies(a_, b_, 0.0);
+        return compareEntropies(a_, b_, _minStdDev);
     }
 
 
@@ -36,7 +36,7 @@ public final class FitPointAnalyzer<S extends ItemStatus<S>, R extends ItemRegre
      * @param b_
      * @return
      */
-    public double compareEntropies(final FitPoint<S, R, T> a_, final FitPoint<S, R, T> b_, final double minStdDev_)
+    public double compareEntropies(final FitPoint a_, final FitPoint b_, final double minStdDev_)
     {
         if (a_.getBlockCount() != b_.getBlockCount())
         {
@@ -45,7 +45,7 @@ public final class FitPointAnalyzer<S extends ItemStatus<S>, R extends ItemRegre
 
         if (a_.getNextBlock() > b_.getNextBlock())
         {
-            return -1.0 * compareEntropies(b_, a_);
+            return -1.0 * compareEntropies(b_, a_, minStdDev_);
         }
 
         // b_ has at least as many values as a_

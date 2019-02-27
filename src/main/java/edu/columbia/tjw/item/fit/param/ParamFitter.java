@@ -130,8 +130,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         final PackedParameters<S, R, T> reduced = new ReducedParameterVector<>(active, packed);
 
-        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _calc.getGrid());
-        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(params_, grid,
+        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(params_, _calc.getGrid(),
                 new ItemModel<>(params_), _settings, reduced);
         return function;
     }

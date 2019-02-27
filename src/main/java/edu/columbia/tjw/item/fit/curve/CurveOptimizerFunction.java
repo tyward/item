@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.*;
 
@@ -37,7 +38,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     private final double[] _workspace;
     private final ItemCurveParams<R, T> _initParams;
     private final PackedCurveFunction<S, R, T> _packed;
-    private final ParamFittingGrid<S, R, T> _grid;
 
     private ItemCurveParams<R, T> _params;
     private MultivariatePoint _prevPoint;
@@ -45,7 +45,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
     public CurveOptimizerFunction(final ItemCurveParams<R, T> initParams_, final ItemCurveFactory<R, T> factory_,
                                   final S toStatus_, final CurveParamsFitter<S, R, T> curveFitter_,
-                                  final int[] actualOrdinals_, final ParamFittingGrid<S, R, T> grid_,
+                                  final int[] actualOrdinals_, final ItemFittingGrid<S, R> grid_,
                                   final ItemSettings settings_, final ItemParameters<S, R, T> rawParams_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
@@ -56,7 +56,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
         _size = actualOrdinals_.length;
         _workspace = new double[_initParams.size()];
-        _grid = grid_;
     }
 
     @Override

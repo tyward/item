@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.fit.param;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.*;
@@ -39,11 +40,14 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     private ItemModel<S, R, T> _model;
 
     public LogisticModelFunction(
-            final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_,
+            final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_,
             final ItemModel<S, R, T> model_, ItemSettings settings_, final PackedParameters<S, R, T> packed_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
-        _grid = grid_;
+
+        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
+
+        _grid = grid;
         _model = model_;
         _packed = packed_;
     }

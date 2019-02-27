@@ -1,6 +1,7 @@
 package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.ReducedParameterVector;
@@ -19,7 +20,7 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
 
     public PackedCurveFunction(final ItemSettings settings_, final ItemCurveParams<R, T> curveParams_,
                                final S toStatus_, final ItemParameters<S, R, T> initParams_,
-                               final ParamFittingGrid<S, R, T> grid_)
+                               final ItemFittingGrid<S, R> grid_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
@@ -34,7 +35,7 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
         _unchangedParams = initParams_;
         _initParams = initParams_.addBeta(repacked, toStatus_);
         _updatedModel = new ItemModel<>(_initParams);
-        _grid = new ParamFittingGrid<>(_initParams, grid_.getUnderlying());
+        _grid = new ParamFittingGrid<>(_initParams, grid_);
 
         final int entryIndex = _initParams.getEntryCount() - 1;//_initParams.getEntryIndex(curveParams_);
         final int interceptIndex = _initParams.getInterceptIndex();

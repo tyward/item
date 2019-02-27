@@ -64,14 +64,14 @@ public class FitPointGenerator<S extends ItemStatus<S>, R extends ItemRegressor<
         _blockCalculators = Collections.unmodifiableList(blockCalculators);
     }
 
-    public FitPoint<S, R, T> generatePoint(final ItemParameters<S, R, T> params_)
+    public ItemFitPoint<S, R, T> generatePoint(final ItemParameters<S, R, T> params_)
     {
         return generatePoint(params_.generatePacked());
     }
 
-    public FitPoint<S, R, T> generatePoint(final PackedParameters<S, R, T> packed_)
+    public ItemFitPoint<S, R, T> generatePoint(final PackedParameters<S, R, T> packed_)
     {
-        return new FitPoint<>(this, packed_);
+        return new ItemFitPoint<>(this, packed_);
     }
 
     public int getBlockCount()

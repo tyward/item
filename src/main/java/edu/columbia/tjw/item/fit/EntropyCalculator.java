@@ -25,7 +25,7 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
-import edu.columbia.tjw.item.fit.calculator.FitPoint;
+import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointGenerator;
 
 /**
@@ -63,7 +63,7 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
 
     public BlockResult computeEntropy(final ItemParameters<S, R, T> params_)
     {
-        final FitPoint<S, R, T> point = _calc.generatePoint(params_);
+        final ItemFitPoint<S, R, T> point = _calc.generatePoint(params_);
         point.computeAll();
         return point.getAggregated();
     }

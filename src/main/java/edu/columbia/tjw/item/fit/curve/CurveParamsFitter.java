@@ -49,7 +49,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private final ItemFittingGrid<S, R> _grid;
 
     // Getting pretty messy, we can now reset our grids and models, recache the power scores, etc...
-    private final ParamFittingGrid<S, R, T> _paramGrid;
     private final ItemModel<S, R, T> _model;
 
     //N.B: These are ordinals, not offsets.
@@ -83,7 +82,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             _actualOutcomes[i] = _grid.getNextStatus(i);
         }
 
-        _paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
         _startingLL = chain_.getLogLikelihood();
         _calc = chain_.getCalculator();
     }
@@ -179,7 +177,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
     private QuantileStatistics generateDistribution(R field_, S toStatus_)
     {
-        final ItemQuantileDistribution<S, R, T> quantGenerator = new ItemQuantileDistribution<>(_paramGrid,
+        final ParamFittingGrid<S, R, T> paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
+        final ItemQuantileDistribution<S, R, T> quantGenerator = new ItemQuantileDistribution<>(paramGrid,
                 _model,
                 _fromStatus, field_, toStatus_);
         final QuantileStatistics dist = quantGenerator.getAdjusted();
@@ -202,7 +201,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     {
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(initParams_, _factory, toStatus_,
                 this, _actualOutcomes,
-                _paramGrid, _settings, params_);
+                _grid, _settings, params_);
 
         return func;
     }
