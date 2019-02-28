@@ -37,20 +37,12 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
     private final double _stdDevThreshold;
     private final FitPointAnalyzer _analyzer;
 
-    private EvaluationResult _a;
-    private EvaluationResult _b;
-    private ResultComparator _comp;
-
 
     public BasicAdaptiveComparator(final int blockSize_, final double stdDevThreshold_)
     {
         _blockSize = blockSize_;
         _stdDevThreshold = stdDevThreshold_;
         _analyzer = new FitPointAnalyzer();
-
-        _a = null;
-        _b = null;
-        _comp = null;
     }
 
     @Override
