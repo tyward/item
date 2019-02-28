@@ -66,6 +66,12 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         return _packed.evaluate(input_);
     }
 
+    public ItemFitPoint<S, R, T> evaluateGradient(final MultivariatePoint input_)
+    {
+        prepare(input_);
+        return _packed.evaluateGradient(input_);
+    }
+
     @Override
     public int dimension()
     {

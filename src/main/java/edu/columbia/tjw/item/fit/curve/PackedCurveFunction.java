@@ -91,6 +91,12 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
         return _generator.generatePoint(_packed);
     }
 
+    public ItemFitPoint<S, R, T> evaluateGradient(final MultivariatePoint input_)
+    {
+        prepare(input_);
+        return _generator.generateGradient(_packed);
+    }
+
     @Override
     public int dimension()
     {

@@ -31,5 +31,6 @@ public interface OptimizationFunction<V extends EvaluationPoint<V>>
 
     public FitPoint evaluate(final V input_);
 
+    public FitPoint evaluateGradient(final V input_);
 
 }

@@ -63,6 +63,12 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
         return _generator.generatePoint(_packed);
     }
 
+    public ItemFitPoint<S, R, T> evaluateGradient(final MultivariatePoint input_)
+    {
+        prepare(input_);
+        return _generator.generateGradient(_packed);
+    }
+
     public double[] getBeta()
     {
         return _packed.getPacked();

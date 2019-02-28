@@ -4,6 +4,10 @@ import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.optimize.MultivariateGradient;
+import edu.columbia.tjw.item.optimize.MultivariatePoint;
+
+import java.util.Arrays;
 
 public final class BlockResultCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>,
         T extends ItemCurveType<T>>
@@ -70,6 +74,37 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             x2 += e2;
         }
 
-        return new BlockResult(_rowOffset, _rowOffset + count, entropySum, x2);
+        final double[] derivative;
+
+        if(type_ == BlockCalculationType.FIRST_DERIVATIVE || type_ == BlockCalculationType.SECOND_DERIVATIVE) {
+            final int dimension = packed_.size();
+            final double[] tmp = new double[dimension];
+            derivative = new double[dimension];
+
+            for (int i = 0; i < count; i++)
+            {
+                model.computeGradient(grid, packed_, i, tmp, null);
+
+                for (int k = 0; k < dimension; k++)
+                {
+                    derivative[k] += tmp[k];
+                }
+            }
+
+            if (count > 0)
+            {
+                //N.B: we are computing the negative log likelihood.
+                final double invCount = 1.0 / count;
+
+                for (int i = 0; i < dimension; i++)
+                {
+                    derivative[i] = derivative[i] * invCount;
+                }
+            }
+        } else {
+            derivative = null;
+        }
+
+        return new BlockResult(_rowOffset, _rowOffset + count, entropySum, x2, derivative);
     }
 }

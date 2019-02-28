@@ -74,6 +74,11 @@ public class FitPointGenerator<S extends ItemStatus<S>, R extends ItemRegressor<
         return new ItemFitPoint<>(this, packed_);
     }
 
+    public ItemFitPoint<S, R, T> generateGradient(final PackedParameters<S, R, T> packed_)
+    {
+        return new ItemFitPoint<>(this, packed_, BlockCalculationType.FIRST_DERIVATIVE);
+    }
+
     public int getBlockCount()
     {
         return _blockCalculators.size();
@@ -84,7 +89,8 @@ public class FitPointGenerator<S extends ItemStatus<S>, R extends ItemRegressor<
         return _blockSize;
     }
 
-    public int getRowCount() {
+    public int getRowCount()
+    {
         return _grid.size();
     }
 
@@ -92,4 +98,6 @@ public class FitPointGenerator<S extends ItemStatus<S>, R extends ItemRegressor<
     {
         return _blockCalculators;
     }
+
+
 }

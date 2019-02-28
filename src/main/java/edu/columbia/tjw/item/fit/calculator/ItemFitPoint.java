@@ -22,11 +22,26 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     private final BlockResultCompound _compound;
     private final int _blockSize;
     private final int _totalSize;
+    private final BlockCalculationType _type;
 
     private int _nextBlock;
 
-    public ItemFitPoint(final FitPointGenerator<S, R, T> calculator_, final PackedParameters<S, R, T> packed_)
+    public ItemFitPoint(final FitPointGenerator<S, R, T> calculator_, final PackedParameters<S, R, T> packed_,
+                        BlockCalculationType type_)
     {
+        if (null == calculator_)
+        {
+            throw new NullPointerException("Calculator cannot be null.");
+        }
+        if (null == packed_)
+        {
+            throw new NullPointerException("Packed cannot be null.");
+        }
+        if (null == type_)
+        {
+            throw new NullPointerException("Type cannot be null.");
+        }
+
         _blockCalculators = calculator_.getCalculators();
         _packed = packed_.clone(); // May be able to avoid, for now, for safety.
         _params = _packed.generateParams();
@@ -34,10 +49,17 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
         _blockSize = calculator_.getBlockSize();
         _totalSize = calculator_.getRowCount();
         _nextBlock = 0;
+        _type = type_;
+    }
+
+    public ItemFitPoint(final FitPointGenerator<S, R, T> calculator_, final PackedParameters<S, R, T> packed_)
+    {
+        this(calculator_, packed_, BlockCalculationType.VALUE);
     }
 
     @Override
-    public int getBlockSize() {
+    public int getBlockSize()
+    {
         return _blockSize;
     }
 
@@ -103,14 +125,16 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     @Override
     public double getMean(int boundary_)
     {
-        if(boundary_ == 0) {
+        if (boundary_ == 0)
+        {
             return 0.0;
         }
         this.computeUntil(boundary_);
 
         final VarianceCalculator vcalc = new VarianceCalculator();
 
-        for(int i = 0; i < boundary_; i++) {
+        for (int i = 0; i < boundary_; i++)
+        {
             final double next = getBlock(i).getEntropyMean();
             vcalc.update(next);
         }
@@ -120,16 +144,19 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     }
 
     @Override
-    public double getStdDev(int boundary_) {
+    public double getStdDev(int boundary_)
+    {
         // TODO: Is this right, shouldn't we make sure the counts line up first?
-        if(boundary_ == 0) {
+        if (boundary_ == 0)
+        {
             return 0.0;
         }
         this.computeUntil(boundary_);
 
         final VarianceCalculator vcalc = new VarianceCalculator();
 
-        for(int i = 0; i < boundary_; i++) {
+        for (int i = 0; i < boundary_; i++)
+        {
             final double next = getBlock(i).getEntropyMean();
             vcalc.update(next);
         }
@@ -138,9 +165,11 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
         return stdev;
     }
 
-    public int getSize() {
+    public int getSize()
+    {
         return this._totalSize;
     }
+
 
     private final class EntropyRunner extends GeneralTask<BlockResult>
     {
@@ -157,7 +186,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
         @Override
         protected BlockResult subRun() throws Exception
         {
-            return _calc.compute(_params);
+            return _calc.compute(_params, _packed, _type);
         }
     }
 }
