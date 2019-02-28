@@ -53,6 +53,12 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
         _comp = null;
     }
 
+    public double compare(final FitPoint pointA_, final FitPoint pointB_) {
+        final double compare = _analyzer.compareEntropies(pointA_, pointB_, _stdDevThreshold);
+        return compare;
+    }
+
+
     @Override
     public double compare(final F function_, final V a_, final V b_, final EvaluationResult aResult_,
                           final EvaluationResult bResult_, final FitPoint pointA_, final FitPoint pointB_)
@@ -117,9 +123,7 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
             LOG.warning("Bad comparison.");
         }
 
-//        final FitPoint pointA = function_.evaluate(a_);
-//        final FitPoint pointB = function_.evaluate(b_);
-        final double check = _analyzer.compareEntropies(pointA_, pointB_, _stdDevThreshold);
+        final double check = compare(pointA_, pointB_);
 
         if (Math.abs(check - output) >= _stdDevThreshold && (check * output) < 0.0)
         {

@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.VarianceCalculator;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.util.thread.GeneralTask;
 import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
@@ -100,23 +101,41 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     }
 
     @Override
-    public double getMean()
+    public double getMean(int boundary_)
     {
-        if(this._nextBlock == 0) {
+        if(boundary_ == 0) {
             return 0.0;
         }
-        // TODO: Is this right, shouldn't we make sure the counts line up first?
-        return this.getAggregated().getEntropyMean();
+        this.computeUntil(boundary_);
+
+        final VarianceCalculator vcalc = new VarianceCalculator();
+
+        for(int i = 0; i < boundary_; i++) {
+            final double next = getBlock(i).getEntropyMean();
+            vcalc.update(next);
+        }
+
+        final double mean = vcalc.getMean();
+        return mean;
     }
 
     @Override
-    public double getStdDev() {
+    public double getStdDev(int boundary_) {
         // TODO: Is this right, shouldn't we make sure the counts line up first?
-        if(this._nextBlock == 0) {
+        if(boundary_ == 0) {
             return 0.0;
         }
+        this.computeUntil(boundary_);
 
-        return this.getAggregated().getEntropyMeanDev();
+        final VarianceCalculator vcalc = new VarianceCalculator();
+
+        for(int i = 0; i < boundary_; i++) {
+            final double next = getBlock(i).getEntropyMean();
+            vcalc.update(next);
+        }
+
+        final double stdev = vcalc.getMeanDev();
+        return stdev;
     }
 
     public int getSize() {

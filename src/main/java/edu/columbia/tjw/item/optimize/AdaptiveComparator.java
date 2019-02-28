@@ -41,6 +41,8 @@ public interface AdaptiveComparator<V extends EvaluationPoint<V>, F extends Opti
     public double compare(final F function_, final V a_, final V b_, final EvaluationResult aResult_,
                           final EvaluationResult bResult_, final FitPoint pointA_, final FitPoint pointB_);
 
+    public double compare(final FitPoint pointA_, final FitPoint pointB_);
+
     public double getSigmaTarget();
 
 }

@@ -20,9 +20,9 @@ public interface FitPoint
 
     BlockResult getBlock(int index_);
 
-    double getMean();
+    double getMean(int boundary_);
 
-    double getStdDev();
+    double getStdDev(int boundary_);
 
     int getSize();
 }
