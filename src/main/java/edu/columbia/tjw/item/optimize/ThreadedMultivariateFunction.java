@@ -224,20 +224,6 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
     protected abstract MultivariateGradient evaluateDerivative(final int start_, final int end_,
                                                                MultivariatePoint input_, FitPoint result_);
 
-    @Override
-    public EvaluationResult generateResult(int start_, int end_)
-    {
-        final int resultSize = this.resultSize(start_, end_);
-        final EvaluationResult output = new EvaluationResult(resultSize);
-        return output;
-    }
-
-    @Override
-    public EvaluationResult generateResult()
-    {
-        return generateResult(0, this.numRows());
-    }
-
     private final class DerivativeTask extends GeneralTask<MultivariateGradient>
     {
         private final int _start;

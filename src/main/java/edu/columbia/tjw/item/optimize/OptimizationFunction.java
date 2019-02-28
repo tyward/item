@@ -31,10 +31,6 @@ public interface OptimizationFunction<V extends EvaluationPoint<V>>
 
     public int numRows();
 
-    public EvaluationResult generateResult(final int start_, final int end_);
-
-    public EvaluationResult generateResult();
-
     public FitPoint evaluate(final V input_);
 
 
