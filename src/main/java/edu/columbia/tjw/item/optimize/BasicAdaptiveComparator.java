@@ -53,83 +53,15 @@ public class BasicAdaptiveComparator<V extends EvaluationPoint<V>, F extends Opt
         _comp = null;
     }
 
-    public double compare(final FitPoint pointA_, final FitPoint pointB_) {
-        final double compare = _analyzer.compareEntropies(pointA_, pointB_, _stdDevThreshold);
-        return compare;
-    }
-
-
     @Override
-    public double compare(final F function_, final V a_, final V b_, final EvaluationResult aResult_,
-                          final EvaluationResult bResult_, final FitPoint pointA_, final FitPoint pointB_)
+    public double compare(final FitPoint pointA_, final FitPoint pointB_)
     {
-        if (a_.distance(b_) == 0.0)
+        if (pointA_ == pointB_)
         {
             return 0.0;
         }
-        if (aResult_ == bResult_)
-        {
-            throw new IllegalArgumentException("Results for distinct points must be distinct.");
-        }
-        if ((_a != aResult_) || (_b != bResult_))
-        {
-            _comp = new ResultComparator(aResult_, bResult_);
-            _a = aResult_;
-            _b = bResult_;
-        }
 
-        int aCount = aResult_.getHighRow();
-        int bCount = bResult_.getHighRow();
-        final int numRows = function_.numRows();
-
-        if (aCount < _blockSize)
-        {
-            final int end = Math.min(numRows, aCount + _blockSize);
-            function_.value(a_, aCount, end, aResult_);
-            aCount = aResult_.getHighRow();
-        }
-        if (bCount < _blockSize)
-        {
-            final int end = Math.min(numRows, bCount + _blockSize);
-            function_.value(b_, bCount, end, bResult_);
-            bCount = bResult_.getHighRow();
-        }
-
-        double zScore = _comp.computeZScore();
-
-        while ((Math.abs(zScore) < _stdDevThreshold) && ((aCount < numRows) || (bCount < numRows)))
-        {
-            //We don't know enough to tell for sure which one is greater, try to improve our estimate.
-            if (aCount < bCount)
-            {
-                final int end = Math.min(aCount + _blockSize, numRows);
-                function_.value(a_, aCount, end, aResult_);
-                aCount = aResult_.getHighRow();
-            } else
-            {
-                final int end = Math.min(bCount + _blockSize, numRows);
-                function_.value(b_, bCount, end, bResult_);
-                bCount = bResult_.getHighRow();
-            }
-
-            zScore = _comp.computeZScore();
-        }
-
-        final double output = -zScore;
-        //LOG.info("Point comparison complete: [" + aCount + ", " + bCount + "]: " + output);
-
-        if (Double.isNaN(output) || Double.isInfinite(output))
-        {
-            LOG.warning("Bad comparison.");
-        }
-
-        final double check = compare(pointA_, pointB_);
-
-        if (Math.abs(check - output) >= _stdDevThreshold && (check * output) < 0.0)
-        {
-            LOG.info("Bad check!");
-        }
-
+        final double check = _analyzer.compareEntropies(pointA_, pointB_, _stdDevThreshold);
         return check;
     }
 

@@ -22,6 +22,7 @@ package edu.columbia.tjw.item.fit.curve;
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
 import edu.columbia.tjw.item.optimize.*;
 
@@ -114,7 +115,7 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 
     @Override
     protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_,
-                                                      EvaluationResult result_)
+                                                      FitPoint result_)
     {
         final MultivariateGradient altGrad = _packed.evaluateDerivative(start_, end_, input_, result_);
         return altGrad;

@@ -136,7 +136,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
     @Override
     protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_,
-                                                      EvaluationResult result_)
+                                                      FitPoint result_)
     {
         final int dimension = input_.getDimension();
         final double[] derivative = new double[dimension];

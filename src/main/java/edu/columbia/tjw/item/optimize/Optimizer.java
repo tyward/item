@@ -102,33 +102,6 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         return output;
     }
 
-    /**
-     * Figure out how far apart these two results could realistically be,
-     * without attempting additional calculations.
-     *
-     * @param aResult_ The first result
-     * @param bResult_ The second result
-     * @return True if aResult_.getMean() is within tolerance of
-     * bResult_.getMean()
-     */
-    protected boolean checkYTolerance(final EvaluationResult aResult_, final EvaluationResult bResult_)
-    {
-        final double meanA = aResult_.getMean();
-        final double meanB = bResult_.getMean();
-
-        final double stdDevA = aResult_.getStdDev();
-        final double stdDevB = bResult_.getStdDev();
-
-        final double raw = Math.abs(meanA - meanB);
-        final double adjusted = raw + this._stdDevThreshold * (stdDevA + stdDevB);
-
-        final double scale = Math.abs((meanA * meanA) + (meanB * meanB));
-
-        final double scaled = adjusted / scale;
-
-        final boolean output = scaled < this._yTol;
-        return output;
-    }
 
     protected boolean checkYTolerance(final FitPoint aResult_, final FitPoint bResult_,
                                       final FitPoint cResult_)
@@ -140,16 +113,6 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         bResult_.computeUntil(highWater);
         cResult_.computeUntil(highWater);
 
-        final boolean checkA = checkYTolerance(aResult_, bResult_);
-        final boolean checkB = checkYTolerance(bResult_, cResult_);
-
-        final boolean output = checkA && checkB;
-        return output;
-    }
-
-    protected boolean checkYTolerance(final EvaluationResult aResult_, final EvaluationResult bResult_,
-                                      final EvaluationResult cResult_)
-    {
         final boolean checkA = checkYTolerance(aResult_, bResult_);
         final boolean checkB = checkYTolerance(bResult_, cResult_);
 

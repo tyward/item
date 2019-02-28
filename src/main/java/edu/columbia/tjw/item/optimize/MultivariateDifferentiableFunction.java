@@ -19,13 +19,15 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+
 /**
  * @author tyler
  */
 public interface MultivariateDifferentiableFunction extends MultivariateFunction
 {
 
-    public MultivariateGradient calculateDerivative(final MultivariatePoint input_, final EvaluationResult result_,
+    public MultivariateGradient calculateDerivative(final MultivariatePoint input_, final FitPoint result_,
                                                     final double precision_);
 
 }

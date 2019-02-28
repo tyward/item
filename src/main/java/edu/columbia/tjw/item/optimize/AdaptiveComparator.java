@@ -31,16 +31,8 @@ public interface AdaptiveComparator<V extends EvaluationPoint<V>, F extends Opti
     /**
      * Return (aRes - bRes) as a zScore.
      *
-     * @param function_ The function to evaluate
-     * @param a_        Point a on which to evaluate the function
-     * @param b_        Point b on which to evaluate the function
-     * @param aResult_  The result of evaluating function_(a_)
-     * @param bResult_  THe result of evaluating function_(b_)
      * @return The difference between these two points, as a z-score
      */
-    public double compare(final F function_, final V a_, final V b_, final EvaluationResult aResult_,
-                          final EvaluationResult bResult_, final FitPoint pointA_, final FitPoint pointB_);
-
     public double compare(final FitPoint pointA_, final FitPoint pointB_);
 
     public double getSigmaTarget();

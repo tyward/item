@@ -61,14 +61,14 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                                                           MultivariatePoint startingPoint_,
                                                           MultivariatePoint direction_) throws ConvergenceException
     {
-        final EvaluationResult result = f_.generateResult();
+        final FitPoint result = f_.evaluate(startingPoint_);
         return optimize(f_, startingPoint_, result, direction_);
     }
 
     public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_,
                                                           MultivariatePoint startingPoint_) throws ConvergenceException
     {
-        final EvaluationResult result = f_.generateResult();
+        final FitPoint result = f_.evaluate(startingPoint_);
         final MultivariateGradient gradient = f_.calculateDerivative(startingPoint_, result, _thetaPrecision);
 
         final MultivariatePoint direction = new MultivariatePoint(gradient.getGradient());
@@ -79,13 +79,12 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
     public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_,
                                                           MultivariatePoint startingPoint_,
-                                                          final EvaluationResult result_,
+                                                          final FitPoint result_,
                                                           MultivariatePoint direction_) throws ConvergenceException
     {
         final MultivariatePoint direction = new MultivariatePoint(direction_);
         final MultivariatePoint currentPoint = new MultivariatePoint(startingPoint_);
-        EvaluationResult currentResult = f_.generateResult();
-        //FitPoint currentFitPoint = f_.evaluate(currentPoint);
+        FitPoint currentResult = f_.evaluate(currentPoint);
 
         final int maxEvalCount = this.getMaxEvalCount();
         final int dimension = f_.dimension();
@@ -112,16 +111,16 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                     evaluationCount += (2 * dimension);
 
                     final MultivariatePoint trialPoint;
-                    final EvaluationResult trialRes;
+                    final FitPoint trialRes;
 
                     final MultivariatePoint pointA = new MultivariatePoint(gradient.getGradient());
                     pointA.scale(-1.0);
-                    final EvaluationResult resA = f_.generateResult();
+
 
                     if (null == gradient.getSecondDerivative())
                     {
                         trialPoint = pointA;
-                        trialRes = resA;
+                        trialRes = f_.evaluate(trialPoint);
 
                         //We need to control the magnitude of the root bracketing....
                         //We want this small enough that we are searching in a small interval, but not so small that
@@ -161,35 +160,34 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         pointA.add(currentPoint);
                         pointB.add(currentPoint);
 
-                        final EvaluationResult resB = f_.generateResult();
                         final FitPoint fitPointA = f_.evaluate(pointA);
                         final FitPoint fitPointB = f_.evaluate(pointB);
 
                         //Only take it if it is clearly better.....
-                        final double comparison = this.getComparator().compare(f_, pointA, pointB, resA, resB, fitPointA, fitPointB);
+                        final double comparison = this.getComparator().compare(fitPointA, fitPointB);
 
                         if (comparison <= -this.getComparator().getSigmaTarget())
                         {
                             //The straight derivative point is better....
                             trialPoint = pointA;
-                            trialRes = resA;
+                            trialRes = fitPointA;
                         }
                         else
                         {
-                            final double comp2 = this.getComparator().compare(f_, currentPoint, pointB, currentResult,
-                                    resB, fitPointCurrent, fitPointB);
+                            final double comp2 = this.getComparator().compare(
+                                    fitPointCurrent, fitPointB);
 
                             if (comp2 <= -this.getComparator().getSigmaTarget())
                             {
                                 //The second derivative point is no better than the current point, use the standard
                                 // derivative.
                                 trialPoint = pointA;
-                                trialRes = resA;
+                                trialRes = fitPointA;
                             }
                             else
                             {
                                 trialPoint = pointB;
-                                trialRes = resB;
+                                trialRes = fitPointB;
                             }
                         }
                     }
@@ -205,11 +203,11 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 evaluationCount += result.evaluationCount();
 
                 nextPoint.copy(result.getOptimum());
-                final EvaluationResult nextResult = result.minResult();
+                final FitPoint nextResult = result.minResult();
                 final FitPoint fitPointNext = f_.evaluate(nextPoint);
 
-                final double zScore = this.getComparator().compare(f_, currentPoint, nextPoint, currentResult,
-                        nextResult, fitPointCurrent, fitPointNext);
+                final double zScore = this.getComparator().compare(
+                        fitPointCurrent, fitPointNext);
 
 //                final double currentVal = currentResult.getMean();
 //                final double nextVal = nextResult.getMean();

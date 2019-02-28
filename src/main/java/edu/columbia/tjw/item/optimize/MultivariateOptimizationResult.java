@@ -19,12 +19,14 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+
 /**
  * @author tyler
  */
 public class MultivariateOptimizationResult extends GeneralOptimizationResult<MultivariatePoint>
 {
-    public MultivariateOptimizationResult(final MultivariatePoint minX_, final EvaluationResult minValue_,
+    public MultivariateOptimizationResult(final MultivariatePoint minX_, final FitPoint minValue_,
                                           final boolean converged_, final int evalCount_)
     {
         super(minX_, minValue_, converged_, evalCount_);

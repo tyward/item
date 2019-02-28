@@ -5,6 +5,7 @@ import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.ReducedParameterVector;
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointGenerator;
 import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
 import edu.columbia.tjw.item.optimize.*;
@@ -180,7 +181,7 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
 
     @Override
     protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_,
-                                                      EvaluationResult result_)
+                                                      FitPoint result_)
     {
         final double[] itemDeriv = new double[_packed.size()];
         final double[] totalDeriv = new double[_packed.size()];

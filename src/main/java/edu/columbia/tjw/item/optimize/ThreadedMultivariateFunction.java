@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.util.thread.GeneralTask;
 import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
 
@@ -136,7 +137,7 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
     }
 
     public synchronized final MultivariateGradient calculateDerivative(MultivariatePoint input_,
-                                                                       EvaluationResult result_, double precision_)
+                                                                       FitPoint result_, double precision_)
     {
         synchronized (_prepLock)
         {
@@ -221,7 +222,7 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
     protected abstract void evaluate(final int start_, final int end_, EvaluationResult result_);
 
     protected abstract MultivariateGradient evaluateDerivative(final int start_, final int end_,
-                                                               MultivariatePoint input_, EvaluationResult result_);
+                                                               MultivariatePoint input_, FitPoint result_);
 
     @Override
     public EvaluationResult generateResult(int start_, int end_)
@@ -243,9 +244,9 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
         private final int _end;
         private final int _rowCount;
         private final MultivariatePoint _input;
-        private final EvaluationResult _result;
+        private final FitPoint _result;
 
-        public DerivativeTask(final int start_, final int end_, MultivariatePoint input_, EvaluationResult result_,
+        public DerivativeTask(final int start_, final int end_, MultivariatePoint input_, FitPoint result_,
                               int rowCount_)
         {
             if (end_ <= start_)
@@ -267,7 +268,7 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
         @Override
         protected MultivariateGradient subRun()
         {
-            final EvaluationResult res;
+            final FitPoint res;
 
             synchronized (_prepLock)
             {

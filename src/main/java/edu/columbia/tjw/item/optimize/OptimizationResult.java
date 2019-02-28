@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+
 /**
  * @author tyler
  */
@@ -32,7 +34,7 @@ public interface OptimizationResult<V extends EvaluationPoint<V>>
 
     public double minValue();
 
-    public EvaluationResult minResult();
+    public FitPoint minResult();
 
     public int dataElementCount();
 
