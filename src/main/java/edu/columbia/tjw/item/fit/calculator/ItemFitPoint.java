@@ -11,7 +11,7 @@ import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements FitPoint<S, R, T>
+public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements FitPoint
 {
     private static final GeneralThreadPool POOL = GeneralThreadPool.singleton();
 
@@ -20,6 +20,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     private final ItemParameters<S, R, T> _params;
     private final BlockResultCompound _compound;
     private final int _blockSize;
+    private final int _totalSize;
 
     private int _nextBlock;
 
@@ -30,6 +31,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
         _params = _packed.generateParams();
         _compound = new BlockResultCompound();
         _blockSize = calculator_.getBlockSize();
+        _totalSize = calculator_.getRowCount();
         _nextBlock = 0;
     }
 
@@ -95,6 +97,30 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     public BlockResult getBlock(final int index_)
     {
         return _compound.getBlock(index_);
+    }
+
+    @Override
+    public double getMean()
+    {
+        if(this._nextBlock == 0) {
+            return 0.0;
+        }
+        // TODO: Is this right, shouldn't we make sure the counts line up first?
+        return this.getAggregated().getEntropyMean();
+    }
+
+    @Override
+    public double getStdDev() {
+        // TODO: Is this right, shouldn't we make sure the counts line up first?
+        if(this._nextBlock == 0) {
+            return 0.0;
+        }
+
+        return this.getAggregated().getEntropyMeanDev();
+    }
+
+    public int getSize() {
+        return this._totalSize;
     }
 
     private final class EntropyRunner extends GeneralTask<BlockResult>

@@ -4,7 +4,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 
-public interface FitPoint<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public interface FitPoint
 {
     int getBlockSize();
 
@@ -19,4 +19,10 @@ public interface FitPoint<S extends ItemStatus<S>, R extends ItemRegressor<R>, T
     void computeUntil(int endBlock_);
 
     BlockResult getBlock(int index_);
+
+    double getMean();
+
+    double getStdDev();
+
+    int getSize();
 }

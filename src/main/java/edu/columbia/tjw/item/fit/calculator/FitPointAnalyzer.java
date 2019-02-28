@@ -6,7 +6,7 @@ public final class FitPointAnalyzer
 {
     // How many blocks do we calculate at a time (to take advantage of threading). This should be several times the number of cores in the computer.
     private static final int DEFAULT_SUPERBLOCK_SIZE = 100;
-    private static final double DEFAULT_MIN_STD_DEV = 3.0;
+    private static final double DEFAULT_MIN_STD_DEV = 5.0;
 
     private final int _superBlockSize;
     private final double _minStdDev;

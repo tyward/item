@@ -84,6 +84,10 @@ public class FitPointGenerator<S extends ItemStatus<S>, R extends ItemRegressor<
         return _blockSize;
     }
 
+    public int getRowCount() {
+        return _grid.size();
+    }
+
     public List<BlockResultCalculator<S, R, T>> getCalculators()
     {
         return _blockCalculators;
