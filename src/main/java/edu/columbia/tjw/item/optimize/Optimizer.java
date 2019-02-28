@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+
 /**
  * @param <V> The type of points over which this can optimize
  * @param <F> The type of function this can optimize
@@ -79,6 +81,27 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         return _comparator;
     }
 
+    protected boolean checkYTolerance(final FitPoint aResult_, final FitPoint bResult_)
+    {
+        // Make sure everything has the same (approximate) level of computed results.
+        final int highWater = Math.max(aResult_.getNextBlock(), bResult_.getNextBlock());
+        final double meanA = aResult_.getMean(highWater);
+        final double meanB = bResult_.getMean(highWater);
+
+        final double stdDevA = aResult_.getStdDev(highWater);
+        final double stdDevB = bResult_.getStdDev(highWater);
+
+        final double raw = Math.abs(meanA - meanB);
+        final double adjusted = raw + this._stdDevThreshold * (stdDevA + stdDevB);
+
+        final double scale = Math.abs((meanA * meanA) + (meanB * meanB));
+
+        final double scaled = adjusted / scale;
+
+        final boolean output = scaled < this._yTol;
+        return output;
+    }
+
     /**
      * Figure out how far apart these two results could realistically be,
      * without attempting additional calculations.
@@ -104,6 +127,23 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         final double scaled = adjusted / scale;
 
         final boolean output = scaled < this._yTol;
+        return output;
+    }
+
+    protected boolean checkYTolerance(final FitPoint aResult_, final FitPoint bResult_,
+                                      final FitPoint cResult_)
+    {
+        // Make sure everything has the same (approximate) level of computed results.
+        int highWater = Math.max(aResult_.getNextBlock(), bResult_.getNextBlock());
+        highWater = Math.max(cResult_.getNextBlock(), highWater);
+        aResult_.computeUntil(highWater);
+        bResult_.computeUntil(highWater);
+        cResult_.computeUntil(highWater);
+
+        final boolean checkA = checkYTolerance(aResult_, bResult_);
+        final boolean checkB = checkYTolerance(bResult_, cResult_);
+
+        final boolean output = checkA && checkB;
         return output;
     }
 

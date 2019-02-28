@@ -85,6 +85,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
         final MultivariatePoint direction = new MultivariatePoint(direction_);
         final MultivariatePoint currentPoint = new MultivariatePoint(startingPoint_);
         EvaluationResult currentResult = f_.generateResult();
+        //FitPoint currentFitPoint = f_.evaluate(currentPoint);
 
         final int maxEvalCount = this.getMaxEvalCount();
         final int dimension = f_.dimension();
@@ -101,6 +102,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
         {
             while (xTolFailed && yTolFailed && (evaluationCount < maxEvalCount))
             {
+                final FitPoint fitPointCurrent = f_.evaluate(currentPoint);
                 final OptimizationResult<MultivariatePoint> result;
 
                 if (!firstLoop)
@@ -174,9 +176,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         }
                         else
                         {
-                            final FitPoint fitPointCurrent = f_.evaluate(currentPoint);
-                            final double comp2 = this.getComparator().compare(f_, currentPoint, pointB, currentResult
-                                    , resB, fitPointCurrent, fitPointB);
+                            final double comp2 = this.getComparator().compare(f_, currentPoint, pointB, currentResult,
+                                    resB, fitPointCurrent, fitPointB);
 
                             if (comp2 <= -this.getComparator().getSigmaTarget())
                             {
@@ -193,7 +194,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         }
                     }
 
-                    result = _optimizer.optimize(f_, currentPoint, currentResult, trialPoint, trialRes);
+                    result = _optimizer.optimize(f_, currentPoint, fitPointCurrent, trialPoint, f_.evaluate(trialPoint));
                 }
                 else
                 {
@@ -205,9 +206,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
                 nextPoint.copy(result.getOptimum());
                 final EvaluationResult nextResult = result.minResult();
-
-                final FitPoint fitPointCurrent = f_.evaluate(currentPoint);
                 final FitPoint fitPointNext = f_.evaluate(nextPoint);
+
                 final double zScore = this.getComparator().compare(f_, currentPoint, nextPoint, currentResult,
                         nextResult, fitPointCurrent, fitPointNext);
 
@@ -233,6 +233,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 stepMagnitude = currentPoint.distance(nextPoint);
                 currentPoint.copy(nextPoint);
                 currentResult = nextResult;
+                //currentFitPoint = fitPointNext;
             }
         }
         catch (final ConvergenceException e)
