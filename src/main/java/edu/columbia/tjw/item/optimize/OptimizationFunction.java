@@ -27,8 +27,6 @@ import edu.columbia.tjw.item.fit.calculator.FitPoint;
  */
 public interface OptimizationFunction<V extends EvaluationPoint<V>>
 {
-    public void value(final V input_, final int start_, final int end_, final EvaluationResult result_);
-
     public int numRows();
 
     public FitPoint evaluate(final V input_);

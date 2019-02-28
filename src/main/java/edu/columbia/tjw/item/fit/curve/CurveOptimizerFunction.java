@@ -102,18 +102,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
     }
 
     @Override
-    protected void evaluate(int start_, int end_, EvaluationResult result_)
-    {
-        if (start_ == end_)
-        {
-            return;
-        }
-
-        _packed.evaluate(start_, end_, result_);
-        return;
-    }
-
-    @Override
     protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_,
                                                       FitPoint result_)
     {

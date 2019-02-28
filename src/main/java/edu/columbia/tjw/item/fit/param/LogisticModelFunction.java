@@ -114,27 +114,6 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     }
 
     @Override
-    protected void evaluate(int start_, int end_, EvaluationResult result_)
-    {
-        if (start_ == end_)
-        {
-            return;
-        }
-
-        final ItemModel<S, R, T> localModel = _model.clone();
-
-        for (int i = start_; i < end_; i++)
-        {
-            final double ll = localModel.logLikelihood(_grid, i);
-
-            result_.add(ll, result_.getHighWater(), i + 1);
-        }
-
-        result_.setHighRow(end_);
-    }
-
-
-    @Override
     protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_,
                                                       FitPoint result_)
     {

@@ -47,69 +47,6 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
 
     public abstract int resultSize(final int start_, final int end_);
 
-    @Override
-    public synchronized final void value(MultivariatePoint input_, int start_, int end_, EvaluationResult result_)
-    {
-        if (start_ == end_)
-        {
-            //do nothing.
-            return;
-        }
-        if (start_ > end_)
-        {
-            throw new IllegalArgumentException("Start must be less than end.");
-        }
-        if (start_ < 0)
-        {
-            throw new IllegalArgumentException("Start must be nonnegative.");
-        }
-
-        synchronized (_prepLock)
-        {
-            prepare(input_);
-        }
-
-        final int numRows = (end_ - start_);
-        final int numTasks = 1 + (numRows / _blockSize);
-
-        final List<FunctionTask> taskList = new ArrayList<>(numTasks);
-
-        for (int i = 0; i < numTasks; i++)
-        {
-            final int thisStart = start_ + (i * _blockSize);
-
-            if (thisStart > end_)
-            {
-                break;
-            }
-
-            final int blockEnd = thisStart + _blockSize;
-            final int thisEnd = Math.min(end_, blockEnd);
-
-            if (thisEnd == thisStart)
-            {
-                break;
-            }
-
-            final int taskSize = this.resultSize(thisStart, thisEnd);
-            final FunctionTask task = new FunctionTask(thisStart, thisEnd, taskSize);
-            taskList.add(task);
-        }
-
-        final List<EvaluationResult> results = executeTasks(taskList);
-
-        //Some synchronization to make sure we don't read old data.
-        synchronized (result_)
-        {
-            for (final EvaluationResult next : results)
-            {
-                synchronized (next)
-                {
-                    result_.add(next, result_.getHighWater(), next.getHighRow());
-                }
-            }
-        }
-    }
 
     private <W> List<W> executeTasks(final List<? extends GeneralTask<W>> tasks_)
     {
@@ -120,8 +57,7 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
             if (_useThreading)
             {
                 POOL.execute(next);
-            }
-            else
+            } else
             {
                 next.run();
             }
@@ -219,8 +155,6 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
 
     protected abstract void prepare(final MultivariatePoint input_);
 
-    protected abstract void evaluate(final int start_, final int end_, EvaluationResult result_);
-
     protected abstract MultivariateGradient evaluateDerivative(final int start_, final int end_,
                                                                MultivariatePoint input_, FitPoint result_);
 
@@ -269,41 +203,5 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
 
     }
 
-    private final class FunctionTask extends GeneralTask<EvaluationResult>
-    {
-        private final int _start;
-        private final int _end;
-        private final int _evalCount;
-
-        public FunctionTask(final int start_, final int end_, final int evalCount_)
-        {
-            if (end_ <= start_)
-            {
-                throw new IllegalArgumentException("Invalid.");
-            }
-            _start = start_;
-            _end = end_;
-            _evalCount = evalCount_;
-        }
-
-        @Override
-        protected EvaluationResult subRun()
-        {
-            final EvaluationResult res;
-
-            synchronized (_prepLock)
-            {
-                res = new EvaluationResult(_evalCount);
-            }
-
-            synchronized (res)
-            {
-                ThreadedMultivariateFunction.this.evaluate(_start, _end, res);
-            }
-
-            return res;
-        }
-
-    }
 
 }
