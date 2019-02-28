@@ -62,8 +62,8 @@ public final class BlockResult
         if (analysisList_.get(0).hasDerivative())
         {
             derivative = new double[analysisList_.get(0)._derivative.length];
-        }
-        else {
+        } else
+        {
             derivative = null;
         }
 
@@ -75,10 +75,12 @@ public final class BlockResult
             h2 += next._sumEntropy2;
             count += next._size;
 
-            if(null != derivative) {
+            if (null != derivative)
+            {
                 final double weight = next._size;
 
-                for(int i = 0; i < derivative.length; i++) {
+                for (int i = 0; i < derivative.length; i++)
+                {
                     derivative[i] += weight * next.getDerivativeEntry(i);
                 }
             }
@@ -89,11 +91,13 @@ public final class BlockResult
             throw new IllegalArgumentException("Discontiguous blocks.");
         }
 
-        if(null != derivative) {
+        if (null != derivative)
+        {
             final double invWeight = 1.0 / count;
 
-            for(int i = 0; i < derivative.length; i++) {
-                derivative[i] += invWeight * derivative[i];
+            for (int i = 0; i < derivative.length; i++)
+            {
+                derivative[i] = invWeight * derivative[i];
             }
         }
 
@@ -176,6 +180,11 @@ public final class BlockResult
         }
 
         return _derivative[index_];
+    }
+
+    public double[] getDerivative()
+    {
+        return _derivative.clone();
     }
 
 //    @Override
