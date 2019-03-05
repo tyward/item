@@ -333,58 +333,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     }
 
-
-    /**
-     * Compute the derivative of the log likelihood with respect to the given
-     * parameters, over the given data set.
-     * <p>
-     * Note that this will be the SUM of the log likelihoods, meaning that
-     * you'll need to normalize it on your own if you plan to do so.
-     * <p>
-     * This function returns the count of the observations examined, so to
-     * produce the average log likelihood, just divide each element of the
-     * derivative by this number.
-     *
-     * @param grid_       The data that will be used for this computation.
-     * @param start_      The row to start at.
-     * @param end_        The row to end at, half open interval (end_ is not included
-     *                    in the computation).
-     * @param derivative_ The function's primary output, the derivative of the
-     *                    LL, the i'th element of which is with respect to the
-     *                    regressorPointer_[i]'th regressor and the statusPointers_[i]'th status.
-     * @return The total observation count used for this computation.
-     */
-    public int computeDerivative(final ParamFittingGrid<S, R, T> grid_, final int start_, final int end_,
-                                 PackedParameters<S, R, T> packed_, final double[] derivative_)
-    {
-        if (end_ < start_)
-        {
-            throw new IllegalArgumentException("Count must be nonnegative.");
-        }
-
-        Arrays.fill(derivative_, 0.0);
-
-        if (end_ == start_)
-        {
-            return 0;
-        }
-
-        // Calculate.
-        final double[] tmp = new double[derivative_.length];
-
-        for (int i = start_; i < end_; i++)
-        {
-            computeGradient(grid_, packed_, i, tmp, null);
-
-            for (int k = 0; k < tmp.length; k++)
-            {
-                derivative_[k] += tmp[k];
-            }
-        }
-
-        return (end_ - start_);
-    }
-
     /**
      * N.B: This is NOT threadsafe. It contains some use of internal state that
      * cannot be shared. Clone the model as needed.
