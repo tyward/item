@@ -21,10 +21,10 @@ package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.fit.ParamFittingGrid;
-import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
-import edu.columbia.tjw.item.optimize.*;
+import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
+import edu.columbia.tjw.item.optimize.MultivariatePoint;
+import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
 
 /**
  * @param <S> The status type for this optimizer function
@@ -105,14 +105,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         _params = new ItemCurveParams<>(_initParams, _factory, _workspace);
 
         _packed.prepare(input_);
-    }
-
-    @Override
-    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_,
-                                                      FitPoint result_)
-    {
-        final MultivariateGradient altGrad = _packed.evaluateDerivative(start_, end_, input_, result_);
-        return altGrad;
     }
 
     @Override

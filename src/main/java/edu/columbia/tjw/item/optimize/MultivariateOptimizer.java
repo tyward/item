@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.util.LogUtil;
 
@@ -69,7 +70,13 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                                                           MultivariatePoint startingPoint_) throws ConvergenceException
     {
         final FitPoint result = f_.evaluate(startingPoint_);
-        final MultivariateGradient gradient = f_.calculateDerivative(startingPoint_, result, _thetaPrecision);
+
+        // Testing code.
+        final FitPoint point = f_.evaluateGradient(startingPoint_);
+        point.computeUntil(point.getBlockCount());
+        final BlockResult aggregated = point.getAggregated();
+
+        final MultivariateGradient gradient = new MultivariateGradient(aggregated.getDerivative(), null);
 
         final MultivariatePoint direction = new MultivariatePoint(gradient.getGradient());
         direction.scale(-1.0);
@@ -106,8 +113,12 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
                 if (!firstLoop)
                 {
-                    final MultivariateGradient gradient = f_.calculateDerivative(currentPoint, currentResult,
-                            this._thetaPrecision);
+                    final FitPoint point = f_.evaluateGradient(currentPoint);
+                    point.computeUntil(point.getBlockCount());
+                    final BlockResult aggregated = point.getAggregated();
+
+                    final MultivariateGradient gradient = new MultivariateGradient(aggregated.getDerivative(), null);
+
                     evaluationCount += (2 * dimension);
 
                     final MultivariatePoint trialPoint;

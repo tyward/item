@@ -165,39 +165,4 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
         return localModel.logLikelihood(_grid, index_);
     }
 
-    @Override
-    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_,
-                                                      FitPoint result_)
-    {
-        final double[] itemDeriv = new double[_packed.size()];
-        final double[] totalDeriv = new double[_packed.size()];
-        final ItemModel<S, R, T> localModel = _updatedModel.clone();
-
-        for (int i = start_; i < end_; i++)
-        {
-            localModel.computeGradient(this._grid, _packed, i, itemDeriv, null);
-
-
-            for (int w = 0; w < itemDeriv.length; w++)
-            {
-                totalDeriv[w] += itemDeriv[w];
-            }
-        }
-
-        final int count = (end_ - start_);
-
-        //N.B: we are computing the negative log likelihood.
-        final double invCount = 1.0 / count;
-
-        for (int i = 0; i < totalDeriv.length; i++)
-        {
-            totalDeriv[i] = totalDeriv[i] * invCount;
-        }
-
-
-        final MultivariatePoint der = new MultivariatePoint(totalDeriv);
-
-        final MultivariateGradient grad = new MultivariateGradient(input_, der, null, 0.0);
-        return grad;
-    }
 }

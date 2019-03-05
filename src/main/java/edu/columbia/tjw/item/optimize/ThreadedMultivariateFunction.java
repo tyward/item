@@ -19,7 +19,6 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.util.thread.GeneralTask;
 import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
 
@@ -57,7 +56,8 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
             if (_useThreading)
             {
                 POOL.execute(next);
-            } else
+            }
+            else
             {
                 next.run();
             }
@@ -72,136 +72,11 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
         return output;
     }
 
-    public synchronized final MultivariateGradient calculateDerivative(MultivariatePoint input_,
-                                                                       FitPoint result_, double precision_)
-    {
-        synchronized (_prepLock)
-        {
-            this.prepare(input_);
-        }
-
-        final int start = 0;
-        final int end = this.numRows();
-
-        final int numRows = (end - start);
-        final int numTasks = 1 + (numRows / _blockSize);
-
-        final List<DerivativeTask> taskList = new ArrayList<>(numTasks);
-
-        for (int i = 0; i < numTasks; i++)
-        {
-            final int thisStart = start + (i * _blockSize);
-
-            if (thisStart > end)
-            {
-                break;
-            }
-
-            final int blockEnd = thisStart + _blockSize;
-            final int thisEnd = Math.min(end, blockEnd);
-
-            if (thisEnd == thisStart)
-            {
-                break;
-            }
-
-            final int size = (thisEnd - thisStart);
-            final DerivativeTask task = new DerivativeTask(thisStart, thisEnd, input_, result_, size);
-            taskList.add(task);
-        }
-
-        final List<MultivariateGradient> results = executeTasks(taskList);
-
-        int totalSize = 0;
-        final double[] gradient = new double[results.get(0).getGradient().getDimension()];
-
-        for (int i = 0; i < results.size(); i++)
-        {
-            final MultivariateGradient next = results.get(i);
-            final DerivativeTask task = taskList.get(i);
-
-            synchronized (task)
-            {
-                final int size = task.getRowCount();
-                totalSize += size;
-
-                final MultivariatePoint nextGrad = next.getGradient();
-
-                for (int w = 0; w < nextGrad.getDimension(); w++)
-                {
-                    final double gradVal = nextGrad.getElement(w);
-                    final double weighted = size * gradVal;
-                    gradient[w] += weighted;
-                }
-            }
-        }
-
-        if (totalSize > 0)
-        {
-            for (int w = 0; w < gradient.length; w++)
-            {
-                gradient[w] = gradient[w] / totalSize;
-            }
-        }
-
-        final MultivariatePoint point = new MultivariatePoint(gradient);
-
-        final MultivariateGradient grad = new MultivariateGradient(input_, point, null, 0.0);
-        return grad;
-    }
 
     @Override
     public abstract int numRows();
 
     protected abstract void prepare(final MultivariatePoint input_);
-
-    protected abstract MultivariateGradient evaluateDerivative(final int start_, final int end_,
-                                                               MultivariatePoint input_, FitPoint result_);
-
-    private final class DerivativeTask extends GeneralTask<MultivariateGradient>
-    {
-        private final int _start;
-        private final int _end;
-        private final int _rowCount;
-        private final MultivariatePoint _input;
-        private final FitPoint _result;
-
-        public DerivativeTask(final int start_, final int end_, MultivariatePoint input_, FitPoint result_,
-                              int rowCount_)
-        {
-            if (end_ <= start_)
-            {
-                throw new IllegalArgumentException("Invalid.");
-            }
-            _start = start_;
-            _end = end_;
-            _input = input_;
-            _result = result_;
-            _rowCount = rowCount_;
-        }
-
-        public int getRowCount()
-        {
-            return _rowCount;
-        }
-
-        @Override
-        protected MultivariateGradient subRun()
-        {
-            final FitPoint res;
-
-            synchronized (_prepLock)
-            {
-                res = _result;
-            }
-
-            synchronized (this)
-            {
-                return ThreadedMultivariateFunction.this.evaluateDerivative(_start, _end, _input, res);
-            }
-        }
-
-    }
 
 
 }

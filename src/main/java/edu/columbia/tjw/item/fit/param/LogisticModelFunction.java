@@ -23,10 +23,11 @@ import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
-import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointGenerator;
 import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
-import edu.columbia.tjw.item.optimize.*;
+import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
+import edu.columbia.tjw.item.optimize.MultivariatePoint;
+import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
 
 /**
  * @param <S> The status type for this grid
@@ -117,41 +118,6 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
         final ItemParameters<S, R, T> updated = _packed.generateParams();
         _model = new ItemModel<>(updated);
-    }
-
-    @Override
-    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_,
-                                                      FitPoint result_)
-    {
-        final int dimension = input_.getDimension();
-        final double[] derivative = new double[dimension];
-
-        if (start_ >= end_)
-        {
-            final MultivariatePoint der = new MultivariatePoint(derivative);
-            return new MultivariateGradient(input_, der, null, 0.0);
-        }
-
-        final ItemModel<S, R, T> localModel = _model.clone();
-
-        final int count = localModel.computeDerivative(_grid, start_, end_, _packed, derivative);
-
-        if (count > 0)
-        {
-            //N.B: we are computing the negative log likelihood. 
-            final double invCount = 1.0 / count;
-
-            for (int i = 0; i < dimension; i++)
-            {
-                derivative[i] = derivative[i] * invCount;
-            }
-        }
-
-        final MultivariatePoint der = new MultivariatePoint(derivative);
-
-        final MultivariateGradient grad = new MultivariateGradient(input_, der, null, 0.0);
-
-        return grad;
     }
 
     @Override

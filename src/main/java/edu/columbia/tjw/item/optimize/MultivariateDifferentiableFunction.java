@@ -27,7 +27,4 @@ import edu.columbia.tjw.item.fit.calculator.FitPoint;
 public interface MultivariateDifferentiableFunction extends MultivariateFunction
 {
 
-    public MultivariateGradient calculateDerivative(final MultivariatePoint input_, final FitPoint result_,
-                                                    final double precision_);
-
 }
