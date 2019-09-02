@@ -38,7 +38,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     private final S _status;
     private final int _selfIndex;
-    private final R _intercept;
+    private R _intercept; // deprecated.
     private final List<ItemCurve<T>> _trans;
     private final List<ParamFilter<S, R, T>> _filters;
     private final UniqueBetaFilter _uniqFilter = new UniqueBetaFilter();
@@ -68,7 +68,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         _status = status_;
-        _intercept = intercept_;
 
         _betas = new double[status_.getReachableCount()][1];
 
@@ -98,7 +97,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     private ItemParameters(ItemParameters<S, R, T> base_, ItemParametersVector packed_)
     {
         _status = base_.getStatus();
-        _intercept = base_._intercept;
         _selfIndex = base_._selfIndex;
 
         _filters = base_._filters;
@@ -204,7 +202,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                            final Collection<ParamFilter<S, R, T>> addedFilters_)
     {
         _status = base_._status;
-        _intercept = base_._intercept;
         _selfIndex = base_._selfIndex;
         _trans = base_._trans;
         _uniqueFields = base_._uniqueFields;
@@ -268,7 +265,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                            final S toStatus_)
     {
         _status = base_._status;
-        _intercept = base_._intercept;
         _selfIndex = base_._selfIndex;
         _filters = base_._filters;
 
@@ -389,7 +385,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     private ItemParameters(final ItemParameters<S, R, T> base_, final int[] dropIndices_)
     {
         _status = base_._status;
-        _intercept = base_._intercept;
         _selfIndex = base_._selfIndex;
         _filters = base_._filters;
 
