@@ -12,18 +12,19 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+
 /**
- *
- * @author tyler
  * @param <V> The type of points over which this can optimize
  * @param <F> The type of function this can optimize
+ * @author tyler
  */
 public abstract class Optimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>>
 {
@@ -43,8 +44,6 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         this(DEFAULT_XTOL, DEFAULT_YTOL, blockSize_, maxEvalCount_);
     }
 
-    public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_) throws ConvergenceException;
-
     public Optimizer(final double xTol_, final double yTol_, final int blockSize_, final int maxEvalCount_)
     {
         _blockSize = blockSize_;
@@ -54,6 +53,8 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
 
         _comparator = new BasicAdaptiveComparator<>(_blockSize, _stdDevThreshold);
     }
+
+    public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_) throws ConvergenceException;
 
     public double getXTolerance()
     {
@@ -80,22 +81,15 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         return _comparator;
     }
 
-    /**
-     * Figure out how far apart these two results could realistically be,
-     * without attempting additional calculations.
-     *
-     * @param aResult_ The first result
-     * @param bResult_ The second result
-     * @return True if aResult_.getMean() is within tolerance of
-     * bResult_.getMean()
-     */
-    protected boolean checkYTolerance(final EvaluationResult aResult_, final EvaluationResult bResult_)
+    protected boolean checkYTolerance(final FitPoint aResult_, final FitPoint bResult_)
     {
-        final double meanA = aResult_.getMean();
-        final double meanB = bResult_.getMean();
+        // Make sure everything has the same (approximate) level of computed results.
+        final int highWater = Math.max(aResult_.getNextBlock(), bResult_.getNextBlock());
+        final double meanA = aResult_.getMean(highWater);
+        final double meanB = bResult_.getMean(highWater);
 
-        final double stdDevA = aResult_.getStdDev();
-        final double stdDevB = bResult_.getStdDev();
+        final double stdDevA = aResult_.getStdDev(highWater);
+        final double stdDevB = bResult_.getStdDev(highWater);
 
         final double raw = Math.abs(meanA - meanB);
         final double adjusted = raw + this._stdDevThreshold * (stdDevA + stdDevB);
@@ -108,8 +102,17 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         return output;
     }
 
-    protected boolean checkYTolerance(final EvaluationResult aResult_, final EvaluationResult bResult_, final EvaluationResult cResult_)
+
+    protected boolean checkYTolerance(final FitPoint aResult_, final FitPoint bResult_,
+                                      final FitPoint cResult_)
     {
+        // Make sure everything has the same (approximate) level of computed results.
+        int highWater = Math.max(aResult_.getNextBlock(), bResult_.getNextBlock());
+        highWater = Math.max(cResult_.getNextBlock(), highWater);
+        aResult_.computeUntil(highWater);
+        bResult_.computeUntil(highWater);
+        cResult_.computeUntil(highWater);
+
         final boolean checkA = checkYTolerance(aResult_, bResult_);
         final boolean checkB = checkYTolerance(bResult_, cResult_);
 

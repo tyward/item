@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item;
@@ -22,9 +22,8 @@ package edu.columbia.tjw.item;
 import java.io.Serializable;
 
 /**
- *
- * @author tyler
  * @param <V> The type of the ITEM curve
+ * @author tyler
  */
 public interface ItemCurve<V extends ItemCurveType<V>>
         extends Serializable, Comparable<ItemCurve<V>>
@@ -51,7 +50,7 @@ public interface ItemCurve<V extends ItemCurveType<V>>
      * parameter, at x_
      *
      * @param index_ The index of the target parameter
-     * @param x_ The point at which df/dx(x) is desired
+     * @param x_     The point at which df/dx(x) is desired
      * @return THe derivative of f(x) at x with respect to parameter index_
      */
     public double derivative(int index_, double x_);

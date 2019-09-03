@@ -12,20 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.util.thread;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- *
  * @author tyler
  */
 public class GeneralThreadPool extends ThreadPoolExecutor
@@ -35,11 +36,6 @@ public class GeneralThreadPool extends ThreadPoolExecutor
     private static final int BASE_SIZE = Math.min(NUM_PROCESSORS, MAX_THREADS);
     private static final int MAX_SIZE = Math.min(2 * NUM_PROCESSORS, MAX_THREADS);
     private static final GeneralThreadPool SINGLETON = new GeneralThreadPool();
-
-    public static GeneralThreadPool singleton()
-    {
-        return SINGLETON;
-    }
 
     public GeneralThreadPool(final int maxSize_)
     {
@@ -52,6 +48,29 @@ public class GeneralThreadPool extends ThreadPoolExecutor
 
         this.setThreadFactory(new GeneralFactory());
 
+    }
+
+    public static GeneralThreadPool singleton()
+    {
+        return SINGLETON;
+    }
+
+    public <V> List<V> runAll(final List<? extends GeneralTask<V>> tasks_)
+    {
+        for (final GeneralTask<V> task : tasks_)
+        {
+            this.execute(task);
+        }
+
+        final List<V> output = new ArrayList<>(tasks_.size());
+
+        for (final GeneralTask<V> task : tasks_)
+        {
+            final V next = task.waitForCompletion();
+            output.add(next);
+        }
+
+        return output;
     }
 
     private static final class GeneralFactory implements ThreadFactory

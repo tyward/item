@@ -12,30 +12,23 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item;
 
+import edu.columbia.tjw.item.fit.PackedParameters;
+
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
- *
- * @author tyler
  * @param <S> The status type for this model
  * @param <R> The regressor type for this model
  * @param <T> The curve type for this model
+ * @author tyler
  */
 public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
 {
@@ -45,7 +38,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     private final S _status;
     private final int _selfIndex;
-    private final R _intercept;
+    private R _intercept; // deprecated.
     private final List<ItemCurve<T>> _trans;
     private final List<ParamFilter<S, R, T>> _filters;
     private final UniqueBetaFilter _uniqFilter = new UniqueBetaFilter();
@@ -75,7 +68,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         _status = status_;
-        _intercept = intercept_;
 
         _betas = new double[status_.getReachableCount()][1];
 
@@ -97,16 +89,119 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     }
 
     /**
+     * We will not change the structure of the params at all, merely changing the value of some betas.
+     *
+     * @param base_
+     * @param packed_
+     */
+    private ItemParameters(ItemParameters<S, R, T> base_, ItemParametersVector packed_)
+    {
+        _status = base_.getStatus();
+        _selfIndex = base_._selfIndex;
+
+        _filters = base_._filters;
+        _uniqueFields = base_._uniqueFields;
+        _fieldOffsets = base_._fieldOffsets;
+        _transOffsets = base_._transOffsets;
+        _uniqueBeta = base_._uniqueBeta;
+        _effectiveParamCount = base_._effectiveParamCount;
+
+
+        // We will go through and replace each of these curves...
+        final List<ItemCurve<T>> trans = new ArrayList<>(base_._trans);
+        _betas = new double[_status.getReachableCount()][base_._uniqueBeta.length];
+
+        //Now we fill the data.
+        int pointer = 0;
+
+        final S fromStatus = this.getStatus();
+        final List<S> reachable = fromStatus.getReachable();
+
+        for (final S next : reachable)
+        {
+            for (int i = 0; i < ItemParameters.this.getEntryCount(); i++)
+            {
+                final S statusRestrict = ItemParameters.this.getEntryStatusRestrict(i);
+
+                if (statusRestrict == null)
+                {
+                    if (next == fromStatus)
+                    {
+                        continue;
+                    }
+
+                    final int nextIndex = this.toStatusIndex(next);
+                    _betas[nextIndex][i] = packed_.getParameter(pointer++);
+                }
+                else
+                {
+                    final int nextIndex = this.toStatusIndex(statusRestrict);
+
+                    if (next != statusRestrict)
+                    {
+                        continue;
+                    }
+
+                    if (!packed_.isBeta(pointer))
+                    {
+                        throw new IllegalArgumentException("Impossible.");
+                    }
+
+                    _betas[nextIndex][i] = packed_.getParameter(pointer++);
+                }
+
+                for (int z = 0; z < ItemParameters.this.getEntryDepth(i); z++)
+                {
+                    final ItemCurve<T> curve = base_.getEntryCurve(i, z);
+
+                    if (null == curve)
+                    {
+                        continue;
+                    }
+
+                    final T curveType = curve.getCurveType();
+                    final int curveParamCount = curveType.getParamCount();
+                    final ItemCurveFactory<R, T> factory = curveType.getFactory();
+
+                    final double[] curveParams = new double[curveParamCount];
+
+                    for (int w = 0; w < curveParamCount; w++)
+                    {
+                        if (!packed_.isCurve(pointer) || packed_.getDepth(pointer) != z || packed_.getCurveIndex(pointer) != w)
+                        {
+                            throw new IllegalArgumentException("Impossible.");
+                        }
+
+                        curveParams[w] = packed_.getParameter(pointer++);
+                    }
+
+                    final int listIndex = base_.getEntryCurveOffset(i, z);
+                    final ItemCurve<T> newCurve = factory.generateCurve(curveType, 0, curveParams);
+                    trans.set(listIndex, newCurve);
+                }
+            }
+        }
+
+        if (pointer != base_.getEffectiveParamCount())
+        {
+            throw new IllegalArgumentException("Impossible: " + pointer + " != " + base_.getEffectiveParamCount());
+        }
+
+        _trans = Collections.unmodifiableList(trans);
+    }
+
+
+    /**
      * The constructor used to change betas, or add filters.
      *
      * @param base_
      * @param betas_
      * @param addedFilters_
      */
-    private ItemParameters(final ItemParameters<S, R, T> base_, final double[][] betas_, final Collection<ParamFilter<S, R, T>> addedFilters_)
+    private ItemParameters(final ItemParameters<S, R, T> base_, final double[][] betas_,
+                           final Collection<ParamFilter<S, R, T>> addedFilters_)
     {
         _status = base_._status;
-        _intercept = base_._intercept;
         _selfIndex = base_._selfIndex;
         _trans = base_._trans;
         _uniqueFields = base_._uniqueFields;
@@ -165,36 +260,26 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
      * Used to make a new set of parameters with a new entry.
      *
      * @param base_
-     * @param regs_
-     * @param curves_
      */
-    private ItemParameters(final ItemParameters<S, R, T> base_, final ItemCurveParams<R, T> curveParams_, final S toStatus_)
+    private ItemParameters(final ItemParameters<S, R, T> base_, final ItemCurveParams<R, T> curveParams_,
+                           final S toStatus_)
     {
         _status = base_._status;
-        _intercept = base_._intercept;
         _selfIndex = base_._selfIndex;
         _filters = base_._filters;
 
         final SortedSet<R> newFields = new TreeSet<>();
-
-        //Workaround for issues with nulls.
-        final Set<ItemCurve<T>> newTrans = new HashSet<>();
-
         newFields.addAll(base_._uniqueFields);
         newFields.addAll(curveParams_.getRegressors());
-
-        newTrans.addAll(base_._trans);
-        newTrans.addAll(curveParams_.getCurves());
 
         //Always add the new entry to the end...
         final int baseEntryCount = base_.getEntryCount();
         final int newEntryCount = baseEntryCount + 1;
         final int endIndex = baseEntryCount;
 
-        //Just add the new entry to the end of the list.
-        _trans = Collections.unmodifiableList(new ArrayList<>(newTrans));
         _uniqueFields = Collections.unmodifiableList(new ArrayList<>(newFields));
 
+        //Just add the new entry to the end of the list.
         _uniqueBeta = Arrays.copyOf(base_._uniqueBeta, newEntryCount);
 
         final int toIndex;
@@ -205,12 +290,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
         else
         {
-            toIndex = _status.getReachable().indexOf(toStatus_);
-
-            if (toIndex == -1)
-            {
-                throw new IllegalArgumentException("Not reachable status: " + toStatus_);
-            }
+            toIndex = getToIndex(toStatus_);
         }
 
         _uniqueBeta[endIndex] = toIndex;
@@ -224,6 +304,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             _betas[i] = Arrays.copyOf(base_._betas[i], newEntryCount);
         }
 
+        //Careful about null curves.....
+        final List<ItemCurve<T>> newTrans = new ArrayList<>();
+        newTrans.add(null);
+
         //First, pull in all the old entries.
         for (int i = 0; i < baseEntryCount; i++)
         {
@@ -235,9 +319,21 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             {
                 final R field = base_.getEntryRegressor(i, w);
                 final ItemCurve<T> curve = base_.getEntryCurve(i, w);
+                final int transIndex;
+
+                if (null == curve)
+                {
+                    transIndex = 0;
+                }
+                else
+                {
+                    transIndex = newTrans.size();
+                    newTrans.add(curve);
+                }
+
 
                 _fieldOffsets[i][w] = _uniqueFields.indexOf(field);
-                _transOffsets[i][w] = _trans.indexOf(curve);
+                _transOffsets[i][w] = transIndex; //_trans.indexOf(curve);
             }
         }
 
@@ -251,9 +347,21 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         {
             final R field = curveParams_.getRegressor(i);
             final ItemCurve<T> curve = curveParams_.getCurve(i);
+            final int transIndex;
+
+            if (null == curve)
+            {
+                transIndex = 0;
+            }
+            else
+            {
+                transIndex = newTrans.size();
+                newTrans.add(curve);
+            }
+
 
             _fieldOffsets[endIndex][i] = _uniqueFields.indexOf(field);
-            _transOffsets[endIndex][i] = _trans.indexOf(curve);
+            _transOffsets[endIndex][i] = transIndex; //_trans.indexOf(curve);
         }
 
         if (toIndex != -1)
@@ -263,7 +371,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             _betas[toIndex][INTERCEPT_INDEX] += curveParams_.getIntercept();
         }
 
+        _trans = Collections.unmodifiableList(new ArrayList<>(newTrans));
         _effectiveParamCount = calculateEffectiveParamCount();
+
     }
 
     /**
@@ -275,7 +385,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     private ItemParameters(final ItemParameters<S, R, T> base_, final int[] dropIndices_)
     {
         _status = base_._status;
-        _intercept = base_._intercept;
         _selfIndex = base_._selfIndex;
         _filters = base_._filters;
 
@@ -427,6 +536,19 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return _effectiveParamCount;
     }
 
+    public int getToIndex(final S toStatus_)
+    {
+        final int toIndex = _status.getReachable().indexOf(toStatus_);
+
+        if (toIndex == -1)
+        {
+            throw new IllegalArgumentException("Not reachable status: " + toStatus_);
+        }
+
+        return toIndex;
+    }
+
+
     public int getInterceptIndex()
     {
         return INTERCEPT_INDEX;
@@ -473,7 +595,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     /**
      * This function will find the entry corresponding to the given curve
      * parameters.
-     *
+     * <p>
      * HOWEVER, it is necessary for the entry to match exactly, meaning many of
      * the constituent objects must be the exact same object. This is most
      * useful for (for instance) finding the entry of some ItemCurveParams that
@@ -577,7 +699,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return _trans;
     }
 
-    public boolean betaIsFrozen(S toStatus_, int paramEntry_, final Collection<ParamFilter<S, R, T>> otherFilters_)
+    public boolean betaIsFrozen(S toStatus_, int paramEntry_)
     {
         if (_uniqFilter.betaIsFrozen(this, toStatus_, paramEntry_))
         {
@@ -592,23 +714,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             }
         }
 
-        if (null == otherFilters_)
-        {
-            return false;
-        }
-
-        for (final ParamFilter<S, R, T> next : otherFilters_)
-        {
-            if (next.betaIsFrozen(this, toStatus_, paramEntry_))
-            {
-                return true;
-            }
-        }
-
         return false;
     }
 
-    public boolean curveIsForbidden(S toStatus_, ItemCurveParams<R, T> curveParams_, final Collection<ParamFilter<S, R, T>> otherFilters_)
+    public boolean curveIsForbidden(S toStatus_, ItemCurveParams<R, T> curveParams_)
     {
         if (_uniqFilter.curveIsForbidden(this, toStatus_, curveParams_))
         {
@@ -616,19 +725,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         for (final ParamFilter<S, R, T> next : getFilters())
-        {
-            if (next.curveIsForbidden(this, toStatus_, curveParams_))
-            {
-                return true;
-            }
-        }
-
-        if (null == otherFilters_)
-        {
-            return false;
-        }
-
-        for (final ParamFilter<S, R, T> next : otherFilters_)
         {
             if (next.curveIsForbidden(this, toStatus_, curveParams_))
             {
@@ -679,7 +775,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             keep[i] = false;
         }
 
-        return dropEntries(field_, keep);
+        return dropEntries(keep);
     }
 
     public ItemParameters<S, R, T> dropIndex(final int index_)
@@ -689,10 +785,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         Arrays.fill(keep, true);
         keep[index_] = false;
 
-        return dropEntries(null, keep);
+        return dropEntries(keep);
     }
 
-    private ItemParameters<S, R, T> dropEntries(final R field_, final boolean[] keep_)
+    private ItemParameters<S, R, T> dropEntries(final boolean[] keep_)
     {
         int dropCount = 0;
 
@@ -722,7 +818,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     /**
      * Adds an empty beta entry, with just the given field.
-     *
+     * <p>
      * Note, if these parameters already contain a raw flag for this beta, then
      * this is returned unchanged.
      *
@@ -754,7 +850,6 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
      *
      * @param curveParams_
      * @param toStatus_
-     *
      * @return A new set of parameters, with the given curve added and its beta
      * set to zero.
      */
@@ -910,6 +1005,11 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return output;
     }
 
+    public PackedParameters<S, R, T> generatePacked()
+    {
+        return new ItemParametersVector();
+    }
+
     private final class UniqueBetaFilter implements ParamFilter<S, R, T>
     {
         private static final long serialVersionUID = 0x49e89a36e4553a69L;
@@ -938,7 +1038,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         @Override
-        public boolean curveIsForbidden(ItemParameters<S, R, T> params_, S toStatus_, ItemCurveParams<R, T> curveParams_)
+        public boolean curveIsForbidden(ItemParameters<S, R, T> params_, S toStatus_,
+                                        ItemCurveParams<R, T> curveParams_)
         {
             //We don't forbid any new additions, except where fromStatus_ == toStatus_
             return (params_.getStatus() == toStatus_);
@@ -946,4 +1047,212 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     }
 
+    private final class ItemParametersVector implements PackedParameters<S, R, T>
+    {
+        private final double[] _paramValues;
+        private final int[] _toStatus;
+        private final int[] _entryIndex;
+        private final int[] _curveDepth;
+        private final int[] _curveIndex;
+        private final boolean[] _betaIsFrozen;
+
+        private ItemParameters<S, R, T> _generated = null;
+
+        public ItemParametersVector(final ItemParametersVector vec_) {
+            _paramValues = vec_._paramValues.clone();
+            _toStatus = vec_._toStatus;
+            _entryIndex = vec_._entryIndex;
+            _curveDepth = vec_._curveDepth;
+            _curveIndex = vec_._curveIndex;
+            _betaIsFrozen = vec_._betaIsFrozen;
+        }
+
+        public ItemParametersVector()
+        {
+            final int paramCount = ItemParameters.this.getEffectiveParamCount();
+
+            _paramValues = new double[paramCount];
+            _toStatus = new int[paramCount];
+            _entryIndex = new int[paramCount];
+            _curveDepth = new int[paramCount];
+            _curveIndex = new int[paramCount];
+            _betaIsFrozen = new boolean[paramCount];
+
+            int pointer = 0;
+
+            final S fromStatus = ItemParameters.this.getStatus();
+            final List<S> reachable = fromStatus.getReachable();
+
+            for (final S next : reachable)
+            {
+                for (int i = 0; i < ItemParameters.this.getEntryCount(); i++)
+                {
+                    final S statusRestrict = ItemParameters.this.getEntryStatusRestrict(i);
+
+                    if (statusRestrict == null)
+                    {
+                        if (next == fromStatus)
+                        {
+                            continue;
+                        }
+
+                        pointer = fillBeta(next, i, pointer);
+                    }
+                    else
+                    {
+                        if (next != statusRestrict)
+                        {
+                            continue;
+                        }
+
+                        pointer = fillBeta(statusRestrict, i, pointer);
+                        final int toIndex = ItemParameters.this.getToIndex(statusRestrict);
+
+                        for (int z = 0; z < ItemParameters.this.getEntryDepth(i); z++)
+                        {
+                            final ItemCurve<T> curve = ItemParameters.this.getEntryCurve(i, z);
+
+                            if (null == curve)
+                            {
+                                continue;
+                            }
+
+                            final int curveParamCount = curve.getCurveType().getParamCount();
+
+
+                            for (int w = 0; w < curveParamCount; w++)
+                            {
+                                final double curveParam = curve.getParam(w);
+                                pointer = fillOne(curveParam, toIndex, i, z, w, pointer);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (pointer != paramCount)
+            {
+                throw new IllegalArgumentException("Impossible: " + pointer + " != " + paramCount);
+            }
+        }
+
+        private int fillBeta(final S toStatus_, final int entryIndex_, final int pointer_)
+        {
+            final int toIndex = ItemParameters.this.getToIndex(toStatus_);
+            _betaIsFrozen[pointer_] = ItemParameters.this.betaIsFrozen(toStatus_, entryIndex_);
+            return fillOne(ItemParameters.this.getBeta(toIndex, entryIndex_), toIndex, entryIndex_, -1, -1, pointer_);
+
+        }
+
+        private int fillOne(final double val_, final int toStatus_, final int entryIndex_, final int curveDepth_,
+                            final int curveIndex_, final int pointer_)
+        {
+            _paramValues[pointer_] = val_;
+            _toStatus[pointer_] = toStatus_;
+            _entryIndex[pointer_] = entryIndex_;
+            _curveDepth[pointer_] = curveDepth_;
+            _curveIndex[pointer_] = curveIndex_;
+            return pointer_ + 1;
+        }
+
+        @Override
+        public int size()
+        {
+            return _paramValues.length;
+        }
+
+        @Override
+        public double[] getPacked()
+        {
+            return _paramValues.clone();
+        }
+
+        @Override
+        public synchronized void updatePacked(double[] newParams_)
+        {
+            if (newParams_.length != _paramValues.length)
+            {
+                throw new IllegalArgumentException("Params wrong length.");
+            }
+
+            System.arraycopy(newParams_, 0, _paramValues, 0, _paramValues.length);
+            _generated = null;
+        }
+
+        @Override
+        public double getParameter(int index_)
+        {
+            return _paramValues[index_];
+        }
+
+        @Override
+        public synchronized void setParameter(int index_, double value_)
+        {
+            _generated = null;
+            _paramValues[index_] = value_;
+        }
+
+        @Override
+        public boolean isBeta(int index_)
+        {
+            return _curveIndex[index_] == -1;
+        }
+
+        @Override
+        public boolean betaIsFrozen(int index_)
+        {
+            return _betaIsFrozen[index_];
+        }
+
+        @Override
+        public boolean isCurve(int index_)
+        {
+            return !isBeta(index_);
+        }
+
+        @Override
+        public int getTransition(int index_)
+        {
+            return _toStatus[index_];
+        }
+
+        @Override
+        public int getEntry(int index_)
+        {
+            return _entryIndex[index_];
+        }
+
+        @Override
+        public int getDepth(int index_)
+        {
+            return _curveDepth[index_];
+        }
+
+        @Override
+        public int getCurveIndex(int index_)
+        {
+            return _curveIndex[index_];
+        }
+
+        @Override
+        public synchronized ItemParameters<S, R, T> generateParams()
+        {
+            if(null != _generated) {
+                return _generated;
+            }
+
+            _generated = new ItemParameters(ItemParameters.this, this);
+            return _generated;
+        }
+
+        @Override
+        public ItemParameters<S, R, T> getOriginalParams()
+        {
+            return ItemParameters.this;
+        }
+
+        public PackedParameters<S, R, T> clone() {
+            return new ItemParametersVector(this);
+        }
+    }
 }

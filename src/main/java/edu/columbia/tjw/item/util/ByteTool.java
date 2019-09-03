@@ -6,15 +6,14 @@
 package edu.columbia.tjw.item.util;
 
 /**
- *
  * @author tyler
  */
 public final class ByteTool
 {
     private static final char[] HEX_CHARS =
-    {
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-    };
+            {
+                    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+            };
 
     private ByteTool()
     {
@@ -85,8 +84,8 @@ public final class ByteTool
 
         for (int i = 0; i < outputLength; i++)
         {
-            final byte high = (byte) (decodeOne(input_.charAt(2*i)) << 4);
-            final byte low = decodeOne(input_.charAt((2*i) + 1));
+            final byte high = (byte) (decodeOne(input_.charAt(2 * i)) << 4);
+            final byte low = decodeOne(input_.charAt((2 * i) + 1));
             final byte next = (byte) (high | low);
             output[i] = next;
         }

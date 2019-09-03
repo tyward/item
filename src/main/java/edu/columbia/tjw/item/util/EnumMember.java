@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.util;
@@ -23,16 +23,15 @@ import java.io.Serializable;
 
 /**
  * A base class for enumerations.
- *
+ * <p>
  * This allows for the efficient enumeration of the ordinal members, for
  * instance.
- *
+ * <p>
  * This is needed because many of the relevant methods in enum (e.g. values())
  * are static, so they cannot be used against objects of unknown types.
  *
- *
- * @author tyler
  * @param <V> The type of this enum member.
+ * @author tyler
  */
 public interface EnumMember<V extends EnumMember<V>> extends Comparable<V>, Serializable
 {

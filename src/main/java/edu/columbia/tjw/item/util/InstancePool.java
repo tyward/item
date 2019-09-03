@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.util;
@@ -25,8 +25,8 @@ import java.util.WeakHashMap;
 /**
  * A pool made for deduplication of objects.
  *
- * @author tyler
  * @param <T> The type to be cached in this instance pool
+ * @author tyler
  */
 public final class InstancePool<T>
 {

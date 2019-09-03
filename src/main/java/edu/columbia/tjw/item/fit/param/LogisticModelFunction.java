@@ -12,70 +12,80 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit.param;
 
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
-import edu.columbia.tjw.item.ItemParameters;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemSettings;
-import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
+import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
-import edu.columbia.tjw.item.optimize.EvaluationResult;
+import edu.columbia.tjw.item.fit.calculator.FitPointGenerator;
+import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
 import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
-import edu.columbia.tjw.item.optimize.MultivariateGradient;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
 
 /**
- *
- * @author tyler
  * @param <S> The status type for this grid
  * @param <R> The regressor type for this grid
  * @param <T> The curve type for this grid
+ * @author tyler
  */
 public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
 {
-    private final double[] _beta;
-    private final int[] _statusPointers;
-    private final int[] _regPointers;
+    private final FitPointGenerator<S, R, T> _generator;
     private final ParamFittingGrid<S, R, T> _grid;
-    private ItemParameters<S, R, T> _params;
+    private final PackedParameters<S, R, T> _packed;
+
     private ItemModel<S, R, T> _model;
 
-    public LogisticModelFunction(final double[] beta_, final int[] statusPointers_, final int[] regPointers_,
-            final ItemParameters<S, R, T> params_, final ParamFittingGrid<S, R, T> grid_, final ItemModel<S, R, T> model_, ItemSettings settings_)
+    public LogisticModelFunction(
+            final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_,
+            final ItemModel<S, R, T> model_, ItemSettings settings_, final PackedParameters<S, R, T> packed_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
-        _beta = beta_.clone();
-        _statusPointers = statusPointers_;
-        _regPointers = regPointers_;
-        _params = params_;
-        _grid = grid_;
+
+        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
+
+        _generator = new FitPointGenerator<S, R, T>(grid_);
+        _grid = grid;
         _model = model_;
+        _packed = packed_;
+    }
+
+    public ItemFitPoint<S, R, T> evaluate(final MultivariatePoint input_)
+    {
+        prepare(input_);
+        return _generator.generatePoint(_packed);
+    }
+
+    public ItemFitPoint<S, R, T> evaluateGradient(final MultivariatePoint input_)
+    {
+        prepare(input_);
+        return _generator.generateGradient(_packed);
     }
 
     public double[] getBeta()
     {
-        return _beta.clone();
+        return _packed.getPacked();
     }
 
     public ItemParameters<S, R, T> generateParams(final double[] beta_)
     {
-        final ItemParameters<S, R, T> updated = updateParams(_params, _statusPointers, _regPointers, beta_);
-        return updated;
+        _packed.updatePacked(beta_);
+        final ItemParameters<S, R, T> p2 = _packed.generateParams();
+        return p2;
     }
 
     @Override
     public int dimension()
     {
-        return _beta.length;
+        return _packed.size();
     }
 
     @Override
@@ -94,9 +104,9 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
         {
             final double value = input_.getElement(i);
 
-            if (value != _beta[i])
+            if (value != _packed.getParameter(i))
             {
-                _beta[i] = value;
+                _packed.setParameter(i, value);
                 changed = true;
             }
         }
@@ -106,93 +116,8 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
             return;
         }
 
-        final ItemParameters<S, R, T> updated = generateParams(_beta);
-        _params = updated;
-        _model = new ItemModel<>(_params);
-    }
-
-    @Override
-    protected void evaluate(int start_, int end_, EvaluationResult result_)
-    {
-        if (start_ == end_)
-        {
-            return;
-        }
-
-        final ItemModel<S, R, T> localModel = _model.clone();
-        final S fromStatus = this._model.getParams().getStatus();
-
-        final int fromStatusOrdinal = fromStatus.ordinal();
-
-        for (int i = start_; i < end_; i++)
-        {
-            final int statOrdinal = _grid.getStatus(i);
-
-            if (statOrdinal != fromStatusOrdinal)
-            {
-                continue;
-            }
-            if (!_grid.hasNextStatus(i))
-            {
-                continue;
-            }
-
-            final double ll = localModel.logLikelihood(_grid, i);
-
-            result_.add(ll, result_.getHighWater(), i + 1);
-        }
-
-        result_.setHighRow(end_);
-    }
-
-    private ItemParameters<S, R, T> updateParams(final ItemParameters<S, R, T> params_, final int[] rowPointers_, final int[] colPointers_, final double[] betas_)
-    {
-        final double[][] beta = params_.getBetas();
-
-        for (int i = 0; i < betas_.length; i++)
-        {
-            final int row = rowPointers_[i];
-            final int column = colPointers_[i];
-            final double value = betas_[i];
-            beta[row][column] = value;
-        }
-
-        final ItemParameters<S, R, T> updated = params_.updateBetas(beta);
-        return updated;
-    }
-
-    @Override
-    protected MultivariateGradient evaluateDerivative(int start_, int end_, MultivariatePoint input_, EvaluationResult result_)
-    {
-        final int dimension = input_.getDimension();
-        final double[] derivative = new double[dimension];
-
-        if (start_ >= end_)
-        {
-            final MultivariatePoint der = new MultivariatePoint(derivative);
-            return new MultivariateGradient(input_, der, null, 0.0);
-        }
-
-        final ItemModel<S, R, T> localModel = _model.clone();
-
-        final int count = localModel.computeDerivative(_grid, start_, end_, _regPointers, _statusPointers, derivative);
-
-        if (count > 0)
-        {
-            //N.B: we are computing the negative log likelihood. 
-            final double invCount = -1.0 / count;
-
-            for (int i = 0; i < dimension; i++)
-            {
-                derivative[i] = derivative[i] * invCount;
-            }
-        }
-
-        final MultivariatePoint der = new MultivariatePoint(derivative);
-
-        final MultivariateGradient grad = new MultivariateGradient(input_, der, null, 0.0);
-
-        return grad;
+        final ItemParameters<S, R, T> updated = _packed.generateParams();
+        _model = new ItemModel<>(updated);
     }
 
     @Override

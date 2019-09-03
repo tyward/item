@@ -12,19 +12,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.base;
 
 
+import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.ItemCurveType;
+import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
- *
  * @author tyler
  */
 public enum SplineCurveType implements ItemCurveType<SplineCurveType>
@@ -45,6 +46,12 @@ public enum SplineCurveType implements ItemCurveType<SplineCurveType>
     public int getParamCount()
     {
         return _paramCount;
+    }
+
+    @Override
+    public <R extends ItemRegressor<R>> ItemCurveFactory<R, SplineCurveType> getFactory()
+    {
+        return new SplineFactory<R>();
     }
 
     @Override

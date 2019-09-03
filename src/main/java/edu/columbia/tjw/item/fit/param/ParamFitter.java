@@ -12,86 +12,68 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.fit.param;
 
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemModel;
-import edu.columbia.tjw.item.ParamFilter;
-import edu.columbia.tjw.item.ItemParameters;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemSettings;
-import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.data.ItemStatusGrid;
-import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.fit.*;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.optimize.EvaluationResult;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
-import java.util.Arrays;
-import java.util.Collection;
+
 import java.util.logging.Logger;
 
 /**
- *
- * @author tyler
  * @param <S> The status type for this fitter
  * @param <R> The regressor type for this fitter
  * @param <T> The curve type for this fitter
+ * @author tyler
  */
 public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private static final Logger LOG = LogUtil.getLogger(ParamFitter.class);
-    private final ItemModel<S, R, T> _model;
+
     private final MultivariateOptimizer _optimizer;
     private final ItemSettings _settings;
-    private final ParamFittingGrid<S, R, T> _grid;
-    private final Collection<ParamFilter<S, R, T>> _filters;
-    private final LogisticModelFunction<S, R, T> _function;
+    private final EntropyCalculator<S, R, T> _calc;
 
-    public ParamFitter(final ItemParameters<S, R, T> params_, final ItemStatusGrid<S, R> grid_, final ItemSettings settings_, final Collection<ParamFilter<S, R, T>> filters_)
+//    ItemParameters<S, R, T> _cacheParams;
+//    LogisticModelFunction<S, R, T> _cacheFunction;
+
+    public ParamFitter(final EntropyCalculator<S, R, T> calc_, final ItemSettings settings_)
     {
-        _model = new ItemModel<>(params_);
-        _grid = new ParamFittingGrid<>(params_, grid_);
-        _filters = filters_;
+        _calc = calc_;
         _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
         _settings = settings_;
-
-        _function = generateFunction();
     }
 
-    public double computeLogLikelihood(final ItemParameters<S, R, T> params_)
+    public ParamFitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_) throws ConvergenceException
     {
-        final double[] startingPoint = _function.getBeta();
-
-        final EvaluationResult res = _function.generateResult();
-        final MultivariatePoint point = new MultivariatePoint(startingPoint);
-        _function.value(point, 0, _function.numRows(), res);
-
-        final double logLikelihood = res.getMean();
-        return logLikelihood;
+        return fit(chain_, chain_.getBestParameters());
     }
 
-    public ParamFitResult<S, R, T> fit() throws ConvergenceException
+    public ParamFitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_) throws ConvergenceException
     {
-        //LOG.info("Fitting Coefficients");
-        final double[] beta = _function.getBeta();
+        final double entropy = chain_.getLogLikelihood();
 
+//        if (params_ != _cacheParams)
+//        {
+//            _cacheParams = params_;
+//            _cacheFunction = generateFunction(params_);
+//        }
+
+        final LogisticModelFunction<S, R, T> function = generateFunction(params_);
+        final double[] beta = function.getBeta();
         final MultivariatePoint point = new MultivariatePoint(beta);
-        final int numRows = _function.numRows();
-        final EvaluationResult res = _function.generateResult();
-        _function.value(point, 0, numRows, res);
+        final int numRows = function.numRows();
 
-        final double oldLL = res.getMean();
-        //LOG.info("\n\n -->Log Likelihood: " + oldLL);
-
-        final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(_function, point);
+        final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(function, point);
         final MultivariatePoint optimumPoint = result.getOptimum();
 
         for (int i = 0; i < beta.length; i++)
@@ -100,7 +82,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         final double newLL = result.minValue();
-        LOG.info("Fitting coefficients, LL improvement: " + oldLL + " -> " + newLL + "(" + (newLL - oldLL) + ")");
+        LOG.info("Fitting coefficients, LL improvement: " + entropy + " -> " + newLL + "(" + (newLL - entropy) + ")");
 
         if (!result.converged())
         {
@@ -109,59 +91,47 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         final ParamFitResult<S, R, T> output;
 
-        if (newLL > oldLL)
+        if (newLL > entropy)
         {
-            output = new ParamFitResult<>(_model.getParams(), _model.getParams(), oldLL, oldLL, numRows);
+            output = new ParamFitResult<>(chain_.getBestParameters(), chain_.getBestParameters(), entropy, entropy,
+                    numRows);
+            chain_.pushResults("ParamFit", output.getEndingParams(), output.getEndingLL());
         }
         else
         {
-            final ItemParameters<S, R, T> updated = _function.generateParams(beta);
-            output = new ParamFitResult<>(_model.getParams(), updated, newLL, oldLL, numRows);
+            final ItemParameters<S, R, T> updated = function.generateParams(beta);
+
+            final double recalcEntropy = _calc.computeEntropy(updated).getEntropyMean();
+            output = new ParamFitResult<>(params_, updated, recalcEntropy, entropy, numRows);
+            chain_.pushResults("ParamFit", output.getEndingParams(), output.getEndingLL());
         }
 
-        //LOG.info("Updated Coefficients: " + output.getParams());
         return output;
     }
 
-    private LogisticModelFunction<S, R, T> generateFunction()
+    private LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_)
     {
-        final ItemParameters<S, R, T> params = _model.getParams();
-        final int reachableCount = params.getStatus().getReachableCount();
-        final int entryCount = params.getEntryCount();
+        final PackedParameters<S, R, T> packed = params_.generatePacked();
+        final boolean[] active = new boolean[params_.getEffectiveParamCount()];
 
-        final S from = params.getStatus();
-
-        final int maxSize = reachableCount * entryCount;
-
-        int pointer = 0;
-        double[] beta = new double[maxSize];
-        int[] statusPointers = new int[maxSize];
-        int[] regPointers = new int[maxSize];
-
-        for (int i = 0; i < reachableCount; i++)
+        for (int i = 0; i < active.length; i++)
         {
-            final S to = from.getReachable().get(i);
-
-            for (int k = 0; k < entryCount; k++)
+            if (!packed.isBeta(i))
             {
-                if (params.betaIsFrozen(to, k, _filters))
-                {
-                    continue;
-                }
-
-                beta[pointer] = params.getBeta(i, k);
-                statusPointers[pointer] = i;
-                regPointers[pointer] = k;
-                pointer++;
+                continue;
             }
+            if (packed.betaIsFrozen(i))
+            {
+                continue;
+            }
+
+            active[i] = true;
         }
 
-        beta = Arrays.copyOf(beta, pointer);
-        statusPointers = Arrays.copyOf(statusPointers, pointer);
-        regPointers = Arrays.copyOf(regPointers, pointer);
+        final PackedParameters<S, R, T> reduced = new ReducedParameterVector<>(active, packed);
 
-        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(beta, statusPointers, regPointers, params, _grid, new ItemModel<>(params), _settings);
-
+        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(params_, _calc.getGrid(),
+                new ItemModel<>(params_), _settings, reduced);
         return function;
     }
 

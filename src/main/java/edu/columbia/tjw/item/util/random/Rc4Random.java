@@ -8,7 +8,6 @@ package edu.columbia.tjw.item.util.random;
 import edu.columbia.tjw.item.util.HashTool;
 
 /**
- *
  * @author tyler
  */
 public final class Rc4Random extends AbstractRandom

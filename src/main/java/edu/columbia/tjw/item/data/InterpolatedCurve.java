@@ -12,21 +12,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.data;
 
-import java.io.Serializable;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.interpolation.UnivariateInterpolator;
 
+import java.io.Serializable;
+import java.util.Arrays;
+
 /**
- *
  * @author tyler
  */
 public final class InterpolatedCurve implements Serializable, UnivariateFunction
@@ -50,14 +51,20 @@ public final class InterpolatedCurve implements Serializable, UnivariateFunction
 
     public InterpolatedCurve(final double[] x_, final double[] y_, final boolean isLinear_, final boolean doCopy_)
     {
+        this(x_, y_, isLinear_, doCopy_, 0, x_.length);
+    }
+
+    public InterpolatedCurve(final double[] x_, final double[] y_, final boolean isLinear_, final boolean doCopy_,
+                             final int start_, final int end_)
+    {
         if (x_.length != y_.length)
         {
             throw new IllegalArgumentException("Length mismatch: " + x_.length + " != " + y_.length);
         }
 
-        for (int i = 0; i < x_.length; i++)
+        for (int i = start_; i < end_; i++)
         {
-            if (i > 0 && !(x_[i] > x_[i - 1]))
+            if (i > start_ && !(x_[i] > x_[i - 1]))
             {
                 throw new IllegalArgumentException("X values must be sorted and well defined.");
             }
@@ -68,10 +75,10 @@ public final class InterpolatedCurve implements Serializable, UnivariateFunction
             }
         }
 
-        if (doCopy_)
+        if (doCopy_ || start_ != 0 || end_ != x_.length)
         {
-            _x = x_.clone();
-            _y = y_.clone();
+            _x = Arrays.copyOfRange(x_, start_, end_);
+            _y = Arrays.copyOfRange(y_, start_, end_);
         }
         else
         {
@@ -98,12 +105,12 @@ public final class InterpolatedCurve implements Serializable, UnivariateFunction
     {
         return _x[index_];
     }
-    
+
     public double getY(final int index_)
     {
         return _y[index_];
     }
-    
+
     @Override
     public double value(double x_)
     {

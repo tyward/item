@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.base;
@@ -24,9 +24,8 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.util.HashUtil;
 
 /**
- *
- * @author tyler
  * @param <V> The type of this family of curves
+ * @author tyler
  */
 public abstract class StandardCurve<V extends ItemCurveType<V>> implements ItemCurve<V>
 {
@@ -139,7 +138,8 @@ public abstract class StandardCurve<V extends ItemCurveType<V>> implements ItemC
         {
             final Double d1 = this.getParam(i);
             final Double d2 = that.getParam(i);
-            //Compare as longs, since that's how we hashed them. THis is not exactly the same as comparing doubles directly.
+            //Compare as longs, since that's how we hashed them. THis is not exactly the same as comparing doubles
+            // directly.
             final long l1 = Double.doubleToLongBits(d1);
             final long l2 = Double.doubleToLongBits(d2);
             if (l1 != l2)

@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.data;
@@ -24,20 +24,19 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
 
 /**
- * 
- * @author tyler
  * @param <S> The Status type
  * @param <R> The regressor type
+ * @author tyler
  */
 public interface ItemStatusGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> extends ItemGrid<R>
 {
-    
+
     public EnumFamily<S> getStatusFamily();
-    
+
     public int getStatus(final int index_);
-    
+
     public int getNextStatus(final int index_);
-    
+
     public boolean hasNextStatus(final int index_);
-    
+
 }

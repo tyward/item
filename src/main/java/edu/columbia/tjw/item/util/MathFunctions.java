@@ -12,9 +12,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- * 
+ *
  * This is provided as an example to help in the understanding of the ITEM model system.
  */
 package edu.columbia.tjw.item.util;
@@ -22,13 +22,14 @@ package edu.columbia.tjw.item.util;
 import org.apache.commons.math3.util.FastMath;
 
 /**
- *
  * @author tyler
  */
 public final class MathFunctions
 {
+    public static final double EPSILON = Math.ulp(1.0);
+
     // SQRT of the difference between 1.0 and the smallest value larger than 1.0.
-    public static final double SQRT_EPSILON = Math.sqrt(Math.ulp(1.0));
+    public static final double SQRT_EPSILON = Math.sqrt(EPSILON);
 
     private MathFunctions()
     {
@@ -50,16 +51,36 @@ public final class MathFunctions
     }
 
     /**
+     * If modelB is better, AIC diff will be less than 0.0.
+     *
+     * @param paramCountA_
+     * @param paramCountB_
+     * @param entropyA_
+     * @param entropyB_
+     * @param rowCount_
+     * @return
+     */
+    public static double computeAicDifference(final int paramCountA_, final int paramCountB_, final double entropyA_,
+                                              final double entropyB_, final int rowCount_)
+    {
+        final double llImprovement = entropyA_ - entropyB_;
+        final double scaledImprovement = llImprovement * rowCount_;
+        final double paramContribution = paramCountB_ - paramCountA_;
+        final double aicDiff = 2.0 * (paramContribution - scaledImprovement);
+        return aicDiff;
+    }
+
+    /**
      * Compares the two doubles, see if they are different beyond a level that
      * would be typical of rounding error.
-     *
+     * <p>
      * Both numbers must be well defined (not infinite, not NaN) for this to
      * work. Also, both must be positive.
      *
      * @param a_
      * @param b_
-     * @return +1 if a_ > b_, -1 if b_ > a_, and 0 if they are too close to
-     * tell.
+     * @return +1 if a_ &gt; b_, -1 if b_ &gt; a_, and 0 if they are too close
+     * to tell.
      */
     public static int doubleCompareRounded(final double a_, final double b_)
     {
