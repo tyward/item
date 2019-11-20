@@ -76,62 +76,62 @@ public final class MultiLogistic
         return expSum;
     }
 
-    public static double multiLogisticBetaDerivative(final double[] regressors_,
-                                                     final double[] computedProbabilities_, final int regressorIndex_
-            , final int toStateIndex_, final int toStateBetaIndex_)
-    {
-        final double reg = regressors_[regressorIndex_];
-        final double computedProb = computedProbabilities_[toStateIndex_];
-        final double betaComputedProb = computedProbabilities_[toStateBetaIndex_];
-
-        double inner;
-
-        if (toStateIndex_ == toStateBetaIndex_)
-        {
-            inner = 1.0;
-        }
-        else
-        {
-            inner = 0.0;
-        }
-
-        inner = inner - betaComputedProb;
-        final double result = reg * inner * computedProb;
-        return result;
-    }
-
-    public static void multiLogisticRegressorDerivatives(final double[] powerScores_, final double[] betaValues_,
-                                                         final double[] workspace_, final double[] output_)
-    {
-        final double expSum = multiLogisticFunction(powerScores_, workspace_);
-
-        //Workspace now holds probabilities. 
-        double betaSum = 0.0;
-
-        for (int i = 0; i < powerScores_.length; i++)
-        {
-            //A term of the form exp(beta dot x).
-            final double expTerm = workspace_[i] * expSum;
-
-            //This is the term beta_(i)(regressorIndex_)
-            final double betaValue = betaValues_[i];
-
-            final double betaMultiplied = betaValue * expTerm;
-
-            betaSum += betaMultiplied;
-
-            output_[i] = betaValue;
-        }
-
-        final double normalizedTerm = betaSum / expSum;
-
-        for (int i = 0; i < powerScores_.length; i++)
-        {
-            output_[i] = (output_[i] - normalizedTerm) * workspace_[i];
-        }
-
-        //Done, output holds the results.
-    }
+//    public static double multiLogisticBetaDerivative(final double[] regressors_,
+//                                                     final double[] computedProbabilities_, final int regressorIndex_
+//            , final int toStateIndex_, final int toStateBetaIndex_)
+//    {
+//        final double reg = regressors_[regressorIndex_];
+//        final double computedProb = computedProbabilities_[toStateIndex_];
+//        final double betaComputedProb = computedProbabilities_[toStateBetaIndex_];
+//
+//        double inner;
+//
+//        if (toStateIndex_ == toStateBetaIndex_)
+//        {
+//            inner = 1.0;
+//        }
+//        else
+//        {
+//            inner = 0.0;
+//        }
+//
+//        inner = inner - betaComputedProb;
+//        final double result = reg * inner * computedProb;
+//        return result;
+//    }
+//
+//    public static void multiLogisticRegressorDerivatives(final double[] powerScores_, final double[] betaValues_,
+//                                                         final double[] workspace_, final double[] output_)
+//    {
+//        final double expSum = multiLogisticFunction(powerScores_, workspace_);
+//
+//        //Workspace now holds probabilities.
+//        double betaSum = 0.0;
+//
+//        for (int i = 0; i < powerScores_.length; i++)
+//        {
+//            //A term of the form exp(beta dot x).
+//            final double expTerm = workspace_[i] * expSum;
+//
+//            //This is the term beta_(i)(regressorIndex_)
+//            final double betaValue = betaValues_[i];
+//
+//            final double betaMultiplied = betaValue * expTerm;
+//
+//            betaSum += betaMultiplied;
+//
+//            output_[i] = betaValue;
+//        }
+//
+//        final double normalizedTerm = betaSum / expSum;
+//
+//        for (int i = 0; i < powerScores_.length; i++)
+//        {
+//            output_[i] = (output_[i] - normalizedTerm) * workspace_[i];
+//        }
+//
+//        //Done, output holds the results.
+//    }
 
     /**
      * It is safe to pass the same array to both arguments if you don't mind it

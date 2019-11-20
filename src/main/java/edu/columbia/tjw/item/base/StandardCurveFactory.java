@@ -344,10 +344,11 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
         public double derivative(int index_, double input_)
         {
             final double forward = _slope * (input_ - _center);
-            final double backward = -_slope * (input_ - _center);
+            //final double backward = -_slope * (input_ - _center);
 
             final double fwdLogistic = MathFunctions.logisticFunction(forward);
-            final double backLogistic = MathFunctions.logisticFunction(backward);
+            //final double backLogistic = MathFunctions.logisticFunction(backward);
+            final double backLogistic = (1.0 - fwdLogistic);
             final double combined = fwdLogistic * backLogistic;
 
             final double paramContribution;
@@ -367,6 +368,10 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
             final double derivative = combined * paramContribution;
             return derivative;
         }
+
+//        public double secondDerivative(int index1_, int index2_, double input_) {
+//
+//        }
 
         @Override
         public double getParam(int index_)

@@ -24,7 +24,6 @@ import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.LogUtil;
-import edu.columbia.tjw.item.util.MathTools;
 import edu.columbia.tjw.item.util.MultiLogistic;
 
 import java.util.Arrays;
@@ -143,7 +142,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (null == curve)
             {
                 weight *= rawReg;
-            } else
+            }
+            else
             {
                 weight *= curve.transform(rawReg);
             }
@@ -192,56 +192,56 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
-    /**
-     * This will take packed probabilities (only the reachable states for this
-     * status), and fill out a vector of unpacked probabilities (all statuses
-     * are represented).
-     *
-     * @param packed_   The probabilities for reachable statuses. (input)
-     * @param unpacked_ A vector to hold the probabilities for all statuses.
-     *                  Unreachable statuses will get 0.0.
-     */
-    public void unpackProbabilities(final double[] packed_, final double[] unpacked_)
-    {
-        final S status = getStatus();
-        //final List<S> reachable = status.getReachable();
-        final int reachableCount = status.getReachableCount();
-        final int statCount = status.getFamily().size();
-
-        if (packed_.length != reachableCount)
-        {
-            throw new IllegalArgumentException("Input is the wrong size: " + packed_.length);
-        }
-        if (unpacked_.length != statCount)
-        {
-            throw new IllegalArgumentException("Output is the wrong size: " + packed_.length);
-        }
-
-        Arrays.fill(unpacked_, 0.0);
-        double sum = 0.0;
-
-        for (int i = 0; i < statCount; i++)
-        {
-            final int reachableOrdinal = _likelihood.ordinalToOffset(i);
-
-            if (reachableOrdinal < 0)
-            {
-                unpacked_[i] = 0.0;
-                continue;
-            }
-
-            final double prob = packed_[reachableOrdinal];
-            sum += prob;
-            unpacked_[i] = prob;
-        }
-
-        final double diff = Math.abs(sum - 1.0);
-
-        if (!(diff < ROUNDING_TOLERANCE))
-        {
-            throw new IllegalArgumentException("Rounding tolerance exceeded by probability vector: " + diff);
-        }
-    }
+//    /**
+//     * This will take packed probabilities (only the reachable states for this
+//     * status), and fill out a vector of unpacked probabilities (all statuses
+//     * are represented).
+//     *
+//     * @param packed_   The probabilities for reachable statuses. (input)
+//     * @param unpacked_ A vector to hold the probabilities for all statuses.
+//     *                  Unreachable statuses will get 0.0.
+//     */
+//    public void unpackProbabilities(final double[] packed_, final double[] unpacked_)
+//    {
+//        final S status = getStatus();
+//        //final List<S> reachable = status.getReachable();
+//        final int reachableCount = status.getReachableCount();
+//        final int statCount = status.getFamily().size();
+//
+//        if (packed_.length != reachableCount)
+//        {
+//            throw new IllegalArgumentException("Input is the wrong size: " + packed_.length);
+//        }
+//        if (unpacked_.length != statCount)
+//        {
+//            throw new IllegalArgumentException("Output is the wrong size: " + packed_.length);
+//        }
+//
+//        Arrays.fill(unpacked_, 0.0);
+//        double sum = 0.0;
+//
+//        for (int i = 0; i < statCount; i++)
+//        {
+//            final int reachableOrdinal = _likelihood.ordinalToOffset(i);
+//
+//            if (reachableOrdinal < 0)
+//            {
+//                unpacked_[i] = 0.0;
+//                continue;
+//            }
+//
+//            final double prob = packed_[reachableOrdinal];
+//            sum += prob;
+//            unpacked_[i] = prob;
+//        }
+//
+//        final double diff = Math.abs(sum - 1.0);
+//
+//        if (!(diff < ROUNDING_TOLERANCE))
+//        {
+//            throw new IllegalArgumentException("Rounding tolerance exceeded by probability vector: " + diff);
+//        }
+//    }
 
     public void computeGradient(final ParamFittingGrid<S, R, T> grid_, PackedParameters<S, R, T> packed_,
                                 final int index_, final double[] derivative_, final double[][] secondDerivative_)
@@ -251,7 +251,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final double[] actual = _actualProbWorkspace;
         final double[] entryWeights = _regWorkspace;
         final double[] rawReg = _rawRegWorkspace;
-        final List<S> reachable = getParams().getStatus().getReachable();
+        //final List<S> reachable = getParams().getStatus().getReachable();
 
         //We inline a bunch of these calcs to reduce duplication of effort.
         grid_.getRegressors(index_, rawReg);
@@ -274,7 +274,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         //final double entropy = LogLikelihood.calcEntropy(computedProbability);
         final double scale = -1.0 / computedProbability;
 
-        for (int k = 0; k < packed_.size(); k++)
+        for (int k = 0; k < dimension; k++)
         {
             final int entry = packed_.getEntry(k);
             final boolean isBetaDerivative = packed_.isBeta(k);
@@ -284,7 +284,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (derivToStatus == actualOffset)
             {
                 delta = 1.0;
-            } else
+            }
+            else
             {
                 delta = 0.0;
             }
@@ -297,7 +298,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (isBetaDerivative)
             {
                 deriv = entryWeight * derivCore;
-            } else
+            }
+            else
             {
                 // This is a derivative w.r.t. one of the elements of the weight.
                 // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
@@ -318,7 +320,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 {
                     // Dealing with some special over/underflow cases.
                     deriv = 0.0;
-                } else
+                }
+                else
                 {
                     final double valRatio = curveDeriv / curveValue;
 
@@ -399,13 +402,13 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         MultiLogistic.multiLogisticFunction(workspace_, workspace_);
     }
 
-    public double betaDerivative(final double[] regressors_, final double[] computedProbabilities_,
-                                 final int regressorIndex_, final int toStateIndex_, final int toStateBetaIndex_)
-    {
-        final double output = MultiLogistic.multiLogisticBetaDerivative(regressors_, computedProbabilities_,
-                regressorIndex_, toStateIndex_, toStateBetaIndex_);
-        return output;
-    }
+//    public double betaDerivative(final double[] regressors_, final double[] computedProbabilities_,
+//                                 final int regressorIndex_, final int toStateIndex_, final int toStateBetaIndex_)
+//    {
+//        final double output = MultiLogistic.multiLogisticBetaDerivative(regressors_, computedProbabilities_,
+//                regressorIndex_, toStateIndex_, toStateBetaIndex_);
+//        return output;
+//    }
 
     /**
      * Note that this method is synchronized. Therefore, it may be called from
