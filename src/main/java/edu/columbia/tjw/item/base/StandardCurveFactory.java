@@ -289,6 +289,12 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
         }
 
         @Override
+        public double secondDerivative(int w_, int z_, double x_)
+        {
+            throw new UnsupportedOperationException("NYI!");
+        }
+
+        @Override
         public double getParam(int index_)
         {
             switch (index_)
@@ -369,9 +375,11 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
             return derivative;
         }
 
-//        public double secondDerivative(int index1_, int index2_, double input_) {
-//
-//        }
+        @Override
+        public double secondDerivative(int w_, int z_, double x_)
+        {
+            throw new UnsupportedOperationException("NYI!");
+        }
 
         @Override
         public double getParam(int index_)

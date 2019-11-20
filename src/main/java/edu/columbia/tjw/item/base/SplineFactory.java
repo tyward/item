@@ -158,6 +158,12 @@ public class SplineFactory<R extends ItemRegressor<R>> implements ItemCurveFacto
         }
 
         @Override
+        public double secondDerivative(int w_, int z_, double x_)
+        {
+            throw new UnsupportedOperationException("NOt yet implemented.");
+        }
+
+        @Override
         public double getParam(int index_)
         {
             switch (index_)
@@ -234,6 +240,12 @@ public class SplineFactory<R extends ItemRegressor<R>> implements ItemCurveFacto
                     throw new IllegalArgumentException("Bad index: " + index_);
             }
 
+        }
+
+        @Override
+        public double secondDerivative(int w_, int z_, double x_)
+        {
+            throw new UnsupportedOperationException("NYI");
         }
 
         @Override

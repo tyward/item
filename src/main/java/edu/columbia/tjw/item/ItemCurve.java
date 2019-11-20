@@ -56,6 +56,16 @@ public interface ItemCurve<V extends ItemCurveType<V>>
     public double derivative(int index_, double x_);
 
     /**
+     * Compute the second derivative of the curve with respect to the given indices.
+     *
+     * @param w_ An index for the derivative.
+     * @param z_ Another (possibly identical) index for the derivative.
+     * @param x_ The regressor to be used for the calculation.
+     * @return The second derivative, dw dz f(x)
+     */
+    public double secondDerivative(int w_, int z_, double x_);
+
+    /**
      * Gets the type of this curve.
      *
      * @return The type of this curve
