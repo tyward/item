@@ -291,7 +291,42 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
         @Override
         public double secondDerivative(int w_, int z_, double x_)
         {
-            throw new UnsupportedOperationException("NYI!");
+            if (z_ < w_)
+            {
+                return secondDerivative(z_, w_, x_);
+            }
+            if (z_ < 0)
+            {
+                throw new IllegalArgumentException("Bad index: " + z_);
+            }
+            if (w_ > 1)
+            {
+                throw new IllegalArgumentException("Bad index: " + w_);
+            }
+
+            final double zTerm = (x_ - _mean) * _invStdDev; // (x - a)/ b
+            final double z2 = zTerm * zTerm;
+            final double s2 = _invStdDev * _invStdDev;
+            final double multiple;
+
+            if (z_ == 0)
+            {
+                // w_ is also 0, second derivative w.r.t. index 0
+                multiple = s2 * ((zTerm * zTerm) - 1);
+            }
+            else if (w_ == 1)
+            {
+                // z_ also is 1, second derivative w.r.t. index 1
+                multiple = s2 * ((z2 * z2) - (3 * z2));
+            }
+            else
+            {
+                // mixed second derivative.
+                multiple = (zTerm * s2) * (z2 - 2);
+            }
+
+            final double output = multiple * transform(x_);
+            return output;
         }
 
         @Override
@@ -378,7 +413,56 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
         @Override
         public double secondDerivative(int w_, int z_, double x_)
         {
-            throw new UnsupportedOperationException("NYI!");
+            if (z_ < w_)
+            {
+                return secondDerivative(z_, w_, x_);
+            }
+            if (z_ < 0)
+            {
+                throw new IllegalArgumentException("Bad index: " + z_);
+            }
+            if (w_ > 1)
+            {
+                throw new IllegalArgumentException("Bad index: " + w_);
+            }
+            if (_slopeParam == 0.0)
+            {
+                // This would be a common divide by zero situation, actual answer is zero.
+                return 0.0;
+            }
+
+            final double val = this.transform(x_);
+
+            if (val == 0.0 || val == 1.0)
+            {
+                // Another divide by zero situation.
+                return 0.0;
+            }
+
+            final double derivative;
+
+            if (z_ == 0)
+            {
+                // w_ is also 0, second derivative w.r.t. index 0
+                final double db = this.derivative(0, x_);
+                final double db2 = db * db;
+                derivative = (db2 / val) - (db2 / (1.0 - val));
+            }
+            else if (w_ == 1)
+            {
+                // z_ also is 1, second derivative w.r.t. index 1
+                final double da = this.derivative(1, x_);
+                derivative = (da / _slopeParam) + (da * da / val) - (da * da / (1.0 - val));
+            }
+            else
+            {
+                // mixed second derivative.
+                final double multiple = (-2.0 * _slopeParam)
+                        + (-2.0 * _slopeParam * _slope * (x_ - _center)) * (1.0 - 2.0 * val);
+                derivative = multiple * val * (1.0 - val);
+            }
+
+            return derivative;
         }
 
         @Override
