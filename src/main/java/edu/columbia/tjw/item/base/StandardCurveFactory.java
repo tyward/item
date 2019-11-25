@@ -386,12 +386,6 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
         {
             final double val = this.transform(input_);
             final double backVal = (1.0 - val);
-            //final double forward = _slope * (input_ - _center);
-            //final double backward = -_slope * (input_ - _center);
-
-            //final double fwdLogistic = MathFunctions.logisticFunction(forward);
-            //final double backLogistic = MathFunctions.logisticFunction(backward);
-            //final double backLogistic = (1.0 - fwdLogistic);
             final double combined = val * backVal;
 
             final double paramContribution;
