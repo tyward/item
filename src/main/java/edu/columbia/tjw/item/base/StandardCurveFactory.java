@@ -266,8 +266,8 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
         @Override
         public double derivative(int index_, double input_)
         {
-            final double centered = (input_ - _mean);
-            final double base = 2.0 * centered * _expNormalizer;
+            final double zVal = (input_ - _mean) * _invStdDev;
+            final double base = zVal * _invStdDev;
             final double expContribution = transform(input_);
 
             final double paramContribution;
@@ -278,7 +278,7 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
                     paramContribution = base;
                     break;
                 case 1:
-                    paramContribution = base * centered * _invStdDev;
+                    paramContribution = base * zVal;
                     break;
                 default:
                     throw new IllegalArgumentException("Bad index: " + index_);
@@ -384,13 +384,15 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
         @Override
         public double derivative(int index_, double input_)
         {
-            final double forward = _slope * (input_ - _center);
+            final double val = this.transform(input_);
+            final double backVal = (1.0 - val);
+            //final double forward = _slope * (input_ - _center);
             //final double backward = -_slope * (input_ - _center);
 
-            final double fwdLogistic = MathFunctions.logisticFunction(forward);
+            //final double fwdLogistic = MathFunctions.logisticFunction(forward);
             //final double backLogistic = MathFunctions.logisticFunction(backward);
-            final double backLogistic = (1.0 - fwdLogistic);
-            final double combined = fwdLogistic * backLogistic;
+            //final double backLogistic = (1.0 - fwdLogistic);
+            final double combined = val * backVal;
 
             final double paramContribution;
 

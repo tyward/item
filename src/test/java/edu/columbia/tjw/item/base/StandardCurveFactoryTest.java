@@ -25,15 +25,18 @@ class StandardCurveFactoryTest
         final double d1 = gaussian.derivative(0, 2.2);
         final double approxD1 = (g2.transform(2.2) - gaussian.transform(2.2)) / 0.0001;
         final double errD1 = Math.abs(d1-approxD1) / Math.abs(d1);
-        //assertEquals(0.0001, errD1);
+        assertTrue(0.0001 > errD1);
 
+        final double h = 0.001;
         ItemCurve<StandardCurveType> g3 = factory.generateCurve(StandardCurveType.GAUSSIAN,
-                0, new double[]{0.5, 3.0001});
+                0, new double[]{0.5, 3.0 + h });
 
-        final double d2 = gaussian.derivative(0, 2.2);
-        final double approxD2 = (g3.transform(2.2) - gaussian.transform(2.2)) / 0.0001;
+        final double d2 = gaussian.derivative(1, 2.2);
+        final double b = g3.transform(2.2);
+        final double a = gaussian.transform(2.2);
+        final double approxD2 = (b - a) / h;
         final double errD2 = Math.abs(d2-approxD2) / Math.abs(d2);
-        assertEquals(0.0001, errD2);
+        assertTrue(0.001 > errD2);
     }
 
     @org.junit.jupiter.api.Test
@@ -55,11 +58,14 @@ class StandardCurveFactoryTest
         final double errD1 = Math.abs(d1-approxD1) / Math.abs(d1);
         assertTrue( 0.001 > errD1);
 
+        final double h = 0.00001;
         ItemCurve<StandardCurveType> g3 = factory.generateCurve(StandardCurveType.LOGISTIC,
-                0, new double[]{0.5, 3.0001});
+                0, new double[]{0.5, 3.0 + h});
 
-        final double d2 = logistic.derivative(0, 0.7);
-        final double approxD2 = (g3.transform(0.7) - logistic.transform(0.7)) / 0.0001;
+        final double d2 = logistic.derivative(1, 0.7);
+        final double b = g3.transform(0.7);
+        final double a = logistic.transform(0.7);
+        final double approxD2 = (b - a) / h;
         final double errD2 = Math.abs(d2-approxD2) / Math.abs(d2);
         assertTrue( 0.001 > errD2);
     }
