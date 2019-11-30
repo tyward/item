@@ -124,7 +124,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return logLikelihood;
     }
 
-    public double computeEntryWeight(final double[] rawRegressors_, final int entry_)
+    private double computeEntryWeight(final double[] rawRegressors_, final int entry_)
     {
         if (rawRegressors_.length != _rawRegWorkspace.length)
         {
@@ -143,8 +143,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (null == curve)
             {
                 weight *= rawReg;
-            }
-            else
+            } else
             {
                 weight *= curve.transform(rawReg);
             }
@@ -161,7 +160,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * @param entry_
      * @param powerScoreOutput_
      */
-    public void addEntryPowerScores(final double[] rawRegressors_, final int entry_, final double[] powerScoreOutput_)
+    private void addEntryPowerScores(final double[] rawRegressors_, final int entry_, final double[] powerScoreOutput_)
     {
         if (powerScoreOutput_.length != _betas.length)
         {
@@ -193,56 +192,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
-//    /**
-//     * This will take packed probabilities (only the reachable states for this
-//     * status), and fill out a vector of unpacked probabilities (all statuses
-//     * are represented).
-//     *
-//     * @param packed_   The probabilities for reachable statuses. (input)
-//     * @param unpacked_ A vector to hold the probabilities for all statuses.
-//     *                  Unreachable statuses will get 0.0.
-//     */
-//    public void unpackProbabilities(final double[] packed_, final double[] unpacked_)
-//    {
-//        final S status = getStatus();
-//        //final List<S> reachable = status.getReachable();
-//        final int reachableCount = status.getReachableCount();
-//        final int statCount = status.getFamily().size();
-//
-//        if (packed_.length != reachableCount)
-//        {
-//            throw new IllegalArgumentException("Input is the wrong size: " + packed_.length);
-//        }
-//        if (unpacked_.length != statCount)
-//        {
-//            throw new IllegalArgumentException("Output is the wrong size: " + packed_.length);
-//        }
-//
-//        Arrays.fill(unpacked_, 0.0);
-//        double sum = 0.0;
-//
-//        for (int i = 0; i < statCount; i++)
-//        {
-//            final int reachableOrdinal = _likelihood.ordinalToOffset(i);
-//
-//            if (reachableOrdinal < 0)
-//            {
-//                unpacked_[i] = 0.0;
-//                continue;
-//            }
-//
-//            final double prob = packed_[reachableOrdinal];
-//            sum += prob;
-//            unpacked_[i] = prob;
-//        }
-//
-//        final double diff = Math.abs(sum - 1.0);
-//
-//        if (!(diff < ROUNDING_TOLERANCE))
-//        {
-//            throw new IllegalArgumentException("Rounding tolerance exceeded by probability vector: " + diff);
-//        }
-//    }
 
     public void computeGradient(final ParamFittingGrid<S, R, T> grid_, PackedParameters<S, R, T> packed_,
                                 final int index_, final double[] derivative_, final double[][] secondDerivative_)
@@ -286,8 +235,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (derivToStatus == actualOffset)
             {
                 delta = 1.0;
-            }
-            else
+            } else
             {
                 delta = 0.0;
             }
@@ -306,8 +254,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (isBetaDerivative)
             {
                 pDeriv = entryWeight;
-            }
-            else
+            } else
             {
                 // This is a derivative w.r.t. one of the elements of the weight.
                 // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
@@ -357,8 +304,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             // Dealing with some special over/underflow cases.
             // This can't actually be zero.
             return 0.0;
-        }
-        else
+        } else
         {
             final double valRatio = curveDeriv / curveValue;
 
@@ -400,8 +346,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (wToStatus == actualOffset_)
             {
                 delta_wk = 1.0;
-            }
-            else
+            } else
             {
                 delta_wk = 0.0;
             }
@@ -420,8 +365,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 if (wToStatus == zToStatus)
                 {
                     delta_wz = 1.0;
-                }
-                else
+                } else
                 {
                     delta_wz = 0.0;
                 }
@@ -433,8 +377,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 if (entryW != entryZ)
                 {
                     term1 = 0.0;
-                }
-                else
+                } else
                 {
                     // N.B: We know wToStatus == zToStatus because their entries match and they have at least one curve
                     // (otherwise both are betas, and this is zero).
@@ -477,8 +420,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             // the weights.
             final double dw = computeWeightDerivative(x_, z, entryWeight, entry_, packed_);
             return dw;
-        }
-        else if (isBetaZ)
+        } else if (isBetaZ)
         {
             // Same thing, just reversed.
             final double dw = computeWeightDerivative(x_, w, entryWeight, entry_, packed_);
@@ -510,8 +452,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             // Just replace the curve value with its second derivative in the entry.
             return entryBeta * entryWeight * (curveSecondDeriv / curveValueW);
-        }
-        else
+        } else
         {
             // These are different curves, need to swap out both of them.
             final ItemCurve<T> curveZ = _params.getEntryCurve(entry_, curveDepthZ);
@@ -560,13 +501,13 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      *                probabilities.
      * @return The number of transition probabilities.
      */
-    public int transitionProbability(final double[] regs_, final double[] output_)
+    private int transitionProbability(final double[] regs_, final double[] output_)
     {
         multiLogisticFunction(regs_, output_);
         return _betas.length;
     }
 
-    public void powerScores(final double[] regressors_, final double[] workspace_)
+    private void powerScores(final double[] regressors_, final double[] workspace_)
     {
         Arrays.fill(workspace_, 0.0);
 
