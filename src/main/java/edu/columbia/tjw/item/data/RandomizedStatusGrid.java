@@ -34,7 +34,7 @@ import java.util.Set;
  * @param <R> The regressor type for this grid
  * @author tyler
  */
-public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemStatusGrid<S, R>
+public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemStatusGrid<S, R>, ItemFittingGrid<S, R>
 {
     private final ItemStatusGrid<S, R> _underlying;
     private final int[] _mapping;

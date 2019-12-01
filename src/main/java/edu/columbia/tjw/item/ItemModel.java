@@ -501,7 +501,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      *                probabilities.
      * @return The number of transition probabilities.
      */
-    private int transitionProbability(final double[] regs_, final double[] output_)
+    public int transitionProbability(final double[] regs_, final double[] output_)
     {
         multiLogisticFunction(regs_, output_);
         return _betas.length;
