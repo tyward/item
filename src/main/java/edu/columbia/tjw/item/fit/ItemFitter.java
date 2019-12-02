@@ -20,9 +20,9 @@
 package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.base.RawFittingGrid;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
-import edu.columbia.tjw.item.data.RandomizedStatusGrid;
 import edu.columbia.tjw.item.data.RawFittingGrid2;
 import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
@@ -141,10 +141,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public static <S extends ItemStatus<S>, R extends ItemRegressor<R>> ItemFittingGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_,
                                                                                                             final ItemSettings settings_, final S status_)
     {
-        // return RawFittingGrid.fromStatusGrid(grid_, settings_, status_);
-        final ItemFittingGrid<S, R> wrapped = new RawFittingGrid2<>(new RandomizedStatusGrid<>(grid_, settings_,
-                grid_.getRegressorFamily(), status_));
-        return wrapped;
+        return RawFittingGrid.fromStatusGrid(grid_, settings_, status_);
     }
 
     public S getStatus()
