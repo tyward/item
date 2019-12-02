@@ -31,7 +31,7 @@ public final class WrappedItemGrid implements ItemGrid<SimpleRegressor>, Seriali
     public static <V extends ItemRegressor<V>> WrappedItemGrid wrapGrid(final ItemGrid<V> grid_, final SortedSet<V> restricted_)
     {
         final int size = grid_.size();
-        final EnumFamily<SimpleRegressor> family = SimpleRegressor.generateFamily(grid_.getRegressorFamily());
+        final EnumFamily<SimpleRegressor> family = SimpleRegressor.generateFamily(grid_.getRegressorFamily(), restricted_);
         final ItemRegressorReader[] readers = new ItemRegressorReader[family.size()];
         final SortedSet<SimpleRegressor> available = new TreeSet<>();
 

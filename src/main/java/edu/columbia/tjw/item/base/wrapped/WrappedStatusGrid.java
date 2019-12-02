@@ -18,18 +18,20 @@ public final class WrappedStatusGrid
     private final ItemStatusGrid<?, ?> _underlying;
     private final EnumFamily<SimpleStatus> _family;
 
-    private WrappedStatusGrid(ItemStatusGrid<?, ?> grid_, WrappedItemGrid wrapped_)
+    private WrappedStatusGrid(ItemStatusGrid<?, ?> grid_, WrappedItemGrid wrapped_, final EnumFamily<SimpleStatus> family_)
     {
         _underlying = grid_;
         _underlyingWrapped = wrapped_;
-        _family = SimpleStatus.generateFamily(grid_.getStatusFamily());
+        _family = family_;
     }
 
     public static <S extends ItemStatus<S>, R extends ItemRegressor<R>>
-    WrappedStatusGrid wrapGrid(final ItemStatusGrid<S, R> grid_, final SortedSet<R> restricted_)
+    WrappedStatusGrid wrapGrid(final ItemStatusGrid<S, R> grid_, final SortedSet<R> restricted_, SortedSet<S> statusRestrict_)
     {
         WrappedItemGrid wrapped = WrappedItemGrid.wrapGrid(grid_, restricted_);
-        return new WrappedStatusGrid(grid_, wrapped);
+        EnumFamily<SimpleStatus> family = SimpleStatus.generateFamily(grid_.getStatusFamily(), statusRestrict_);
+
+        return new WrappedStatusGrid(grid_, wrapped, family);
     }
 
 

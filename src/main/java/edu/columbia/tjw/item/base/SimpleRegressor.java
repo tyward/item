@@ -22,6 +22,7 @@ import edu.columbia.tjw.item.util.HashUtil;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  * This is a simple regressor. Ideally, it's slightly cleaner to make your own
@@ -57,12 +58,17 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
      * @param underlying_
      * @return
      */
-    public static <V extends ItemRegressor<V>> EnumFamily<SimpleRegressor> generateFamily(final EnumFamily<V> underlying_)
+    public static <V extends ItemRegressor<V>> EnumFamily<SimpleRegressor> generateFamily(final EnumFamily<V> underlying_,
+                                                                                          final Set<V> allowed_)
     {
         final List<String> names = new ArrayList<>(underlying_.size());
 
         for (final V next : underlying_.getMembers())
         {
+            if (!allowed_.contains(next))
+            {
+                continue;
+            }
             names.add(next.name());
         }
 

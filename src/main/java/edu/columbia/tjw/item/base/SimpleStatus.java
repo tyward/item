@@ -15,15 +15,11 @@
  */
 package edu.columbia.tjw.item.base;
 
-import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.HashUtil;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * This is a simple fully connected status family generated from a set of names.
@@ -55,16 +51,43 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
      * @param underlying_
      * @return
      */
-    public static <V extends ItemStatus<V>> EnumFamily<SimpleStatus> generateFamily(final EnumFamily<V> underlying_)
+    public static <V extends ItemStatus<V>> EnumFamily<SimpleStatus> generateFamily(final EnumFamily<V> underlying_, final Set<V> allowed_)
     {
         final List<String> names = new ArrayList<>(underlying_.size());
 
         for (final V next : underlying_.getMembers())
         {
+//            if (!allowed_.contains(next))
+//            {
+//                continue;
+//            }
+
             names.add(next.name());
         }
 
-        return generateFamily(names);
+        EnumFamily<SimpleStatus> output = generateFamily(names);
+
+        for (SimpleStatus next : output.getMembers())
+        {
+            final String nextName = next.name();
+            final V orig = underlying_.getFromName(nextName);
+
+            List<SimpleStatus> reachable = new ArrayList<>();
+
+            for (final V nextReachable : orig.getReachable())
+            {
+                if (!allowed_.contains(nextReachable))
+                {
+                    continue;
+                }
+
+                reachable.add(output.getFromName(nextReachable.name()));
+            }
+
+            next._reachable = Collections.unmodifiableList(reachable);
+        }
+
+        return output;
     }
 
     public static EnumFamily<SimpleStatus> generateFamily(final Collection<String> statusNames_)
