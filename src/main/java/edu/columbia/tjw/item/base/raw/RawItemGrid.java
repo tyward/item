@@ -1,12 +1,16 @@
-package edu.columbia.tjw.item.base;
+package edu.columbia.tjw.item.base.raw;
 
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemRegressorReader;
 import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
+import edu.columbia.tjw.item.util.EnumMember;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * A serializable version of the ItemGrid. Allows for data to be coveniently cached and moved around.
@@ -21,6 +25,44 @@ public class RawItemGrid<R extends ItemRegressor<R>> implements ItemGrid<R>, Ser
     private final int _size;
     private final EnumFamily<R> _regressorFamily;
     private final ItemRegressorReader[] _readers;
+
+//    /**
+//     * Constructs a raw item grid, converting the enums of the underlying into the given family.
+//     *
+//     * @param underlying_
+//     * @param convertFamily_
+//     */
+//    private RawItemGrid(ItemGrid<?> underlying_, EnumFamily<R> convertFamily_)
+//    {
+//        _regressorFamily = convertFamily_;
+//        _size = underlying_.size();
+//        final SortedSet<R> available = new TreeSet<>();
+//
+//        for (final EnumMember<?> next : underlying_.getAvailableRegressors())
+//        {
+//            final String nextName = next.name();
+//            final R nextConverted = convertFamily_.getFromName(nextName);
+//
+//            if (null == nextConverted)
+//            {
+//                throw new IllegalArgumentException("Name mismatch.");
+//            }
+//
+//            available.add(nextConverted);
+//        }
+//
+//        _availableRegressors = Collections.unmodifiableSortedSet(available);
+//        _readers = new ItemRegressorReader[_regressorFamily.size()];
+//
+//        for (final R next : _availableRegressors)
+//        {
+//
+//
+//            _readers[next.ordinal()] = new RawRegressorReader(underlying_.getRegressorReader(underlying_.getRegressorFamily().getFromName(next.name())));
+//        }
+//    }
+
+
 
     public RawItemGrid(ItemGrid<R> underlying_)
     {

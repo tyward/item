@@ -1,7 +1,8 @@
-package edu.columbia.tjw.item.base;
+package edu.columbia.tjw.item.base.raw;
 
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.base.raw.RawItemGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
 

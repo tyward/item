@@ -20,10 +20,9 @@
 package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.*;
-import edu.columbia.tjw.item.base.RawFittingGrid;
+import edu.columbia.tjw.item.base.raw.RawFittingGrid;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
-import edu.columbia.tjw.item.data.RawFittingGrid2;
 import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;

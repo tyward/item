@@ -15,6 +15,7 @@
  */
 package edu.columbia.tjw.item.base;
 
+import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.HashUtil;
@@ -47,9 +48,28 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
         _indistinguishable = Collections.singletonList(this);
     }
 
-    public static EnumFamily<SimpleStatus> generateFamily(final Collection<String> regressorNames_)
+    /**
+     * Constructs a simple status family from the given enum family. The generated family matches names and ordinals
+     * exactly, but has lost any other information.
+     *
+     * @param underlying_
+     * @return
+     */
+    public static <V extends ItemStatus<V>> EnumFamily<SimpleStatus> generateFamily(final EnumFamily<V> underlying_)
     {
-        final EnumFamily<SimpleStringEnum> baseFamily = SimpleStringEnum.generateFamily(regressorNames_);
+        final List<String> names = new ArrayList<>(underlying_.size());
+
+        for (final V next : underlying_.getMembers())
+        {
+            names.add(next.name());
+        }
+
+        return generateFamily(names);
+    }
+
+    public static EnumFamily<SimpleStatus> generateFamily(final Collection<String> statusNames_)
+    {
+        final EnumFamily<SimpleStringEnum> baseFamily = SimpleStringEnum.generateFamily(statusNames_);
 
         final SimpleStatus[] regs = new SimpleStatus[baseFamily.size()];
         int pointer = 0;

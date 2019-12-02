@@ -1,4 +1,4 @@
-package edu.columbia.tjw.item.base;
+package edu.columbia.tjw.item.base.raw;
 
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemSettings;
@@ -41,7 +41,6 @@ public class RawFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>>
                 grid_.getRegressorFamily(), status_);
         return new RawFittingGrid<>(wrapped);
     }
-
 
     @Override
     public S getFromStatus()
