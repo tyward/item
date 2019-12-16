@@ -65,10 +65,10 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
 
         for (final V next : underlying_.getMembers())
         {
-            if (!allowed_.contains(next))
-            {
-                continue;
-            }
+//            if (!allowed_.contains(next))
+//            {
+//                continue;
+//            }
             names.add(next.name());
         }
 

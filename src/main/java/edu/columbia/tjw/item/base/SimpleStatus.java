@@ -186,7 +186,7 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
     @Override
     public int getReachableCount()
     {
-        return _family.size();
+        return getReachable().size();
     }
 
     /**

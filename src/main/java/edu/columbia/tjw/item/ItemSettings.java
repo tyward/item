@@ -101,7 +101,7 @@ public final class ItemSettings implements Serializable
         _validate = DEFAULT_VALIDATE;
     }
 
-    public ItemSettings(final ItemSettingsBuilder builder_)
+    public ItemSettings(final Builder builder_)
     {
         _rand = builder_.getRand();
         _randomShuffle = builder_.isRandomShuffle();
@@ -201,12 +201,17 @@ public final class ItemSettings implements Serializable
         return _approximateDerivatives;
     }
 
-    public ItemSettingsBuilder makeBuilder()
+    public Builder toBuilder()
     {
-        return new ItemSettingsBuilder(this);
+        return new Builder(this);
     }
 
-    public final class ItemSettingsBuilder
+    public static Builder newBuilder()
+    {
+        return new Builder();
+    }
+
+    public static final class Builder
     {
         private Random _rand;
         private boolean _randomShuffle;
@@ -225,12 +230,12 @@ public final class ItemSettings implements Serializable
         private int _threadBlockSize;
         private boolean _validate;
 
-        public ItemSettingsBuilder()
+        public Builder()
         {
             this(DEFAULT);
         }
 
-        public ItemSettingsBuilder(final ItemSettings base_)
+        public Builder(final ItemSettings base_)
         {
             _rand = base_.getRandom();
             _randomShuffle = base_.isRandomShuffle();
@@ -260,7 +265,7 @@ public final class ItemSettings implements Serializable
             return _rand;
         }
 
-        public ItemSettingsBuilder setRand(Random _rand)
+        public Builder setRand(Random _rand)
         {
             this._rand = _rand;
             return this;
@@ -271,7 +276,7 @@ public final class ItemSettings implements Serializable
             return _randomShuffle;
         }
 
-        public ItemSettingsBuilder setRandomShuffle(boolean _randomShuffle)
+        public Builder setRandomShuffle(boolean _randomShuffle)
         {
             this._randomShuffle = _randomShuffle;
             return this;
@@ -282,7 +287,7 @@ public final class ItemSettings implements Serializable
             return _useThreading;
         }
 
-        public ItemSettingsBuilder setUseThreading(boolean _useThreading)
+        public Builder setUseThreading(boolean _useThreading)
         {
             this._useThreading = _useThreading;
             return this;
@@ -293,7 +298,7 @@ public final class ItemSettings implements Serializable
             return _approximateDerivatives;
         }
 
-        public ItemSettingsBuilder setApproximateDerivatives(boolean _approximateDerivatives)
+        public Builder setApproximateDerivatives(boolean _approximateDerivatives)
         {
             this._approximateDerivatives = _approximateDerivatives;
             return this;
@@ -304,7 +309,7 @@ public final class ItemSettings implements Serializable
             return _polishStartingParams;
         }
 
-        public ItemSettingsBuilder setPolishStartingParams(boolean _polishStartingParams)
+        public Builder setPolishStartingParams(boolean _polishStartingParams)
         {
             this._polishStartingParams = _polishStartingParams;
             return this;
@@ -315,7 +320,7 @@ public final class ItemSettings implements Serializable
             return _allowInteractionCurves;
         }
 
-        public ItemSettingsBuilder setAllowInteractionCurves(boolean _allowInteractionCurves)
+        public Builder setAllowInteractionCurves(boolean _allowInteractionCurves)
         {
             this._allowInteractionCurves = _allowInteractionCurves;
             return this;
@@ -326,7 +331,7 @@ public final class ItemSettings implements Serializable
             return _boundCentrality;
         }
 
-        public ItemSettingsBuilder setBoundCentrality(boolean _boundCentrality)
+        public Builder setBoundCentrality(boolean _boundCentrality)
         {
             this._boundCentrality = _boundCentrality;
             return this;
@@ -337,7 +342,7 @@ public final class ItemSettings implements Serializable
             return _polishMultStartPoints;
         }
 
-        public ItemSettingsBuilder setPolishMultStartPoints(int _polishMultStartPoints)
+        public Builder setPolishMultStartPoints(int _polishMultStartPoints)
         {
             this._polishMultStartPoints = _polishMultStartPoints;
             return this;
@@ -348,7 +353,7 @@ public final class ItemSettings implements Serializable
             return _minCalibrationCount;
         }
 
-        public ItemSettingsBuilder setMinCalibrationCount(int _minCalibrationCount)
+        public Builder setMinCalibrationCount(int _minCalibrationCount)
         {
             this._minCalibrationCount = _minCalibrationCount;
             return this;
@@ -359,7 +364,7 @@ public final class ItemSettings implements Serializable
             return _improvementRatio;
         }
 
-        public ItemSettingsBuilder setImprovementRatio(double _improvementRatio)
+        public Builder setImprovementRatio(double _improvementRatio)
         {
             this._improvementRatio = _improvementRatio;
             return this;
@@ -370,7 +375,7 @@ public final class ItemSettings implements Serializable
             return _exhaustiveImprovementLimit;
         }
 
-        public ItemSettingsBuilder setExhaustiveImprovementLimit(double _exhaustiveImprovementLimit)
+        public Builder setExhaustiveImprovementLimit(double _exhaustiveImprovementLimit)
         {
             this._exhaustiveImprovementLimit = _exhaustiveImprovementLimit;
             return this;
@@ -381,7 +386,7 @@ public final class ItemSettings implements Serializable
             return _aicCutoff;
         }
 
-        public ItemSettingsBuilder setAicCutoff(double aicCutoff_)
+        public Builder setAicCutoff(double aicCutoff_)
         {
             if (aicCutoff_ > 0.0)
             {
@@ -397,7 +402,7 @@ public final class ItemSettings implements Serializable
             return _zScoreCutoff;
         }
 
-        public ItemSettingsBuilder setzScoreCutoff(double zScoreCutoff_)
+        public Builder setzScoreCutoff(double zScoreCutoff_)
         {
             this._zScoreCutoff = zScoreCutoff_;
             return this;
@@ -408,7 +413,7 @@ public final class ItemSettings implements Serializable
             return _blockSize;
         }
 
-        public ItemSettingsBuilder setBlockSize(int blockSize_)
+        public Builder setBlockSize(int blockSize_)
         {
             this._blockSize = blockSize_;
             return this;
@@ -419,7 +424,7 @@ public final class ItemSettings implements Serializable
             return _threadBlockSize;
         }
 
-        public ItemSettingsBuilder setThreadBlockSize(int threadBlockSize_)
+        public Builder setThreadBlockSize(int threadBlockSize_)
         {
             if (threadBlockSize_ < 100)
             {
@@ -440,7 +445,7 @@ public final class ItemSettings implements Serializable
             return _validate;
         }
 
-        public ItemSettingsBuilder setValidate(boolean _validate)
+        public Builder setValidate(boolean _validate)
         {
             this._validate = _validate;
             return this;

@@ -140,6 +140,12 @@ public class RandomTool
         return output;
     }
 
+    public static Random getRandom(final PrngType type_, final long seed_)
+    {
+        return getRandom(type_, ByteTool.longToBytes(seed_));
+    }
+
+
     public static Random getRandom(final PrngType type_, final byte[] seed_)
     {
         final byte[] whitened = HashTool.hash(seed_);

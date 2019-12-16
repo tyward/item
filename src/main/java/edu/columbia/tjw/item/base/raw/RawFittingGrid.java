@@ -30,7 +30,7 @@ public class RawFittingGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>>
     public static <S extends ItemStatus<S>, R extends ItemRegressor<R>>
     ItemFittingGrid<S, R> fromStatusGrid(final ItemStatusGrid<S, R> grid_, final S status_)
     {
-        final ItemSettings noShuffleSettings = (new ItemSettings()).makeBuilder().setRandomShuffle(false).build();
+        final ItemSettings noShuffleSettings = (new ItemSettings()).toBuilder().setRandomShuffle(false).build();
         return fromStatusGrid(grid_, noShuffleSettings, status_);
     }
 
