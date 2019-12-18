@@ -68,7 +68,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             //This is synchronized so that clone may safely be called by any thread. 
             //In this way, we can generate models that are detached form one another, 
             //and may safely be used simultaneously in different threads without requiring
-            //any additiona synchronization. 
+            //any additional synchronization.
             _params = params_;
             final S status = params_.getStatus();
 
@@ -337,7 +337,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             }
 
             final int wToStatus = packed_.getTransition(w);
-            final double gw = modelProbabilities_[w];
+            final double gw = modelProbabilities_[wToStatus];
             final double pw = pDeriv_[w];
             final double dw = derivative_[w];
             final int entryW = packed_.getEntry(w);
@@ -359,7 +359,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 final int zToStatus = packed_.getTransition(z);
                 final double delta_wz;
                 final double pz = pDeriv_[z];
-                final double gz = modelProbabilities_[z];
+                final double gz = modelProbabilities_[zToStatus];
                 final int entryZ = packed_.getEntry(z);
 
                 if (wToStatus == zToStatus)

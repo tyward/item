@@ -34,7 +34,8 @@ import java.util.Set;
  * @param <R> The regressor type for this grid
  * @author tyler
  */
-public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>> implements ItemStatusGrid<S, R>, ItemFittingGrid<S, R>
+public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>>
+        implements ItemStatusGrid<S, R>, ItemFittingGrid<S, R>
 {
     private final ItemStatusGrid<S, R> _underlying;
     private final int[] _mapping;
@@ -57,16 +58,31 @@ public class RandomizedStatusGrid<S extends ItemStatus<S>, R extends ItemRegress
             final int[] rawMapping = new int[size];
             int count = 0;
 
+            final boolean[] reachableMask = new boolean[fromStatus_.getFamily().size()];
+
+            for (S next : fromStatus_.getReachable())
+            {
+                reachableMask[next.ordinal()] = true;
+            }
+
+
             for (int i = 0; i < size; i++)
             {
                 final int statOrdinal = underlying_.getStatus(i);
 
                 if (statOrdinal != fromOrdinal)
                 {
+                    // Wrong starting status.
                     continue;
                 }
                 if (!underlying_.hasNextStatus(i))
                 {
+                    // Next status not available.
+                    continue;
+                }
+                if (!reachableMask[underlying_.getNextStatus(i)])
+                {
+                    // This is plainly invalid, it shows a status that is impossible according to our status family.
                     continue;
                 }
 
