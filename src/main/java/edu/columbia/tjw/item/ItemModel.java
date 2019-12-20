@@ -40,7 +40,8 @@ import java.util.logging.Logger;
  * @param <T> The curve type for this model
  * @author tyler
  */
-public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Cloneable
+public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+        implements Cloneable
 {
     private static final Logger LOG = LogUtil.getLogger(ItemModel.class);
     private final double ROUNDING_TOLERANCE = 1.0e-8;
@@ -143,7 +144,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (null == curve)
             {
                 weight *= rawReg;
-            } else
+            }
+            else
             {
                 weight *= curve.transform(rawReg);
             }
@@ -235,7 +237,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (derivToStatus == actualOffset)
             {
                 delta = 1.0;
-            } else
+            }
+            else
             {
                 delta = 0.0;
             }
@@ -254,7 +257,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (isBetaDerivative)
             {
                 pDeriv = entryWeight;
-            } else
+            }
+            else
             {
                 // This is a derivative w.r.t. one of the elements of the weight.
                 // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
@@ -269,7 +273,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         if (null != secondDerivative_)
         {
-            fillSecondDerivatives(rawReg, actualOffset, computedProbability, packed_, modelProbabilities, powerScoreDerivatives,
+            fillSecondDerivatives(rawReg, actualOffset, computedProbability, packed_, modelProbabilities,
+                    powerScoreDerivatives,
                     derivative_, secondDerivative_);
         }
 
@@ -278,7 +283,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         {
             derivative_[k] = derivative_[k] * scale;
         }
-
 
     }
 
@@ -304,7 +308,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             // Dealing with some special over/underflow cases.
             // This can't actually be zero.
             return 0.0;
-        } else
+        }
+        else
         {
             final double valRatio = curveDeriv / curveValue;
 
@@ -314,8 +319,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     }
 
 
-    private void fillSecondDerivatives(final double[] x_, final int actualOffset_, final double computedProb, PackedParameters<S, R, T> packed_,
-                                       final double[] modelProbabilities_, final double[] pDeriv_, final double[] derivative_,
+    private void fillSecondDerivatives(final double[] x_, final int actualOffset_, final double computedProb,
+                                       PackedParameters<S, R, T> packed_,
+                                       final double[] modelProbabilities_, final double[] pDeriv_,
+                                       final double[] derivative_,
                                        final double[][] secondDerivative_)
     {
         if (secondDerivative_.length != derivative_.length)
@@ -346,7 +353,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (wToStatus == actualOffset_)
             {
                 delta_wk = 1.0;
-            } else
+            }
+            else
             {
                 delta_wk = 0.0;
             }
@@ -365,7 +373,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 if (wToStatus == zToStatus)
                 {
                     delta_wz = 1.0;
-                } else
+                }
+                else
                 {
                     delta_wz = 0.0;
                 }
@@ -377,7 +386,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 if (entryW != entryZ)
                 {
                     term1 = 0.0;
-                } else
+                }
+                else
                 {
                     // N.B: We know wToStatus == zToStatus because their entries match and they have at least one curve
                     // (otherwise both are betas, and this is zero).
@@ -392,6 +402,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 final double d2 = (-dwz / gk) + (dw * dz) / (gk2);
                 secondDerivative_[w][z] = d2;
 
+
                 // TODO: Fill in once testing is done.
                 //secondDerivative_[z][w] = d2;
             }
@@ -401,7 +412,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     }
 
     private double powerScoreSecondDerivative(final double[] x_, final int w, final int z, final int toStatus_,
-                                              final int entry_, final double[] pDeriv_, PackedParameters<S, R, T> packed_)
+                                              final int entry_, final double[] pDeriv_,
+                                              PackedParameters<S, R, T> packed_)
     {
         final boolean isBetaW = packed_.isBeta(w);
         final boolean isBetaZ = packed_.isBeta(z);
@@ -420,7 +432,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             // the weights.
             final double dw = computeWeightDerivative(x_, z, entryWeight, entry_, packed_);
             return dw;
-        } else if (isBetaZ)
+        }
+        else if (isBetaZ)
         {
             // Same thing, just reversed.
             final double dw = computeWeightDerivative(x_, w, entryWeight, entry_, packed_);
@@ -432,7 +445,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final int curveDepthW = packed_.getDepth(w);
         final int curveDepthZ = packed_.getDepth(z);
         final int curveParamW = packed_.getCurveIndex(w);
-        final int curveParamZ = packed_.getCurveIndex(w);
+        final int curveParamZ = packed_.getCurveIndex(z);
 
         final ItemCurve<T> curveW = _params.getEntryCurve(entry_, curveDepthW);
         final int regOffsetW = _params.getEntryRegressorOffset(entry_, curveDepthW);
@@ -452,7 +465,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             // Just replace the curve value with its second derivative in the entry.
             return entryBeta * entryWeight * (curveSecondDeriv / curveValueW);
-        } else
+        }
+        else
         {
             // These are different curves, need to swap out both of them.
             final ItemCurve<T> curveZ = _params.getEntryCurve(entry_, curveDepthZ);
