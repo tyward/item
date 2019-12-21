@@ -1,5 +1,6 @@
 package edu.columbia.tjw.item;
 
+import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.StandardCurveFactory;
@@ -16,9 +17,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
+import java.io.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
@@ -139,31 +138,13 @@ class ItemModelTest
         return minCos;
     }
 
-    @Test
-    void computeGradient() throws Exception
+    private void testGradients(ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params)
     {
-        final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-                makeFitter();
-
-        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
-                .fitCoefficients();
-        Assertions.assertTrue(result.getEndingLL() < 0.2024);
-
-        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.expandModel(_curveRegs, 2);
-
-        System.out.println(fitter.getChain());
-        System.out.println("Next param: " + r3.getEndingParams());
-        //Assertions.assertTrue(r3.getEndingLL() < 0.195);
-
-        ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params = r3.getEndingParams();
         PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> origPacked = params.generatePacked();
         ParamFittingGrid<SimpleStatus, SimpleRegressor, StandardCurveType> paramGrid = new ParamFittingGrid<>(params,
                 _rawData);
         final double[] beta = origPacked.getPacked();
-
-
         ItemModel<SimpleStatus, SimpleRegressor, StandardCurveType> orig = new ItemModel<>(params);
-
 
         PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> repacked = origPacked.clone();
         final int paramCount = beta.length;
@@ -186,7 +167,7 @@ class ItemModelTest
             {
                 final double[] testBeta = beta.clone();
                 //final double h = Math.abs(testBeta[i] * 0.00001) + 1.0e-8;
-                final double h = 1.0e-5;
+                final double h = 1.0e-6;
                 testBeta[i] = testBeta[i] + h;
                 repacked.updatePacked(testBeta);
 
@@ -228,6 +209,16 @@ class ItemModelTest
             // Now validate cosine similarity of the rows of the second derivative.
             for (int z = 0; z < paramCount; z++)
             {
+                final double fdMag = VectorTools.magnitude(fdSecondDerivative[z]);
+                final double sdMag = VectorTools.magnitude(secondDerivative[z]);
+
+                if (fdMag < 1.0e-6 && sdMag < 1.0e-6)
+                {
+                    // Ignore anything that is essentially zero. These regressors don't matter for this observation,
+                    // so just skip over the.
+                    continue;
+                }
+
                 final double cos2 = MathTools.cos(fdSecondDerivative[z], secondDerivative[z]);
                 minfd2Cos = Math.min(cos2, minfd2Cos);
                 System.out.println("cos2[" + k + "][" + z + "]: " + cos2);
@@ -243,11 +234,91 @@ class ItemModelTest
 
             }
 
+            System.out.println("Min Cos[" + k + "]:" + minfd2Cos);
             Assertions.assertTrue(minfd2Cos > 0.99);
             System.out.println("MOving to next observation.");
         }
 
+    }
 
+    private ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> readParams(final InputStream input)
+            throws IOException
+    {
+        try (ObjectInputStream oIn = new ObjectInputStream(input))
+        {
+            final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> result =
+                    (ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType>) oIn.readObject();
+            return result;
+        }
+        catch (final ClassNotFoundException e)
+        {
+            throw new IOException(e);
+        }
+    }
+
+    private void writeParams(final File outputFile,
+                             ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params) throws IOException
+    {
+        try (final FileOutputStream fOut = new FileOutputStream(outputFile);
+             final ObjectOutputStream oOut = new ObjectOutputStream(fOut))
+        {
+            oOut.writeObject(params);
+        }
+    }
+
+    /**
+     * Zero out the beta param to remove some moving parts here, make sure everything matches up.
+     */
+    @Test
+    void basicGradient() throws Exception
+    {
+        ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params =
+                readParams(ItemModelTest.class.getResourceAsStream("/test_model_small.dat"));
+
+        PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> packed = params.generatePacked();
+
+        final double[] raw = packed.getPacked();
+        raw[1] = 0.0;
+        packed.updatePacked(raw);
+
+        testGradients(packed.generateParams());
+    }
+
+    /**
+     * Zero out the beta param to remove some moving parts here, make sure everything matches up.
+     */
+    @Test
+    void testSmallGradient() throws Exception
+    {
+        ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params =
+                readParams(ItemModelTest.class.getResourceAsStream("/test_model_small.dat"));
+
+        testGradients(params);
+    }
+
+    @Test
+    void computeGradient() throws Exception
+    {
+        final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
+                makeFitter();
+
+        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
+                .fitCoefficients();
+        Assertions.assertTrue(result.getEndingLL() < 0.2024);
+
+        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.expandModel(_curveRegs, 12);
+
+        System.out.println(fitter.getChain());
+        System.out.println("Next param: " + r3.getEndingParams());
+        //Assertions.assertTrue(r3.getEndingLL() < 0.195);
+
+        ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params = r3.getEndingParams();
+
+        final File outputFolder = new File("/Users/tyler/sync-workspace/code/outputModels");
+
+        writeParams(new File(outputFolder, "test_model.dat"), params);
+
+        testGradients(params);
     }
 
     @Test

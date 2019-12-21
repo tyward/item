@@ -287,16 +287,17 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     }
 
-    private final double computeWeightDerivative(final double[] x_, final int k, double entryWeight_,
-                                                 final int entry_, PackedParameters<S, R, T> packed_)
+    private static <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+    double computeWeightDerivative(final double[] x_, final int k, double entryWeight_,
+                                   final int entry_, PackedParameters<S, R, T> packed_)
     {
         // This is a derivative w.r.t. one of the elements of the weight.
         // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
         //final double entryBeta = packed_.getParameter(k);
         final int curveDepth = packed_.getDepth(k);
-        final ItemCurve<T> curve = _params.getEntryCurve(entry_, curveDepth);
+        final ItemCurve<T> curve = packed_.generateParams().getEntryCurve(entry_, curveDepth);
 
-        final int regOffset = _params.getEntryRegressorOffset(entry_, curveDepth);
+        final int regOffset = packed_.generateParams().getEntryRegressorOffset(entry_, curveDepth);
         final double reg = x_[regOffset];
 
         final int curveParamIndex = packed_.getCurveIndex(k);
@@ -392,7 +393,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 {
                     // N.B: We know wToStatus == zToStatus because their entries match and they have at least one curve
                     // (otherwise both are betas, and this is zero).
-                    term1 = powerScoreSecondDerivative(x_, w, z, wToStatus, entryW, pDeriv_, packed_) * gk * dm;
+                    final double psd = powerScoreSecondDerivative(x_, w, z, wToStatus, entryW, pDeriv_, packed_);
+
+                    // TODO: This minus sign seems stray.
+                    term1 = -psd * gk * dm;
                 }
 
                 final double term2 = pw * dz * dm;
