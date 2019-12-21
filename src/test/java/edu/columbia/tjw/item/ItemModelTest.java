@@ -110,6 +110,35 @@ class ItemModelTest
         Assertions.assertTrue(r3.getEndingLL() < 0.1889);
     }
 
+    private double checkSymmetry(final double[][] matrix)
+    {
+        double minCos = Double.MAX_VALUE;
+        double[] workspace = new double[matrix.length];
+
+        // Verify that the second derivative is symmetric.
+        for (int w = 0; w < matrix.length; w++)
+        {
+            // Extract column w.
+            for (int z = 0; z < matrix.length; z++)
+            {
+                workspace[z] = matrix[z][w];
+            }
+
+            // Compare to row w.
+            final double crossCos = MathTools.cos(workspace, matrix[w]);
+            System.out.println("CrossCos[" + w + "]: " + crossCos);
+
+            if (!(crossCos > 0.99))
+            {
+                System.out.println("Boing");
+            }
+
+            minCos = Math.min(minCos, crossCos);
+        }
+
+        return minCos;
+    }
+
     @Test
     void computeGradient() throws Exception
     {
@@ -120,12 +149,11 @@ class ItemModelTest
                 .fitCoefficients();
         Assertions.assertTrue(result.getEndingLL() < 0.2024);
 
-        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 =
-                fitter.expandModel(_curveRegs, 50);
+        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.expandModel(_curveRegs, 2);
 
         System.out.println(fitter.getChain());
         System.out.println("Next param: " + r3.getEndingParams());
-        Assertions.assertTrue(r3.getEndingLL() < 0.195);
+        //Assertions.assertTrue(r3.getEndingLL() < 0.195);
 
         ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params = r3.getEndingParams();
         PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> origPacked = params.generatePacked();
@@ -150,35 +178,15 @@ class ItemModelTest
         {
             orig.computeGradient(paramGrid, origPacked, k, gradient, secondDerivative);
 
-            double minCos = Double.MAX_VALUE;
+            double minCos = checkSymmetry(secondDerivative);
 
-            // Verify that the second derivative is symmetric.
-            for (int w = 0; w < paramCount; w++)
-            {
-                // Extract column w.
-                for (int z = 0; z < paramCount; z++)
-                {
-                    workspace[z] = secondDerivative[z][w];
-                }
-
-                // Compare to row w.
-                final double crossCos = MathTools.cos(workspace, secondDerivative[w]);
-                System.out.println("CrossCos[" + k + "][" + w + "]: " + crossCos);
-
-                if (!(crossCos > 0.99))
-                {
-                    System.out.println("Boing");
-                }
-
-                minCos = Math.min(minCos, crossCos);
-            }
-
-            //Assertions.assertTrue(minCos > 0.99);
+            Assertions.assertTrue(minCos > 0.99);
 
             for (int i = 0; i < paramCount; i++)
             {
                 final double[] testBeta = beta.clone();
-                final double h = Math.abs(testBeta[i] * 0.00001) + 1.0e-8;
+                //final double h = Math.abs(testBeta[i] * 0.00001) + 1.0e-8;
+                final double h = 1.0e-5;
                 testBeta[i] = testBeta[i] + h;
                 repacked.updatePacked(testBeta);
 
@@ -214,20 +222,28 @@ class ItemModelTest
 
             Assertions.assertTrue(cos > 0.99);
 
+            final double fdCos = checkSymmetry(fdSecondDerivative);
+            double minfd2Cos = Double.MAX_VALUE;
+
             // Now validate cosine similarity of the rows of the second derivative.
             for (int z = 0; z < paramCount; z++)
             {
                 final double cos2 = MathTools.cos(fdSecondDerivative[z], secondDerivative[z]);
+                minfd2Cos = Math.min(cos2, minfd2Cos);
                 System.out.println("cos2[" + k + "][" + z + "]: " + cos2);
 
                 if (cos2 < 0.99)
                 {
                     System.out.println("Blah2");
+                    final double[] g2 = new double[paramCount];
+                    final double[][] s2 = new double[paramCount][paramCount];
+                    orig.computeGradient(paramGrid, origPacked, k, g2, s2);
                 }
 
-                //Assertions.assertTrue(cos2 > 0.99);
+
             }
 
+            Assertions.assertTrue(minfd2Cos > 0.99);
             System.out.println("MOving to next observation.");
         }
 

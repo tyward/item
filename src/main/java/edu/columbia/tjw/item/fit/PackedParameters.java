@@ -19,6 +19,8 @@ public interface PackedParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     public void setParameter(final int index_, final double value_);
 
+    public double getEntryBeta(int index_);
+
     public boolean isBeta(final int index_);
 
     public boolean betaIsFrozen(final int index_);

@@ -30,7 +30,8 @@ import java.util.*;
  * @param <T> The curve type for this model
  * @author tyler
  */
-public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
+public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+        implements Serializable
 {
     //This is just to make it clear that the 0th entry is always the intercept.
     private static final int INTERCEPT_INDEX = 0;
@@ -167,7 +168,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
                     for (int w = 0; w < curveParamCount; w++)
                     {
-                        if (!packed_.isCurve(pointer) || packed_.getDepth(pointer) != z || packed_.getCurveIndex(pointer) != w)
+                        if (!packed_.isCurve(pointer) || packed_.getDepth(pointer) != z || packed_
+                                .getCurveIndex(pointer) != w)
                         {
                             throw new IllegalArgumentException("Impossible.");
                         }
@@ -1054,16 +1056,19 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         private final int[] _entryIndex;
         private final int[] _curveDepth;
         private final int[] _curveIndex;
+        private final int[] _betaIndex;
         private final boolean[] _betaIsFrozen;
 
         private ItemParameters<S, R, T> _generated = null;
 
-        public ItemParametersVector(final ItemParametersVector vec_) {
+        public ItemParametersVector(final ItemParametersVector vec_)
+        {
             _paramValues = vec_._paramValues.clone();
             _toStatus = vec_._toStatus;
             _entryIndex = vec_._entryIndex;
             _curveDepth = vec_._curveDepth;
             _curveIndex = vec_._curveIndex;
+            _betaIndex = vec_._betaIndex;
             _betaIsFrozen = vec_._betaIsFrozen;
         }
 
@@ -1076,6 +1081,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             _entryIndex = new int[paramCount];
             _curveDepth = new int[paramCount];
             _curveIndex = new int[paramCount];
+            _betaIndex = new int[paramCount];
             _betaIsFrozen = new boolean[paramCount];
 
             int pointer = 0;
@@ -1134,6 +1140,19 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             {
                 throw new IllegalArgumentException("Impossible: " + pointer + " != " + paramCount);
             }
+
+            // Basically we are just getting the parameters that represent the actual betas.
+            for (int i = 0; i < paramCount; i++)
+            {
+                if (this._curveDepth[i] < 0)
+                {
+                    _betaIndex[i] = i;
+                }
+                else
+                {
+                    _betaIndex[i] = _betaIndex[i - 1];
+                }
+            }
         }
 
         private int fillBeta(final S toStatus_, final int entryIndex_, final int pointer_)
@@ -1183,6 +1202,12 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         public double getParameter(int index_)
         {
             return _paramValues[index_];
+        }
+
+        @Override
+        public double getEntryBeta(int index_)
+        {
+            return _paramValues[_betaIndex[index_]];
         }
 
         @Override
@@ -1237,7 +1262,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         @Override
         public synchronized ItemParameters<S, R, T> generateParams()
         {
-            if(null != _generated) {
+            if (null != _generated)
+            {
                 return _generated;
             }
 
@@ -1251,7 +1277,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             return ItemParameters.this;
         }
 
-        public PackedParameters<S, R, T> clone() {
+        public PackedParameters<S, R, T> clone()
+        {
             return new ItemParametersVector(this);
         }
     }

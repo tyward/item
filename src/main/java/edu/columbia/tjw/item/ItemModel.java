@@ -262,7 +262,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             {
                 // This is a derivative w.r.t. one of the elements of the weight.
                 // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
-                final double entryBeta2 = this._params.getBeta(derivToStatus, entry);
+                final double entryBeta2 = packed_.getEntryBeta(k);
+
                 final double dw2 = computeWeightDerivative(rawReg, k, entryWeight, entry, packed_);
                 pDeriv = entryBeta2 * dw2;
             }
@@ -400,7 +401,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
                 // Now compute the second derivative of the log likelihood, which is -dwz/gk + (dw * dz) / gk*gk
                 final double d2 = (-dwz / gk) + (dw * dz) / (gk2);
-                secondDerivative_[w][z] = d2;
+
+                // I don't know where the extra - sign comes from, but FD approx shows
+                // that it's needed.
+                secondDerivative_[w][z] = -d2;
 
 
                 // TODO: Fill in once testing is done.
@@ -441,7 +445,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
 
         // OK, neither of these is a beta derivative, both are on curves.
-        final double entryBeta = packed_.getParameter(w); // Could use either w or z, get the same result.
+        // Could use either w or z, get the same result.
+        final double entryBeta = packed_.getEntryBeta(w);
         final int curveDepthW = packed_.getDepth(w);
         final int curveDepthZ = packed_.getDepth(z);
         final int curveParamW = packed_.getCurveIndex(w);
