@@ -1,6 +1,5 @@
 package edu.columbia.tjw.item;
 
-import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.StandardCurveFactory;
@@ -13,6 +12,9 @@ import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.util.MathTools;
 import edu.columbia.tjw.item.util.random.PrngType;
 import edu.columbia.tjw.item.util.random.RandomTool;
+import org.apache.commons.math3.linear.Array2DRowRealMatrix;
+import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.linear.SingularValueDecomposition;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -109,33 +111,101 @@ class ItemModelTest
         Assertions.assertTrue(r3.getEndingLL() < 0.1889);
     }
 
+    /**
+     * See if a is approximately equal to b, return the largest singular value of (a-b) divided by the average of the
+     * largest singular values of a and b.
+     */
+    private double checkEquality(final double[][] a, final double[][] b)
+    {
+//        // Now validate cosine similarity of the rows of the second derivative.
+//        for (int z = 0; z < paramCount; z++)
+//        {
+//            final double fdMag = VectorTools.magnitude(a[z]);
+//            final double sdMag = VectorTools.magnitude(b[z]);
+//
+//            if (fdMag < 1.0e-6 && sdMag < 1.0e-6)
+//            {
+//                // Ignore anything that is essentially zero. These regressors don't matter for this observation,
+//                // so just skip over the.
+//                continue;
+//            }
+//
+//            final double cos2 = MathTools.cos(a[z], b[z]);
+//            minfd2Cos = Math.min(cos2, minfd2Cos);
+//            System.out.println("cos2[" + k + "][" + z + "]: " + cos2);
+//
+//            if (cos2 < 0.99)
+//            {
+//                System.out.println("Blah2");
+//                final double[] g2 = new double[paramCount];
+//                final double[][] s2 = new double[paramCount][paramCount];
+//                orig.computeGradient(paramGrid, origPacked, k, g2, s2);
+//            }
+//        }
+
+
+        final RealMatrix aMatrix = new Array2DRowRealMatrix(a);
+        final RealMatrix bMatrix = new Array2DRowRealMatrix(b);
+
+        final RealMatrix diffMatrix = aMatrix.subtract(bMatrix);
+
+        final SingularValueDecomposition aDecomp = new SingularValueDecomposition(aMatrix);
+        final SingularValueDecomposition bDecomp = new SingularValueDecomposition(bMatrix);
+        final SingularValueDecomposition diffDecomp = new SingularValueDecomposition(diffMatrix);
+
+        final double aVal = aDecomp.getSingularValues()[0];
+        final double bVal = bDecomp.getSingularValues()[0];
+        final double diffVal = diffDecomp.getSingularValues()[0];
+
+        final double denominator = 0.5 * (aVal + bVal);
+        final double valRatio = diffVal / denominator;
+
+        return valRatio;
+    }
+
     private double checkSymmetry(final double[][] matrix)
     {
-        double minCos = Double.MAX_VALUE;
-        double[] workspace = new double[matrix.length];
+//        double minCos = Double.MAX_VALUE;
+//        double[] workspace = new double[matrix.length];
+//
+//        // Verify that the second derivative is symmetric.
+//        for (int w = 0; w < matrix.length; w++)
+//        {
+//            // Extract column w.
+//            for (int z = 0; z < matrix.length; z++)
+//            {
+//                workspace[z] = matrix[z][w];
+//            }
+//
+//            // Compare to row w.
+//            final double crossCos = MathTools.cos(workspace, matrix[w]);
+//            System.out.println("CrossCos[" + w + "]: " + crossCos);
+//
+//            if (!(crossCos > 0.99))
+//            {
+//                System.out.println("Boing");
+//            }
+//
+//            minCos = Math.min(minCos, crossCos);
+//        }
 
-        // Verify that the second derivative is symmetric.
-        for (int w = 0; w < matrix.length; w++)
+        RealMatrix wrapped = new Array2DRowRealMatrix(matrix);
+        RealMatrix residual = wrapped.subtract(wrapped.transpose());
+
+        SingularValueDecomposition wrappedDecomp = new SingularValueDecomposition(wrapped);
+        SingularValueDecomposition residualDecomp = new SingularValueDecomposition(residual);
+
+        final double wrappedMax = wrappedDecomp.getSingularValues()[0];
+        final double residMax = residualDecomp.getSingularValues()[0];
+
+        final double valRatio = residMax / wrappedMax;
+
+        if (valRatio > 1.0e-4)
         {
-            // Extract column w.
-            for (int z = 0; z < matrix.length; z++)
-            {
-                workspace[z] = matrix[z][w];
-            }
-
-            // Compare to row w.
-            final double crossCos = MathTools.cos(workspace, matrix[w]);
-            System.out.println("CrossCos[" + w + "]: " + crossCos);
-
-            if (!(crossCos > 0.99))
-            {
-                System.out.println("Boing");
-            }
-
-            minCos = Math.min(minCos, crossCos);
+            System.out.println("Major value fail: " + valRatio);
         }
 
-        return minCos;
+        return valRatio;
     }
 
     private void testGradients(ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params)
@@ -155,13 +225,16 @@ class ItemModelTest
 
         final double[] workspace = new double[paramCount];
 
+        double maxEpsilon = Double.MIN_VALUE;
+
         for (int k = 0; k < Math.min(1000, paramGrid.size()); k++)
         {
             orig.computeGradient(paramGrid, origPacked, k, gradient, secondDerivative);
 
-            double minCos = checkSymmetry(secondDerivative);
+            final double sdSymmEpsilon = checkSymmetry(secondDerivative);
 
-            Assertions.assertTrue(minCos > 0.99);
+            // Roughly speaking, we want this less than sqrt(machineEpsilon).
+            Assertions.assertTrue(sdSymmEpsilon < 1.0e-8);
 
             for (int i = 0; i < paramCount; i++)
             {
@@ -192,53 +265,50 @@ class ItemModelTest
 
             final double cos = MathTools.cos(gradient, fdGradient);
 
-            System.out.println("Cos[" + k + "]: " + cos);
-
-            if (!(cos > 0.99))
+            if (cos < 0.99999)
             {
-                System.out.println("Blah!");
-                final double origLL = orig.logLikelihood(paramGrid, k);
-                //final double shiftLL = adjusted.logLikelihood(paramGrid, k);
+                System.out.println("Weak Cos[" + k + "]: " + cos);
             }
+//
+//            if (!(cos > 0.99))
+//            {
+//                System.out.println("Blah!");
+//                final double origLL = orig.logLikelihood(paramGrid, k);
+//                //final double shiftLL = adjusted.logLikelihood(paramGrid, k);
+//            }
 
             Assertions.assertTrue(cos > 0.99);
 
-            final double fdCos = checkSymmetry(fdSecondDerivative);
-            double minfd2Cos = Double.MAX_VALUE;
+            final double fdSdSymmEpsilon = checkSymmetry(fdSecondDerivative);
 
-            // Now validate cosine similarity of the rows of the second derivative.
-            for (int z = 0; z < paramCount; z++)
+            // Roughly speaking, we want this less than sqrt(machineEpsilon).
+            if (fdSdSymmEpsilon > 1.0e-4)
             {
-                final double fdMag = VectorTools.magnitude(fdSecondDerivative[z]);
-                final double sdMag = VectorTools.magnitude(secondDerivative[z]);
-
-                if (fdMag < 1.0e-6 && sdMag < 1.0e-6)
-                {
-                    // Ignore anything that is essentially zero. These regressors don't matter for this observation,
-                    // so just skip over the.
-                    continue;
-                }
-
-                final double cos2 = MathTools.cos(fdSecondDerivative[z], secondDerivative[z]);
-                minfd2Cos = Math.min(cos2, minfd2Cos);
-                System.out.println("cos2[" + k + "][" + z + "]: " + cos2);
-
-                if (cos2 < 0.99)
-                {
-                    System.out.println("Blah2");
-                    final double[] g2 = new double[paramCount];
-                    final double[][] s2 = new double[paramCount][paramCount];
-                    orig.computeGradient(paramGrid, origPacked, k, g2, s2);
-                }
-
-
+                System.out.println("FD second derivative not symmetric: " + fdSdSymmEpsilon);
             }
 
-            System.out.println("Min Cos[" + k + "]:" + minfd2Cos);
-            Assertions.assertTrue(minfd2Cos > 0.99);
-            System.out.println("MOving to next observation.");
+            // Now validate cosine similarity of the rows of the second derivative.
+            final double matrixEpsilon = checkEquality(fdSecondDerivative, secondDerivative);
+
+            System.out.println("MatrixEpsilon[" + k + "]:" + matrixEpsilon);
+
+            if (matrixEpsilon >= 1.0e-4)
+            {
+                System.out.println("Blah2");
+                checkEquality(fdSecondDerivative, secondDerivative);
+                final double[] g2 = new double[paramCount];
+                final double[][] s2 = new double[paramCount][paramCount];
+                orig.computeGradient(paramGrid, origPacked, k, g2, s2);
+            }
+
+            maxEpsilon = Math.max(maxEpsilon, matrixEpsilon);
+
+            Assertions.assertTrue(matrixEpsilon < 1.0e-4);
+
+
         }
 
+        System.out.println("Max Epsilon: " + maxEpsilon);
     }
 
     private ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> readParams(final InputStream input)
@@ -295,6 +365,16 @@ class ItemModelTest
 
         testGradients(params);
     }
+
+    @Test
+    void testMediumGradient() throws Exception
+    {
+        ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params =
+                readParams(ItemModelTest.class.getResourceAsStream("/test_model_medium.dat"));
+
+        testGradients(params);
+    }
+
 
     @Test
     void computeGradient() throws Exception
