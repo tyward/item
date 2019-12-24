@@ -363,7 +363,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             final double dm = (delta_wk - gw);
 
-            // TODO: Check this result and then fix the bound.
             for (int z = w; z < derivative_.length; z++)
             {
                 final int zToStatus = packed_.getTransition(z);

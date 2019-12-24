@@ -223,7 +223,7 @@ class ItemModelTest
 
         double maxEpsilon = Double.MIN_VALUE;
 
-        for (int k = 0; k < Math.min(1000, paramGrid.size()); k++)
+        for (int k = 0; k < Math.min(10000, paramGrid.size()); k++)
         {
             orig.computeGradient(paramGrid, origPacked, k, gradient, secondDerivative);
 
