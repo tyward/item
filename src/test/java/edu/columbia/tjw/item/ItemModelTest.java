@@ -113,33 +113,6 @@ class ItemModelTest
      */
     private double checkEquality(final double[][] a, final double[][] b)
     {
-//        // Now validate cosine similarity of the rows of the second derivative.
-//        for (int z = 0; z < paramCount; z++)
-//        {
-//            final double fdMag = VectorTools.magnitude(a[z]);
-//            final double sdMag = VectorTools.magnitude(b[z]);
-//
-//            if (fdMag < 1.0e-6 && sdMag < 1.0e-6)
-//            {
-//                // Ignore anything that is essentially zero. These regressors don't matter for this observation,
-//                // so just skip over the.
-//                continue;
-//            }
-//
-//            final double cos2 = MathTools.cos(a[z], b[z]);
-//            minfd2Cos = Math.min(cos2, minfd2Cos);
-//            System.out.println("cos2[" + k + "][" + z + "]: " + cos2);
-//
-//            if (cos2 < 0.99)
-//            {
-//                System.out.println("Blah2");
-//                final double[] g2 = new double[paramCount];
-//                final double[][] s2 = new double[paramCount][paramCount];
-//                orig.computeGradient(paramGrid, origPacked, k, g2, s2);
-//            }
-//        }
-
-
         final RealMatrix aMatrix = new Array2DRowRealMatrix(a);
         final RealMatrix bMatrix = new Array2DRowRealMatrix(b);
 
@@ -161,30 +134,6 @@ class ItemModelTest
 
     private double checkSymmetry(final double[][] matrix)
     {
-//        double minCos = Double.MAX_VALUE;
-//        double[] workspace = new double[matrix.length];
-//
-//        // Verify that the second derivative is symmetric.
-//        for (int w = 0; w < matrix.length; w++)
-//        {
-//            // Extract column w.
-//            for (int z = 0; z < matrix.length; z++)
-//            {
-//                workspace[z] = matrix[z][w];
-//            }
-//
-//            // Compare to row w.
-//            final double crossCos = MathTools.cos(workspace, matrix[w]);
-//            System.out.println("CrossCos[" + w + "]: " + crossCos);
-//
-//            if (!(crossCos > 0.99))
-//            {
-//                System.out.println("Boing");
-//            }
-//
-//            minCos = Math.min(minCos, crossCos);
-//        }
-
         RealMatrix wrapped = new Array2DRowRealMatrix(matrix);
         RealMatrix residual = wrapped.subtract(wrapped.transpose());
 
@@ -265,13 +214,7 @@ class ItemModelTest
             {
                 System.out.println("Weak Cos[" + k + "]: " + cos);
             }
-//
-//            if (!(cos > 0.99))
-//            {
-//                System.out.println("Blah!");
-//                final double origLL = orig.logLikelihood(paramGrid, k);
-//                //final double shiftLL = adjusted.logLikelihood(paramGrid, k);
-//            }
+
 
             Assertions.assertTrue(cos > 0.99);
 
