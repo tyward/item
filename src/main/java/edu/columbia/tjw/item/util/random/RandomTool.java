@@ -8,6 +8,7 @@ package edu.columbia.tjw.item.util.random;
 import edu.columbia.tjw.item.util.ByteTool;
 import edu.columbia.tjw.item.util.HashTool;
 
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Random;
 
@@ -157,7 +158,16 @@ public class RandomTool
                 output = new Random(ByteTool.bytesToLong(whitened, 0));
                 break;
             case SECURE:
-                output = new SecureRandom(whitened);
+                try
+                {
+                    output = SecureRandom.getInstance("SHA1PRNG");
+                    output.setSeed(ByteTool.bytesToLong(whitened, 0));
+                }
+                catch (final NoSuchAlgorithmException e)
+                {
+                    throw new RuntimeException(e);
+                }
+                //output = new SecureRandom(whitened);
                 break;
             default:
                 throw new IllegalArgumentException("Unknown PRNG type.");
