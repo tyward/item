@@ -25,6 +25,7 @@ import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
+import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;

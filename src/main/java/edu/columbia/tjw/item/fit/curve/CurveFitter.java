@@ -219,8 +219,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         {
             LOG.info("Now calculating interactions.");
 
-            final boolean interactionBetter = this.generateInteractions(chain_, best.getCurveParams(),
-                    best.getToState(), best.aicPerParameter(), preExpansionEntropy, true);
+            final boolean interactionBetter = this.generateInteractions(chain_, best);
 
             if (!interactionBetter)
             {
@@ -399,9 +398,17 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     }
 
     public boolean generateInteractions(final FittingProgressChain<S, R, T> chain_,
+                                        final CurveFitResult<S, R, T> curveFitResult_)
+    {
+        return generateInteractions(chain_, curveFitResult_.getCurveParams(), curveFitResult_.getToState(),
+                curveFitResult_.aicPerParameter(), curveFitResult_.getFitResult().getPrev().getEntropy(),
+                true);
+    }
+
+    public boolean generateInteractions(final FittingProgressChain<S, R, T> chain_,
                                         final ItemCurveParams<R, T> curveParams_,
-                                        final S toStatus_, final double perParameterTarget_, final double baseLL_,
-                                        final boolean exhaustive_)
+                                        final S toStatus_, final double perParameterTarget_,
+                                        final double baseLL_, final boolean exhaustive_)
     {
         final ItemParameters<S, R, T> base = chain_.getBestParameters();
         final List<Pair<R, ItemCurve<T>>> allRegs = extractRegs(base, toStatus_);
@@ -409,12 +416,10 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         final FitResult<S, R, T> prevResult = chain_.getLatestFrame().getFitResults().getFitResult();
         final double startingLL = prevResult.getEntropy();
-        //final double startingLL = chain_.getLogLikelihood();
         final double improvementBound = _settings.getImprovementRatio() * (chain_.getLatestFrame().getAicDiff());
 
-        CurveFitResult<S, R, T> best = new CurveFitResult<>(prevResult, curveParams_, toStatus_, chain_.getRowCount());
-//        CurveFitResult<S, R, T> best = new CurveFitResult<>(base, base, curveParams_, toStatus_,
-//                chain_.getLogLikelihood(), chain_.getLogLikelihood(), chain_.getRowCount());
+        CurveFitResult<S, R, T> best = new CurveFitResult<>(prevResult, curveParams_, toStatus_,
+                chain_.getRowCount());
         final boolean curveIsFlag = (curveParams_.getEntryDepth() == 1) && (curveParams_.getCurve(0) == null);
         int calcCount = 0;
 

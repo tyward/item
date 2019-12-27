@@ -45,19 +45,6 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
         _toState = toState_;
         _curveParams = curveParams_;
     }
-//
-//    public CurveFitResult(final ItemParameters<S, R, T> startingParams_, final ItemParameters<S, R, T> params_,
-//                          final ItemCurveParams<R, T> curveParams_, final S toState_,
-//                          final double logLikelihood_, final double startingLL_, final int rowCount_)
-//    {
-//        FitResult<S, R, T> prevResult = new FitResult<>(startingParams_, startingLL_, rowCount_);
-//        _fitResult = new FitResult<>(params_, logLikelihood_, rowCount_, prevResult);
-//
-//
-//        _curveParams = curveParams_;
-//        _toState = toState_;
-//        _rowCount = rowCount_;
-//    }
 
     public FitResult<S, R, T> getFitResult()
     {
@@ -99,14 +86,9 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
         return _fitResult.getEntropy();
     }
 
-    public double getImprovement()
+    private double getImprovement()
     {
         return getStartingLogLikelihood() - getLogLikelihood();
-    }
-
-    public double improvementPerParameter()
-    {
-        return getImprovement() / getEffectiveParamCount();
     }
 
     public double aicPerParameter()

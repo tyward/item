@@ -67,6 +67,23 @@ public class ItemFitterTest
         Assertions.assertEquals(r3.getEndingLL(), 0.19814760690220218);
     }
 
+    @Test
+    void largeTest() throws Exception
+    {
+        final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
+                makeFitter();
+
+        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
+                .fitCoefficients();
+        Assertions.assertEquals(result.getEndingLL(), 0.20231126613149455);
+
+        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 =
+                fitter.expandModel(_curveRegs, 20);
+
+        System.out.println("Revised: " + r3.getEndingParams());
+        Assertions.assertEquals(r3.getEndingLL(), 0.18882103170241665);
+    }
+
 //    @Test
 //    void simpleFitTest() throws Exception
 //    {
