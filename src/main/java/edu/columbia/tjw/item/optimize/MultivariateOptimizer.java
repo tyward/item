@@ -73,10 +73,9 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
         // Testing code.
         final FitPoint point = f_.evaluateGradient(startingPoint_);
-        point.computeUntil(point.getBlockCount());
-        final BlockResult aggregated = point.getAggregated();
+        final double[] derivative = this.getComparator().getDerivative(point);
 
-        final MultivariateGradient gradient = new MultivariateGradient(aggregated.getDerivative(), null);
+        final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
 
         final MultivariatePoint direction = new MultivariatePoint(gradient.getGradient());
         direction.scale(-1.0);
@@ -114,10 +113,9 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 if (!firstLoop)
                 {
                     final FitPoint point = f_.evaluateGradient(currentPoint);
-                    point.computeUntil(point.getBlockCount());
-                    final BlockResult aggregated = point.getAggregated();
+                    final double[] derivative = this.getComparator().getDerivative(point);
 
-                    final MultivariateGradient gradient = new MultivariateGradient(aggregated.getDerivative(), null);
+                    final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
 
                     evaluationCount += (2 * dimension);
 
@@ -126,7 +124,6 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
                     final MultivariatePoint pointA = new MultivariatePoint(gradient.getGradient());
                     pointA.scale(-1.0);
-
 
                     if (null == gradient.getSecondDerivative())
                     {
@@ -203,7 +200,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         }
                     }
 
-                    result = _optimizer.optimize(f_, currentPoint, fitPointCurrent, trialPoint, f_.evaluate(trialPoint));
+                    result = _optimizer
+                            .optimize(f_, currentPoint, fitPointCurrent, trialPoint, f_.evaluate(trialPoint));
                 }
                 else
                 {

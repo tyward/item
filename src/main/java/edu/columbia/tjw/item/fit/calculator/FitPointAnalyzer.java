@@ -25,12 +25,19 @@ public final class FitPointAnalyzer
 
     public double compare(final FitPoint a_, final FitPoint b_)
     {
-        return compareEntropies(a_, b_, _minStdDev);
+        return compare(a_, b_, _minStdDev);
     }
 
     public double getSigmaTarget()
     {
         return _minStdDev;
+    }
+
+    public double[] getDerivative(final FitPoint point_)
+    {
+        point_.computeAll();
+        final BlockResult aggregated = point_.getAggregated();
+        return aggregated.getDerivative();
     }
 
     /**
@@ -45,7 +52,7 @@ public final class FitPointAnalyzer
      * @param b_
      * @return
      */
-    public double compareEntropies(final FitPoint a_, final FitPoint b_, final double minStdDev_)
+    public double compare(final FitPoint a_, final FitPoint b_, final double minStdDev_)
     {
         if (a_ == b_)
         {
@@ -59,7 +66,7 @@ public final class FitPointAnalyzer
 
         if (a_.getNextBlock() > b_.getNextBlock())
         {
-            return -1.0 * compareEntropies(b_, a_, minStdDev_);
+            return -1.0 * compare(b_, a_, minStdDev_);
         }
 
         // b_ has at least as many values as a_
