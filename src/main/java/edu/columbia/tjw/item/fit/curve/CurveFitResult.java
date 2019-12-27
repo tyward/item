@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.util.MathFunctions;
 
 /**
@@ -30,27 +31,22 @@ import edu.columbia.tjw.item.util.MathFunctions;
  */
 public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
-    private final double _startingLogL;
-    private final double _logL;
-    private final double _llImprovement;
+    private final FitResult<S, R, T> _fitResult;
     private final int _rowCount;
     private final S _toState;
-    private final ItemParameters<S, R, T> _params;
     private final ItemCurveParams<R, T> _curveParams;
-    private final ItemParameters<S, R, T> _startingParams;
 
     public CurveFitResult(final ItemParameters<S, R, T> startingParams_, final ItemParameters<S, R, T> params_,
                           final ItemCurveParams<R, T> curveParams_, final S toState_,
                           final double logLikelihood_, final double startingLL_, final int rowCount_)
     {
-        _params = params_;
+        FitResult<S, R, T> prevResult = new FitResult<>(startingParams_, startingLL_, rowCount_);
+        _fitResult = new FitResult<>(params_, logLikelihood_, rowCount_, prevResult);
+
+
         _curveParams = curveParams_;
         _toState = toState_;
-        _logL = logLikelihood_;
-        _llImprovement = (startingLL_ - _logL);
-        _startingLogL = startingLL_;
         _rowCount = rowCount_;
-        _startingParams = startingParams_;
     }
 
     public S getToState()
@@ -65,12 +61,12 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
 
     public ItemParameters<S, R, T> getStartingParams()
     {
-        return _startingParams;
+        return _fitResult.getPrev().getParams();
     }
 
     public ItemParameters<S, R, T> getModelParams()
     {
-        return _params;
+        return _fitResult.getParams();
     }
 
     public int getRowCount()
@@ -80,17 +76,22 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
 
     public double getStartingLogLikelihood()
     {
-        return _startingLogL;
+        return _fitResult.getPrev().getEntropy();
     }
 
     public double getLogLikelihood()
     {
-        return _logL;
+        return _fitResult.getEntropy();
+    }
+
+    public double getImprovement()
+    {
+        return getStartingLogLikelihood() - getLogLikelihood();
     }
 
     public double improvementPerParameter()
     {
-        return _llImprovement / getEffectiveParamCount();
+        return getImprovement() / getEffectiveParamCount();
     }
 
     public double aicPerParameter()
@@ -108,14 +109,14 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
     public double calculateAicDifference()
     {
         final double aicDiff = MathFunctions.computeAicDifference(0,
-                getEffectiveParamCount(), _startingLogL, _logL, _rowCount);
+                getEffectiveParamCount(), getStartingLogLikelihood(), getLogLikelihood(), _rowCount);
         return aicDiff;
     }
 
     @Override
     public String toString()
     {
-        return "Fit result[" + _llImprovement + "]: \n" + _curveParams.toString();
+        return "Fit result[" + getImprovement() + "]: \n" + _curveParams.toString();
     }
 
 }

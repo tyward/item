@@ -23,6 +23,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.util.MathFunctions;
 
 /**
@@ -33,99 +34,79 @@ import edu.columbia.tjw.item.util.MathFunctions;
  */
 public final class ParamFitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
-    private final double _startingLogL;
-    private final double _logL;
-    private final double _llImprovement;
     private final int _rowCount;
-    private final ItemParameters<S, R, T> _starting;
-    private final ItemParameters<S, R, T> _endingParams;
+    private final FitResult<S, R, T> _fitResult;
+
+    public ParamFitResult(final FitResult<S, R, T> fitResult_, final int rowCount_)
+    {
+        _fitResult = fitResult_;
+        _rowCount = rowCount_;
+    }
 
     public ParamFitResult(final ItemParameters<S, R, T> starting_, final ItemParameters<S, R, T> ending_,
                           final double logLikelihood_, final double startingLL_, final int rowCount_)
     {
-        if (null == starting_ || null == ending_)
-        {
-            throw new NullPointerException("Parameters cannot be null.");
-        }
-        if (Double.isNaN(logLikelihood_) || Double.isInfinite(logLikelihood_) || logLikelihood_ < 0.0)
-        {
-            throw new IllegalArgumentException("Log likelihood must be well defined.");
-        }
-        if (Double.isNaN(startingLL_) || Double.isInfinite(startingLL_) || startingLL_ < 0.0)
-        {
-            throw new IllegalArgumentException("Starting Log Likelihood must be well defined.");
-        }
+        final FitResult<S, R, T> starting = new FitResult<>(starting_, startingLL_, rowCount_);
+        final FitResult<S, R, T> ending;
 
-        _starting = starting_;
-        _endingParams = ending_;
-        _startingLogL = startingLL_;
-
-        if (isUnchanged())
+        if (starting_ == ending_)
         {
-            //Don't let strange rounding errors throw us off.
-            _logL = _startingLogL;
-            _llImprovement = 0.0;
+            //Don't let minor rounding errors throw us off.
+            ending = new FitResult<>(ending_, startingLL_, rowCount_, starting);
         }
         else
         {
-            _logL = logLikelihood_;
-            _llImprovement = (startingLL_ - _logL);
+            ending = new FitResult<>(ending_, logLikelihood_, rowCount_, starting);
         }
 
+        _fitResult = ending;
         _rowCount = rowCount_;
-    }
-
-    public boolean isWorse()
-    {
-        if (_starting.getEffectiveParamCount() != _endingParams.getEffectiveParamCount())
-        {
-
-        }
-
-        return MathFunctions.isAicWorse(_startingLogL, _logL);
     }
 
     public boolean isBetter()
     {
-        return MathFunctions.isAicWorse(_logL, _startingLogL);
+        return MathFunctions.isAicWorse(getEndingLL(), getStartingLL());
     }
 
     public boolean isUnchanged()
     {
-        return (_starting == _endingParams);
+        return (getEndingLL() == getStartingLL());
     }
 
     public double getAic()
     {
-        final double scaledImprovement = _llImprovement * _rowCount;
-        final double paramContribution = (_endingParams.getEffectiveParamCount() - _starting.getEffectiveParamCount());
+        final double scaledImprovement = getLLImprovement() * _rowCount;
+        final double paramContribution =
+                (getEndingParams().getEffectiveParamCount() - getStartingParams()
+                        .getEffectiveParamCount());
         final double aicDiff = 2.0 * (paramContribution - scaledImprovement);
         return aicDiff;
     }
 
     public double getStartingLL()
     {
-        return _startingLogL;
+        return _fitResult.getPrev().getEntropy();
     }
 
     public double getEndingLL()
     {
-        return _logL;
+        return _fitResult.getEntropy();
     }
 
     public double getLLImprovement()
     {
-        return _llImprovement;
+        final double llImprovement = getEndingLL() - getStartingLL();
+        return llImprovement;
     }
 
     public ItemParameters<S, R, T> getStartingParams()
     {
-        return _starting;
+        return _fitResult.getPrev().getParams();
     }
 
     public ItemParameters<S, R, T> getEndingParams()
     {
-        return _endingParams;
+        return _fitResult.getParams();
     }
 
 }

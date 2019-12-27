@@ -20,7 +20,6 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     private final List<BlockResultCalculator<S, R, T>> _blockCalculators;
     private final PackedParameters<S, R, T> _packed;
     private final ItemParameters<S, R, T> _params;
-    //private final BlockResultCompound _compound;
     private final int _blockSize;
     private final int _totalSize;
 
@@ -41,7 +40,6 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
         _blockCalculators = calculator_.getCalculators();
         _packed = packed_.clone(); // May be able to avoid, for now, for safety.
         _params = _packed.generateParams();
-        //_compound = new BlockResultCompound();
         _blockSize = calculator_.getBlockSize();
         _totalSize = calculator_.getRowCount();
 

@@ -40,7 +40,6 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
     private final FitPointGenerator<S, R, T> _calc;
     private final ItemFittingGrid<S, R> _grid;
 
-
     public EntropyCalculator(final ItemFittingGrid<S, R> grid_)
     {
         _calc = new FitPointGenerator<>(grid_);
@@ -69,5 +68,18 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
         return point.getAggregated(BlockCalculationType.VALUE);
     }
 
+    public BlockResult computeDerivative(final ItemParameters<S, R, T> params_)
+    {
+        final ItemFitPoint<S, R, T> point = _calc.generatePoint(params_);
+        point.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
+        return point.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+    }
 
+    public double computeAic(final ItemParameters<S, R, T> params_)
+    {
+        final double entropy = computeEntropy(params_).getEntropySum();
+        final double paramAdj = params_.getEffectiveParamCount();
+        final double aic = entropy + paramAdj;
+        return aic;
+    }
 }

@@ -61,13 +61,6 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     public ParamFitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_) throws ConvergenceException
     {
         final double entropy = chain_.getLogLikelihood();
-
-//        if (params_ != _cacheParams)
-//        {
-//            _cacheParams = params_;
-//            _cacheFunction = generateFunction(params_);
-//        }
-
         final LogisticModelFunction<S, R, T> function = generateFunction(params_);
         final double[] beta = function.getBeta();
         final MultivariatePoint point = new MultivariatePoint(beta);
