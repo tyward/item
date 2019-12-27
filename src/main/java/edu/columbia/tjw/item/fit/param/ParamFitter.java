@@ -58,7 +58,8 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return fit(chain_, chain_.getBestParameters());
     }
 
-    public ParamFitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_) throws ConvergenceException
+    public ParamFitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_)
+            throws ConvergenceException
     {
         final double entropy = chain_.getLogLikelihood();
         final LogisticModelFunction<S, R, T> function = generateFunction(params_);
@@ -86,16 +87,19 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         if (newLL > entropy)
         {
-            output = new ParamFitResult<>(chain_.getBestParameters(), chain_.getBestParameters(), entropy, entropy,
-                    numRows);
+            // Push a frame with no improvement.
+            final FitResult<S, R, T> res = new FitResult<>(chain_.getBestParameters(), entropy, numRows,
+                    chain_.getLatestResults().getFitResult());
+            output = new ParamFitResult<>(res, numRows);
             chain_.pushResults("ParamFit", output.getEndingParams(), output.getEndingLL());
         }
         else
         {
             final ItemParameters<S, R, T> updated = function.generateParams(beta);
+            final FitResult<S, R, T> fitResult = _calc
+                    .computeFitResult(updated, chain_.getLatestResults().getFitResult());
 
-            final double recalcEntropy = _calc.computeEntropy(updated).getEntropyMean();
-            output = new ParamFitResult<>(params_, updated, recalcEntropy, entropy, numRows);
+            output = new ParamFitResult<>(fitResult, numRows);
             chain_.pushResults("ParamFit", output.getEndingParams(), output.getEndingLL());
         }
 

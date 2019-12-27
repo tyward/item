@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.fit.FitResult;
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.util.MathFunctions;
 
 /**
@@ -36,17 +37,31 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
     private final S _toState;
     private final ItemCurveParams<R, T> _curveParams;
 
-    public CurveFitResult(final ItemParameters<S, R, T> startingParams_, final ItemParameters<S, R, T> params_,
-                          final ItemCurveParams<R, T> curveParams_, final S toState_,
-                          final double logLikelihood_, final double startingLL_, final int rowCount_)
+    public CurveFitResult(FitResult<S, R, T> result_, final ItemCurveParams<R, T> curveParams_, final S toState_,
+                          final int rowCount_)
     {
-        FitResult<S, R, T> prevResult = new FitResult<>(startingParams_, startingLL_, rowCount_);
-        _fitResult = new FitResult<>(params_, logLikelihood_, rowCount_, prevResult);
-
-
-        _curveParams = curveParams_;
-        _toState = toState_;
+        _fitResult = result_;
         _rowCount = rowCount_;
+        _toState = toState_;
+        _curveParams = curveParams_;
+    }
+//
+//    public CurveFitResult(final ItemParameters<S, R, T> startingParams_, final ItemParameters<S, R, T> params_,
+//                          final ItemCurveParams<R, T> curveParams_, final S toState_,
+//                          final double logLikelihood_, final double startingLL_, final int rowCount_)
+//    {
+//        FitResult<S, R, T> prevResult = new FitResult<>(startingParams_, startingLL_, rowCount_);
+//        _fitResult = new FitResult<>(params_, logLikelihood_, rowCount_, prevResult);
+//
+//
+//        _curveParams = curveParams_;
+//        _toState = toState_;
+//        _rowCount = rowCount_;
+//    }
+
+    public FitResult<S, R, T> getFitResult()
+    {
+        return _fitResult;
     }
 
     public S getToState()

@@ -213,11 +213,13 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
         if (compare >= 0)
         {
-            LOG.info("Discarding results, likelihood did not improve[" + aicDifference + "]: " + currentBest + " -> " + logLikelihood_);
+            LOG.info(
+                    "Discarding results, likelihood did not improve[" + aicDifference + "]: " + currentBest + " -> " + logLikelihood_);
             return false;
         }
 
-        LOG.info("Log Likelihood improvement[" + frameName_ + "][" + aicDifference + "]: " + currentBest + " -> " + logLikelihood_);
+        LOG.info(
+                "Log Likelihood improvement[" + frameName_ + "][" + aicDifference + "]: " + currentBest + " -> " + logLikelihood_);
 
         if (aicDifference >= -5.0)
         {
@@ -296,9 +298,13 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         final ParamProgressFrame<S, R, T> startFrame = _frameList.get(0);
         final ParamProgressFrame<S, R, T> endFrame = getLatestFrame();
 
-        final ParamFitResult<S, R, T> output = new ParamFitResult<>(startFrame.getCurrentParams(),
-                endFrame.getCurrentParams(), endFrame.getCurrentLogLikelihood(), startFrame.getCurrentLogLikelihood()
-                , _rowCount);
+        final FitResult<S, R, T> fitResult = new FitResult<>(endFrame.getCurrentParams(),
+                endFrame.getCurrentLogLikelihood(), _rowCount, startFrame.getFitResults().getFitResult());
+
+        final ParamFitResult<S, R, T> output = new ParamFitResult<>(fitResult, _rowCount);
+//        final ParamFitResult<S, R, T> output = new ParamFitResult<>(startFrame.getCurrentParams(),
+//                endFrame.getCurrentParams(), endFrame.getCurrentLogLikelihood(), startFrame.getCurrentLogLikelihood()
+//                , _rowCount);
         return output;
     }
 
@@ -323,7 +329,8 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     }
 
     //
-    public <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> double getAicDiff(final ParamProgressFrame<S, R, T> frame1_, final ParamProgressFrame<S, R, T> frame2_)
+    public <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> double getAicDiff(
+            final ParamProgressFrame<S, R, T> frame1_, final ParamProgressFrame<S, R, T> frame2_)
     {
         final int paramCountA = frame1_.getCurrentParams().getEffectiveParamCount();
         final int paramCountB = frame2_.getCurrentParams().getEffectiveParamCount();
@@ -361,20 +368,22 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             _frameName = frameName_;
             _current = current_;
             _currentLL = currentLL_;
+            final FitResult<S1, R1, T1> prev;
 
             if (null == startingPoint_)
             {
                 //This is basically a loopback fit result, but it's properly formed, so should be OK.
-                _fitResult = new ParamFitResult<>(current_, current_, currentLL_, currentLL_, _rowCount);
+                prev = null;
                 _startingPoint = this;
             }
             else
             {
-                _fitResult = new ParamFitResult<>(startingPoint_.getCurrentParams(), current_, currentLL_,
-                        startingPoint_.getCurrentLogLikelihood(), _rowCount);
+                prev = startingPoint_.getFitResults().getFitResult();
                 _startingPoint = startingPoint_;
             }
 
+            final FitResult<S1, R1, T1> current = new FitResult<>(current_, currentLL_, _rowCount, prev);
+            _fitResult = new ParamFitResult<>(current, _rowCount);
             _entryTime = System.currentTimeMillis();
         }
 
@@ -425,7 +434,8 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         {
             final StringBuilder builder = new StringBuilder();
 
-            builder.append("frame[" + _frameName + "][" + this.getAicDiff() + "] {" + _currentLL + ", " + this.getElapsed() + "}");
+            builder.append("frame[" + _frameName + "][" + this.getAicDiff() + "] {" + _currentLL + ", " + this
+                    .getElapsed() + "}");
 
             return builder.toString();
         }

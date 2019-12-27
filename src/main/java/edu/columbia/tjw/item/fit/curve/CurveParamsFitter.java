@@ -23,6 +23,7 @@ import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
+import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
@@ -114,7 +115,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return result;
     }
 
-    public CurveFitResult<S, R, T> calibrateCurveAddition(T curveType_, R field_, S toStatus_) throws ConvergenceException
+    public CurveFitResult<S, R, T> calibrateCurveAddition(T curveType_, R field_, S toStatus_)
+            throws ConvergenceException
     {
         LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
 
@@ -187,7 +189,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
     public CurveFitResult<S, R, T> expandParameters(final ItemParameters<S, R, T> params_,
                                                     final ItemCurveParams<R, T> initParams_, S toStatus_,
-                                                    final boolean subtractStarting_, final double startingLL_) throws ConvergenceException
+                                                    final boolean subtractStarting_, final double startingLL_)
+            throws ConvergenceException
     {
         final CurveOptimizerFunction<S, R, T> func = generateFunction(initParams_, toStatus_, subtractStarting_,
                 params_);
@@ -208,7 +211,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
     public CurveFitResult<S, R, T> generateFit(final S toStatus_, final ItemParameters<S, R, T> baseParams_,
                                                final CurveOptimizerFunction<S, R, T> func_,
-                                               final double startingLL_, final ItemCurveParams<R, T> starting_) throws ConvergenceException
+                                               final double startingLL_, final ItemCurveParams<R, T> starting_)
+            throws ConvergenceException
     {
         final double[] startingArray = starting_.generatePoint();
         final MultivariatePoint startingPoint = new MultivariatePoint(startingArray);
@@ -220,12 +224,17 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final ItemCurveParams<R, T> curveParams = new ItemCurveParams<>(starting_, _factory, bestVal);
         final ItemParameters<S, R, T> updated = baseParams_.addBeta(curveParams, toStatus_);
 
+        final FitResult<S, R, T> prev = new FitResult<>(baseParams_, startingLL_, result.dataElementCount());
+        final FitResult<S, R, T> fitResult = _calc.computeFitResult(updated, prev);
+
         //N.B: The optimizer will only run until it is sure that it has found the 
         //best point, or that it can't make further progress. Its goal is not to 
         //compute the log likelihood accurately, so recompute that now. 
-        final double recalcEntropy = _calc.computeEntropy(updated).getEntropyMean();
-        final CurveFitResult<S, R, T> output = new CurveFitResult<>(baseParams_, updated, curveParams, toStatus_,
-                recalcEntropy, startingLL_, result.dataElementCount());
+//        final double recalcEntropy = _calc.computeEntropy(updated).getEntropyMean();
+//        final CurveFitResult<S, R, T> output = new CurveFitResult<>(baseParams_, updated, curveParams, toStatus_,
+//                recalcEntropy, startingLL_, result.dataElementCount());
+        final CurveFitResult<S, R, T> output = new CurveFitResult<>(fitResult, curveParams, toStatus_,
+                result.dataElementCount());
 
 
         return output;

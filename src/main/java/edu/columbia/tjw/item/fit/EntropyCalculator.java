@@ -61,6 +61,18 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
         return _grid.size();
     }
 
+    public ItemFitPoint<S, R, T> generatePoint(final ItemParameters<S, R, T> params_)
+    {
+        return _calc.generatePoint(params_);
+    }
+
+    public FitResult<S, R, T> computeFitResult(final ItemParameters<S, R, T> params_, FitResult<S, R, T> prevResult_)
+    {
+        final double entropy = computeEntropy(params_).getEntropyMean();
+        FitResult<S, R, T> output = new FitResult<>(params_, entropy, _calc.getRowCount(), prevResult_);
+        return output;
+    }
+
     public BlockResult computeEntropy(final ItemParameters<S, R, T> params_)
     {
         final ItemFitPoint<S, R, T> point = _calc.generatePoint(params_);

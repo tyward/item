@@ -43,24 +43,29 @@ public final class ParamFitResult<S extends ItemStatus<S>, R extends ItemRegress
         _rowCount = rowCount_;
     }
 
-    public ParamFitResult(final ItemParameters<S, R, T> starting_, final ItemParameters<S, R, T> ending_,
-                          final double logLikelihood_, final double startingLL_, final int rowCount_)
+//    public ParamFitResult(final ItemParameters<S, R, T> starting_, final ItemParameters<S, R, T> ending_,
+//                          final double logLikelihood_, final double startingLL_, final int rowCount_)
+//    {
+//        final FitResult<S, R, T> starting = new FitResult<>(starting_, startingLL_, rowCount_);
+//        final FitResult<S, R, T> ending;
+//
+//        if (starting_ == ending_)
+//        {
+//            //Don't let minor rounding errors throw us off.
+//            ending = new FitResult<>(ending_, startingLL_, rowCount_, starting);
+//        }
+//        else
+//        {
+//            ending = new FitResult<>(ending_, logLikelihood_, rowCount_, starting);
+//        }
+//
+//        _fitResult = ending;
+//        _rowCount = rowCount_;
+//    }
+
+    public FitResult<S, R, T> getFitResult()
     {
-        final FitResult<S, R, T> starting = new FitResult<>(starting_, startingLL_, rowCount_);
-        final FitResult<S, R, T> ending;
-
-        if (starting_ == ending_)
-        {
-            //Don't let minor rounding errors throw us off.
-            ending = new FitResult<>(ending_, startingLL_, rowCount_, starting);
-        }
-        else
-        {
-            ending = new FitResult<>(ending_, logLikelihood_, rowCount_, starting);
-        }
-
-        _fitResult = ending;
-        _rowCount = rowCount_;
+        return _fitResult;
     }
 
     public boolean isBetter()
