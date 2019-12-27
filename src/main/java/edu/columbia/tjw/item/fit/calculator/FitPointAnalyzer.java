@@ -35,8 +35,8 @@ public final class FitPointAnalyzer
 
     public double[] getDerivative(final FitPoint point_)
     {
-        point_.computeAll();
-        final BlockResult aggregated = point_.getAggregated();
+        point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
+        final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
         return aggregated.getDerivative();
     }
 
@@ -64,10 +64,12 @@ public final class FitPointAnalyzer
             throw new IllegalArgumentException("Incomparable points.");
         }
 
-        if (a_.getNextBlock() > b_.getNextBlock())
+        if (a_.getNextBlock(BlockCalculationType.VALUE) > b_.getNextBlock(BlockCalculationType.VALUE))
         {
             return -1.0 * compare(b_, a_, minStdDev_);
         }
+
+        final BlockCalculationType valType = BlockCalculationType.VALUE;
 
         // b_ has at least as many values as a_
         final VarianceCalculator vcalc = new VarianceCalculator();
@@ -75,7 +77,7 @@ public final class FitPointAnalyzer
 
         for (int i = 0; i < a_.getBlockCount(); i++)
         {
-            if (i >= a_.getNextBlock())
+            if (i >= a_.getNextBlock(valType))
             {
                 if (i >= _superBlockSize && vcalc.getMean() != 0.0)
                 {
@@ -91,13 +93,13 @@ public final class FitPointAnalyzer
                 }
 
                 final int target = Math.min(i + _superBlockSize, a_.getBlockCount());
-                a_.computeUntil(target);
-                b_.computeUntil(target);
+                a_.computeUntil(target, valType);
+                b_.computeUntil(target, valType);
                 // OK, carry on now that data has been computed.
             }
 
-            final BlockResult a = a_.getBlock(i);
-            final BlockResult b = b_.getBlock(i);
+            final BlockResult a = a_.getBlock(i, valType);
+            final BlockResult b = b_.getBlock(i, valType);
 
             if (a.getRowStart() != b.getRowStart())
             {
@@ -114,7 +116,7 @@ public final class FitPointAnalyzer
             vcalc.update(diff);
         }
 
-        if (a_.getNextBlock() < 1)
+        if (a_.getNextBlock(valType) < 1)
         {
             // No data, can't tell which is better.
             return 0.0;
@@ -127,8 +129,8 @@ public final class FitPointAnalyzer
         {
             // Special case, can't do much else about the variance.
             // This is a considerable overestimate.
-            final double devA = a_.getBlock(0).getEntropyMeanDev();
-            final double devB = b_.getBlock(0).getEntropyMeanDev();
+            final double devA = a_.getBlock(0, valType).getEntropyMeanDev();
+            final double devB = b_.getBlock(0, valType).getEntropyMeanDev();
             dev = 0.5 * (devA + devB);
         }
 

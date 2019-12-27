@@ -29,6 +29,15 @@ public final class BlockResultCompound
         }
     }
 
+    public void setResult(final int index_, final BlockResult next_)
+    {
+        if (null == next_)
+        {
+            throw new NullPointerException("Next cannot be null.");
+        }
+
+        _results.set(index_, next_);
+    }
 
     public void appendResult(final BlockResult next_)
     {

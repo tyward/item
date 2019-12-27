@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -122,6 +123,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
      */
     private Bracket<V> completeBracket(final F f_, final Bracket<V> bracket_) throws ConvergenceException
     {
+        BlockCalculationType valType = BlockCalculationType.VALUE;
         final FitPointAnalyzer comparator = this.getComparator();
 
         //We know that the three points are in order, but don't know how they compare. 
@@ -185,8 +187,8 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             final double bScalar = b.project(ab);
             final double cScalar = c.project(ab);
 
-            int highWater = Math.max(pointA.getNextBlock(), pointB.getNextBlock());
-            highWater = Math.max(highWater, pointC.getNextBlock());
+            int highWater = Math.max(pointA.getNextBlock(valType), pointB.getNextBlock(valType));
+            highWater = Math.max(highWater, pointC.getNextBlock(valType));
 
 
             final double aVal = pointA.getMean(highWater);
@@ -447,8 +449,9 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             final double comparison = comparator.compare(pointB, nextPoint);
             evalCount++;
 
-            int highWater = Math.max(pointA.getNextBlock(), pointB.getNextBlock());
-            highWater = Math.max(highWater, pointC.getNextBlock());
+            BlockCalculationType valType = BlockCalculationType.VALUE;
+            int highWater = Math.max(pointA.getNextBlock(valType), pointB.getNextBlock(valType));
+            highWater = Math.max(highWater, pointC.getNextBlock(valType));
 
             final double bMean = pointB.getMean(highWater);
             final double nextMean = nextPoint.getMean(highWater);

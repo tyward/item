@@ -76,7 +76,7 @@ public class FitPointGenerator<S extends ItemStatus<S>, R extends ItemRegressor<
 
     public ItemFitPoint<S, R, T> generateGradient(final PackedParameters<S, R, T> packed_)
     {
-        return new ItemFitPoint<>(this, packed_, BlockCalculationType.FIRST_DERIVATIVE);
+        return new ItemFitPoint<>(this, packed_);
     }
 
     public int getBlockCount()

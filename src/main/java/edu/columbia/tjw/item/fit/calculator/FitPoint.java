@@ -10,15 +10,15 @@ public interface FitPoint
 
     int getBlockCount();
 
-    int getNextBlock();
+    int getNextBlock(BlockCalculationType type_);
 
-    void computeAll();
+    void computeAll(BlockCalculationType type_);
 
-    BlockResult getAggregated();
+    BlockResult getAggregated(BlockCalculationType type_);
 
-    void computeUntil(int endBlock_);
+    void computeUntil(int endBlock_, BlockCalculationType type_);
 
-    BlockResult getBlock(int index_);
+    BlockResult getBlock(int index_, BlockCalculationType type_);
 
     double getMean(int boundary_);
 
