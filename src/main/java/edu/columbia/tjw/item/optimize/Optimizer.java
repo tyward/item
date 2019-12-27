@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
+import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
 
 /**
  * @param <V> The type of points over which this can optimize
@@ -37,7 +38,7 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
     private final int _blockSize;
     private final int _maxEvalCount;
 
-    private final AdaptiveComparator<V, F> _comparator;
+    private final FitPointAnalyzer _comparator;
 
     public Optimizer(final int blockSize_, final int maxEvalCount_)
     {
@@ -51,10 +52,11 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         _yTol = yTol_;
         _maxEvalCount = maxEvalCount_;
 
-        _comparator = new BasicAdaptiveComparator<>(_blockSize, _stdDevThreshold);
+        _comparator = new FitPointAnalyzer(_blockSize, _stdDevThreshold);
     }
 
-    public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_) throws ConvergenceException;
+    public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_)
+            throws ConvergenceException;
 
     public double getXTolerance()
     {
@@ -76,7 +78,7 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         return _maxEvalCount;
     }
 
-    public AdaptiveComparator<V, F> getComparator()
+    public FitPointAnalyzer getComparator()
     {
         return _comparator;
     }

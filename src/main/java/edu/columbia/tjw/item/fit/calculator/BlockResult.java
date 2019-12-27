@@ -10,10 +10,11 @@ public final class BlockResult
     private final double _sumEntropy;
     private final double _sumEntropy2;
     private final double[] _derivative;
+    private final double[][] _secondDerivative;
     private final int _size;
 
     public BlockResult(final int rowStart_, final int rowEnd_, final double sumEntropy_, final double sumEntropy2_,
-                       final double[] derivative_)
+                       final double[] derivative_, final double[][] secondDerivative_)
     {
         if (rowStart_ < 0)
         {
@@ -42,6 +43,7 @@ public final class BlockResult
         _sumEntropy2 = sumEntropy2_;
         _size = size;
         _derivative = derivative_;
+        _secondDerivative = secondDerivative_;
     }
 
     public BlockResult(final List<BlockResult> analysisList_)
@@ -58,13 +60,29 @@ public final class BlockResult
         int count = 0;
 
         final double[] derivative;
+        final double[][] secondDerivative;
 
-        if (analysisList_.get(0).hasDerivative())
+        final boolean hasSecondDerivative = analysisList_.get(0).hasSecondDerivative();
+        final boolean hasDerivative = hasSecondDerivative || analysisList_.get(0).hasDerivative();
+
+        if (hasDerivative)
         {
-            derivative = new double[analysisList_.get(0)._derivative.length];
-        } else
+            final int dimension = analysisList_.get(0).getDerivativeDimension();
+            derivative = new double[dimension];
+
+            if (hasSecondDerivative)
+            {
+                secondDerivative = new double[dimension][dimension];
+            }
+            else
+            {
+                secondDerivative = null;
+            }
+        }
+        else
         {
             derivative = null;
+            secondDerivative = null;
         }
 
         for (final BlockResult next : analysisList_)
@@ -78,10 +96,19 @@ public final class BlockResult
             if (null != derivative)
             {
                 final double weight = next._size;
+                final int dimension = derivative.length;
 
-                for (int i = 0; i < derivative.length; i++)
+                for (int i = 0; i < dimension; i++)
                 {
                     derivative[i] += weight * next.getDerivativeEntry(i);
+
+                    if (null != secondDerivative)
+                    {
+                        for (int j = 0; j < dimension; j++)
+                        {
+                            secondDerivative[i][j] += weight * next.getSecondDerivativeEntry(i, j);
+                        }
+                    }
                 }
             }
         }
@@ -94,10 +121,19 @@ public final class BlockResult
         if (null != derivative)
         {
             final double invWeight = 1.0 / count;
+            final int dimension = derivative.length;
 
-            for (int i = 0; i < derivative.length; i++)
+            for (int i = 0; i < dimension; i++)
             {
                 derivative[i] = invWeight * derivative[i];
+
+                if (null != secondDerivative)
+                {
+                    for (int j = 0; j < dimension; j++)
+                    {
+                        secondDerivative[i][j] = invWeight * secondDerivative[i][j];
+                    }
+                }
             }
         }
 
@@ -107,6 +143,7 @@ public final class BlockResult
         _sumEntropy2 = h2;
         _size = count;
         _derivative = derivative;
+        _secondDerivative = secondDerivative;
     }
 
     public int getRowStart()
@@ -162,7 +199,12 @@ public final class BlockResult
         return _derivative != null;
     }
 
-    public int derivativeDimension()
+    public boolean hasSecondDerivative()
+    {
+        return _secondDerivative != null;
+    }
+
+    public int getDerivativeDimension()
     {
         if (!hasDerivative())
         {
@@ -170,6 +212,16 @@ public final class BlockResult
         }
 
         return _derivative.length;
+    }
+
+    public double getSecondDerivativeEntry(final int row_, final int column_)
+    {
+        if (!hasSecondDerivative())
+        {
+            throw new IllegalArgumentException("Derivative was not calculated.");
+        }
+
+        return _secondDerivative[row_][column_];
     }
 
     public double getDerivativeEntry(final int index_)

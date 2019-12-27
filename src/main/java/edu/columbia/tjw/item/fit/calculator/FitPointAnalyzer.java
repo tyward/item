@@ -4,25 +4,34 @@ import edu.columbia.tjw.item.algo.VarianceCalculator;
 
 public final class FitPointAnalyzer
 {
-    // How many blocks do we calculate at a time (to take advantage of threading). This should be several times the number of cores in the computer.
+    // How many blocks do we calculate at a time (to take advantage of threading). This should be several times the
+    // number of cores in the computer.
     private static final int DEFAULT_SUPERBLOCK_SIZE = 100;
     private static final double DEFAULT_MIN_STD_DEV = 5.0;
 
     private final int _superBlockSize;
     private final double _minStdDev;
 
+    public FitPointAnalyzer(final int superBlockSize_, final double minStdDev_)
+    {
+        _superBlockSize = superBlockSize_;
+        _minStdDev = minStdDev_;
+    }
 
     public FitPointAnalyzer()
     {
-        _superBlockSize = DEFAULT_SUPERBLOCK_SIZE;
-        _minStdDev = DEFAULT_MIN_STD_DEV;
+        this(DEFAULT_SUPERBLOCK_SIZE, DEFAULT_MIN_STD_DEV);
     }
 
-    public double compareEntropies(final FitPoint a_, final FitPoint b_)
+    public double compare(final FitPoint a_, final FitPoint b_)
     {
         return compareEntropies(a_, b_, _minStdDev);
     }
 
+    public double getSigmaTarget()
+    {
+        return _minStdDev;
+    }
 
     /**
      * How many sigma higher/lower than other_ is this block result. If positive, this is X sigma higher than other_.
@@ -38,6 +47,11 @@ public final class FitPointAnalyzer
      */
     public double compareEntropies(final FitPoint a_, final FitPoint b_, final double minStdDev_)
     {
+        if (a_ == b_)
+        {
+            // These are identical objects, the answer would always be zero.
+            return 0.0;
+        }
         if (a_.getBlockCount() != b_.getBlockCount())
         {
             throw new IllegalArgumentException("Incomparable points.");

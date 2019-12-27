@@ -4,10 +4,6 @@ import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
-import edu.columbia.tjw.item.optimize.MultivariateGradient;
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
-
-import java.util.Arrays;
 
 public final class BlockResultCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>,
         T extends ItemCurveType<T>>
@@ -76,7 +72,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
         final double[] derivative;
 
-        if(type_ == BlockCalculationType.FIRST_DERIVATIVE || type_ == BlockCalculationType.SECOND_DERIVATIVE) {
+        if (type_ == BlockCalculationType.FIRST_DERIVATIVE || type_ == BlockCalculationType.SECOND_DERIVATIVE)
+        {
             final int dimension = packed_.size();
             final double[] tmp = new double[dimension];
             derivative = new double[dimension];
@@ -101,10 +98,13 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
                     derivative[i] = derivative[i] * invCount;
                 }
             }
-        } else {
+        }
+        else
+        {
             derivative = null;
         }
 
-        return new BlockResult(_rowOffset, _rowOffset + count, entropySum, x2, derivative);
+        return new BlockResult(_rowOffset, _rowOffset + count, entropySum, x2,
+                derivative, null);
     }
 }

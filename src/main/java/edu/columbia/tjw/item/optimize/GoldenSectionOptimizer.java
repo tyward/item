@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
+import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.logging.Logger;
@@ -29,7 +30,8 @@ import java.util.logging.Logger;
  * @param <F> The type of function this can optimize
  * @author tyler
  */
-public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>> extends Optimizer<V, F>
+public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>>
+        extends Optimizer<V, F>
 {
     private static final double MAX_BRACKET_SCALE = 2000.0;
     private static final double STD_DEV_CUTOFF = 1.0;
@@ -48,7 +50,8 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
     }
 
     @Override
-    public OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V scaleStep_) throws ConvergenceException
+    public OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V scaleStep_)
+            throws ConvergenceException
     {
         //final AdaptiveComparator<V, F> comparator = this.getComparator();
         V scaleStep = scaleStep_;
@@ -119,7 +122,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
      */
     private Bracket<V> completeBracket(final F f_, final Bracket<V> bracket_) throws ConvergenceException
     {
-        final AdaptiveComparator<V, F> comparator = this.getComparator();
+        final FitPointAnalyzer comparator = this.getComparator();
 
         //We know that the three points are in order, but don't know how they compare. 
         final V a = bracket_.getA().clone();
@@ -310,7 +313,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
 
     private Bracket<V> bracket(final F f_, final Bracket<V> bracket_) throws ConvergenceException
     {
-        final AdaptiveComparator<V, F> comparator = this.getComparator();
+        final FitPointAnalyzer comparator = this.getComparator();
 
         //We know that the three points are in order, but don't know how they compare. 
         final V a = bracket_.getA().clone();
@@ -439,7 +442,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
                 next.add(scaleStep);
             }
 
-            final AdaptiveComparator<V, F> comparator = this.getComparator();
+            final FitPointAnalyzer comparator = this.getComparator();
             final FitPoint nextPoint = f_.evaluate(next);
             final double comparison = comparator.compare(pointB, nextPoint);
             evalCount++;

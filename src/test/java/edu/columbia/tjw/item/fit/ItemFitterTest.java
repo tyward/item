@@ -64,7 +64,7 @@ public class ItemFitterTest
         ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.expandModel(_curveRegs, 2);
 
         System.out.println("Revised: " + r3.getEndingParams());
-        Assertions.assertEquals(r3.getEndingLL(), 0.1943684028229462);
+        Assertions.assertEquals(r3.getEndingLL(), 0.19814760690220218);
     }
 
 //    @Test
