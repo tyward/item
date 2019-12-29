@@ -281,12 +281,12 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return flagRegs;
     }
 
+
     private CurveFitResult<S, R, T> generateSingleInteraction(final R reg_, final ItemParameters<S, R, T> params_,
-                                                              final ItemCurveParams<R, T> starting_,
-                                                              final ItemCurve<T> curve_, final S toStatus,
-                                                              final double startingLL_)
+                                                              final CurveFitResult<S, R, T> starting_,
+                                                              final ItemCurve<T> curve_, final S toStatus)
     {
-        final ItemCurveParams<R, T> testParams = appendToCurveParams(starting_, curve_, reg_);
+        final ItemCurveParams<R, T> testParams = appendToCurveParams(starting_.getCurveParams(), curve_, reg_);
 
         if (params_.curveIsForbidden(toStatus, testParams))
         {
@@ -294,28 +294,23 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             return null;
         }
 
-
         final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("SingleInteraction", params_,
-                startingLL_, _calc.size(), _calc, true);
+                starting_.getFitResult().getEntropy(), _calc.size(), _calc, true);
 
         if (null == toStatus)
         {
             //This is a flag-flag interaction term...
             //This means, among other things, that we just add an additional entry with more flags
             final ItemParameters<S, R, T> updatedParams = params_.addBeta(testParams, null);
-            //final ParamFitter<S, R, T> fitter = new ParamFitter<>(updatedParams, _grid, _settings, null);
 
             try
             {
                 final ParamFitResult<S, R, T> fitResult = _paramFitter.fit(subChain, updatedParams);
-                //final double llValue = fitResult.getEndingLL();
                 final ItemParameters<S, R, T> modParams = fitResult.getEndingParams();
                 ItemCurveParams<R, T> modCurveParams = modParams.getEntryCurveParams(modParams.getEntryCount() - 1,
                         true);
 
                 return new CurveFitResult<>(fitResult.getFitResult(), modCurveParams, toStatus, _grid.size());
-//                return new CurveFitResult<>(params_, modParams, modCurveParams, toStatus, llValue, startingLL_,
-//                        _grid.size());
             }
             catch (final ConvergenceException e)
             {
@@ -330,7 +325,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             try
             {
                 final CurveFitResult<S, R, T> result = getFitter(subChain).expandParameters(params_, testParams,
-                        toStatus, false, startingLL_);
+                        toStatus, starting_.getFitResult().getEntropy());
 
                 if (!subChain.pushResults("ParameterExpansion", result))
                 {
@@ -344,10 +339,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                     final ItemParameters<S, R, T> updated = calibrated.getEndingParams();
                     final CurveFitResult<S, R, T> r2 = new CurveFitResult<>(calibrated.getFitResult(),
                             updated.getEntryCurveParams(updated.getEntryCount() - 1, true), toStatus, _grid.size());
-
-//                    final CurveFitResult<S, R, T> r2 = new CurveFitResult<>(params_, updated,
-//                            updated.getEntryCurveParams(updated.getEntryCount() - 1, true), toStatus,
-//                            calibrated.getEndingLL(), startingLL_, _grid.size());
                     return r2;
                 }
                 else
@@ -405,6 +396,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                 true);
     }
 
+    // TODO: This needs to be fixed up, it doesn't work well currently.
     public boolean generateInteractions(final FittingProgressChain<S, R, T> chain_,
                                         final ItemCurveParams<R, T> curveParams_,
                                         final S toStatus_, final double perParameterTarget_,
@@ -459,8 +451,8 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             }
 
             calcCount++;
-            final CurveFitResult<S, R, T> result = generateSingleInteraction(reg, base, best.getCurveParams(), curve,
-                    toStatus_, chain_.getLogLikelihood());
+            final CurveFitResult<S, R, T> result = generateSingleInteraction(reg, base, best, curve,
+                    toStatus_);
 
             if (null == result)
             {
@@ -562,8 +554,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     private boolean calibrateCurve(final int entryIndex_, final S toStatus_,
                                    final FittingProgressChain<S, R, T> subChain_) throws ConvergenceException
     {
-        CurveFitResult<S, R, T> result = getFitter(subChain_).calibrateExistingCurve(entryIndex_, toStatus_,
-                subChain_.getLogLikelihood());
+        CurveFitResult<S, R, T> result = getFitter(subChain_).calibrateExistingCurve(entryIndex_, toStatus_);
 
         if (null == result)
         {

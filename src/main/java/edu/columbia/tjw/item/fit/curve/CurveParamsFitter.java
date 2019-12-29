@@ -57,8 +57,10 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private final MultivariateOptimizer _optimizer;
     private final S _fromStatus;
 
-    private final double _startingLL;
+    //private final double _startingLL;
     private final EntropyCalculator<S, R, T> _calc;
+
+    private FitResult<S, R, T> _prevResult;
 
 
     public CurveParamsFitter(final ItemCurveFactory<R, T> factory_,
@@ -83,17 +85,17 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             _actualOutcomes[i] = _grid.getNextStatus(i);
         }
 
-        _startingLL = chain_.getLogLikelihood();
+        _prevResult = chain_.getLatestResults().getFitResult();
         _calc = chain_.getCalculator();
     }
 
     public double getEntropy()
     {
-        return _startingLL;
+        return _prevResult.getEntropy();
     }
 
-    public CurveFitResult<S, R, T> calibrateExistingCurve(final int entryIndex_, final S toStatus_,
-                                                          final double startingLL_) throws ConvergenceException
+    public CurveFitResult<S, R, T> calibrateExistingCurve(final int entryIndex_, final S toStatus_)
+            throws ConvergenceException
     {
         final ItemParameters<S, R, T> params = _model.getParams();
 
@@ -101,7 +103,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final ItemCurveParams<R, T> entryParams = params.getEntryCurveParams(entryIndex_);
         final ItemParameters<S, R, T> reduced = params.dropIndex(entryIndex_);
 
-        final CurveFitResult<S, R, T> result = expandParameters(reduced, entryParams, toStatus_, true, startingLL_);
+        final CurveFitResult<S, R, T> result = expandParameters(reduced, entryParams, toStatus_, getEntropy());
         final double aicDiff = result.calculateAicDifference();
 
         if (aicDiff > _settings.getAicCutoff())
@@ -124,8 +126,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final ItemCurveParams<R, T> starting = _factory.generateStartingParameters(curveType_, field_, dist,
                 _settings.getRandom());
 
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, false, _model.getParams());
-        final CurveFitResult<S, R, T> result = generateFit(toStatus_, _model.getParams(), func, _startingLL, starting);
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, _model.getParams());
+        final CurveFitResult<S, R, T> result = generateFit(toStatus_, _model.getParams(), func, getEntropy(), starting);
 
         if (_settings.getPolishStartingParams())
         {
@@ -139,7 +141,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
                     //LOG.info("Have polished parameters, testing.");
 
                     final CurveFitResult<S, R, T> output2 = generateFit(toStatus_, _model.getParams(), func,
-                            _startingLL, polished);
+                            getEntropy(), polished);
 
                     //LOG.info("Fit comparison: " + output.getLogLikelihood() + " <> " + output2.getLogLikelihood());
                     final double aic1 = result.calculateAicDifference();
@@ -189,18 +191,18 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
     public CurveFitResult<S, R, T> expandParameters(final ItemParameters<S, R, T> params_,
                                                     final ItemCurveParams<R, T> initParams_, S toStatus_,
-                                                    final boolean subtractStarting_, final double startingLL_)
+                                                    final double startingLL_)
             throws ConvergenceException
     {
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(initParams_, toStatus_, subtractStarting_,
+        final CurveOptimizerFunction<S, R, T> func = generateFunction(initParams_, toStatus_,
                 params_);
         final CurveFitResult<S, R, T> result = generateFit(toStatus_, params_, func, startingLL_, initParams_);
         return result;
     }
 
     private CurveOptimizerFunction<S, R, T> generateFunction(final ItemCurveParams<R, T> initParams_, S toStatus_,
-                                                             final boolean subtractStarting_, final ItemParameters<S,
-            R, T> params_)
+                                                             final ItemParameters<S,
+                                                                     R, T> params_)
     {
         final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(initParams_, _factory, toStatus_,
                 this, _actualOutcomes,
@@ -225,14 +227,11 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final ItemParameters<S, R, T> updated = baseParams_.addBeta(curveParams, toStatus_);
 
         final FitResult<S, R, T> prev = new FitResult<>(baseParams_, startingLL_, result.dataElementCount());
-        final FitResult<S, R, T> fitResult = _calc.computeFitResult(updated, prev);
 
-        //N.B: The optimizer will only run until it is sure that it has found the 
-        //best point, or that it can't make further progress. Its goal is not to 
-        //compute the log likelihood accurately, so recompute that now. 
-//        final double recalcEntropy = _calc.computeEntropy(updated).getEntropyMean();
-//        final CurveFitResult<S, R, T> output = new CurveFitResult<>(baseParams_, updated, curveParams, toStatus_,
-//                recalcEntropy, startingLL_, result.dataElementCount());
+        //N.B: The optimizer will only run until it is sure that it has found the
+        //best point, or that it can't make further progress. Its goal is not to
+        //compute the log likelihood accurately, so recompute that now.
+        final FitResult<S, R, T> fitResult = _calc.computeFitResult(updated, prev);
         final CurveFitResult<S, R, T> output = new CurveFitResult<>(fitResult, curveParams, toStatus_,
                 result.dataElementCount());
 
