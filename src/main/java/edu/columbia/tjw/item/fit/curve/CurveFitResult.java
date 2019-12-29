@@ -21,8 +21,6 @@ package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.fit.FitResult;
-import edu.columbia.tjw.item.fit.calculator.FitPoint;
-import edu.columbia.tjw.item.util.MathFunctions;
 
 /**
  * @param <S>
@@ -71,11 +69,6 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
         return _fitResult.getParams();
     }
 
-    public int getRowCount()
-    {
-        return _rowCount;
-    }
-
     public double getStartingLogLikelihood()
     {
         return _fitResult.getPrev().getEntropy();
@@ -105,9 +98,7 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
 
     public double calculateAicDifference()
     {
-        final double aicDiff = MathFunctions.computeAicDifference(0,
-                getEffectiveParamCount(), getStartingLogLikelihood(), getLogLikelihood(), _rowCount);
-        return aicDiff;
+        return _fitResult.getAicDiff();
     }
 
     @Override

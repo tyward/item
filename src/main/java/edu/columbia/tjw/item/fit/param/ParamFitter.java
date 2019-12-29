@@ -88,7 +88,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         if (newLL > entropy)
         {
             // Push a frame with no improvement.
-            final FitResult<S, R, T> res = new FitResult<>(chain_.getBestParameters(), entropy, numRows,
+            final FitResult<S, R, T> res = new FitResult<>(chain_.getLatestResults(),
                     chain_.getLatestResults());
             output = res;
             chain_.pushResults("ParamFit", res);

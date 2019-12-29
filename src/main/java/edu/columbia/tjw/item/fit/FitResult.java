@@ -4,10 +4,14 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.util.MathFunctions;
+
+import java.io.Serializable;
 
 public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+        implements Serializable
 {
+    private static final long serialVersionUID = 0x606e4b6c2343db26L;
+
     private final FitResult<S, R, T> _prev;
     private final ItemParameters<S, R, T> _params;
 
@@ -15,10 +19,21 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double _aic;
     private final double _tic;
 
-    public FitResult(final ItemParameters<S, R, T> params_,
-                     final double entropy_, final long rowCount_)
+    /**
+     * Make a new fit result based on current_, but with a new prev_.
+     * <p>
+     * This is useful for squashing a bunch of garbage together into a single result.
+     *
+     * @param current_
+     * @param prev_
+     */
+    public FitResult(final FitResult<S, R, T> current_, final FitResult<S, R, T> prev_)
     {
-        this(params_, entropy_, rowCount_, null);
+        this._prev = prev_;
+        _params = current_.getParams();
+        _entropy = current_.getEntropy();
+        _aic = current_.getAic();
+        _tic = current_.getTic();
     }
 
     public FitResult(final ItemParameters<S, R, T> params_,
@@ -59,11 +74,6 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     public double getEntropy()
     {
         return _entropy;
-    }
-
-    public boolean isBetter()
-    {
-        return MathFunctions.isAicWorse(getAic(), getPrev().getAic());
     }
 
     public double getAic()

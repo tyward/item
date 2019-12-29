@@ -132,11 +132,8 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
      */
     public void forcePushResults(final String frameName_, final ItemParameters<S, R, T> fitResult_)
     {
-        final BlockResult ea = _calc.computeEntropy(fitResult_);
-        final double entropy = ea.getEntropyMean();
-        LOG.info("Force pushing params onto chain[" + entropy + "]");
-        final FitResult<S, R, T> result = new FitResult<>(fitResult_, entropy, _rowCount,
-                this.getLatestFrame().getFitResults());
+        final FitResult<S, R, T> result = _calc.computeFitResult(fitResult_, this.getLatestResults());
+        LOG.info("Force pushing params onto chain[" + result.getEntropy() + "]");
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, result,
                 getLatestFrame());
         _frameList.add(frame);
@@ -144,9 +141,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
     public boolean pushVacuousResults(final String frameName_, final ItemParameters<S, R, T> fitResult_)
     {
-        final double currentBest = getLogLikelihood();
-        final FitResult<S, R, T> result = new FitResult<>(fitResult_, currentBest, _rowCount,
-                this.getLatestFrame().getFitResults());
+        final FitResult<S, R, T> result = _calc.computeFitResult(fitResult_, this.getLatestFrame().getFitResults());
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, result,
                 getLatestFrame());
         _frameList.add(frame);
@@ -254,8 +249,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         final ParamProgressFrame<S, R, T> startFrame = _frameList.get(0);
         final ParamProgressFrame<S, R, T> endFrame = getLatestFrame();
 
-        final FitResult<S, R, T> fitResult = new FitResult<>(endFrame.getCurrentParams(),
-                endFrame.getCurrentLogLikelihood(), _rowCount, startFrame.getFitResults());
+        final FitResult<S, R, T> fitResult = new FitResult<>(endFrame.getFitResults(), startFrame.getFitResults());
 
         return fitResult;
     }
@@ -317,7 +311,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             {
                 _startingPoint = this;
                 // This will take care of what would otherwise be some null pointer issues.
-                _fitResult = new FitResult<>(current_.getParams(), current_.getEntropy(), _rowCount, current_);
+                _fitResult = new FitResult<>(current_, current_);
             }
             else
             {
