@@ -34,34 +34,12 @@ import edu.columbia.tjw.item.util.MathFunctions;
  */
 public final class ParamFitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
-    private final int _rowCount;
     private final FitResult<S, R, T> _fitResult;
 
-    public ParamFitResult(final FitResult<S, R, T> fitResult_, final int rowCount_)
+    public ParamFitResult(final FitResult<S, R, T> fitResult_)
     {
         _fitResult = fitResult_;
-        _rowCount = rowCount_;
     }
-
-//    public ParamFitResult(final ItemParameters<S, R, T> starting_, final ItemParameters<S, R, T> ending_,
-//                          final double logLikelihood_, final double startingLL_, final int rowCount_)
-//    {
-//        final FitResult<S, R, T> starting = new FitResult<>(starting_, startingLL_, rowCount_);
-//        final FitResult<S, R, T> ending;
-//
-//        if (starting_ == ending_)
-//        {
-//            //Don't let minor rounding errors throw us off.
-//            ending = new FitResult<>(ending_, startingLL_, rowCount_, starting);
-//        }
-//        else
-//        {
-//            ending = new FitResult<>(ending_, logLikelihood_, rowCount_, starting);
-//        }
-//
-//        _fitResult = ending;
-//        _rowCount = rowCount_;
-//    }
 
     public FitResult<S, R, T> getFitResult()
     {
@@ -70,21 +48,12 @@ public final class ParamFitResult<S extends ItemStatus<S>, R extends ItemRegress
 
     public boolean isBetter()
     {
-        return MathFunctions.isAicWorse(getEndingLL(), getStartingLL());
-    }
-
-    public boolean isUnchanged()
-    {
-        return (getEndingLL() == getStartingLL());
+        return MathFunctions.isAicWorse(_fitResult.getAic(), _fitResult.getPrev().getAic());
     }
 
     public double getAic()
     {
-        final double scaledImprovement = getLLImprovement() * _rowCount;
-        final double paramContribution =
-                (getEndingParams().getEffectiveParamCount() - getStartingParams()
-                        .getEffectiveParamCount());
-        final double aicDiff = 2.0 * (paramContribution - scaledImprovement);
+        final double aicDiff = (getFitResult().getAic() - getFitResult().getPrev().getAic());
         return aicDiff;
     }
 
@@ -96,12 +65,6 @@ public final class ParamFitResult<S extends ItemStatus<S>, R extends ItemRegress
     public double getEndingLL()
     {
         return _fitResult.getEntropy();
-    }
-
-    public double getLLImprovement()
-    {
-        final double llImprovement = getEndingLL() - getStartingLL();
-        return llImprovement;
     }
 
     public ItemParameters<S, R, T> getStartingParams()

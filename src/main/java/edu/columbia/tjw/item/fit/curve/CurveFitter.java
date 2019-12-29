@@ -295,8 +295,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("SingleInteraction",
-                starting_.getModelParams(),
-                starting_.getFitResult().getEntropy(), _calc.size(), _calc, true);
+                starting_.getFitResult(), _calc.size(), _calc, true);
 
         if (null == toStatus)
         {
@@ -407,7 +406,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         final List<Pair<R, ItemCurve<T>>> allRegs = extractRegs(base, toStatus_);
         Collections.shuffle(allRegs, _settings.getRandom());
 
-        final FitResult<S, R, T> prevResult = chain_.getLatestFrame().getFitResults().getFitResult();
+        final FitResult<S, R, T> prevResult = chain_.getLatestFrame().getFitResults();
         final double startingLL = prevResult.getEntropy();
         final double improvementBound = _settings.getImprovementRatio() * (chain_.getLatestFrame().getAicDiff());
 
@@ -472,7 +471,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             }
 
             //This result is sufficiently better that we can (maybe) add it to the chain.
-            if (chain_.pushResults("CurveInteractions", result.getModelParams(), result.getLogLikelihood()))
+            if (chain_.pushResults("CurveInteractions", result.getFitResult()))
             {
                 hasInteraction = true;
                 best = result;

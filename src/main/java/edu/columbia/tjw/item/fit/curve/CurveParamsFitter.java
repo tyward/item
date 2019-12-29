@@ -85,7 +85,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             _actualOutcomes[i] = _grid.getNextStatus(i);
         }
 
-        _prevResult = chain_.getLatestResults().getFitResult();
+        _prevResult = chain_.getLatestResults();
         _calc = chain_.getCalculator();
     }
 

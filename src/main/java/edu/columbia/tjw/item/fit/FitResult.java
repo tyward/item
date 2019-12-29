@@ -40,7 +40,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _params = params_;
         _entropy = entropy_;
 
-        _aic = (entropy_ * rowCount_) + _params.getEffectiveParamCount();
+        _aic = 2.0 * ((entropy_ * rowCount_) + _params.getEffectiveParamCount());
 
         _tic = Double.NaN;
     }

@@ -25,7 +25,6 @@ import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
-import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
@@ -112,7 +111,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept);
         final double logLikelihood = this.computeLogLikelihood(starting);
-        _chain = new FittingProgressChain<>("Primary", starting, logLikelihood, _grid.size(), _calc,
+        final FitResult<S, R, T> fitResult = new FitResult<>(starting, logLikelihood, _grid.size());
+        _chain = new FittingProgressChain<>("Primary", fitResult, _grid.size(), _calc,
                 _settings.getDoValidate());
 
         _fitter = new ParamFitter<>(_calc, _settings);
@@ -138,8 +138,9 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @param settings_
      * @return A randomized version of grid_
      */
-    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>> ItemFittingGrid<S, R> randomizeGrid(final ItemStatusGrid<S, R> grid_,
-                                                                                                            final ItemSettings settings_, final S status_)
+    public static <S extends ItemStatus<S>, R extends ItemRegressor<R>> ItemFittingGrid<S, R> randomizeGrid(
+            final ItemStatusGrid<S, R> grid_,
+            final ItemSettings settings_, final S status_)
     {
         return RawFittingGrid.fromStatusGrid(grid_, settings_, status_);
     }
@@ -174,7 +175,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return _grid;
     }
 
-    public ParamFitResult<S, R, T> pushParameters(final String label_, ItemParameters<S, R, T> params_) throws ConvergenceException
+    public FitResult<S, R, T> pushParameters(final String label_, ItemParameters<S, R, T> params_)
+            throws ConvergenceException
     {
         _chain.forcePushResults("ForcePush[" + label_ + "]", params_);
         return _chain.getLatestResults();
@@ -187,7 +189,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A model fit with all the additional allowed coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ParamFitResult<S, R, T> addCoefficients(final Collection<R> coefficients_) throws ConvergenceException
+    public FitResult<S, R, T> addCoefficients(final Collection<R> coefficients_) throws ConvergenceException
     {
         ItemParameters<S, R, T> params = _chain.getBestParameters();
 
@@ -234,7 +236,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A model with newly optimized coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    public ParamFitResult<S, R, T> fitCoefficients() throws ConvergenceException
+    public FitResult<S, R, T> fitCoefficients() throws ConvergenceException
     {
         innerFitCoefficients(_chain);
         return _chain.getLatestResults();
@@ -278,12 +280,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         }
 
         final ParamFitResult<S, R, T> rebuilt = expandModel(subChain_, curveFields_, reduction);
-        final boolean better = _chain.pushResults("AnnealingExpansion", subChain_.getBestParameters(),
-                subChain_.getLogLikelihood());
+        final boolean better = _chain.pushResults("AnnealingExpansion", subChain_.getLatestResults());
 
         if (better)
         {
-            LOG.info("Annealing improved model: " + rebuilt.getStartingLL() + " -> " + rebuilt.getEndingLL() + " (" + rebuilt.getAic() + ")");
+            LOG.info("Annealing improved model: " + rebuilt.getStartingLL() + " -> " + rebuilt
+                    .getEndingLL() + " (" + rebuilt.getAic() + ")");
         }
         else
         {
@@ -291,12 +293,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         }
     }
 
-    public ParamFitResult<S, R, T> trim(final boolean exhaustiveCalibration_)
+    public FitResult<S, R, T> trim(final boolean exhaustiveCalibration_)
     {
         return this.trim(-_settings.getAicCutoff(), exhaustiveCalibration_);
     }
 
-    public ParamFitResult<S, R, T> trim(final double aicCutoff_, final boolean exhaustiveCalibration_)
+    public FitResult<S, R, T> trim(final double aicCutoff_, final boolean exhaustiveCalibration_)
     {
         for (int i = 0; i < _chain.getBestParameters().getEntryCount(); i++)
         {
@@ -340,8 +342,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return _chain.getLatestResults();
     }
 
-    public ParamFitResult<S, R, T> runAnnealingByEntry(final Set<R> curveFields_,
-                                                       final boolean exhaustiveCalibration_) throws ConvergenceException
+    public FitResult<S, R, T> runAnnealingByEntry(final Set<R> curveFields_,
+                                                  final boolean exhaustiveCalibration_) throws ConvergenceException
     {
         int offset = 0;
 
@@ -366,11 +368,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             doSingleAnnealingOperation(curveFields_, base, reduced, subChain, exhaustiveCalibration_);
 
             final ParamFitResult<S, R, T> results = subChain.getConsolidatedResults();
-            final double aic = results.getAic();
+            //final double aicDiff = results.getFitResult().getAic() - results.getFitResult().getPrev().getAic();
+            final double aicDiff = results.getAic();
 
-            LOG.info("----->Completed Annealing Step[" + i + "]: " + aic);
+            LOG.info("----->Completed Annealing Step[" + i + "]: " + aicDiff);
 
-            if (aic < _settings.getAicCutoff())
+            if (aicDiff < _settings.getAicCutoff())
             {
                 //Just step back, this entry has been removed, other entries slid up.
                 offset++;
@@ -381,7 +384,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return _chain.getLatestResults();
     }
 
-    public ParamFitResult<S, R, T> runAnnealingPass(final Set<R> curveFields_, final boolean exhaustiveCalibration_) throws ConvergenceException
+    public FitResult<S, R, T> runAnnealingPass(final Set<R> curveFields_, final boolean exhaustiveCalibration_)
+            throws ConvergenceException
     {
         for (final R regressor : curveFields_)
         {
@@ -405,12 +409,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return entropy;
     }
 
-    public ParamFitResult<S, R, T> generateFlagInteractions(final boolean exhaustive_)
+    public FitResult<S, R, T> generateFlagInteractions(final boolean exhaustive_)
     {
         return generateFlagInteractions(_chain.getBestParameters().getEntryCount(), exhaustive_);
     }
 
-    private ParamFitResult<S, R, T> generateFlagInteractions(final int entryNumber_, final boolean exhaustive_)
+    private FitResult<S, R, T> generateFlagInteractions(final int entryNumber_, final boolean exhaustive_)
     {
         //N.B: This loop can keep expanding as the params grows very large, if we are very successful.
         // Just make sure to cap it out at the entryNumber_
@@ -447,7 +451,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A new model with additional curves added, and all coefficients
      * optimized.
      */
-    public ParamFitResult<S, R, T> expandModel(final Set<R> curveFields_, final int paramCount_)
+    public FitResult<S, R, T> expandModel(final Set<R> curveFields_, final int paramCount_)
     {
         if (paramCount_ < 1)
         {
@@ -467,7 +471,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         final ParamFitResult<S, R, T> results = subChain.getConsolidatedResults();
 
-        this._chain.pushResults("ExhaustiveCalibration", results);
+        this._chain.pushResults("ExhaustiveCalibration", results.getFitResult());
 
         return results;
     }

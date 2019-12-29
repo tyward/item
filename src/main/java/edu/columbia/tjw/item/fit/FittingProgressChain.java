@@ -59,12 +59,13 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
      */
     public FittingProgressChain(final String chainName_, final FittingProgressChain<S, R, T> baseChain_)
     {
-        this(chainName_, baseChain_.getBestParameters(), baseChain_.getLogLikelihood(), baseChain_.getRowCount(),
+        this(chainName_, baseChain_.getLatestResults(),
+                baseChain_.getRowCount(),
                 baseChain_._calc, baseChain_.isValidate());
     }
 
-    public FittingProgressChain(final String chainName_, final ItemParameters<S, R, T> fitResult_,
-                                final double startingLL_, final int rowCount_, final EntropyCalculator<S, R, T> calc_
+    public FittingProgressChain(final String chainName_, final FitResult<S, R, T> fitResult_,
+                                final int rowCount_, final EntropyCalculator<S, R, T> calc_
             , final boolean validating_)
     {
         if (rowCount_ <= 0)
@@ -72,11 +73,11 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             throw new IllegalArgumentException("Data set cannot be empty.");
         }
 
-        this.validate(fitResult_, startingLL_);
+        this.validate(fitResult_);
 
         _chainName = chainName_;
         _rowCount = rowCount_;
-        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>("Initial", fitResult_, startingLL_, null);
+        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>("Initial", fitResult_, null);
 
         _frameList = new ArrayList<>();
         _frameList.add(frame);
@@ -92,62 +93,28 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
     public boolean pushResults(final String frameName_, final CurveFitResult<S, R, T> curveResult_)
     {
-        final double currLL = this.getLogLikelihood();
-        final double incomingStartLL = curveResult_.getStartingLogLikelihood();
-
-        final double incomingEntropy = curveResult_.getLogLikelihood();
-        final ItemParameters<S, R, T> incomingParams = curveResult_.getModelParams();
-
-        //This should always match, the curve result was built on top of this chain, right? 
-        final int compare = MathFunctions.doubleCompareRounded(currLL, incomingStartLL);
-
-        if (compare != 0)
-        {
-            final BlockResult ea = _calc.computeEntropy(curveResult_.getStartingParams());
-
-            LOG.info("Unexpected incoming Log Likelihood: " + currLL + " != "
-                    + incomingStartLL + " (" + ea.getEntropyMean() + ")");
-        }
-
-        return this.pushResults(frameName_, incomingParams, incomingEntropy);
+        return this.pushResults(frameName_, curveResult_.getFitResult());
     }
 
-    private synchronized void validate(final ItemParameters<S, R, T> fitResult_, final double entropy_)
+    private synchronized void validate(final FitResult<S, R, T> fitResult_)
     {
         if (this.isValidate())
         {
 
             //Since the claim is that the LL improved, let's see if that's true...
-            final BlockResult ea = _calc.computeEntropy(fitResult_);
+            final BlockResult ea = _calc.computeEntropy(fitResult_.getParams());
             final double entropy = ea.getEntropyMean();
 
             //LOG.info("Params: " + fitResult_.hashCode() + " -> " + entropy);
             //LOG.info("Chain: " + this.toString());
-            final int compare = MathFunctions.doubleCompareRounded(entropy, entropy_);
+            final int compare = MathFunctions.doubleCompareRounded(entropy, fitResult_.getEntropy());
 
             if (compare != 0)
             {
-                throw new IllegalStateException("Found entropy mismatch: " + entropy + " != " + entropy_);
+                throw new IllegalStateException(
+                        "Found entropy mismatch: " + entropy + " != " + fitResult_.getEntropy());
             }
         }
-    }
-
-    public boolean pushResults(final String frameName_, final ParamFitResult<S, R, T> fitResult_)
-    {
-        final double currLL = this.getLogLikelihood();
-        final double incomingStartLL = fitResult_.getStartingLL();
-
-        final int compare = MathFunctions.doubleCompareRounded(currLL, incomingStartLL);
-
-        if (compare != 0)
-        {
-            final BlockResult ea = _calc.computeEntropy(fitResult_.getStartingParams());
-
-            LOG.info("Unexpected incoming Log Likelihood: " + currLL + " != "
-                    + incomingStartLL + " (" + ea.getEntropyMean() + ")");
-        }
-
-        return this.pushResults(frameName_, fitResult_.getEndingParams(), fitResult_.getEndingLL());
     }
 
     /**
@@ -161,7 +128,9 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         final BlockResult ea = _calc.computeEntropy(fitResult_);
         final double entropy = ea.getEntropyMean();
         LOG.info("Force pushing params onto chain[" + entropy + "]");
-        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, fitResult_, entropy,
+        final FitResult<S, R, T> result = new FitResult<>(fitResult_, entropy, _rowCount,
+                this.getLatestFrame().getFitResults());
+        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, result,
                 getLatestFrame());
         _frameList.add(frame);
     }
@@ -169,57 +138,38 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     public boolean pushVacuousResults(final String frameName_, final ItemParameters<S, R, T> fitResult_)
     {
         final double currentBest = getLogLikelihood();
-        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, fitResult_, currentBest,
+        final FitResult<S, R, T> result = new FitResult<>(fitResult_, currentBest, _rowCount,
+                this.getLatestFrame().getFitResults());
+        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, result,
                 getLatestFrame());
         _frameList.add(frame);
         return true;
     }
 
-    public boolean pushResults(final String frameName_, final ItemParameters<S, R, T> fitResult_)
-    {
-        final double entropy = _calc.computeEntropy(fitResult_).getEntropyMean();
-        return pushResults(frameName_, fitResult_, entropy);
-    }
 
-    public boolean pushResults(final String frameName_, final ItemParameters<S, R, T> fitResult_,
-                               final double logLikelihood_)
+    public boolean pushResults(final String frameName_, final FitResult<S, R, T> fitResult_)
     {
         final double currentBest = getLogLikelihood();
 
-        this.validate(fitResult_, logLikelihood_);
+        this.validate(fitResult_);
 
-//        if (this.isValidate())
-//        {
-//            //Since the claim is that the LL improved, let's see if that's true...
-//            final BlockResult ea = _calc.compute(fitResult_);
-//            final double entropy = ea.getEntropy();
-//
-//            final int compare = MathFunctions.doubleCompareRounded(entropy, logLikelihood_);
-//
-//            if (compare != 0)
-//            {
-//                LOG.info("Found entropy mismatch.");
-//            }
-//        }
-        final int prevParamCount = this.getBestParameters().getEffectiveParamCount();
-        final int proposedParamCount = fitResult_.getEffectiveParamCount();
+        final double prevAic = this.getLatestResults().getAic();
+        final double newAic = fitResult_.getAic();
+        final double aicDifference = newAic - prevAic;
 
-        final double aicDifference = MathFunctions.computeAicDifference(prevParamCount, proposedParamCount,
-                currentBest, logLikelihood_, _rowCount);
-
-        // These are negative log likelihoods (positive numbers), a lower number is better.
-        // So compare must be < 0, best must be more than the new value.
-        final int compare = MathFunctions.doubleCompareRounded(currentBest, logLikelihood_);
+        final int compare = MathFunctions.doubleCompareRounded(prevAic, newAic);
 
         if (compare >= 0)
         {
             LOG.info(
-                    "Discarding results, likelihood did not improve[" + aicDifference + "]: " + currentBest + " -> " + logLikelihood_);
+                    "Discarding results, likelihood did not improve[" + aicDifference + "]: " + currentBest + " -> " + fitResult_
+                            .getEntropy());
             return false;
         }
 
         LOG.info(
-                "Log Likelihood improvement[" + frameName_ + "][" + aicDifference + "]: " + currentBest + " -> " + logLikelihood_);
+                "Log Likelihood improvement[" + frameName_ + "][" + aicDifference + "]: " + currentBest + " -> " + fitResult_
+                        .getEntropy());
 
         if (aicDifference >= -5.0)
         {
@@ -228,7 +178,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         }
 
         //This is an improvement. 
-        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, fitResult_, logLikelihood_,
+        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, fitResult_,
                 getLatestFrame());
         _frameList.add(frame);
 
@@ -299,12 +249,9 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         final ParamProgressFrame<S, R, T> endFrame = getLatestFrame();
 
         final FitResult<S, R, T> fitResult = new FitResult<>(endFrame.getCurrentParams(),
-                endFrame.getCurrentLogLikelihood(), _rowCount, startFrame.getFitResults().getFitResult());
+                endFrame.getCurrentLogLikelihood(), _rowCount, startFrame.getFitResults());
 
-        final ParamFitResult<S, R, T> output = new ParamFitResult<>(fitResult, _rowCount);
-//        final ParamFitResult<S, R, T> output = new ParamFitResult<>(startFrame.getCurrentParams(),
-//                endFrame.getCurrentParams(), endFrame.getCurrentLogLikelihood(), startFrame.getCurrentLogLikelihood()
-//                , _rowCount);
+        final ParamFitResult<S, R, T> output = new ParamFitResult<>(fitResult);
         return output;
     }
 
@@ -313,7 +260,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         return this.getAicDiff(_frameList.get(0), this.getLatestFrame());
     }
 
-    public ParamFitResult<S, R, T> getLatestResults()
+    public FitResult<S, R, T> getLatestResults()
     {
         return getLatestFrame().getFitResults();
     }
@@ -332,59 +279,55 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     public <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> double getAicDiff(
             final ParamProgressFrame<S, R, T> frame1_, final ParamProgressFrame<S, R, T> frame2_)
     {
-        final int paramCountA = frame1_.getCurrentParams().getEffectiveParamCount();
-        final int paramCountB = frame2_.getCurrentParams().getEffectiveParamCount();
+        if (frame1_ == null)
+        {
+            return frame2_.getFitResults().getAic();
+        }
 
-        final double entropyA = frame1_.getCurrentLogLikelihood();
-        final double entropyB = frame2_.getCurrentLogLikelihood();
-
-        final double aic = MathFunctions.computeAicDifference(paramCountA, paramCountB, entropyA, entropyB,
-                frame1_.getRowCount());
-        return aic;
+        final double aicDiff = frame2_.getFitResults().getAic() - frame1_.getFitResults().getAic();
+        return aicDiff;
     }
 
     public final class ParamProgressFrame<S1 extends ItemStatus<S1>, R1 extends ItemRegressor<R1>,
             T1 extends ItemCurveType<T1>>
     {
-        private final ItemParameters<S1, R1, T1> _current;
-        private final double _currentLL;
         private final ParamProgressFrame<S1, R1, T1> _startingPoint;
-        private final ParamFitResult<S1, R1, T1> _fitResult;
+        private final FitResult<S1, R1, T1> _fitResult;
         private final long _entryTime;
         private final String _frameName;
 
-        private ParamProgressFrame(final String frameName_, final ItemParameters<S1, R1, T1> current_,
-                                   final double currentLL_, final ParamProgressFrame<S1, R1, T1> startingPoint_)
+        private ParamProgressFrame(final String frameName_, final FitResult<S1, R1, T1> current_,
+                                   final ParamProgressFrame<S1, R1, T1> startingPoint_)
         {
             if (null == current_)
             {
                 throw new NullPointerException("Parameters cannot be null.");
             }
-            if (Double.isNaN(currentLL_) || Double.isInfinite(currentLL_) || currentLL_ < 0.0)
-            {
-                throw new IllegalArgumentException("Log Likelihood must be well defined.");
-            }
 
             _frameName = frameName_;
-            _current = current_;
-            _currentLL = currentLL_;
-            final FitResult<S1, R1, T1> prev;
+
+            _entryTime = System.currentTimeMillis();
 
             if (null == startingPoint_)
             {
-                //This is basically a loopback fit result, but it's properly formed, so should be OK.
-                prev = null;
                 _startingPoint = this;
+                // This will take care of what would otherwise be some null pointer issues.
+                _fitResult = new FitResult<>(current_.getParams(), current_.getEntropy(), _rowCount, current_);
             }
             else
             {
-                prev = startingPoint_.getFitResults().getFitResult();
+                _fitResult = current_;
                 _startingPoint = startingPoint_;
             }
 
-            final FitResult<S1, R1, T1> current = new FitResult<>(current_, currentLL_, _rowCount, prev);
-            _fitResult = new ParamFitResult<>(current, _rowCount);
-            _entryTime = System.currentTimeMillis();
+
+            // Validate that the prev result from the fit result actually matches the starting point?
+            if (null != startingPoint_ && MathFunctions
+                    .doubleCompareRounded(startingPoint_.getFitResults().getEntropy(),
+                            _fitResult.getPrev().getEntropy()) != 0)
+            {
+                throw new IllegalArgumentException("Mismatched starting points.");
+            }
         }
 
         public long getElapsed()
@@ -399,19 +342,19 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             return _entryTime;
         }
 
-        public ParamFitResult<S1, R1, T1> getFitResults()
+        public FitResult<S1, R1, T1> getFitResults()
         {
             return _fitResult;
         }
 
         public ItemParameters<S1, R1, T1> getCurrentParams()
         {
-            return _current;
+            return _fitResult.getParams();
         }
 
         public double getCurrentLogLikelihood()
         {
-            return _currentLL;
+            return _fitResult.getEntropy();
         }
 
         public ParamProgressFrame<S1, R1, T1> getStartingPoint()
@@ -434,8 +377,9 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         {
             final StringBuilder builder = new StringBuilder();
 
-            builder.append("frame[" + _frameName + "][" + this.getAicDiff() + "] {" + _currentLL + ", " + this
-                    .getElapsed() + "}");
+            builder.append(
+                    "frame[" + _frameName + "][" + this.getAicDiff() + "] {" + getCurrentLogLikelihood() + ", " + this
+                            .getElapsed() + "}");
 
             return builder.toString();
         }

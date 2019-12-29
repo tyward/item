@@ -89,18 +89,18 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         {
             // Push a frame with no improvement.
             final FitResult<S, R, T> res = new FitResult<>(chain_.getBestParameters(), entropy, numRows,
-                    chain_.getLatestResults().getFitResult());
-            output = new ParamFitResult<>(res, numRows);
-            chain_.pushResults("ParamFit", output.getEndingParams(), output.getEndingLL());
+                    chain_.getLatestResults());
+            output = new ParamFitResult<>(res);
+            chain_.pushResults("ParamFit", res);
         }
         else
         {
             final ItemParameters<S, R, T> updated = function.generateParams(beta);
             final FitResult<S, R, T> fitResult = _calc
-                    .computeFitResult(updated, chain_.getLatestResults().getFitResult());
+                    .computeFitResult(updated, chain_.getLatestResults());
 
-            output = new ParamFitResult<>(fitResult, numRows);
-            chain_.pushResults("ParamFit", output.getEndingParams(), output.getEndingLL());
+            output = new ParamFitResult<>(fitResult);
+            chain_.pushResults("ParamFit", fitResult);
         }
 
         return output;

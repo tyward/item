@@ -6,7 +6,6 @@ import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.StandardCurveFactory;
 import edu.columbia.tjw.item.base.StandardCurveType;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.util.random.PrngType;
 import edu.columbia.tjw.item.util.random.RandomTool;
 import org.junit.jupiter.api.Assertions;
@@ -57,14 +56,15 @@ public class ItemFitterTest
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
                 makeFitter();
 
-        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
                 .fitCoefficients();
-        Assertions.assertEquals(result.getEndingLL(), 0.20231126613149455);
+        Assertions.assertEquals(result.getEntropy(), 0.20231126613149455);
 
-        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.expandModel(_curveRegs, 2);
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.expandModel(_curveRegs, 2);
 
-        System.out.println("Revised: " + r3.getEndingParams());
-        Assertions.assertEquals(r3.getEndingLL(), 0.19814760690220218);
+        System.out.println("Revised: " + r3.getParams());
+        r3.getAic();
+        Assertions.assertEquals(r3.getEntropy(), 0.19814760690220218);
     }
 
     @Test
@@ -73,15 +73,15 @@ public class ItemFitterTest
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
                 makeFitter();
 
-        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
                 .fitCoefficients();
-        Assertions.assertEquals(result.getEndingLL(), 0.20231126613149455);
+        Assertions.assertEquals(result.getEntropy(), 0.20231126613149455);
 
-        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 =
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 =
                 fitter.expandModel(_curveRegs, 20);
 
-        System.out.println("Revised: " + r3.getEndingParams());
-        Assertions.assertEquals(r3.getEndingLL(), 0.18882103170241665);
+        System.out.println("Revised: " + r3.getParams());
+        Assertions.assertEquals(r3.getEntropy(), 0.18882103170241665);
     }
 
 //    @Test
