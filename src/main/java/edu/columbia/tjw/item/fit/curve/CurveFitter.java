@@ -294,7 +294,8 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             return null;
         }
 
-        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("SingleInteraction", params_,
+        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("SingleInteraction",
+                starting_.getModelParams(),
                 starting_.getFitResult().getEntropy(), _calc.size(), _calc, true);
 
         if (null == toStatus)
@@ -325,7 +326,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             try
             {
                 final CurveFitResult<S, R, T> result = getFitter(subChain).expandParameters(params_, testParams,
-                        toStatus, starting_.getFitResult().getEntropy());
+                        toStatus, starting_.getFitResult());
 
                 if (!subChain.pushResults("ParameterExpansion", result))
                 {
