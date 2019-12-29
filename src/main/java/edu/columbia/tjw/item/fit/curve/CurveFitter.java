@@ -24,7 +24,6 @@ import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
-import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
@@ -305,12 +304,12 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             try
             {
-                final ParamFitResult<S, R, T> fitResult = _paramFitter.fit(subChain, updatedParams);
-                final ItemParameters<S, R, T> modParams = fitResult.getEndingParams();
+                final FitResult<S, R, T> fitResult = _paramFitter.fit(subChain, updatedParams);
+                final ItemParameters<S, R, T> modParams = fitResult.getParams();
                 ItemCurveParams<R, T> modCurveParams = modParams.getEntryCurveParams(modParams.getEntryCount() - 1,
                         true);
 
-                return new CurveFitResult<>(fitResult.getFitResult(), modCurveParams, toStatus, _grid.size());
+                return new CurveFitResult<>(fitResult, modCurveParams, toStatus, _grid.size());
             }
             catch (final ConvergenceException e)
             {
@@ -332,12 +331,12 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                     return result;
                 }
 
-                final ParamFitResult<S, R, T> calibrated = _paramFitter.fit(subChain, result.getModelParams());
+                final FitResult<S, R, T> calibrated = _paramFitter.fit(subChain, result.getModelParams());
 
                 if (calibrated.isBetter())
                 {
-                    final ItemParameters<S, R, T> updated = calibrated.getEndingParams();
-                    final CurveFitResult<S, R, T> r2 = new CurveFitResult<>(calibrated.getFitResult(),
+                    final ItemParameters<S, R, T> updated = calibrated.getParams();
+                    final CurveFitResult<S, R, T> r2 = new CurveFitResult<>(calibrated,
                             updated.getEntryCurveParams(updated.getEntryCount() - 1, true), toStatus, _grid.size());
                     return r2;
                 }

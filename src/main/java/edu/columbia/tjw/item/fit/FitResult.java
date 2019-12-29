@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.util.MathFunctions;
 
 public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
@@ -60,9 +61,24 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return _entropy;
     }
 
+    public boolean isBetter()
+    {
+        return MathFunctions.isAicWorse(getAic(), getPrev().getAic());
+    }
+
     public double getAic()
     {
         return _aic;
+    }
+
+    public double getAicDiff()
+    {
+        if (null == _prev)
+        {
+            return getAic();
+        }
+
+        return getAic() - getPrev().getAic();
     }
 
     public double getTic()

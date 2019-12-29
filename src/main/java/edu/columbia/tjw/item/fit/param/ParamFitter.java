@@ -53,12 +53,12 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         _settings = settings_;
     }
 
-    public ParamFitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_) throws ConvergenceException
+    public FitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_) throws ConvergenceException
     {
         return fit(chain_, chain_.getBestParameters());
     }
 
-    public ParamFitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_)
+    public FitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_)
             throws ConvergenceException
     {
         final double entropy = chain_.getLogLikelihood();
@@ -83,14 +83,14 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             LOG.info("Exhausted dataset before convergence, moving on.");
         }
 
-        final ParamFitResult<S, R, T> output;
+        final FitResult<S, R, T> output;
 
         if (newLL > entropy)
         {
             // Push a frame with no improvement.
             final FitResult<S, R, T> res = new FitResult<>(chain_.getBestParameters(), entropy, numRows,
                     chain_.getLatestResults());
-            output = new ParamFitResult<>(res);
+            output = res;
             chain_.pushResults("ParamFit", res);
         }
         else
@@ -99,7 +99,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             final FitResult<S, R, T> fitResult = _calc
                     .computeFitResult(updated, chain_.getLatestResults());
 
-            output = new ParamFitResult<>(fitResult);
+            output = fitResult;
             chain_.pushResults("ParamFit", fitResult);
         }
 

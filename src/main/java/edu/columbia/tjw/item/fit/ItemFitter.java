@@ -26,7 +26,6 @@ import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
-import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
@@ -279,13 +278,13 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             return;
         }
 
-        final ParamFitResult<S, R, T> rebuilt = expandModel(subChain_, curveFields_, reduction);
+        final FitResult<S, R, T> rebuilt = expandModel(subChain_, curveFields_, reduction);
         final boolean better = _chain.pushResults("AnnealingExpansion", subChain_.getLatestResults());
 
         if (better)
         {
-            LOG.info("Annealing improved model: " + rebuilt.getStartingLL() + " -> " + rebuilt
-                    .getEndingLL() + " (" + rebuilt.getAic() + ")");
+            LOG.info("Annealing improved model: " + rebuilt.getPrev().getEntropy() + " -> " + rebuilt
+                    .getEntropy() + " (" + rebuilt.getAic() + ")");
         }
         else
         {
@@ -367,7 +366,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final ItemParameters<S, R, T> reduced = base.dropIndex(index);
             doSingleAnnealingOperation(curveFields_, base, reduced, subChain, exhaustiveCalibration_);
 
-            final ParamFitResult<S, R, T> results = subChain.getConsolidatedResults();
+            final FitResult<S, R, T> results = subChain.getConsolidatedResults();
             //final double aicDiff = results.getFitResult().getAic() - results.getFitResult().getPrev().getAic();
             final double aicDiff = results.getAic();
 
@@ -462,21 +461,21 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return _chain.getLatestResults();
     }
 
-    public ParamFitResult<S, R, T> calibrateCurves()
+    public FitResult<S, R, T> calibrateCurves()
     {
         final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("CalibrationChain", _chain);
 
         //First, try to calibrate any existing curves to improve the fit. 
         _curveFitter.calibrateCurves(0.0, true, subChain);
 
-        final ParamFitResult<S, R, T> results = subChain.getConsolidatedResults();
+        final FitResult<S, R, T> results = subChain.getConsolidatedResults();
 
-        this._chain.pushResults("ExhaustiveCalibration", results.getFitResult());
+        this._chain.pushResults("ExhaustiveCalibration", results);
 
         return results;
     }
 
-    private ParamFitResult<S, R, T> expandModel(final FittingProgressChain<S, R, T> chain_, final Set<R> curveFields_
+    private FitResult<S, R, T> expandModel(final FittingProgressChain<S, R, T> chain_, final Set<R> curveFields_
             , final int paramCount_)
     {
         final long start = System.currentTimeMillis();

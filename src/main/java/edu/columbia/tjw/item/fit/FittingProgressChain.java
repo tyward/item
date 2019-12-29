@@ -25,7 +25,6 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitResult;
-import edu.columbia.tjw.item.fit.param.ParamFitResult;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MathFunctions;
 
@@ -100,7 +99,6 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     {
         if (this.isValidate())
         {
-
             //Since the claim is that the LL improved, let's see if that's true...
             final BlockResult ea = _calc.computeEntropy(fitResult_.getParams());
             final double entropy = ea.getEntropyMean();
@@ -108,6 +106,15 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             //LOG.info("Params: " + fitResult_.hashCode() + " -> " + entropy);
             //LOG.info("Chain: " + this.toString());
             final int compare = MathFunctions.doubleCompareRounded(entropy, fitResult_.getEntropy());
+
+            if (compare != 0)
+            {
+                throw new IllegalStateException(
+                        "Found entropy mismatch: " + entropy + " != " + fitResult_.getEntropy());
+            }
+
+            final int entropyCompare = MathFunctions.doubleCompareRounded(fitResult_.getPrev().getEntropy(),
+                    this.getLatestResults().getEntropy());
 
             if (compare != 0)
             {
@@ -156,7 +163,6 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         final double prevAic = this.getLatestResults().getAic();
         final double newAic = fitResult_.getAic();
         final double aicDifference = newAic - prevAic;
-
         final int compare = MathFunctions.doubleCompareRounded(prevAic, newAic);
 
         if (compare >= 0)
@@ -243,7 +249,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
      *
      * @return
      */
-    public ParamFitResult<S, R, T> getConsolidatedResults()
+    public FitResult<S, R, T> getConsolidatedResults()
     {
         final ParamProgressFrame<S, R, T> startFrame = _frameList.get(0);
         final ParamProgressFrame<S, R, T> endFrame = getLatestFrame();
@@ -251,8 +257,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         final FitResult<S, R, T> fitResult = new FitResult<>(endFrame.getCurrentParams(),
                 endFrame.getCurrentLogLikelihood(), _rowCount, startFrame.getFitResults());
 
-        final ParamFitResult<S, R, T> output = new ParamFitResult<>(fitResult);
-        return output;
+        return fitResult;
     }
 
     public double getChainAicDiff()
