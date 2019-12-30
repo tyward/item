@@ -48,16 +48,16 @@ public final class BaseFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final double newAic = FitResult.computeAic(result.minValue(), _calc.getGrid().size(),
                     packed_.getOriginalParams().getEffectiveParamCount());
 
-            if (newAic >= prevAic)
-            {
-                // We will not even consider this result unless it was at least slightly better than the original.
-                // N.B: Since the optimizer didn't necessarily evaluate all observations, this is not guarantee that
-                // the point is actually better, we will actually recompute to be sure later on, but don't even spend
-                // the time if there's no real chance here.
-
-                // A vacuous result, not changed from the underlying.
-                return new FitResult<>(prev_, prev_);
-            }
+//            if (newAic >= prevAic)
+//            {
+//                // We will not even consider this result unless it was at least slightly better than the original.
+//                // N.B: Since the optimizer didn't necessarily evaluate all observations, this is not guarantee that
+//                // the point is actually better, we will actually recompute to be sure later on, but don't even spend
+//                // the time if there's no real chance here.
+//
+//                // A vacuous result, not changed from the underlying.
+//                return new FitResult<>(prev_, prev_);
+//            }
 
             final ItemParameters<S, R, T> params = function.generateParams(result.getOptimum().getElements());
             return _calc.computeFitResult(params, prev_);

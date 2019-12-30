@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.fit.param;
 
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.fit.*;
+import edu.columbia.tjw.item.fit.base.BaseFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
@@ -43,11 +44,14 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     private final ItemSettings _settings;
     private final EntropyCalculator<S, R, T> _calc;
 
+    private final BaseFitter<S, R, T> _base;
+
     public ParamFitter(final EntropyCalculator<S, R, T> calc_, final ItemSettings settings_)
     {
         _calc = calc_;
         _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
         _settings = settings_;
+        _base = new BaseFitter<>(calc_, settings_);
     }
 
     public FitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_) throws ConvergenceException
@@ -56,6 +60,18 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     }
 
     public FitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_)
+            throws ConvergenceException
+    {
+        final PackedParameters<S, R, T> packed = packParameters(params_);
+        final FitResult<S, R, T> fitResult = _base.doFit(packed, chain_.getLatestResults());
+
+        chain_.pushResults("ParamFit", fitResult);
+        //final FitResult<S, R, T> f2 = subFit(chain_, params_);
+
+        return fitResult;
+    }
+
+    private FitResult<S, R, T> subFit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_)
             throws ConvergenceException
     {
         final double entropy = chain_.getLogLikelihood();

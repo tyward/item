@@ -4,7 +4,6 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
-import edu.columbia.tjw.item.algo.VarianceCalculator;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.util.thread.GeneralTask;
 import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
@@ -160,17 +159,18 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
             return 0.0;
         }
         this.computeUntil(boundary_, BlockCalculationType.VALUE);
+        return this.getAggregated(BlockCalculationType.VALUE).getEntropyMean();
 
-        final VarianceCalculator vcalc = new VarianceCalculator();
-
-        for (int i = 0; i < boundary_; i++)
-        {
-            final double next = getBlock(i, BlockCalculationType.VALUE).getEntropyMean();
-            vcalc.update(next);
-        }
-
-        final double mean = vcalc.getMean();
-        return mean;
+//        final VarianceCalculator vcalc = new VarianceCalculator();
+//
+//        for (int i = 0; i < boundary_; i++)
+//        {
+//            final double next = getBlock(i, BlockCalculationType.VALUE).getEntropyMean();
+//            vcalc.update(next);
+//        }
+//
+//        final double mean = vcalc.getMean();
+//        return mean;
     }
 
     @Override
@@ -182,17 +182,20 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
             return 0.0;
         }
         this.computeUntil(boundary_, BlockCalculationType.VALUE);
+        return this.getAggregated(BlockCalculationType.VALUE).getEntropyMeanDev();
 
-        final VarianceCalculator vcalc = new VarianceCalculator();
-
-        for (int i = 0; i < boundary_; i++)
-        {
-            final double next = getBlock(i, BlockCalculationType.VALUE).getEntropyMean();
-            vcalc.update(next);
-        }
-
-        final double stdev = vcalc.getMeanDev();
-        return stdev;
+//        this.computeUntil(boundary_, BlockCalculationType.VALUE);
+//
+//        final VarianceCalculator vcalc = new VarianceCalculator();
+//
+//        for (int i = 0; i < boundary_; i++)
+//        {
+//            final double next = getBlock(i, BlockCalculationType.VALUE).getEntropyMean();
+//            vcalc.update(next);
+//        }
+//
+//        final double stdev = vcalc.getMeanDev();
+//        return stdev;
     }
 
     public int getSize()

@@ -58,12 +58,12 @@ public class ItemFitterTest
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
                 .fitCoefficients();
-        Assertions.assertEquals(0.20231126613149455, result.getEntropy());
+        Assertions.assertEquals(0.2023112681060799, result.getEntropy());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.expandModel(_curveRegs, 2);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19814760690220218, r3.getEntropy());
+        Assertions.assertEquals(0.19814740755725763, r3.getEntropy());
     }
 
     @Test
@@ -74,13 +74,13 @@ public class ItemFitterTest
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
                 .fitCoefficients();
-        Assertions.assertEquals(0.20231126613149455, result.getEntropy());
+        Assertions.assertEquals(0.2023112681060799, result.getEntropy());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 =
                 fitter.expandModel(_curveRegs, 20);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.1888210179263304, r3.getEntropy());
+        Assertions.assertEquals(0.1895561780515718, r3.getEntropy());
     }
 
 //    @Test
