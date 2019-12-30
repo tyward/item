@@ -26,8 +26,8 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
-import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointGenerator;
+import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
 
 /**
  * @param <S>
@@ -66,10 +66,11 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
         return _calc.generatePoint(params_);
     }
 
-    public FitResult<S, R, T> computeFitResult(final ItemParameters<S, R, T> params_, FitResult<S, R, T> prevResult_)
+    public synchronized FitResult<S, R, T> computeFitResult(final ItemParameters<S, R, T> params_,
+                                                            FitResult<S, R, T> prevResult_)
     {
-        final double entropy = computeEntropy(params_).getEntropyMean();
-        FitResult<S, R, T> output = new FitResult<>(params_, entropy, _calc.getRowCount(), prevResult_);
+        final ItemFitPoint<S, R, T> point = _calc.generatePoint(params_);
+        final FitResult<S, R, T> output = new FitResult<>(point, prevResult_);
         return output;
     }
 
@@ -78,20 +79,5 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
         final ItemFitPoint<S, R, T> point = _calc.generatePoint(params_);
         point.computeAll(BlockCalculationType.VALUE);
         return point.getAggregated(BlockCalculationType.VALUE);
-    }
-
-    public BlockResult computeDerivative(final ItemParameters<S, R, T> params_)
-    {
-        final ItemFitPoint<S, R, T> point = _calc.generatePoint(params_);
-        point.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
-        return point.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
-    }
-
-    public double computeAic(final ItemParameters<S, R, T> params_)
-    {
-        final double entropy = computeEntropy(params_).getEntropySum();
-        final double paramAdj = params_.getEffectiveParamCount();
-        final double aic = entropy + paramAdj;
-        return aic;
     }
 }

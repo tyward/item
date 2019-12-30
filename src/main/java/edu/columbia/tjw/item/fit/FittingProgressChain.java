@@ -109,6 +109,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
             if (compare != 0)
             {
+                MathFunctions.doubleCompareRounded(entropy, fitResult_.getEntropy());
                 //System.out.println("Found entropy mismatch: " + entropy + " != " + fitResult_.getEntropy());
                 throw new IllegalStateException(
                         "Found entropy mismatch: " + entropy + " != " + fitResult_.getEntropy());

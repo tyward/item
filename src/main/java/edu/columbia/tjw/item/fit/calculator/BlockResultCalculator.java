@@ -42,7 +42,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
     }
 
 
-    public BlockResult compute(final ItemParameters<S, R, T> params_, final PackedParameters<S, R, T> packed_,
+    public synchronized BlockResult compute(final ItemParameters<S, R, T> params_,
+                                          final PackedParameters<S, R, T> packed_,
                                final BlockCalculationType type_)
     {
         if (params_.getStatus() != _grid.getFromStatus())
