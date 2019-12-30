@@ -1,6 +1,8 @@
 package edu.columbia.tjw.item.fit.calculator;
 
-import java.util.Collection;
+import org.apache.commons.math3.linear.Array2DRowRealMatrix;
+import org.apache.commons.math3.linear.RealMatrix;
+
 import java.util.List;
 
 public final class BlockResult
@@ -11,10 +13,12 @@ public final class BlockResult
     private final double _sumEntropy2;
     private final double[] _derivative;
     private final double[][] _secondDerivative;
+    private final double[][] _fisherInformation;
     private final int _size;
 
     public BlockResult(final int rowStart_, final int rowEnd_, final double sumEntropy_, final double sumEntropy2_,
-                       final double[] derivative_, final double[][] secondDerivative_)
+                       final double[] derivative_,
+                       final double[][] fisherInformation_, final double[][] secondDerivative_)
     {
         if (rowStart_ < 0)
         {
@@ -44,6 +48,7 @@ public final class BlockResult
         _size = size;
         _derivative = derivative_;
         _secondDerivative = secondDerivative_;
+        _fisherInformation = fisherInformation_;
     }
 
     public BlockResult(final List<BlockResult> analysisList_)
@@ -60,6 +65,7 @@ public final class BlockResult
         int count = 0;
 
         final double[] derivative;
+        final double[][] fisherInformation;
         final double[][] secondDerivative;
 
         final boolean hasSecondDerivative = analysisList_.get(0).hasSecondDerivative();
@@ -69,6 +75,7 @@ public final class BlockResult
         {
             final int dimension = analysisList_.get(0).getDerivativeDimension();
             derivative = new double[dimension];
+            fisherInformation = new double[dimension][dimension];
 
             if (hasSecondDerivative)
             {
@@ -82,6 +89,7 @@ public final class BlockResult
         else
         {
             derivative = null;
+            fisherInformation = null;
             secondDerivative = null;
         }
 
@@ -101,6 +109,11 @@ public final class BlockResult
                 for (int i = 0; i < dimension; i++)
                 {
                     derivative[i] += weight * next.getDerivativeEntry(i);
+
+                    for (int j = 0; j < dimension; j++)
+                    {
+                        fisherInformation[i][j] += weight * next.getFisherInformationEntry(i, j);
+                    }
 
                     if (null != secondDerivative)
                     {
@@ -127,6 +140,11 @@ public final class BlockResult
             {
                 derivative[i] = invWeight * derivative[i];
 
+                for (int j = 0; j < dimension; j++)
+                {
+                    fisherInformation[i][j] *= invWeight;
+                }
+
                 if (null != secondDerivative)
                 {
                     for (int j = 0; j < dimension; j++)
@@ -143,6 +161,7 @@ public final class BlockResult
         _sumEntropy2 = h2;
         _size = count;
         _derivative = derivative;
+        _fisherInformation = fisherInformation;
         _secondDerivative = secondDerivative;
     }
 
@@ -224,6 +243,16 @@ public final class BlockResult
         return _secondDerivative[row_][column_];
     }
 
+    public double getFisherInformationEntry(final int row_, final int column_)
+    {
+        if (!hasDerivative())
+        {
+            throw new IllegalArgumentException("Derivative was not calculated.");
+        }
+
+        return _fisherInformation[row_][column_];
+    }
+
     public double getDerivativeEntry(final int index_)
     {
         if (!hasDerivative())
@@ -237,6 +266,16 @@ public final class BlockResult
     public double[] getDerivative()
     {
         return _derivative.clone();
+    }
+
+    public RealMatrix getSecondDerivative()
+    {
+        return new Array2DRowRealMatrix(_secondDerivative);
+    }
+
+    public RealMatrix getFisherInformation()
+    {
+        return new Array2DRowRealMatrix(_fisherInformation);
     }
 
 //    @Override
