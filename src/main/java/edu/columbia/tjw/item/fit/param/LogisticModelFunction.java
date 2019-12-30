@@ -52,7 +52,7 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
 
-        _generator = new FitPointGenerator<S, R, T>(grid_);
+        _generator = new FitPointGenerator<>(grid_);
         _grid = grid;
         _model = model_;
         _packed = packed_;

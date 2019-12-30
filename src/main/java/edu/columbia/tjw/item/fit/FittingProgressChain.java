@@ -63,8 +63,15 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
                 baseChain_._calc, baseChain_.isValidate());
     }
 
-    public FittingProgressChain(final String chainName_, final FitResult<S, R, T> fitResult_,
+    public FittingProgressChain(final String chainName_, final ItemParameters<S, R, T> params_,
                                 final int rowCount_, final EntropyCalculator<S, R, T> calc_
+            , final boolean validating_)
+    {
+        this(chainName_, calc_.computeFitResult(params_, null), rowCount_, calc_, validating_);
+    }
+
+    private FittingProgressChain(final String chainName_, final FitResult<S, R, T> result_,
+                                 final int rowCount_, final EntropyCalculator<S, R, T> calc_
             , final boolean validating_)
     {
         if (rowCount_ <= 0)
@@ -72,17 +79,16 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             throw new IllegalArgumentException("Data set cannot be empty.");
         }
 
-        this.validate(fitResult_);
-
         _chainName = chainName_;
         _rowCount = rowCount_;
-        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>("Initial", fitResult_, null);
 
+        _calc = calc_;
+        _validate = validating_;
+
+        final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>("Initial", result_, null);
         _frameList = new ArrayList<>();
         _frameList.add(frame);
         _frameListReadOnly = Collections.unmodifiableList(_frameList);
-        _calc = calc_;
-        _validate = validating_;
     }
 
     public String getName()
@@ -152,9 +158,6 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     public boolean pushResults(final String frameName_, final FitResult<S, R, T> fitResult_)
     {
         final double currentBest = getLogLikelihood();
-
-        this.validate(fitResult_);
-
         final double prevAic = this.getLatestResults().getAic();
         final double newAic = fitResult_.getAic();
         final double aicDifference = newAic - prevAic;
@@ -177,6 +180,10 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             LOG.info("Insufficient AIC, discarding results: " + aicDifference);
             return false;
         }
+
+        // We validate only if we are actually keeping this result. No need to waste resources
+        // validating things we are planning to discard anyway.
+        this.validate(fitResult_);
 
         //This is an improvement. 
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, fitResult_,
