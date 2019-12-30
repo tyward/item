@@ -1,23 +1,4 @@
-/*
- * Copyright 2014 Tyler Ward.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * This code is part of the reference implementation of http://arxiv.org/abs/1409.6075
- *
- * This is provided as an example to help in the understanding of the ITEM model system.
- */
-package edu.columbia.tjw.item.fit.param;
+package edu.columbia.tjw.item.fit.base;
 
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
@@ -29,13 +10,7 @@ import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
 
-/**
- * @param <S> The status type for this grid
- * @param <R> The regressor type for this grid
- * @param <T> The curve type for this grid
- * @author tyler
- */
-public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+public class BaseModelFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
 {
     private final FitPointGenerator<S, R, T> _generator;
@@ -43,17 +18,16 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     private final PackedParameters<S, R, T> _packed;
 
 
-    public LogisticModelFunction(
-            final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_,
-            final ItemModel<S, R, T> model_, ItemSettings settings_, final PackedParameters<S, R, T> packed_)
+    public BaseModelFunction(final ItemFittingGrid<S, R> grid_, ItemSettings settings_,
+                             final PackedParameters<S, R, T> packedStarting_)
     {
         super(settings_.getThreadBlockSize(), settings_.getUseThreading());
 
-        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
+        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(packedStarting_.getOriginalParams(), grid_);
 
         _generator = new FitPointGenerator<>(grid_);
         _grid = grid;
-        _packed = packed_;
+        _packed = packedStarting_.clone();
     }
 
     public ItemFitPoint<S, R, T> evaluate(final MultivariatePoint input_)
@@ -96,17 +70,11 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     protected void prepare(MultivariatePoint input_)
     {
         final int dimension = this.dimension();
-        boolean changed = false;
 
         for (int i = 0; i < dimension; i++)
         {
             final double value = input_.getElement(i);
-
-            if (value != _packed.getParameter(i))
-            {
-                _packed.setParameter(i, value);
-                changed = true;
-            }
+            _packed.setParameter(i, value);
         }
     }
 
@@ -117,3 +85,4 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     }
 
 }
+

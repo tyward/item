@@ -110,7 +110,13 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _tic = Double.NaN;
         }
 
-        _aic = 2.0 * ((_entropy * rowCount) + _params.getEffectiveParamCount());
+        //_aic = 2.0 * ((_entropy * rowCount) + _params.getEffectiveParamCount());
+        _aic = computeAic(_entropy, rowCount, _params.getEffectiveParamCount());
+    }
+
+    public static double computeAic(final double entropy_, final int rowCount_, final int paramCount_)
+    {
+        return 2.0 * ((entropy_ * rowCount_) + paramCount_);
     }
 
 //    protected FitResult(final ItemParameters<S, R, T> params_,

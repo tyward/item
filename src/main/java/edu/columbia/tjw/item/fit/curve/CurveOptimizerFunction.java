@@ -37,11 +37,9 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
 {
     private final ItemCurveFactory<R, T> _factory;
     private final int _size;
-    //private final double[] _workspace;
     private final ItemCurveParams<R, T> _initParams;
     private final PackedCurveFunction<S, R, T> _packed;
 
-    //private ItemCurveParams<R, T> _params;
     private MultivariatePoint _prevPoint;
 
 
@@ -57,7 +55,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         _initParams = initParams_;
 
         _size = actualOrdinals_.length;
-        //_workspace = new double[_initParams.size()];
     }
 
     public ItemFitPoint<S, R, T> evaluate(final MultivariatePoint input_)
@@ -96,14 +93,6 @@ public class CurveOptimizerFunction<S extends ItemStatus<S>, R extends ItemRegre
         }
 
         _prevPoint = input_.clone();
-
-//        for (int i = 0; i < input_.getDimension(); i++)
-//        {
-//            _workspace[i] = input_.getElement(i);
-//        }
-
-        //_params = new ItemCurveParams<>(_initParams, _factory, _workspace);
-
         _packed.prepare(input_);
     }
 

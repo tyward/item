@@ -43,9 +43,6 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     private final ItemSettings _settings;
     private final EntropyCalculator<S, R, T> _calc;
 
-//    ItemParameters<S, R, T> _cacheParams;
-//    LogisticModelFunction<S, R, T> _cacheFunction;
-
     public ParamFitter(final EntropyCalculator<S, R, T> calc_, final ItemSettings settings_)
     {
         _calc = calc_;
@@ -106,7 +103,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return output;
     }
 
-    private LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_)
+    private PackedParameters<S, R, T> packParameters(final ItemParameters<S, R, T> params_)
     {
         final PackedParameters<S, R, T> packed = params_.generatePacked();
         final boolean[] active = new boolean[params_.getEffectiveParamCount()];
@@ -126,6 +123,12 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         final PackedParameters<S, R, T> reduced = new ReducedParameterVector<>(active, packed);
+        return reduced;
+    }
+
+    private LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_)
+    {
+        final PackedParameters<S, R, T> reduced = packParameters(params_);
 
         final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(params_, _calc.getGrid(),
                 new ItemModel<>(params_), _settings, reduced);

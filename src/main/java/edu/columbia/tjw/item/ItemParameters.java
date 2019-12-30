@@ -1213,7 +1213,12 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         @Override
         public synchronized void setParameter(int index_, double value_)
         {
-            _generated = null;
+            if (_paramValues[index_] != value_)
+            {
+                // We only reset the generated params if a parameter actually changed.
+                _generated = null;
+            }
+
             _paramValues[index_] = value_;
         }
 
