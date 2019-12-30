@@ -53,6 +53,11 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
 
     }
 
+    public ItemParameters<S, R, T> getParams()
+    {
+        return _params;
+    }
+
     @Override
     public int getBlockSize()
     {
