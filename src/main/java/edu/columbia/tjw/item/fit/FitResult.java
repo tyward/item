@@ -110,30 +110,32 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _aic = 2.0 * ((_entropy * rowCount) + _params.getEffectiveParamCount());
     }
 
-//    protected FitResult(final ItemParameters<S, R, T> params_,
-//                        final double entropy_, final long rowCount_, final FitResult<S, R, T> prev_)
-//    {
-//        if (params_ == null)
-//        {
-//            throw new NullPointerException("Params cannot be null.");
-//        }
-//        if (Double.isNaN(entropy_) || Double.isInfinite(entropy_) || entropy_ < 0.0)
-//        {
-//            throw new IllegalArgumentException("Log likelihood must be well defined.");
-//        }
-//        if (rowCount_ < 1)
-//        {
-//            throw new IllegalArgumentException("Row count must be positive: " + rowCount_);
-//        }
-//
-//        _prev = prev_;
-//        _params = params_;
-//        _entropy = entropy_;
-//
-//        _aic = 2.0 * ((entropy_ * rowCount_) + _params.getEffectiveParamCount());
-//
-//        _tic = Double.NaN;
-//    }
+    protected FitResult(final ItemParameters<S, R, T> params_,
+                        final double entropy_, final long rowCount_, final FitResult<S, R, T> prev_)
+    {
+        if (params_ == null)
+        {
+            throw new NullPointerException("Params cannot be null.");
+        }
+        if (Double.isNaN(entropy_) || Double.isInfinite(entropy_) || entropy_ < 0.0)
+        {
+            throw new IllegalArgumentException("Log likelihood must be well defined.");
+        }
+        if (rowCount_ < 1)
+        {
+            throw new IllegalArgumentException("Row count must be positive: " + rowCount_);
+        }
+
+        _prev = prev_;
+        _params = params_;
+        _entropy = entropy_;
+
+        _aic = 2.0 * ((entropy_ * rowCount_) + _params.getEffectiveParamCount());
+
+        _tic = Double.NaN;
+        _gradient = null;
+        _paramStdDev = null;
+    }
 
     public FitResult<S, R, T> getPrev()
     {
