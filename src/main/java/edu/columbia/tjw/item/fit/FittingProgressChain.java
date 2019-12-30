@@ -109,6 +109,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
             if (compare != 0)
             {
+                //System.out.println("Found entropy mismatch: " + entropy + " != " + fitResult_.getEntropy());
                 throw new IllegalStateException(
                         "Found entropy mismatch: " + entropy + " != " + fitResult_.getEntropy());
             }
@@ -116,8 +117,9 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             final int entropyCompare = MathFunctions.doubleCompareRounded(fitResult_.getPrev().getEntropy(),
                     this.getLatestResults().getEntropy());
 
-            if (compare != 0)
+            if (entropyCompare != 0)
             {
+                //System.out.println("Found entropy mismatch: " + entropy + " != " + fitResult_.getEntropy());
                 throw new IllegalStateException(
                         "Found entropy mismatch: " + entropy + " != " + fitResult_.getEntropy());
             }
