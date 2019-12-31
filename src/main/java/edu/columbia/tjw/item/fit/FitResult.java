@@ -22,6 +22,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final ItemParameters<S, R, T> _params;
 
     private final double _entropy;
+    private final double _entropyStdDev;
     private final double _aic;
     private final double _tic;
 
@@ -41,6 +42,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         this._prev = prev_;
         _params = current_.getParams();
         _entropy = current_.getEntropy();
+        _entropyStdDev = current_.getEntropyStdDev();
         _aic = current_.getAic();
         _tic = current_.getTic();
         _gradient = current_._gradient;
@@ -59,6 +61,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             fitPoint_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
             final BlockResult secondDerivative = fitPoint_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
             _entropy = secondDerivative.getEntropyMean();
+            _entropyStdDev = secondDerivative.getEntropyMeanDev();
             _gradient = secondDerivative.getDerivative();
 
             final RealMatrix jMatrix = secondDerivative.getSecondDerivative();
@@ -105,6 +108,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         {
             fitPoint_.computeAll(BlockCalculationType.VALUE);
             _entropy = fitPoint_.getAggregated(BlockCalculationType.VALUE).getEntropyMean();
+            _entropyStdDev = fitPoint_.getAggregated(BlockCalculationType.VALUE).getEntropyMeanDev();
             _gradient = null;
             _paramStdDev = null;
             _tic = Double.NaN;
@@ -159,6 +163,11 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     public double getEntropy()
     {
         return _entropy;
+    }
+
+    public double getEntropyStdDev()
+    {
+        return _entropyStdDev;
     }
 
     public double getAic()
