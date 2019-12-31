@@ -63,7 +63,7 @@ public class ItemFitterTest
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.expandModel(_curveRegs, 2);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19814740755725763, r3.getEntropy());
+        Assertions.assertEquals(0.19814012517094468, r3.getEntropy());
     }
 
     @Test
@@ -80,7 +80,7 @@ public class ItemFitterTest
                 fitter.expandModel(_curveRegs, 20);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.18886625764455542, r3.getEntropy());
+        Assertions.assertEquals(0.18996153070429303, r3.getEntropy());
     }
 
 //    @Test

@@ -28,9 +28,6 @@ import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.base.BaseFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
-import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.logging.Logger;
@@ -49,19 +46,11 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private final ItemSettings _settings;
 
     private final ItemFittingGrid<S, R> _grid;
-
-    // Getting pretty messy, we can now reset our grids and models, recache the power scores, etc...
     private final ItemModel<S, R, T> _model;
 
-    //N.B: These are ordinals, not offsets.
-    private final int[] _actualOutcomes;
-    private final MultivariateOptimizer _optimizer;
     private final S _fromStatus;
-
-    //private final double _startingLL;
     private final EntropyCalculator<S, R, T> _calc;
-
-    private FitResult<S, R, T> _prevResult;
+    private final FitResult<S, R, T> _prevResult;
 
     private final BaseFitter<S, R, T> _base;
 
@@ -75,22 +64,9 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         _factory = factory_;
         _model = new ItemModel<>(params);
         _grid = grid_;
-        _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
         _fromStatus = params.getStatus();
-
-        final int reachableCount = _fromStatus.getReachableCount();
-
-        final int count = _grid.size();
-        _actualOutcomes = new int[count];
-
-        for (int i = 0; i < count; i++)
-        {
-            _actualOutcomes[i] = _grid.getNextStatus(i);
-        }
-
         _prevResult = chain_.getLatestResults();
         _calc = chain_.getCalculator();
-
         _base = new BaseFitter<>(_calc, settings_);
     }
 
@@ -142,11 +118,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final ItemCurveParams<R, T> starting = _factory.generateStartingParameters(curveType_, field_, dist,
                 _settings.getRandom());
 
-        //CurveFitResult<S, R, T> fitResult = doCalibration(starting, _model.getParams(), _prevResult, toStatus_);
-
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, _model.getParams());
-        final CurveFitResult<S, R, T> result = generateFit(toStatus_, _model.getParams(), func, _prevResult, starting);
-
+        final CurveFitResult<S, R, T> result = doCalibration(starting, _model.getParams(), _prevResult, toStatus_);
 
         if (_settings.getPolishStartingParams())
         {
@@ -157,10 +129,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
                 if (polished != starting)
                 {
-                    //LOG.info("Have polished parameters, testing.");
-
-                    final CurveFitResult<S, R, T> output2 = generateFit(toStatus_, _model.getParams(), func,
-                            _prevResult, polished);
+                    final CurveFitResult<S, R, T> output2 = doCalibration(polished, _model.getParams(), _prevResult,
+                            toStatus_);
 
                     //LOG.info("Fit comparison: " + output.getLogLikelihood() + " <> " + output2.getLogLikelihood());
                     final double aic1 = result.calculateAicDifference();
@@ -217,45 +187,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return cfr;
     }
 
-    private CurveOptimizerFunction<S, R, T> generateFunction(final ItemCurveParams<R, T> initParams_, S toStatus_,
-                                                             final ItemParameters<S,
-                                                                     R, T> params_)
-    {
-        final CurveOptimizerFunction<S, R, T> func = new CurveOptimizerFunction<>(initParams_, _factory, toStatus_,
-                this, _actualOutcomes,
-                _grid, _settings, params_);
-
-        return func;
-    }
-
-    public CurveFitResult<S, R, T> generateFit(final S toStatus_, final ItemParameters<S, R, T> baseParams_,
-                                               final CurveOptimizerFunction<S, R, T> func_,
-                                               final FitResult<S, R, T> prevResult_,
-                                               final ItemCurveParams<R, T> starting_)
-            throws ConvergenceException
-    {
-        final double[] startingArray = starting_.generatePoint();
-        final MultivariatePoint startingPoint = new MultivariatePoint(startingArray);
-        final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(func_, startingPoint);
-
-        //Convert the results into params.
-        final MultivariatePoint best = result.getOptimum();
-        final double[] bestVal = best.getElements();
-        final ItemCurveParams<R, T> curveParams = new ItemCurveParams<>(starting_, _factory, bestVal);
-        final ItemParameters<S, R, T> updated = baseParams_.addBeta(curveParams, toStatus_);
-
-        //final FitResult<S, R, T> prev = new FitResult<>(baseParams_, startingLL_, result.dataElementCount());
-
-        //N.B: The optimizer will only run until it is sure that it has found the
-        //best point, or that it can't make further progress. Its goal is not to
-        //compute the log likelihood accurately, so recompute that now.
-        final FitResult<S, R, T> fitResult = _calc.computeFitResult(updated, prevResult_);
-        final CurveFitResult<S, R, T> output = new CurveFitResult<>(fitResult, curveParams, toStatus_,
-                result.dataElementCount());
-
-
-        return output;
-    }
 
     public ItemParameters<S, R, T> getParams()
     {
