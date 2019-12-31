@@ -23,9 +23,6 @@ import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.fit.*;
 import edu.columbia.tjw.item.fit.base.BaseFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
-import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.logging.Logger;
@@ -40,17 +37,10 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 {
     private static final Logger LOG = LogUtil.getLogger(ParamFitter.class);
 
-    private final MultivariateOptimizer _optimizer;
-    private final ItemSettings _settings;
-    private final EntropyCalculator<S, R, T> _calc;
-
     private final BaseFitter<S, R, T> _base;
 
     public ParamFitter(final EntropyCalculator<S, R, T> calc_, final ItemSettings settings_)
     {
-        _calc = calc_;
-        _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
-        _settings = settings_;
         _base = new BaseFitter<>(calc_, settings_);
     }
 
@@ -66,58 +56,9 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         final FitResult<S, R, T> fitResult = _base.doFit(packed, chain_.getLatestResults());
 
         chain_.pushResults("ParamFit", fitResult);
-        //final FitResult<S, R, T> f2 = subFit(chain_, params_);
-
         return fitResult;
     }
 
-    private FitResult<S, R, T> subFit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_)
-            throws ConvergenceException
-    {
-        final double entropy = chain_.getLogLikelihood();
-        final LogisticModelFunction<S, R, T> function = generateFunction(params_);
-        final double[] beta = function.getBeta();
-        final MultivariatePoint point = new MultivariatePoint(beta);
-        final int numRows = function.numRows();
-
-        final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(function, point);
-        final MultivariatePoint optimumPoint = result.getOptimum();
-
-        for (int i = 0; i < beta.length; i++)
-        {
-            beta[i] = optimumPoint.getElement(i);
-        }
-
-        final double newLL = result.minValue();
-        LOG.info("Fitting coefficients, LL improvement: " + entropy + " -> " + newLL + "(" + (newLL - entropy) + ")");
-
-        if (!result.converged())
-        {
-            LOG.info("Exhausted dataset before convergence, moving on.");
-        }
-
-        final FitResult<S, R, T> output;
-
-        if (newLL > entropy)
-        {
-            // Push a frame with no improvement.
-            final FitResult<S, R, T> res = new FitResult<>(chain_.getLatestResults(),
-                    chain_.getLatestResults());
-            output = res;
-            chain_.pushResults("ParamFit", res);
-        }
-        else
-        {
-            final ItemParameters<S, R, T> updated = function.generateParams(beta);
-            final FitResult<S, R, T> fitResult = _calc
-                    .computeFitResult(updated, chain_.getLatestResults());
-
-            output = fitResult;
-            chain_.pushResults("ParamFit", fitResult);
-        }
-
-        return output;
-    }
 
     private PackedParameters<S, R, T> packParameters(final ItemParameters<S, R, T> params_)
     {
@@ -142,13 +83,5 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return reduced;
     }
 
-    private LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_)
-    {
-        final PackedParameters<S, R, T> reduced = packParameters(params_);
-
-        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(params_, _calc.getGrid(),
-                new ItemModel<>(params_), _settings, reduced);
-        return function;
-    }
 
 }

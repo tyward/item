@@ -80,7 +80,7 @@ public class ItemFitterTest
                 fitter.expandModel(_curveRegs, 20);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.1895561780515718, r3.getEntropy());
+        Assertions.assertEquals(0.18886625764455542, r3.getEntropy());
     }
 
 //    @Test

@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.fit.base.BaseFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
 import edu.columbia.tjw.item.optimize.MultivariatePoint;
@@ -62,6 +63,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
     private FitResult<S, R, T> _prevResult;
 
+    private final BaseFitter<S, R, T> _base;
+
 
     public CurveParamsFitter(final ItemCurveFactory<R, T> factory_,
                              final ItemFittingGrid<S, R> grid_, final ItemSettings settings_,
@@ -87,12 +90,25 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
         _prevResult = chain_.getLatestResults();
         _calc = chain_.getCalculator();
+
+        _base = new BaseFitter<>(_calc, settings_);
     }
 
-    public double getEntropy()
+    public CurveFitResult<S, R, T> doCalibration(final ItemCurveParams<R, T> curveParams_,
+                                                 final ItemParameters<S, R, T> reduced_, final FitResult<S, R, T> prev_,
+                                                 final S toStatus_)
     {
-        return _prevResult.getEntropy();
+        //First, expand the parameters.
+        final ItemParameters<S, R, T> expanded = reduced_.addBeta(curveParams_,
+                toStatus_);
+
+        final FitResult<S, R, T> result = _base.doFit(expanded.generatePacked(), prev_);
+        final CurveFitResult<S, R, T> output = new CurveFitResult<>(result, curveParams_, toStatus_,
+                _calc.size());
+
+        return output;
     }
+
 
     public CurveFitResult<S, R, T> calibrateExistingCurve(final int entryIndex_, final S toStatus_)
             throws ConvergenceException
@@ -126,8 +142,11 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final ItemCurveParams<R, T> starting = _factory.generateStartingParameters(curveType_, field_, dist,
                 _settings.getRandom());
 
+        //CurveFitResult<S, R, T> fitResult = doCalibration(starting, _model.getParams(), _prevResult, toStatus_);
+
         final CurveOptimizerFunction<S, R, T> func = generateFunction(starting, toStatus_, _model.getParams());
         final CurveFitResult<S, R, T> result = generateFit(toStatus_, _model.getParams(), func, _prevResult, starting);
+
 
         if (_settings.getPolishStartingParams())
         {
@@ -194,11 +213,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
                                                     final FitResult<S, R, T> fitResult_)
             throws ConvergenceException
     {
-        final CurveOptimizerFunction<S, R, T> func = generateFunction(initParams_, toStatus_,
-                params_);
-        final CurveFitResult<S, R, T> result = generateFit(toStatus_, params_, func, fitResult_,
-                initParams_);
-        return result;
+        final CurveFitResult<S, R, T> cfr = doCalibration(initParams_, params_, _prevResult, toStatus_);
+        return cfr;
     }
 
     private CurveOptimizerFunction<S, R, T> generateFunction(final ItemCurveParams<R, T> initParams_, S toStatus_,
