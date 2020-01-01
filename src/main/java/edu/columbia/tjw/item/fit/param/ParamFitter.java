@@ -50,7 +50,6 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     }
 
     public FitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_)
-            throws ConvergenceException
     {
         final PackedParameters<S, R, T> packed = packParameters(params_);
         final FitResult<S, R, T> fitResult = _base.doFit(packed, chain_.getLatestResults());

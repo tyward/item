@@ -303,53 +303,38 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             //This means, among other things, that we just add an additional entry with more flags
             final ItemParameters<S, R, T> updatedParams = params_.addBeta(testParams, null);
 
-            try
-            {
-                final FitResult<S, R, T> fitResult = _paramFitter.fit(subChain, updatedParams);
-                final ItemParameters<S, R, T> modParams = fitResult.getParams();
-                ItemCurveParams<R, T> modCurveParams = modParams.getEntryCurveParams(modParams.getEntryCount() - 1,
-                        true);
+            final FitResult<S, R, T> fitResult = _paramFitter.fit(subChain, updatedParams);
+            final ItemParameters<S, R, T> modParams = fitResult.getParams();
+            ItemCurveParams<R, T> modCurveParams = modParams.getEntryCurveParams(modParams.getEntryCount() - 1,
+                    true);
 
-                return new CurveFitResult<>(fitResult, modCurveParams, toStatus, _grid.size());
-            }
-            catch (final ConvergenceException e)
-            {
-                LOG.info("Convergence exception, moving on: " + e.toString());
-                return null;
-            }
+            return new CurveFitResult<>(fitResult, modCurveParams, toStatus, _grid.size());
+
         }
         else
         {
             //This is a flag-curve interaction term.
             // Try to append this to the given CurveParams
-            try
+            final CurveFitResult<S, R, T> result = getFitter(subChain).expandParameters(params_, testParams,
+                    toStatus, starting_.getFitResult());
+
+            if (!subChain.pushResults("ParameterExpansion", result))
             {
-                final CurveFitResult<S, R, T> result = getFitter(subChain).expandParameters(params_, testParams,
-                        toStatus, starting_.getFitResult());
-
-                if (!subChain.pushResults("ParameterExpansion", result))
-                {
-                    return result;
-                }
-
-                final FitResult<S, R, T> calibrated = _paramFitter.fit(subChain, result.getModelParams());
-
-                if (calibrated.getAicDiff() < _settings.getAicCutoff())
-                {
-                    final ItemParameters<S, R, T> updated = calibrated.getParams();
-                    final CurveFitResult<S, R, T> r2 = new CurveFitResult<>(calibrated,
-                            updated.getEntryCurveParams(updated.getEntryCount() - 1, true), toStatus, _grid.size());
-                    return r2;
-                }
-                else
-                {
-                    return result;
-                }
+                return result;
             }
-            catch (final ConvergenceException e)
+
+            final FitResult<S, R, T> calibrated = _paramFitter.fit(subChain, result.getModelParams());
+
+            if (calibrated.getAicDiff() < _settings.getAicCutoff())
             {
-                LOG.info("Convergence exception, moving on: " + e.toString());
-                return null;
+                final ItemParameters<S, R, T> updated = calibrated.getParams();
+                final CurveFitResult<S, R, T> r2 = new CurveFitResult<>(calibrated,
+                        updated.getEntryCurveParams(updated.getEntryCount() - 1, true), toStatus, _grid.size());
+                return r2;
+            }
+            else
+            {
+                return result;
             }
         }
     }
@@ -523,11 +508,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                             bestImprovement = improvement;
                             bestResult = res;
                         }
-                    }
-                    catch (final ConvergenceException e)
-                    {
-                        LOG.info("Trouble converging, moving on to next curve.");
-                        LOG.info(e.getMessage());
                     }
                     catch (final IllegalArgumentException e)
                     {

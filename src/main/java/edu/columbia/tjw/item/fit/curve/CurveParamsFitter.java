@@ -27,7 +27,6 @@ import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.base.BaseFitter;
-import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.logging.Logger;
@@ -87,7 +86,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
 
     public CurveFitResult<S, R, T> calibrateExistingCurve(final int entryIndex_, final S toStatus_)
-            throws ConvergenceException
     {
         final ItemParameters<S, R, T> params = _model.getParams();
 
@@ -110,7 +108,6 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     }
 
     public CurveFitResult<S, R, T> calibrateCurveAddition(T curveType_, R field_, S toStatus_)
-            throws ConvergenceException
     {
         LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
 
@@ -125,14 +122,13 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             try
             {
                 final ItemCurveParams<R, T> polished = RawCurveCalibrator.polishCurveParameters(_factory, _settings,
-                        dist, field_, starting);
+                        dist, starting);
 
                 if (polished != starting)
                 {
                     final CurveFitResult<S, R, T> output2 = doCalibration(polished, _model.getParams(), _prevResult,
                             toStatus_);
 
-                    //LOG.info("Fit comparison: " + output.getLogLikelihood() + " <> " + output2.getLogLikelihood());
                     final double aic1 = result.calculateAicDifference();
                     final double aic2 = output2.calculateAicDifference();
                     final String resString;
@@ -181,9 +177,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     public CurveFitResult<S, R, T> expandParameters(final ItemParameters<S, R, T> params_,
                                                     final ItemCurveParams<R, T> initParams_, S toStatus_,
                                                     final FitResult<S, R, T> fitResult_)
-            throws ConvergenceException
     {
-        final CurveFitResult<S, R, T> cfr = doCalibration(initParams_, params_, _prevResult, toStatus_);
+        final CurveFitResult<S, R, T> cfr = doCalibration(initParams_, params_, fitResult_, toStatus_);
         return cfr;
     }
 

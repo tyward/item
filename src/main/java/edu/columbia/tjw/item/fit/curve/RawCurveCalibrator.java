@@ -49,7 +49,7 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
     public static <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> ItemCurveParams<R
             , T> polishCurveParameters(final ItemCurveFactory<R, T> factory_,
                                        final ItemSettings settings_, final QuantileStatistics dist_,
-                                       final R regressor_, final ItemCurveParams<R, T> params_)
+                                       final ItemCurveParams<R, T> params_)
     {
         if (params_.getEntryDepth() > 1)
         {

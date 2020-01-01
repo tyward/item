@@ -48,9 +48,10 @@ public final class BaseFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final double newAic = FitResult.computeAic(result.minValue(), _calc.getGrid().size(),
                     packed_.getOriginalParams().getEffectiveParamCount());
 
-            if (newAic >= prevAic)
+            if (newAic >= (prevAic + 5.0))
             {
-                // We will not even consider this result unless it was at least slightly better than the original.
+                // We will not even consider this result unless it was at least slightly better (or not much worse)
+                // than the original.
                 // N.B: Since the optimizer didn't necessarily evaluate all observations, this is not guarantee that
                 // the point is actually better, we will actually recompute to be sure later on, but don't even spend
                 // the time if there's no real chance here.
