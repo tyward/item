@@ -56,7 +56,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private final R _intercept;
     private final EnumFamily<R> _family;
     private final S _status;
-    private final ItemFittingGrid<S, R> _grid;
     private final EntropyCalculator<S, R, T> _calc;
 
     private final ParamFitter<S, R, T> _fitter;
@@ -105,15 +104,14 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _intercept = intercept_;
         _family = intercept_.getFamily();
         _status = status_;
-        _grid = grid_;
-        _calc = new EntropyCalculator<>(_grid);
+        _calc = new EntropyCalculator<>(grid_);
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept);
-        _chain = new FittingProgressChain<>("Primary", starting, _grid.size(), _calc,
+        _chain = new FittingProgressChain<>("Primary", starting, _calc.size(), _calc,
                 _settings.getDoValidate());
 
         _fitter = new ParamFitter<>(_calc, _settings);
-        _curveFitter = new CurveFitter<>(_factory, _settings, _grid, _calc);
+        _curveFitter = new CurveFitter<>(_factory, _settings, _calc);
     }
 
     /**
@@ -169,7 +167,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     public ItemFittingGrid<S, R> getGrid()
     {
-        return _grid;
+        return _calc.getGrid();
     }
 
     public FitResult<S, R, T> pushParameters(final String label_, ItemParameters<S, R, T> params_)

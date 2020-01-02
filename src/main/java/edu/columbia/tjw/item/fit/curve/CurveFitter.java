@@ -48,7 +48,6 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     private final EnumFamily<T> _family;
     private final ItemSettings _settings;
-    private final ItemFittingGrid<S, R> _grid;
     private final ItemCurveFactory<R, T> _factory;
 
     private final BaseFitter<S, R, T> _base;
@@ -56,8 +55,8 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     private final CurveParamsFitter<S, R, T> _fitter;
 
 
-    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_, final ItemFittingGrid<S,
-            R> grid_, final EntropyCalculator<S, R, T> calc_)
+    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_,
+                       final EntropyCalculator<S, R, T> calc_)
     {
         if (null == settings_)
         {
@@ -67,11 +66,10 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         _factory = factory_;
         _family = factory_.getFamily();
         _settings = settings_;
-        _grid = grid_;
 
         _base = new BaseFitter<>(calc_, _settings);
         _paramFitter = new ParamFitter<>(_base);
-        _fitter = new CurveParamsFitter<>(_factory, _grid, _settings, _base);
+        _fitter = new CurveParamsFitter<>(_factory, _settings, _base);
     }
 
     public final boolean calibrateCurves(final double improvementTarget_, final boolean exhaustive_,
@@ -280,7 +278,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         // This is oh-sooo hacky.
         final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("SingleInteraction",
-                starting_.getFitResult().getParams(), _grid.size(), _base.getCalc(), true);
+                starting_.getFitResult().getParams(), getSize(), _base.getCalc(), true);
 
         if (null == toStatus)
         {
@@ -293,7 +291,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             ItemCurveParams<R, T> modCurveParams = modParams.getEntryCurveParams(modParams.getEntryCount() - 1,
                     true);
 
-            return new CurveFitResult<>(fitResult, modCurveParams, toStatus, _grid.size());
+            return new CurveFitResult<>(fitResult, modCurveParams, toStatus, getGrid().size());
 
         }
         else
@@ -314,7 +312,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             {
                 final ItemParameters<S, R, T> updated = calibrated.getParams();
                 final CurveFitResult<S, R, T> r2 = new CurveFitResult<>(calibrated,
-                        updated.getEntryCurveParams(updated.getEntryCount() - 1, true), toStatus, _grid.size());
+                        updated.getEntryCurveParams(updated.getEntryCount() - 1, true), toStatus, getGrid().size());
                 return r2;
             }
             else
@@ -505,6 +503,16 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         return bestResult;
+    }
+
+    private int getSize()
+    {
+        return getGrid().size();
+    }
+
+    private ItemFittingGrid<S, R> getGrid()
+    {
+        return _base.getCalc().getGrid();
     }
 
     /**

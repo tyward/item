@@ -5,6 +5,7 @@ import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.StandardCurveFactory;
 import edu.columbia.tjw.item.base.StandardCurveType;
+import edu.columbia.tjw.item.base.raw.RawFittingGrid;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.util.random.PrngType;
 import edu.columbia.tjw.item.util.random.RandomTool;
@@ -13,7 +14,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
@@ -27,11 +27,9 @@ public class ItemFitterTest
 
     public ItemFitterTest()
     {
-        try (final InputStream iStream = this.getClass().getResourceAsStream("/raw_data.dat");
-             final ObjectInputStream oIn = new ObjectInputStream(iStream))
+        try (final InputStream iStream = this.getClass().getResourceAsStream("/raw_data.dat"))
         {
-            _rawData = (ItemFittingGrid<SimpleStatus, SimpleRegressor>) oIn.readObject();
-
+            _rawData = RawFittingGrid.readFromStream(iStream, SimpleStatus.class, SimpleRegressor.class);
             _intercept = _rawData.getRegressorFamily().getFromName("INTERCEPT");
 
             final Set<String> regNames = new TreeSet<>(Arrays.asList("FICO",
@@ -41,10 +39,6 @@ public class ItemFitterTest
                     .collect(Collectors.toSet());
         }
         catch (final IOException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (final ClassNotFoundException e)
         {
             throw new RuntimeException(e);
         }

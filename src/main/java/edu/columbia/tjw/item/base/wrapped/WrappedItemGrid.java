@@ -6,11 +6,13 @@ import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.data.ItemGrid;
 import edu.columbia.tjw.item.util.EnumFamily;
 
-import java.io.Serializable;
+import java.io.*;
 import java.util.Collections;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public final class WrappedItemGrid implements ItemGrid<SimpleRegressor>, Serializable
 {
@@ -28,10 +30,12 @@ public final class WrappedItemGrid implements ItemGrid<SimpleRegressor>, Seriali
         _readers = readers_;
     }
 
-    public static <V extends ItemRegressor<V>> WrappedItemGrid wrapGrid(final ItemGrid<V> grid_, final SortedSet<V> restricted_)
+    public static <V extends ItemRegressor<V>> WrappedItemGrid wrapGrid(final ItemGrid<V> grid_,
+                                                                        final SortedSet<V> restricted_)
     {
         final int size = grid_.size();
-        final EnumFamily<SimpleRegressor> family = SimpleRegressor.generateFamily(grid_.getRegressorFamily(), restricted_);
+        final EnumFamily<SimpleRegressor> family = SimpleRegressor
+                .generateFamily(grid_.getRegressorFamily(), restricted_);
         final ItemRegressorReader[] readers = new ItemRegressorReader[family.size()];
         final SortedSet<SimpleRegressor> available = new TreeSet<>();
 

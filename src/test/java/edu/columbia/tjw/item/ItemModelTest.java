@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.StandardCurveFactory;
 import edu.columbia.tjw.item.base.StandardCurveType;
+import edu.columbia.tjw.item.base.raw.RawFittingGrid;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.ItemFitter;
 import edu.columbia.tjw.item.fit.PackedParameters;
@@ -32,11 +33,9 @@ class ItemModelTest
 
     public ItemModelTest()
     {
-        try (final InputStream iStream = ItemModelTest.class.getResourceAsStream("/raw_data.dat");
-             final ObjectInputStream oIn = new ObjectInputStream(iStream))
+        try (final InputStream iStream = ItemModelTest.class.getResourceAsStream("/raw_data.dat"))
         {
-            _rawData = (ItemFittingGrid<SimpleStatus, SimpleRegressor>) oIn.readObject();
-
+            _rawData = RawFittingGrid.readFromStream(iStream, SimpleStatus.class, SimpleRegressor.class);
             _intercept = _rawData.getRegressorFamily().getFromName("INTERCEPT");
 
             final Set<String> regNames = new TreeSet<>(Arrays.asList("FICO",
@@ -46,10 +45,6 @@ class ItemModelTest
                     .collect(Collectors.toSet());
         }
         catch (final IOException e)
-        {
-            throw new RuntimeException(e);
-        }
-        catch (final ClassNotFoundException e)
         {
             throw new RuntimeException(e);
         }
@@ -75,37 +70,6 @@ class ItemModelTest
 
         return fitter;
     }
-
-
-//    @Test
-//    void vacuous() throws Exception
-//    {
-//        assertTrue(_rawData.size() > 0);
-//
-//        final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-//                makeFitter();
-//
-//        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
-//                .fitCoefficients();
-//
-//        System.out.println(fitter.getChain());
-//        System.out.println("Fit Vacuous: " + result.getEndingParams());
-//        Assertions.assertTrue(result.getEndingLL() < 0.2024, "Fit not good enough: " + result.getEndingLL());
-//
-//        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result2 =
-//                fitter.expandModel(Collections.singleton(_rawData.getRegressorFamily().getFromName("FICO")), 5);
-//
-//        System.out.println(fitter.getChain());
-//        System.out.println("Next param: " + result2.getEndingParams());
-//        Assertions.assertTrue(result2.getEndingLL() < 0.2025);
-//
-//        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 =
-//                fitter.expandModel(_curveRegs, 50);
-//
-//        System.out.println(fitter.getChain());
-//        System.out.println("Next param: " + r3.getEndingParams());
-//        Assertions.assertTrue(r3.getEndingLL() < 0.1889);
-//    }
 
     /**
      * See if a is approximately equal to b, return the largest singular value of (a-b) divided by the average of the

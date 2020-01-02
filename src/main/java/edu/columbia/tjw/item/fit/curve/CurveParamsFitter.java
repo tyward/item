@@ -21,7 +21,6 @@ package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
-import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.base.BaseFitter;
@@ -41,17 +40,15 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
     private final ItemCurveFactory<R, T> _factory;
     private final ItemSettings _settings;
-    private final ItemFittingGrid<S, R> _grid;
     private final BaseFitter<S, R, T> _base;
 
 
     public CurveParamsFitter(final ItemCurveFactory<R, T> factory_,
-                             final ItemFittingGrid<S, R> grid_, final ItemSettings settings_,
+                             final ItemSettings settings_,
                              final BaseFitter<S, R, T> base_)
     {
         _settings = settings_;
         _factory = factory_;
-        _grid = grid_;
         _base = base_;
     }
 
@@ -65,7 +62,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
         final FitResult<S, R, T> result = _base.doFit(expanded.generatePacked(), prev_);
         final CurveFitResult<S, R, T> output = new CurveFitResult<>(result, curveParams_, toStatus_,
-                _grid.size());
+                _base.getCalc().getGrid().size());
 
         return output;
     }
@@ -158,7 +155,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private QuantileStatistics generateDistribution(R field_, S toStatus_, FitResult<S, R, T> fitResult_)
     {
         final ItemParameters<S, R, T> params = fitResult_.getParams();
-        final ParamFittingGrid<S, R, T> paramGrid = new ParamFittingGrid<>(params, _grid);
+        final ParamFittingGrid<S, R, T> paramGrid = new ParamFittingGrid<>(params, _base.getCalc().getGrid());
         final ItemModel<S, R, T> model = new ItemModel<>(params);
         final ItemQuantileDistribution<S, R, T> quantGenerator = new ItemQuantileDistribution<>(paramGrid,
                 model,
