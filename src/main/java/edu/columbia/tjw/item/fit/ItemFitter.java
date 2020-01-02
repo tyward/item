@@ -527,11 +527,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 }
 
             }
-            catch (final ConvergenceException e)
-            {
-                LOG.info("Unable to make progress, breaking out.");
-                break;
-            }
             finally
             {
                 LOG.info("Completed one round of curve drawing, moving on.");

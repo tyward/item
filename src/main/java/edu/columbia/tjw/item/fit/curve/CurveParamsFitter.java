@@ -22,9 +22,7 @@ package edu.columbia.tjw.item.fit.curve;
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FitResult;
-import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.base.BaseFitter;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -43,30 +41,18 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
     private final ItemCurveFactory<R, T> _factory;
     private final ItemSettings _settings;
-
     private final ItemFittingGrid<S, R> _grid;
-    private final ItemModel<S, R, T> _model;
-
-    private final S _fromStatus;
-    private final EntropyCalculator<S, R, T> _calc;
-    private final FitResult<S, R, T> _prevResult;
-
     private final BaseFitter<S, R, T> _base;
 
 
     public CurveParamsFitter(final ItemCurveFactory<R, T> factory_,
                              final ItemFittingGrid<S, R> grid_, final ItemSettings settings_,
-                             final FittingProgressChain<S, R, T> chain_)
+                             final BaseFitter<S, R, T> base_)
     {
-        final ItemParameters<S, R, T> params = chain_.getBestParameters();
         _settings = settings_;
         _factory = factory_;
-        _model = new ItemModel<>(params);
         _grid = grid_;
-        _fromStatus = params.getStatus();
-        _prevResult = chain_.getLatestResults();
-        _calc = chain_.getCalculator();
-        _base = new BaseFitter<>(_calc, settings_);
+        _base = base_;
     }
 
     public CurveFitResult<S, R, T> doCalibration(final ItemCurveParams<R, T> curveParams_,
@@ -79,21 +65,22 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
         final FitResult<S, R, T> result = _base.doFit(expanded.generatePacked(), prev_);
         final CurveFitResult<S, R, T> output = new CurveFitResult<>(result, curveParams_, toStatus_,
-                _calc.size());
+                _grid.size());
 
         return output;
     }
 
 
-    public CurveFitResult<S, R, T> calibrateExistingCurve(final int entryIndex_, final S toStatus_)
+    public CurveFitResult<S, R, T> calibrateExistingCurve(final int entryIndex_, final S toStatus_, final FitResult<S
+            , R, T> prevResult_)
     {
-        final ItemParameters<S, R, T> params = _model.getParams();
+        final ItemParameters<S, R, T> params = prevResult_.getParams();
 
         //N.B: Don't check for filtering, this is an entry we already have, filtering isn't relevant.
         final ItemCurveParams<R, T> entryParams = params.getEntryCurveParams(entryIndex_);
         final ItemParameters<S, R, T> reduced = params.dropIndex(entryIndex_);
 
-        final CurveFitResult<S, R, T> result = expandParameters(reduced, entryParams, toStatus_, _prevResult);
+        final CurveFitResult<S, R, T> result = doCalibration(entryParams, reduced, prevResult_, toStatus_);
         final double aicDiff = result.calculateAicDifference();
 
         if (aicDiff > _settings.getAicCutoff())
@@ -107,15 +94,18 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return result;
     }
 
-    public CurveFitResult<S, R, T> calibrateCurveAddition(T curveType_, R field_, S toStatus_)
+    public CurveFitResult<S, R, T> calibrateCurveAddition(T curveType_, R field_, S toStatus_,
+                                                          final FitResult<S, R, T> prevResult_)
     {
         LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
 
-        final QuantileStatistics dist = generateDistribution(field_, toStatus_);
+        final ItemParameters<S, R, T> params = prevResult_.getParams();
+
+        final QuantileStatistics dist = generateDistribution(field_, toStatus_, prevResult_);
         final ItemCurveParams<R, T> starting = _factory.generateStartingParameters(curveType_, field_, dist,
                 _settings.getRandom());
 
-        final CurveFitResult<S, R, T> result = doCalibration(starting, _model.getParams(), _prevResult, toStatus_);
+        final CurveFitResult<S, R, T> result = doCalibration(starting, params, prevResult_, toStatus_);
 
         if (_settings.getPolishStartingParams())
         {
@@ -126,7 +116,8 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 
                 if (polished != starting)
                 {
-                    final CurveFitResult<S, R, T> output2 = doCalibration(polished, _model.getParams(), _prevResult,
+                    final CurveFitResult<S, R, T> output2 = doCalibration(polished, params,
+                            prevResult_,
                             toStatus_);
 
                     final double aic1 = result.calculateAicDifference();
@@ -164,28 +155,16 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return result;
     }
 
-    private QuantileStatistics generateDistribution(R field_, S toStatus_)
+    private QuantileStatistics generateDistribution(R field_, S toStatus_, FitResult<S, R, T> fitResult_)
     {
-        final ParamFittingGrid<S, R, T> paramGrid = new ParamFittingGrid<>(_model.getParams(), _grid);
+        final ItemParameters<S, R, T> params = fitResult_.getParams();
+        final ParamFittingGrid<S, R, T> paramGrid = new ParamFittingGrid<>(params, _grid);
+        final ItemModel<S, R, T> model = new ItemModel<>(params);
         final ItemQuantileDistribution<S, R, T> quantGenerator = new ItemQuantileDistribution<>(paramGrid,
-                _model,
-                _fromStatus, field_, toStatus_);
+                model,
+                params.getStatus(), field_, toStatus_);
         final QuantileStatistics dist = quantGenerator.getAdjusted();
         return dist;
-    }
-
-    public CurveFitResult<S, R, T> expandParameters(final ItemParameters<S, R, T> params_,
-                                                    final ItemCurveParams<R, T> initParams_, S toStatus_,
-                                                    final FitResult<S, R, T> fitResult_)
-    {
-        final CurveFitResult<S, R, T> cfr = doCalibration(initParams_, params_, fitResult_, toStatus_);
-        return cfr;
-    }
-
-
-    public ItemParameters<S, R, T> getParams()
-    {
-        return _model.getParams();
     }
 
 

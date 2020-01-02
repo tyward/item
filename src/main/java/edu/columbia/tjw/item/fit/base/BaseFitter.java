@@ -70,6 +70,11 @@ public final class BaseFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         }
     }
 
+    public EntropyCalculator<S, R, T> getCalc()
+    {
+        return _calc;
+    }
+
     private BaseModelFunction<S, R, T> generateFunction(final PackedParameters<S, R, T> packed_)
     {
         final BaseModelFunction<S, R, T> function = new BaseModelFunction<>(_calc.getGrid(),

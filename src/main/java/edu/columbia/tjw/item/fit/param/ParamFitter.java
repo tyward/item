@@ -39,9 +39,19 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     private final BaseFitter<S, R, T> _base;
 
+    public ParamFitter(final BaseFitter<S, R, T> base_)
+    {
+        if (null == base_)
+        {
+            throw new NullPointerException("Base cannot be null.");
+        }
+
+        _base = base_;
+    }
+
     public ParamFitter(final EntropyCalculator<S, R, T> calc_, final ItemSettings settings_)
     {
-        _base = new BaseFitter<>(calc_, settings_);
+        this(new BaseFitter<>(calc_, settings_));
     }
 
     public FitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_) throws ConvergenceException
