@@ -2,16 +2,12 @@ package edu.columbia.tjw.item;
 
 import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
-import edu.columbia.tjw.item.base.StandardCurveFactory;
 import edu.columbia.tjw.item.base.StandardCurveType;
 import edu.columbia.tjw.item.base.raw.RawFittingGrid;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.fit.ItemFitter;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.MathTools;
-import edu.columbia.tjw.item.util.random.PrngType;
-import edu.columbia.tjw.item.util.random.RandomTool;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
@@ -20,16 +16,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.*;
-import java.util.Arrays;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 class ItemModelTest
 {
     private final ItemFittingGrid<SimpleStatus, SimpleRegressor> _rawData;
     private final SimpleRegressor _intercept;
-    private final Set<SimpleRegressor> _curveRegs;
 
     public ItemModelTest()
     {
@@ -37,12 +28,6 @@ class ItemModelTest
         {
             _rawData = RawFittingGrid.readFromStream(iStream, SimpleStatus.class, SimpleRegressor.class);
             _intercept = _rawData.getRegressorFamily().getFromName("INTERCEPT");
-
-            final Set<String> regNames = new TreeSet<>(Arrays.asList("FICO",
-                    "INCENTIVE", "AGE"));
-
-            _curveRegs = regNames.stream().map((x) -> _rawData.getRegressorFamily().getFromName(x))
-                    .collect(Collectors.toSet());
         }
         catch (final IOException e)
         {
@@ -55,20 +40,6 @@ class ItemModelTest
     void setUp()
     {
 
-    }
-
-
-    private ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> makeFitter()
-    {
-        ItemSettings settings = ItemSettings.newBuilder()
-                .setRand(RandomTool.getRandom(PrngType.SECURE, 0xcafebabe)).build();
-
-        final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-                new ItemFitter<>(new StandardCurveFactory<>(),
-                        _intercept,
-                        _rawData.getFromStatus(), _rawData, settings);
-
-        return fitter;
     }
 
     /**
@@ -217,16 +188,10 @@ class ItemModelTest
     private ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> readParams(final InputStream input)
             throws IOException
     {
-        try (ObjectInputStream oIn = new ObjectInputStream(input))
-        {
-            final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> result =
-                    (ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType>) oIn.readObject();
-            return result;
-        }
-        catch (final ClassNotFoundException e)
-        {
-            throw new IOException(e);
-        }
+        final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> result =
+                ItemParameters.readFromStream(input, SimpleStatus.class,
+                        SimpleRegressor.class, StandardCurveType.class);
+        return result;
     }
 
     private void writeParams(final File outputFile,

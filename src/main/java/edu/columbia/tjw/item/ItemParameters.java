@@ -20,11 +20,19 @@
 package edu.columbia.tjw.item;
 
 import edu.columbia.tjw.item.fit.PackedParameters;
+import edu.columbia.tjw.item.util.EnumFamily;
 
-import java.io.Serializable;
+import java.io.*;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 /**
+ * ItemParameters encapsulates everything needed to fully describe an item model. It has a fair bit of type-checking
+ * logic as well, to ensure that the status types are compatible, and the regressors as well. This should prevent
+ * issues like mismatched regressor names, shifting curve definitions, or status transition matrices that don't match
+ * what the model was fit on.
+ *
  * @param <S> The status type for this model
  * @param <R> The regressor type for this model
  * @param <T> The curve type for this model
@@ -35,11 +43,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 {
     //This is just to make it clear that the 0th entry is always the intercept.
     private static final int INTERCEPT_INDEX = 0;
-    private static final long serialVersionUID = 0x35c74a5424d6cf48L;
+    private static final long serialVersionUID = 0x20315705d45eb662L;
 
     private final S _status;
     private final int _selfIndex;
-    private R _intercept; // deprecated.
     private final List<ItemCurve<T>> _trans;
     private final List<ParamFilter<S, R, T>> _filters;
     private final UniqueBetaFilter _uniqFilter = new UniqueBetaFilter();
@@ -57,7 +64,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     private final int _effectiveParamCount;
 
-    public ItemParameters(final S status_, final R intercept_)
+    private final EnumFamily<T> _typeFamily;
+    private final EnumFamily<R> _regFamily;
+
+    public ItemParameters(final S status_, final R intercept_, final EnumFamily<T> typeFamily_)
     {
         if (null == status_)
         {
@@ -66,6 +76,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         if (null == intercept_)
         {
             throw new NullPointerException("Intercept cannot be null.");
+        }
+        if (null == typeFamily_)
+        {
+            throw new NullPointerException("Type family cannot be null.");
         }
 
         _status = status_;
@@ -87,6 +101,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
         _selfIndex = _status.getReachable().indexOf(_status);
         _effectiveParamCount = calculateEffectiveParamCount();
+
+        _regFamily = intercept_.getFamily();
+        _typeFamily = typeFamily_;
     }
 
     /**
@@ -106,7 +123,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _transOffsets = base_._transOffsets;
         _uniqueBeta = base_._uniqueBeta;
         _effectiveParamCount = base_._effectiveParamCount;
-
+        _regFamily = base_._regFamily;
+        _typeFamily = base_._typeFamily;
 
         // We will go through and replace each of these curves...
         final List<ItemCurve<T>> trans = new ArrayList<>(base_._trans);
@@ -211,6 +229,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _transOffsets = base_._transOffsets;
         _uniqueBeta = base_._uniqueBeta;
 
+        _regFamily = base_._regFamily;
+        _typeFamily = base_._typeFamily;
+
         if (null != betas_)
         {
             final int size = base_._betas.length;
@@ -269,6 +290,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _status = base_._status;
         _selfIndex = base_._selfIndex;
         _filters = base_._filters;
+        _regFamily = base_._regFamily;
+        _typeFamily = base_._typeFamily;
 
         final SortedSet<R> newFields = new TreeSet<>();
         newFields.addAll(base_._uniqueFields);
@@ -389,6 +412,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _status = base_._status;
         _selfIndex = base_._selfIndex;
         _filters = base_._filters;
+        _regFamily = base_._regFamily;
+        _typeFamily = base_._typeFamily;
 
         final int startSize = base_.getEntryCount();
         final boolean[] drop = new boolean[startSize];
@@ -1011,6 +1036,50 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     {
         return new ItemParametersVector();
     }
+
+    public void writeToStream(final OutputStream stream_) throws IOException
+    {
+        try (final GZIPOutputStream zipout = new GZIPOutputStream(stream_);
+             final ObjectOutputStream oOut = new ObjectOutputStream(zipout))
+        {
+            oOut.writeObject(this);
+            oOut.flush();
+        }
+    }
+
+    public static <S2 extends ItemStatus<S2>, R2 extends ItemRegressor<R2>, T2 extends ItemCurveType<T2>>
+    ItemParameters<S2, R2, T2> readFromStream(final InputStream stream_,
+                                              final Class<S2> statusClass_, final Class<R2> regClass_,
+                                              final Class<T2> typeClass_)
+            throws IOException
+    {
+        try (final GZIPInputStream zipin = new GZIPInputStream(stream_);
+             final ObjectInputStream oIn = new ObjectInputStream(zipin))
+        {
+            final ItemParameters<?, ?, ?> raw = (ItemParameters<?, ?, ?>) oIn.readObject();
+
+            if (raw.getStatus().getClass() != statusClass_)
+            {
+                throw new IOException("Status class mismatch.");
+            }
+            if (raw._regFamily.getComponentType() != regClass_)
+            {
+                throw new IOException("Regressor class mismatch.");
+            }
+            if (raw._typeFamily.getComponentType() != typeClass_)
+            {
+                throw new IOException("Curve Type class mismatch.");
+            }
+
+            final ItemParameters<S2, R2, T2> typed = (ItemParameters<S2, R2, T2>) raw;
+            return typed;
+        }
+        catch (ClassNotFoundException e)
+        {
+            throw new IOException(e);
+        }
+    }
+
 
     private final class UniqueBetaFilter implements ParamFilter<S, R, T>
     {
