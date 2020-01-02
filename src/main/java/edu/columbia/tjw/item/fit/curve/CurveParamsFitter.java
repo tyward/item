@@ -38,17 +38,14 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
 {
     private static final Logger LOG = LogUtil.getLogger(CurveParamsFitter.class);
 
-    private final ItemCurveFactory<R, T> _factory;
     private final ItemSettings _settings;
     private final BaseFitter<S, R, T> _base;
 
 
-    public CurveParamsFitter(final ItemCurveFactory<R, T> factory_,
-                             final ItemSettings settings_,
+    public CurveParamsFitter(final ItemSettings settings_,
                              final BaseFitter<S, R, T> base_)
     {
         _settings = settings_;
-        _factory = factory_;
         _base = base_;
     }
 
@@ -97,9 +94,10 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
 
         final ItemParameters<S, R, T> params = prevResult_.getParams();
+        final ItemCurveFactory<R, T> factory = params.getCurveFamily().getFromOrdinal(0).getFactory();
 
         final QuantileStatistics dist = generateDistribution(field_, toStatus_, prevResult_);
-        final ItemCurveParams<R, T> starting = _factory.generateStartingParameters(curveType_, field_, dist,
+        final ItemCurveParams<R, T> starting = factory.generateStartingParameters(curveType_, field_, dist,
                 _settings.getRandom());
 
         final CurveFitResult<S, R, T> result = doCalibration(starting, params, prevResult_, toStatus_);
@@ -108,7 +106,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         {
             try
             {
-                final ItemCurveParams<R, T> polished = RawCurveCalibrator.polishCurveParameters(_factory, _settings,
+                final ItemCurveParams<R, T> polished = RawCurveCalibrator.polishCurveParameters(factory, _settings,
                         dist, starting);
 
                 if (polished != starting)

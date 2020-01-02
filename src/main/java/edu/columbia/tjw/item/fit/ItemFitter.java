@@ -28,7 +28,6 @@ import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.Collection;
@@ -51,10 +50,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 {
     private static final Logger LOG = LogUtil.getLogger(ItemFitter.class);
 
-    private final ItemCurveFactory<R, T> _factory;
     private final ItemSettings _settings;
     private final R _intercept;
-    private final EnumFamily<R> _family;
     private final S _status;
     private final EntropyCalculator<S, R, T> _calc;
 
@@ -99,20 +96,18 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             throw new NullPointerException("Grid cannot be null.");
         }
 
-        _factory = factory_;
         _settings = settings_;
         _intercept = intercept_;
-        _family = intercept_.getFamily();
         _status = status_;
         _calc = new EntropyCalculator<>(grid_);
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept,
-                _factory.getFamily());
+                factory_.getFamily());
         _chain = new FittingProgressChain<>("Primary", starting, _calc.size(), _calc,
                 _settings.getDoValidate());
 
         _fitter = new ParamFitter<>(_calc, _settings);
-        _curveFitter = new CurveFitter<>(_factory, _settings, _calc);
+        _curveFitter = new CurveFitter<>(_settings, _calc);
     }
 
     /**

@@ -35,6 +35,7 @@ public enum StandardCurveType implements ItemCurveType<StandardCurveType>
     GAUSSIAN(2);
 
     public static final EnumFamily<StandardCurveType> FAMILY = new EnumFamily<>(values());
+    private static final StandardCurveFactory FACTORY = new StandardCurveFactory();
 
     private final int _paramCount;
 
@@ -52,7 +53,7 @@ public enum StandardCurveType implements ItemCurveType<StandardCurveType>
     @Override
     public <R extends ItemRegressor<R>> ItemCurveFactory<R, StandardCurveType> getFactory()
     {
-        return new StandardCurveFactory<>();
+        return FACTORY;
     }
 
     @Override

@@ -80,7 +80,8 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
             final double end = result.getValue();
             final double[] endPoint = result.getPointRef();
 
-            LOG.info("Polish run completed (" + start + " -> " + end + ")[" + optim.getIterations() + "]: " + Arrays.toString(rawParams) + " -> " + Arrays.toString(endPoint));
+            LOG.info("Polish run completed (" + start + " -> " + end + ")[" + optim.getIterations() + "]: " + Arrays
+                    .toString(rawParams) + " -> " + Arrays.toString(endPoint));
 
             if (end < start)
             {

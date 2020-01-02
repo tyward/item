@@ -27,7 +27,6 @@ import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.base.BaseFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MathFunctions;
 import org.apache.commons.math3.util.Pair;
@@ -46,16 +45,14 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 {
     private static final Logger LOG = LogUtil.getLogger(CurveFitter.class);
 
-    private final EnumFamily<T> _family;
     private final ItemSettings _settings;
-    private final ItemCurveFactory<R, T> _factory;
 
     private final BaseFitter<S, R, T> _base;
     private final ParamFitter<S, R, T> _paramFitter;
     private final CurveParamsFitter<S, R, T> _fitter;
 
 
-    public CurveFitter(final ItemCurveFactory<R, T> factory_, final ItemSettings settings_,
+    public CurveFitter(final ItemSettings settings_,
                        final EntropyCalculator<S, R, T> calc_)
     {
         if (null == settings_)
@@ -63,13 +60,11 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             throw new NullPointerException("Settings cannot be null.");
         }
 
-        _factory = factory_;
-        _family = factory_.getFamily();
         _settings = settings_;
 
         _base = new BaseFitter<>(calc_, _settings);
         _paramFitter = new ParamFitter<>(_base);
-        _fitter = new CurveParamsFitter<>(_factory, _settings, _base);
+        _fitter = new CurveParamsFitter<>(_settings, _base);
     }
 
     public final boolean calibrateCurves(final double improvementTarget_, final boolean exhaustive_,
@@ -460,14 +455,15 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             fieldLoop:
             for (final R field : fields_)
             {
-                for (final T curveType : _family.getMembers())
+                for (final T curveType : params.getCurveFamily().getMembers())
                 {
                     try
                     {
                         //First, check for admissibiilty.
                         //Requires making a quick vacuous set of params...
                         final ItemCurveParams<R, T> vacuousParams = new ItemCurveParams<>(0.0, 0.0, field,
-                                _factory.generateCurve(curveType, 0, new double[curveType.getParamCount()]));
+                                curveType.getFactory()
+                                        .generateCurve(curveType, 0, new double[curveType.getParamCount()]));
 
                         if (params.curveIsForbidden(toStatus, vacuousParams))
                         {
