@@ -106,7 +106,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _status = status_;
         _calc = new EntropyCalculator<>(grid_);
 
-        final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept, _factory.getFamily());
+        final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept,
+                _factory.getFamily());
         _chain = new FittingProgressChain<>("Primary", starting, _calc.size(), _calc,
                 _settings.getDoValidate());
 

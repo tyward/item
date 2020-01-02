@@ -575,6 +575,15 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return toIndex;
     }
 
+    public EnumFamily<T> getCurveFamily()
+    {
+        return _typeFamily;
+    }
+
+    public EnumFamily<R> getRegressorFamily()
+    {
+        return _regFamily;
+    }
 
     public int getInterceptIndex()
     {
