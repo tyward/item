@@ -1,9 +1,6 @@
 package edu.columbia.tjw.item.fit.calculator;
 
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemParameters;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.util.thread.GeneralTask;
 import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
@@ -17,8 +14,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     private static final GeneralThreadPool POOL = GeneralThreadPool.singleton();
 
     private final List<BlockResultCalculator<S, R, T>> _blockCalculators;
-    private final PackedParameters<S, R, T> _packed;
-    private final ItemParameters<S, R, T> _params;
+    private final ItemModel<S, R, T> _model;
     private final int _blockSize;
     private final int _totalSize;
 
@@ -37,8 +33,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
         }
 
         _blockCalculators = calculator_.getCalculators();
-        _packed = packed_.clone(); // May be able to avoid, for now, for safety.
-        _params = _packed.generateParams();
+        _model = new ItemModel<>(packed_);
         _blockSize = calculator_.getBlockSize();
         _totalSize = calculator_.getRowCount();
 
@@ -54,7 +49,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
 
     public ItemParameters<S, R, T> getParams()
     {
-        return _params;
+        return _model.getParams();
     }
 
     @Override
@@ -103,7 +98,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
         for (int i = nextBlock; i < endBlock_; i++)
         {
             final BlockResultCalculator<S, R, T> calc = _blockCalculators.get(i);
-            final EntropyRunner runner = new EntropyRunner(calc, _params, type_);
+            final EntropyRunner runner = new EntropyRunner(calc, type_);
             runners.add(runner);
         }
 
@@ -160,17 +155,6 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
         }
         this.computeUntil(boundary_, BlockCalculationType.VALUE);
         return this.getAggregated(BlockCalculationType.VALUE).getEntropyMean();
-
-//        final VarianceCalculator vcalc = new VarianceCalculator();
-//
-//        for (int i = 0; i < boundary_; i++)
-//        {
-//            final double next = getBlock(i, BlockCalculationType.VALUE).getEntropyMean();
-//            vcalc.update(next);
-//        }
-//
-//        final double mean = vcalc.getMean();
-//        return mean;
     }
 
     @Override
@@ -183,19 +167,6 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
         }
         this.computeUntil(boundary_, BlockCalculationType.VALUE);
         return this.getAggregated(BlockCalculationType.VALUE).getEntropyMeanDev();
-
-//        this.computeUntil(boundary_, BlockCalculationType.VALUE);
-//
-//        final VarianceCalculator vcalc = new VarianceCalculator();
-//
-//        for (int i = 0; i < boundary_; i++)
-//        {
-//            final double next = getBlock(i, BlockCalculationType.VALUE).getEntropyMean();
-//            vcalc.update(next);
-//        }
-//
-//        final double stdev = vcalc.getMeanDev();
-//        return stdev;
     }
 
     public int getSize()
@@ -207,23 +178,22 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     private final class EntropyRunner extends GeneralTask<BlockResult>
     {
         private final BlockResultCalculator<S, R, T> _calc;
-        private final ItemParameters<S, R, T> _params;
         private final BlockCalculationType _type;
 
         public EntropyRunner(final BlockResultCalculator<S, R, T> calc_,
-                             final ItemParameters<S, R, T> params_,
                              final BlockCalculationType type_)
         {
             _calc = calc_;
-            _params = params_;
             _type = type_;
         }
-
 
         @Override
         protected BlockResult subRun() throws Exception
         {
-            return _calc.compute(_params, _packed, _type);
+            // N.B: we clone the model since ItemModel isn't threadsafe (it has internal state).
+            // However, cloning models is a bit faster than making new ones because of the internal (immutable)
+            // parameters.
+            return _calc.compute(_model.clone(), _type);
         }
     }
 }

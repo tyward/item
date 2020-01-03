@@ -48,7 +48,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final LogLikelihood<S> _likelihood;
 
     // We need both params and packed because in some cases we will want derivatives with respect to only subsets of
-    // the parameters.
+    // the parameters. However, we allow users to specify only one or the other, so they are guaranteed consistent at
+    // this point.
     private final ItemParameters<S, R, T> _params;
     private final PackedParameters<S, R, T> _packed;
 
@@ -110,6 +111,11 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     public final ItemParameters<S, R, T> getParams()
     {
         return _params;
+    }
+
+    public int getDerivativeSize()
+    {
+        return _packed.size();
     }
 
     /**
@@ -590,6 +596,9 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         //Yes, yes, this is bad form. However, this class is final and I don't feel like
         //making all its internal variables not-final so that I can use the proper clone
         //idiom.
-        return new ItemModel<>(this._packed);
+
+        // N.B: It's OK for these models to share the packed params, since these are never modified or given out
+        // (were cloned in the initial construction), so _packed is effectively immutable here.
+        return new ItemModel<>(this._params, this._packed);
     }
 }

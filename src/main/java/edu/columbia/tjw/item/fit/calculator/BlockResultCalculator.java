@@ -1,8 +1,10 @@
 package edu.columbia.tjw.item.fit.calculator;
 
-import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.ItemCurveType;
+import edu.columbia.tjw.item.ItemModel;
+import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 
 public final class BlockResultCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>,
@@ -36,23 +38,15 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         return _grid;
     }
 
-    public BlockResult compute(final ItemParameters<S, R, T> params_)
-    {
-        return compute(params_, null, BlockCalculationType.VALUE);
-    }
-
-
-    public synchronized BlockResult compute(final ItemParameters<S, R, T> params_,
-                                            final PackedParameters<S, R, T> packed_,
+    public synchronized BlockResult compute(final ItemModel<S, R, T> model_,
                                             final BlockCalculationType type_)
     {
-        if (params_.getStatus() != _grid.getFromStatus())
+        if (model_.getParams().getStatus() != _grid.getFromStatus())
         {
             throw new IllegalArgumentException("Status mismatch.");
         }
 
-        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _grid);
-        final ItemModel<S, R, T> model = new ItemModel<>(packed_);
+        final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(model_.getParams(), _grid);
 
         double entropySum = 0.0;
         double x2 = 0.0;
@@ -65,7 +59,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
         for (int i = 0; i < grid.size(); i++)
         {
-            final double entropy = model.logLikelihood(grid, i);
+            final double entropy = model_.logLikelihood(grid, i);
             final double e2 = entropy * entropy;
             entropySum += entropy;
             x2 += e2;
@@ -77,14 +71,14 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
         if (type_ == BlockCalculationType.SECOND_DERIVATIVE)
         {
-            final int dimension = packed_.size();
+            final int dimension = model_.getDerivativeSize();
             derivative = new double[dimension];
             fisherInformation = new double[dimension][dimension];
             secondDerivative = new double[dimension][dimension];
         }
         else if (type_ == BlockCalculationType.FIRST_DERIVATIVE)
         {
-            final int dimension = packed_.size();
+            final int dimension = model_.getDerivativeSize();
             derivative = new double[dimension];
             fisherInformation = new double[dimension][dimension];
             secondDerivative = null;
@@ -113,7 +107,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
             for (int i = 0; i < count; i++)
             {
-                model.computeGradient(grid, i, tmp, tmp2);
+                model_.computeGradient(grid, i, tmp, tmp2);
 
                 for (int k = 0; k < dimension; k++)
                 {
