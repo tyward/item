@@ -85,6 +85,10 @@ public class ItemFitterTest
 
         System.out.println("Revised: " + r3.getParams());
         Assertions.assertEquals(0.18996153070429303, r3.getEntropy());
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3a = fitter.trim(true);
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> refit = fitter.fitAllParameters();
+
+
 //
 //        final File outputDir = new File("/Users/tyler/Documents/code/outputModels");
 //        final File dataFile = new File(outputDir, "test_model_small.dat");
@@ -93,7 +97,7 @@ public class ItemFitterTest
 //        final File dataFileMed = new File(outputDir, "test_model_medium.dat");
 //        r3.getParams().writeToStream(new FileOutputStream(dataFileMed));
 //
-//        System.out.println("Done!");
+        System.out.println("Done!");
     }
 
 //    @Test

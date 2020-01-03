@@ -21,7 +21,6 @@ package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
-import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.fit.FittingProgressChain;
 import edu.columbia.tjw.item.fit.base.BaseFitter;
@@ -53,7 +52,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
 
     public CurveFitter(final ItemSettings settings_,
-                       final EntropyCalculator<S, R, T> calc_)
+                       final BaseFitter<S, R, T> base_)
     {
         if (null == settings_)
         {
@@ -62,7 +61,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
         _settings = settings_;
 
-        _base = new BaseFitter<>(calc_, _settings);
+        _base = base_;
         _paramFitter = new ParamFitter<>(_base);
         _fitter = new CurveParamsFitter<>(_settings, _base);
     }

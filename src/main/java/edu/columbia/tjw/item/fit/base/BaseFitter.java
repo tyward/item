@@ -29,6 +29,12 @@ public final class BaseFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     public FitResult<S, R, T> doFit(final PackedParameters<S, R, T> packed_, final FitResult<S, R, T> prev_)
     {
+        return doFit(packed_, prev_, true);
+    }
+
+    public FitResult<S, R, T> doFit(final PackedParameters<S, R, T> packed_, final FitResult<S, R, T> prev_,
+                                    final boolean skipWorse_)
+    {
         try
         {
             // The entropy of the starting point.
@@ -48,7 +54,7 @@ public final class BaseFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final double newAic = FitResult.computeAic(result.minValue(), _calc.getGrid().size(),
                     packed_.getOriginalParams().getEffectiveParamCount());
 
-            if (newAic >= (prevAic + 5.0))
+            if (skipWorse_ && newAic >= (prevAic + 5.0))
             {
                 // We will not even consider this result unless it was at least slightly better (or not much worse)
                 // than the original.

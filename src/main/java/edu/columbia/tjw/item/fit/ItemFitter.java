@@ -24,16 +24,17 @@ import edu.columbia.tjw.item.base.raw.RawFittingGrid;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
+import edu.columbia.tjw.item.fit.base.BaseFitter;
+import edu.columbia.tjw.item.fit.base.ModelFitter;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
+import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.Collection;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.logging.Logger;
 
 /**
@@ -55,10 +56,14 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private final S _status;
     private final EntropyCalculator<S, R, T> _calc;
 
+    private final ModelFitter<S, R, T> _modelFitter;
+    private final BaseFitter<S, R, T> _base;
     private final ParamFitter<S, R, T> _fitter;
     private final CurveFitter<S, R, T> _curveFitter;
 
     private final FittingProgressChain<S, R, T> _chain;
+    private final EnumFamily<T> _curveFamily;
+
 
     public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
                       final ItemStatusGrid<S, R> grid_)
@@ -100,15 +105,24 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _intercept = intercept_;
         _status = status_;
         _calc = new EntropyCalculator<>(grid_);
+        _curveFamily = factory_.getFamily();
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept,
                 factory_.getFamily());
+
+
+        _modelFitter = new ModelFitter(_curveFamily, _intercept, _status, grid_, settings_);
+        _base = new BaseFitter<>(_calc, _settings);
+        _fitter = new ParamFitter<>(_base);
+        _curveFitter = new CurveFitter<>(_settings, _base);
+
         _chain = new FittingProgressChain<>("Primary", starting, _calc.size(), _calc,
                 _settings.getDoValidate());
 
-        _fitter = new ParamFitter<>(_calc, _settings);
-        _curveFitter = new CurveFitter<>(_settings, _calc);
+        final FitResult<S, R, T> initial = _modelFitter.generateInitialModel();
+        _chain.pushResults("Initial Fit", initial);
     }
+
 
     /**
      * This function will wrap the provided grid factory. The goal here is to
@@ -151,11 +165,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return _calc;
     }
 
-    public double getBestLogLikelihood()
-    {
-        return _chain.getLogLikelihood();
-    }
-
     public ItemParameters<S, R, T> getBestParameters()
     {
         return _chain.getBestParameters();
@@ -173,6 +182,35 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return _chain.getLatestResults();
     }
 
+    public FitResult<S, R, T> fitModel(final Collection<R> coefficients_,
+                                       final Set<R> curveFields_,
+                                       final int paramCount_, final boolean doAnnealing_) throws ConvergenceException
+    {
+        // This will basically generate a fully formed model.
+        if (!coefficients_.isEmpty())
+        {
+            // Add the coefficients.
+            addCoefficients(coefficients_);
+        }
+
+        // Add the curves.
+        expandModel(curveFields_, paramCount_);
+
+        // Fit all the parameters together.
+        fitAllParameters();
+
+        if (doAnnealing_)
+        {
+            runAnnealingPass(curveFields_, true);
+        }
+
+        // Remove any parameters that aren't very helpful.
+        trim(true);
+
+        return _chain.getLatestResults();
+    }
+
+
     /**
      * Add a group of coefficients to the model, then refit all coefficients.
      *
@@ -182,44 +220,19 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      */
     public FitResult<S, R, T> addCoefficients(final Collection<R> coefficients_) throws ConvergenceException
     {
-        ItemParameters<S, R, T> params = _chain.getBestParameters();
-
-        final SortedSet<R> flagSet = new TreeSet<>();
-
-        for (int i = 0; i < params.getEntryCount(); i++)
-        {
-            if (params.getEntryDepth(i) != 1)
-            {
-                continue;
-            }
-            if (params.getEntryCurve(i, 0) != null)
-            {
-                continue;
-            }
-
-            flagSet.add(params.getEntryRegressor(i, 0));
-        }
-
-        final int startingSize = params.getEntryCount();
-
-        for (final R field : coefficients_)
-        {
-            if (flagSet.contains(field))
-            {
-                continue;
-            }
-
-            params = params.addBeta(field);
-        }
-
-        if (params.getEntryCount() != startingSize)
-        {
-            _chain.pushVacuousResults("VacuousAddCoefficients", params);
-        }
-
-        innerFitCoefficients(_chain);
+        final FitResult<S, R, T> fitResult = _modelFitter.addDirectRegressors(_chain.getLatestResults(), coefficients_);
+        _chain.pushResults("Adding Direct Betas", fitResult);
         return _chain.getLatestResults();
     }
+
+    public FitResult<S, R, T> fitAllParameters()
+    {
+        final FitResult<S, R, T> best = _chain.getLatestResults();
+        final FitResult<S, R, T> refit = _modelFitter.fitAllParameters(best);
+        _chain.pushResults("Full Refit", refit);
+        return refit;
+    }
+
 
     /**
      * Optimize the coefficients.
@@ -229,15 +242,9 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      */
     public FitResult<S, R, T> fitCoefficients() throws ConvergenceException
     {
-        innerFitCoefficients(_chain);
+        final FitResult<S, R, T> betaFit = _modelFitter.fitBetas(_chain.getLatestResults());
+        _chain.pushResults("Fit Betas", betaFit);
         return _chain.getLatestResults();
-    }
-
-    private void innerFitCoefficients(final FittingProgressChain<S, R, T> chain_) throws ConvergenceException
-    {
-        //final ParamFitter<S, R, T> fitter = new ParamFitter<>(chain_.getBestParameters(), _grid, _settings, filters_);
-        _fitter.fit(chain_);
-        //chain_.pushResults("FitCoefficients", fitResult);
     }
 
     private void doSingleAnnealingOperation(final Set<R> curveFields_, final ItemParameters<S, R, T> base_,
@@ -253,7 +260,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             try
             {
-                this.innerFitCoefficients(subChain_);
+                _fitter.fit(subChain_);
                 _curveFitter.calibrateCurves(0.0, true, subChain_);
             }
             catch (final ConvergenceException e)
@@ -286,51 +293,51 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     public FitResult<S, R, T> trim(final boolean exhaustiveCalibration_)
     {
-        return this.trim(-_settings.getAicCutoff(), exhaustiveCalibration_);
-    }
-
-    public FitResult<S, R, T> trim(final double aicCutoff_, final boolean exhaustiveCalibration_)
-    {
-        for (int i = 0; i < _chain.getBestParameters().getEntryCount(); i++)
-        {
-            final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain", _chain);
-            final ItemParameters<S, R, T> base = subChain.getBestParameters();
-
-            if (i == base.getInterceptIndex())
-            {
-                continue;
-            }
-
-            final ItemParameters<S, R, T> reduced = base.dropIndex(i);
-
-            subChain.forcePushResults("DropEntry", reduced);
-
-            if (exhaustiveCalibration_)
-            {
-                try
-                {
-                    _fitter.fit(subChain);
-                }
-                catch (final ConvergenceException e)
-                {
-                    LOG.info("Convergence Exception: " + e);
-                }
-            }
-
-            final double aic = subChain.getChainAicDiff();
-
-            //This entry is not good enough, so remove it.
-            if (aic < aicCutoff_)
-            {
-                LOG.info("Trimming an entry[" + i + "]");
-                _chain.forcePushResults("Trim", reduced);
-
-                //Just step back, this entry has been removed, other entries slid up.
-                i--;
-            }
-        }
-
+        final FitResult<S, R, T> trimmed = _modelFitter.trim(_chain.getLatestResults());
+        _chain.pushResults("Trimmed", trimmed);
         return _chain.getLatestResults();
+
+//
+//        for (int i = 0; i < _chain.getBestParameters().getEntryCount(); i++)
+//        {
+//            final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain", _chain);
+//            final ItemParameters<S, R, T> base = subChain.getBestParameters();
+//
+//            if (i == base.getInterceptIndex())
+//            {
+//                continue;
+//            }
+//
+//            final ItemParameters<S, R, T> reduced = base.dropIndex(i);
+//
+//            subChain.forcePushResults("DropEntry", reduced);
+//
+//            if (exhaustiveCalibration_)
+//            {
+//                try
+//                {
+//                    _fitter.fit(subChain);
+//                }
+//                catch (final ConvergenceException e)
+//                {
+//                    LOG.info("Convergence Exception: " + e);
+//                }
+//            }
+//
+//            final double aic = subChain.getChainAicDiff();
+//
+//            //This entry is not good enough, so remove it.
+//            if (aic < -_settings.getAicCutoff())
+//            {
+//                LOG.info("Trimming an entry[" + i + "]");
+//                _chain.forcePushResults("Trim", reduced);
+//
+//                //Just step back, this entry has been removed, other entries slid up.
+//                i--;
+//            }
+//        }
+//
+//        return _chain.getLatestResults();
     }
 
     public FitResult<S, R, T> runAnnealingByEntry(final Set<R> curveFields_,
@@ -481,7 +488,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             try
             {
-                innerFitCoefficients(chain_);
+                _fitter.fit(chain_);
             }
             catch (final ConvergenceException e)
             {
@@ -531,7 +538,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         try
         {
-            innerFitCoefficients(chain_);
+            _fitter.fit(chain_);
         }
         catch (final ConvergenceException e)
         {

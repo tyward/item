@@ -61,13 +61,18 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     public FitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_)
     {
-        final PackedParameters<S, R, T> packed = packParameters(params_);
-        final FitResult<S, R, T> fitResult = _base.doFit(packed, chain_.getLatestResults());
-
+        final FitResult<S, R, T> prev = chain_.getLatestResults();
+        final FitResult<S, R, T> fitResult = fitBetas(prev.getParams(), prev); //_base.doFit(packed, chain_
         chain_.pushResults("ParamFit", fitResult);
         return fitResult;
     }
 
+    public FitResult<S, R, T> fitBetas(final ItemParameters<S, R, T> params_, final FitResult<S, R, T> prev_)
+    {
+        final PackedParameters<S, R, T> packed = packParameters(params_);
+        final FitResult<S, R, T> fitResult = _base.doFit(packed, prev_);
+        return fitResult;
+    }
 
     private PackedParameters<S, R, T> packParameters(final ItemParameters<S, R, T> params_)
     {
