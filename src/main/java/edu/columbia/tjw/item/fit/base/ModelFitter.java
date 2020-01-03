@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FitResult;
+import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.util.EnumFamily;
@@ -159,6 +160,30 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             }
 
             // Now do the actual expansion....
+//            final List<CurveFitResult<S, R, T>> candidates = _curveFitter
+//                    .generateCandidateResults(curveFields_, fitResult_);
+
+            final CurveFitResult<S, R, T> curveFit = _curveFitter.findBest(curveFields_, best);
+
+            if (null == curveFit)
+            {
+                break;
+            }
+            if (curveFit.getFitResult().getAicDiff() >= _settings.getAicCutoff())
+            {
+                // Curve wasn't really better.
+                break;
+            }
+
+            if (curveFit.getFitResult().getEntropy() >= best.getEntropy())
+            {
+                // This wasn't actually better, just misidentified.
+                break;
+            }
+
+            best = curveFit.getFitResult();
+
+            // TODO: Consider interactions here?
 
 //            try
 //            {

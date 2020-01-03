@@ -103,30 +103,37 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 
     private synchronized void validate(final FitResult<S, R, T> fitResult_)
     {
-        if (this.isValidate())
+        if (!this.isValidate())
         {
-            //Since the claim is that the LL improved, let's see if that's true...
-            final BlockResult ea = _calc.computeEntropy(fitResult_.getParams());
-            final double entropy = ea.getEntropyMean();
+            return;
+        }
+        if (fitResult_ == this.getLatestResults())
+        {
+            // Already on the chain, it is fine.
+            return;
+        }
 
-            //LOG.info("Params: " + fitResult_.hashCode() + " -> " + entropy);
-            //LOG.info("Chain: " + this.toString());
-            final int compare = MathFunctions.doubleCompareRounded(entropy, fitResult_.getEntropy());
+        //Since the claim is that the LL improved, let's see if that's true...
+        final BlockResult ea = _calc.computeEntropy(fitResult_.getParams());
+        final double entropy = ea.getEntropyMean();
 
-            if (compare != 0)
-            {
-                throw new IllegalStateException(
-                        "Found entropy mismatch: " + entropy + " != " + fitResult_.getEntropy());
-            }
+        //LOG.info("Params: " + fitResult_.hashCode() + " -> " + entropy);
+        //LOG.info("Chain: " + this.toString());
+        final int compare = MathFunctions.doubleCompareRounded(entropy, fitResult_.getEntropy());
 
-            final int entropyCompare = MathFunctions.doubleCompareRounded(fitResult_.getPrev().getEntropy(),
-                    this.getLatestResults().getEntropy());
+        if (compare != 0)
+        {
+            throw new IllegalStateException(
+                    "Found entropy mismatch: " + entropy + " != " + fitResult_.getEntropy());
+        }
 
-            if (entropyCompare != 0)
-            {
-                throw new IllegalStateException(
-                        "Found entropy mismatch: " + entropy + " != " + fitResult_.getEntropy());
-            }
+        final int entropyCompare = MathFunctions.doubleCompareRounded(fitResult_.getPrev().getEntropy(),
+                this.getLatestResults().getEntropy());
+
+        if (entropyCompare != 0)
+        {
+            throw new IllegalStateException(
+                    "Prev mismatches: " + entropy + " != " + fitResult_.getEntropy());
         }
     }
 
@@ -184,6 +191,14 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
         // We validate only if we are actually keeping this result. No need to waste resources
         // validating things we are planning to discard anyway.
         this.validate(fitResult_);
+
+        if (fitResult_.getPrev() != this.getLatestResults())
+        {
+            // There are some skipped steps, but this is good enough to accept, so just rebase it onto the current
+            // chain.
+            return pushResults(frameName_, new FitResult<>(fitResult_, this.getLatestResults()));
+        }
+
 
         //This is an improvement. 
         final ParamProgressFrame<S, R, T> frame = new ParamProgressFrame<>(frameName_, fitResult_,

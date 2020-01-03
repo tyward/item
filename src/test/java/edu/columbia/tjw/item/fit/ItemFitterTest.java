@@ -39,7 +39,7 @@ public class ItemFitterTest
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.expandModel(curveRegs, 2);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19814012517094468, r3.getEntropy());
+        Assertions.assertEquals(0.19025716309892124, r3.getEntropy());
 
 
 //        final File outputDir = new File("/Users/tyler/Documents/code/outputModels");
@@ -67,7 +67,7 @@ public class ItemFitterTest
                 fitter.expandModel(curveRegs, 20);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.18996153070429303, r3.getEntropy());
+        Assertions.assertEquals(0.18960350822925431, r3.getEntropy());
 //        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3a = fitter.trim(true);
 //        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> refit = fitter.fitAllParameters();
 

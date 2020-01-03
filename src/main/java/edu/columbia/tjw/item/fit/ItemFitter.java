@@ -23,7 +23,6 @@ import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.base.raw.RawFittingGrid;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.data.ItemStatusGrid;
-import edu.columbia.tjw.item.fit.FittingProgressChain.ParamProgressFrame;
 import edu.columbia.tjw.item.fit.base.BaseFitter;
 import edu.columbia.tjw.item.fit.base.ModelFitter;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
@@ -33,7 +32,9 @@ import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -110,7 +111,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept,
                 factory_.getFamily());
 
-
         _modelFitter = new ModelFitter(_curveFamily, _intercept, _status, grid_, settings_);
         _base = new BaseFitter<>(_calc, _settings);
         _fitter = new ParamFitter<>(_base);
@@ -118,9 +118,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         _chain = new FittingProgressChain<>("Primary", starting, _calc.size(), _calc,
                 _settings.getDoValidate());
-
-        final FitResult<S, R, T> initial = _modelFitter.generateInitialModel();
-        _chain.pushResults("Initial Fit", initial);
     }
 
 
@@ -435,64 +432,39 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private FitResult<S, R, T> expandModel(final FittingProgressChain<S, R, T> chain_, final Set<R> curveFields_
             , final int paramCount_)
     {
-        final long start = System.currentTimeMillis();
-        //final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("ModelExpansionChain", chain_);
+        final FitResult<S, R, T> expansion = _modelFitter.expandModel(chain_.getLatestResults(), curveFields_,
+                paramCount_ + chain_.getBestParameters().getEffectiveParamCount());
 
-        final int statingParamCount = chain_.getBestParameters().getEffectiveParamCount();
-        final int paramCountLimit = statingParamCount + paramCount_;
+        final List<FitResult<S, R, T>> resultList = new ArrayList<>();
 
-        //As a bare minimum, each expansion will consume at least one param, we'll break out before this most likely.
-        for (int i = 0; i < paramCount_; i++)
+        FitResult<S, R, T> target = expansion;
+
+        for (int i = 0; i < 1000; i++)
         {
-            try
+            if (target != chain_.getLatestResults())
             {
-                _fitter.fit(chain_);
-            }
-            catch (final ConvergenceException e)
-            {
-                LOG.warning("Unable to improve results in coefficient fit, moving on.");
-            }
-
-            if (i > 0)
-            {
-                final ParamProgressFrame frame = chain_.getLatestFrame();
-                final double improvement =
-                        frame.getStartingPoint().getCurrentLogLikelihood() - frame.getCurrentLogLikelihood();
-
-                //First, try to calibrate any existing curves to improve the fit. 
-                final boolean isBetter = _curveFitter.calibrateCurves(improvement, false, chain_);
-
-                if (!isBetter)
+                if (target.getPrev() == target)
                 {
-                    LOG.info("Curve calibration unable to improve results.");
-                }
-            }
-
-            try
-            {
-                //Now, try to add a new curve. 
-                final boolean expansionBetter = _curveFitter.generateCurve(chain_, curveFields_);
-
-                if (!expansionBetter)
-                {
-                    LOG.info("Curve expansion unable to improve results, breaking out.");
-                    break;
+                    throw new IllegalArgumentException("Prev loopback.");
                 }
 
-                if (chain_.getBestParameters().getEffectiveParamCount() >= paramCountLimit)
-                {
-                    LOG.info("Param count limit reached, breaking out.");
-                    break;
-                }
-
+                resultList.add(0, target);
+                target = target.getPrev();
             }
-            finally
+            else
             {
-                LOG.info("Completed one round of curve drawing, moving on.");
-                LOG.info("Time marker: " + (System.currentTimeMillis() - start));
-                LOG.info("Heap used: " + Runtime.getRuntime().totalMemory() / (1024 * 1024));
+                break;
             }
         }
+
+        for (final FitResult<S, R, T> result : resultList)
+        {
+            final FitResult<S, R, T> rebased = new FitResult<>(result, chain_.getLatestResults());
+            chain_.pushResults("CurveGeneration", rebased);
+        }
+
+        //final List<FitResult<S,R,T>>
+        //chain_.pushResults("CurveGeneration", expansion);
 
         try
         {
@@ -503,7 +475,77 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             LOG.info("Unable to improve results in coefficient fit, moving on.");
         }
 
-        return chain_.getConsolidatedResults();
+        return expansion;
+//
+//        final long start = System.currentTimeMillis();
+//        //final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("ModelExpansionChain", chain_);
+//
+//        final int statingParamCount = chain_.getBestParameters().getEffectiveParamCount();
+//        final int paramCountLimit = statingParamCount + paramCount_;
+//
+//        //As a bare minimum, each expansion will consume at least one param, we'll break out before this most likely.
+//        for (int i = 0; i < paramCount_; i++)
+//        {
+//            try
+//            {
+//                _fitter.fit(chain_);
+//            }
+//            catch (final ConvergenceException e)
+//            {
+//                LOG.warning("Unable to improve results in coefficient fit, moving on.");
+//            }
+//
+//            if (i > 0)
+//            {
+//                final ParamProgressFrame frame = chain_.getLatestFrame();
+//                final double improvement =
+//                        frame.getStartingPoint().getCurrentLogLikelihood() - frame.getCurrentLogLikelihood();
+//
+//                //First, try to calibrate any existing curves to improve the fit.
+//                final boolean isBetter = _curveFitter.calibrateCurves(improvement, false, chain_);
+//
+//                if (!isBetter)
+//                {
+//                    LOG.info("Curve calibration unable to improve results.");
+//                }
+//            }
+//
+//            try
+//            {
+//                //Now, try to add a new curve.
+//                final boolean expansionBetter = _curveFitter.generateCurve(chain_, curveFields_);
+//
+//                if (!expansionBetter)
+//                {
+//                    LOG.info("Curve expansion unable to improve results, breaking out.");
+//                    break;
+//                }
+//
+//                if (chain_.getBestParameters().getEffectiveParamCount() >= paramCountLimit)
+//                {
+//                    LOG.info("Param count limit reached, breaking out.");
+//                    break;
+//                }
+//
+//            }
+//            finally
+//            {
+//                LOG.info("Completed one round of curve drawing, moving on.");
+//                LOG.info("Time marker: " + (System.currentTimeMillis() - start));
+//                LOG.info("Heap used: " + Runtime.getRuntime().totalMemory() / (1024 * 1024));
+//            }
+//        }
+//
+//        try
+//        {
+//            _fitter.fit(chain_);
+//        }
+//        catch (final ConvergenceException e)
+//        {
+//            LOG.info("Unable to improve results in coefficient fit, moving on.");
+//        }
+//
+//        return chain_.getConsolidatedResults();
     }
 
 }

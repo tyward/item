@@ -502,7 +502,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     }
 
 
-    private CurveFitResult<S, R, T> findBest(final Set<R> fields_, final FitResult<S, R, T> fitResult_)
+    public CurveFitResult<S, R, T> findBest(final Set<R> fields_, final FitResult<S, R, T> fitResult_)
     {
         final List<CurveFitResult<S, R, T>> candidates = generateCandidateResults(fields_, fitResult_);
 
