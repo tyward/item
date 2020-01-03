@@ -196,10 +196,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
 
     public void computeGradient(final ParamFittingGrid<S, R, T> grid_, PackedParameters<S, R, T> packed_,
+                                final ItemParameters<S, R, T> generated_,
                                 final int index_, final double[] derivative_, final double[][] secondDerivative_)
     {
         final int dimension = packed_.size();
-        final ItemParameters<S, R, T> generatedParams = packed_.generateParams();
         final double[] modelProbabilities = _probWorkspace;
         // TODO: Fix this.
         final double[] powerScoreDerivatives = new double[derivative_.length]; // _actualProbWorkspace;
@@ -265,7 +265,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
                 final double entryBeta2 = packed_.getEntryBeta(k);
 
-                final double dw2 = computeWeightDerivative(rawReg, k, entryWeight, entry, packed_, generatedParams);
+                final double dw2 = computeWeightDerivative(rawReg, k, entryWeight, entry, packed_, generated_);
                 pDeriv = entryBeta2 * dw2;
             }
 
@@ -275,7 +275,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         if (null != secondDerivative_)
         {
-            fillSecondDerivatives(rawReg, actualOffset, computedProbability, packed_, generatedParams,
+            fillSecondDerivatives(rawReg, actualOffset, computedProbability, packed_, generated_,
                     modelProbabilities,
                     powerScoreDerivatives,
                     derivative_, secondDerivative_);

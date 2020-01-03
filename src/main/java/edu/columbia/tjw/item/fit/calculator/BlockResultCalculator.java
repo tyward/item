@@ -43,8 +43,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
 
     public synchronized BlockResult compute(final ItemParameters<S, R, T> params_,
-                                          final PackedParameters<S, R, T> packed_,
-                               final BlockCalculationType type_)
+                                            final PackedParameters<S, R, T> packed_,
+                                            final BlockCalculationType type_)
     {
         if (params_.getStatus() != _grid.getFromStatus())
         {
@@ -111,9 +111,11 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
                 tmp2 = null;
             }
 
+            final ItemParameters<S, R, T> generated = packed_.generateParams();
+
             for (int i = 0; i < count; i++)
             {
-                model.computeGradient(grid, packed_, i, tmp, tmp2);
+                model.computeGradient(grid, packed_, generated, i, tmp, tmp2);
 
                 for (int k = 0; k < dimension; k++)
                 {
