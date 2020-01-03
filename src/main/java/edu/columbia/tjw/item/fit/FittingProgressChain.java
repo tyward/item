@@ -165,8 +165,8 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     public boolean pushResults(final String frameName_, final FitResult<S, R, T> fitResult_)
     {
         final double currentBest = getLogLikelihood();
-        final double prevAic = this.getLatestResults().getAic();
-        final double newAic = fitResult_.getAic();
+        final double prevAic = this.getLatestResults().getInformationCriterion();
+        final double newAic = fitResult_.getInformationCriterion();
         final double aicDifference = newAic - prevAic;
         final int compare = MathFunctions.doubleCompareRounded(prevAic, newAic);
 
@@ -302,10 +302,10 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
     {
         if (frame1_ == null)
         {
-            return frame2_.getFitResults().getAic();
+            return frame2_.getFitResults().getInformationCriterion();
         }
 
-        final double aicDiff = frame2_.getFitResults().getAic() - frame1_.getFitResults().getAic();
+        final double aicDiff = frame2_.getFitResults().getInformationCriterion() - frame1_.getFitResults().getInformationCriterion();
         return aicDiff;
     }
 

@@ -302,7 +302,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             final FitResult<S, R, T> calibrated = _paramFitter.fit(subChain, result.getModelParams());
 
-            if (calibrated.getAicDiff() < _settings.getAicCutoff())
+            if (calibrated.getInformationCriterionDiff() < _settings.getAicCutoff())
             {
                 final ItemParameters<S, R, T> updated = calibrated.getParams();
                 final CurveFitResult<S, R, T> r2 = new CurveFitResult<>(calibrated,
@@ -422,7 +422,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                 continue;
             }
 
-            final double thisAic = result.getFitResult().getAicDiff();
+            final double thisAic = result.getFitResult().getInformationCriterionDiff();
             final double thisAicPP = thisAic / result.getEffectiveParamCount();
 
             if (thisAicPP >= perParameterTarget_)
@@ -485,7 +485,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                             continue;
                         }
 
-                        if (res.getFitResult().getAicDiff() < _settings.getAicCutoff())
+                        if (res.getFitResult().getInformationCriterionDiff() < _settings.getAicCutoff())
                         {
                             fitResults.add(res);
                         }

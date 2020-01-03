@@ -50,7 +50,7 @@ public final class BaseFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             }
 
             //final double newEntropy = result.minValue();
-            final double prevAic = prev_.getAic();
+            final double prevAic = prev_.getInformationCriterion();
             final double newAic = FitResult.computeAic(result.minValue(), _calc.getGrid().size(),
                     packed_.getOriginalParams().getEffectiveParamCount());
 

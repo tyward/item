@@ -280,7 +280,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         if (better)
         {
             LOG.info("Annealing improved model: " + rebuilt.getPrev().getEntropy() + " -> " + rebuilt
-                    .getEntropy() + " (" + rebuilt.getAic() + ")");
+                    .getEntropy() + " (" + rebuilt.getInformationCriterion() + ")");
         }
         else
         {
@@ -322,7 +322,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
             final FitResult<S, R, T> results = subChain.getConsolidatedResults();
             //final double aicDiff = results.getFitResult().getAic() - results.getFitResult().getPrev().getAic();
-            final double aicDiff = results.getAic();
+            final double aicDiff = results.getInformationCriterion();
 
             LOG.info("----->Completed Annealing Step[" + i + "]: " + aicDiff);
 
@@ -463,9 +463,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             chain_.pushResults("CurveGeneration", rebased);
         }
 
-        //final List<FitResult<S,R,T>>
-        //chain_.pushResults("CurveGeneration", expansion);
-
         try
         {
             _fitter.fit(chain_);
@@ -476,76 +473,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         }
 
         return expansion;
-//
-//        final long start = System.currentTimeMillis();
-//        //final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("ModelExpansionChain", chain_);
-//
-//        final int statingParamCount = chain_.getBestParameters().getEffectiveParamCount();
-//        final int paramCountLimit = statingParamCount + paramCount_;
-//
-//        //As a bare minimum, each expansion will consume at least one param, we'll break out before this most likely.
-//        for (int i = 0; i < paramCount_; i++)
-//        {
-//            try
-//            {
-//                _fitter.fit(chain_);
-//            }
-//            catch (final ConvergenceException e)
-//            {
-//                LOG.warning("Unable to improve results in coefficient fit, moving on.");
-//            }
-//
-//            if (i > 0)
-//            {
-//                final ParamProgressFrame frame = chain_.getLatestFrame();
-//                final double improvement =
-//                        frame.getStartingPoint().getCurrentLogLikelihood() - frame.getCurrentLogLikelihood();
-//
-//                //First, try to calibrate any existing curves to improve the fit.
-//                final boolean isBetter = _curveFitter.calibrateCurves(improvement, false, chain_);
-//
-//                if (!isBetter)
-//                {
-//                    LOG.info("Curve calibration unable to improve results.");
-//                }
-//            }
-//
-//            try
-//            {
-//                //Now, try to add a new curve.
-//                final boolean expansionBetter = _curveFitter.generateCurve(chain_, curveFields_);
-//
-//                if (!expansionBetter)
-//                {
-//                    LOG.info("Curve expansion unable to improve results, breaking out.");
-//                    break;
-//                }
-//
-//                if (chain_.getBestParameters().getEffectiveParamCount() >= paramCountLimit)
-//                {
-//                    LOG.info("Param count limit reached, breaking out.");
-//                    break;
-//                }
-//
-//            }
-//            finally
-//            {
-//                LOG.info("Completed one round of curve drawing, moving on.");
-//                LOG.info("Time marker: " + (System.currentTimeMillis() - start));
-//                LOG.info("Heap used: " + Runtime.getRuntime().totalMemory() / (1024 * 1024));
-//            }
-//        }
-//
-//        try
-//        {
-//            _fitter.fit(chain_);
-//        }
-//        catch (final ConvergenceException e)
-//        {
-//            LOG.info("Unable to improve results in coefficient fit, moving on.");
-//        }
-//
-//        return chain_.getConsolidatedResults();
     }
 
 }

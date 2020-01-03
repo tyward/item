@@ -91,7 +91,7 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
 
     public double calculateAicDifference()
     {
-        return _fitResult.getAicDiff();
+        return _fitResult.getInformationCriterionDiff();
     }
 
     @Override

@@ -124,7 +124,7 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             // Try to recalibrate everything, don't short-circuit if we see worse results.
             final FitResult<S, R, T> refit = _base.doFit(reduced.generatePacked(), current, false);
-            final double aicDiff = refit.getAicDiff();
+            final double aicDiff = refit.getInformationCriterionDiff();
 
             // Check to see if the reduced model is good enough that we would not be able to add this entry (i.e.
             // adding the entry would have failed the cutoff).
@@ -153,7 +153,7 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             // N.B: Do we fit all parameters, or just coefficients?
             final FitResult<S, R, T> recalibrated = this.fitAllParameters(best);
 
-            if (recalibrated.getAic() < best.getAic())
+            if (recalibrated.getInformationCriterion() < best.getInformationCriterion())
             {
                 // First step, just calibrate all the parameters if we cann.
                 best = recalibrated;
@@ -169,7 +169,7 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             {
                 break;
             }
-            if (curveFit.getFitResult().getAicDiff() >= _settings.getAicCutoff())
+            if (curveFit.getFitResult().getInformationCriterionDiff() >= _settings.getAicCutoff())
             {
                 // Curve wasn't really better.
                 break;

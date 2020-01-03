@@ -43,7 +43,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _params = current_.getParams();
         _entropy = current_.getEntropy();
         _entropyStdDev = current_.getEntropyStdDev();
-        _aic = current_.getAic();
+        _aic = current_.getInformationCriterion();
         _tic = current_.getTic();
         _gradient = current_._gradient;
         _paramStdDev = current_._paramStdDev;
@@ -114,7 +114,6 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _tic = Double.NaN;
         }
 
-        //_aic = 2.0 * ((_entropy * rowCount) + _params.getEffectiveParamCount());
         _aic = computeAic(_entropy, rowCount, _params.getEffectiveParamCount());
     }
 
@@ -122,33 +121,6 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     {
         return 2.0 * ((entropy_ * rowCount_) + paramCount_);
     }
-
-//    protected FitResult(final ItemParameters<S, R, T> params_,
-//                        final double entropy_, final long rowCount_, final FitResult<S, R, T> prev_)
-//    {
-//        if (params_ == null)
-//        {
-//            throw new NullPointerException("Params cannot be null.");
-//        }
-//        if (Double.isNaN(entropy_) || Double.isInfinite(entropy_) || entropy_ < 0.0)
-//        {
-//            throw new IllegalArgumentException("Log likelihood must be well defined.");
-//        }
-//        if (rowCount_ < 1)
-//        {
-//            throw new IllegalArgumentException("Row count must be positive: " + rowCount_);
-//        }
-//
-//        _prev = prev_;
-//        _params = params_;
-//        _entropy = entropy_;
-//
-//        _aic = 2.0 * ((entropy_ * rowCount_) + _params.getEffectiveParamCount());
-//
-//        _tic = Double.NaN;
-//        _gradient = null;
-//        _paramStdDev = null;
-//    }
 
     public FitResult<S, R, T> getPrev()
     {
@@ -175,14 +147,20 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return _aic;
     }
 
-    public double getAicDiff()
+    public double getInformationCriterion()
+    {
+        // For now, this is AIC, but it could be TIC later on.
+        return getAic();
+    }
+
+    public double getInformationCriterionDiff()
     {
         if (null == _prev)
         {
-            return getAic();
+            return getInformationCriterion();
         }
 
-        return getAic() - getPrev().getAic();
+        return getInformationCriterion() - getPrev().getInformationCriterion();
     }
 
     public double getTic()
