@@ -199,6 +199,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                                 final int index_, final double[] derivative_, final double[][] secondDerivative_)
     {
         final int dimension = packed_.size();
+        final ItemParameters<S, R, T> generatedParams = packed_.generateParams();
         final double[] modelProbabilities = _probWorkspace;
         // TODO: Fix this.
         final double[] powerScoreDerivatives = new double[derivative_.length]; // _actualProbWorkspace;
@@ -264,7 +265,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
                 final double entryBeta2 = packed_.getEntryBeta(k);
 
-                final double dw2 = computeWeightDerivative(rawReg, k, entryWeight, entry, packed_);
+                final double dw2 = computeWeightDerivative(rawReg, k, entryWeight, entry, packed_, generatedParams);
                 pDeriv = entryBeta2 * dw2;
             }
 
@@ -274,7 +275,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         if (null != secondDerivative_)
         {
-            fillSecondDerivatives(rawReg, actualOffset, computedProbability, packed_, modelProbabilities,
+            fillSecondDerivatives(rawReg, actualOffset, computedProbability, packed_, generatedParams,
+                    modelProbabilities,
                     powerScoreDerivatives,
                     derivative_, secondDerivative_);
         }
@@ -289,15 +291,16 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     private static <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
     double computeWeightDerivative(final double[] x_, final int k, double entryWeight_,
-                                   final int entry_, PackedParameters<S, R, T> packed_)
+                                   final int entry_, PackedParameters<S, R, T> packed_,
+                                   final ItemParameters<S, R, T> generated_)
     {
         // This is a derivative w.r.t. one of the elements of the weight.
         // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
         //final double entryBeta = packed_.getParameter(k);
         final int curveDepth = packed_.getDepth(k);
-        final ItemCurve<T> curve = packed_.generateParams().getEntryCurve(entry_, curveDepth);
+        final ItemCurve<T> curve = generated_.getEntryCurve(entry_, curveDepth);
 
-        final int regOffset = packed_.generateParams().getEntryRegressorOffset(entry_, curveDepth);
+        final int regOffset = generated_.getEntryRegressorOffset(entry_, curveDepth);
         final double reg = x_[regOffset];
 
         final int curveParamIndex = packed_.getCurveIndex(k);
@@ -322,7 +325,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
 
     private void fillSecondDerivatives(final double[] x_, final int actualOffset_, final double computedProb,
-                                       PackedParameters<S, R, T> packed_,
+                                       PackedParameters<S, R, T> packed_, final ItemParameters<S, R, T> generated_,
                                        final double[] modelProbabilities_, final double[] pDeriv_,
                                        final double[] derivative_,
                                        final double[][] secondDerivative_)
@@ -392,7 +395,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 {
                     // N.B: We know wToStatus == zToStatus because their entries match and they have at least one curve
                     // (otherwise both are betas, and this is zero).
-                    final double psd = powerScoreSecondDerivative(x_, w, z, wToStatus, entryW, pDeriv_, packed_);
+                    final double psd = powerScoreSecondDerivative(x_, w, z, wToStatus, entryW, packed_,
+                            generated_);
 
                     // TODO: This minus sign seems stray.
                     term1 = -psd * gk * dm;
@@ -416,8 +420,9 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     }
 
     private double powerScoreSecondDerivative(final double[] x_, final int w, final int z, final int toStatus_,
-                                              final int entry_, final double[] pDeriv_,
-                                              PackedParameters<S, R, T> packed_)
+                                              final int entry_,
+                                              PackedParameters<S, R, T> packed_,
+                                              final ItemParameters<S, R, T> generated_)
     {
         final boolean isBetaW = packed_.isBeta(w);
         final boolean isBetaZ = packed_.isBeta(z);
@@ -434,13 +439,13 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         {
             // This is a single derivative w.r.t. a single curve and also its beta. Hence just the derivative w.r.t.
             // the weights.
-            final double dw = computeWeightDerivative(x_, z, entryWeight, entry_, packed_);
+            final double dw = computeWeightDerivative(x_, z, entryWeight, entry_, packed_, generated_);
             return dw;
         }
         else if (isBetaZ)
         {
             // Same thing, just reversed.
-            final double dw = computeWeightDerivative(x_, w, entryWeight, entry_, packed_);
+            final double dw = computeWeightDerivative(x_, w, entryWeight, entry_, packed_, generated_);
             return dw;
         }
 
