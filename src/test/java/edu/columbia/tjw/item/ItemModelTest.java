@@ -109,7 +109,7 @@ class ItemModelTest
 
         for (int k = 0; k < Math.min(10000, paramGrid.size()); k++)
         {
-            orig.computeGradient(paramGrid, origPacked, params, k, gradient, secondDerivative);
+            orig.computeGradient(paramGrid, k, gradient, secondDerivative);
 
             final double sdSymmEpsilon = checkSymmetry(secondDerivative);
 
@@ -125,7 +125,7 @@ class ItemModelTest
                 repacked.updatePacked(testBeta);
 
                 ItemModel<SimpleStatus, SimpleRegressor, StandardCurveType> adjusted = new ItemModel<>(
-                        repacked.generateParams());
+                        repacked);
 
                 final double origLL = orig.logLikelihood(paramGrid, k);
                 final double shiftLL = adjusted.logLikelihood(paramGrid, k);
@@ -135,7 +135,7 @@ class ItemModelTest
                 fdGradient[i] = fdd;
 
                 // Now same for gradient.
-                adjusted.computeGradient(paramGrid, repacked, repacked.generateParams(), k, fdSecondDerivative[i],
+                adjusted.computeGradient(paramGrid, k, fdSecondDerivative[i],
                         null);
 
                 for (int z = 0; z < paramCount; z++)
@@ -173,7 +173,7 @@ class ItemModelTest
                 checkEquality(fdSecondDerivative, secondDerivative);
                 final double[] g2 = new double[paramCount];
                 final double[][] s2 = new double[paramCount][paramCount];
-                orig.computeGradient(paramGrid, origPacked, params, k, g2, s2);
+                orig.computeGradient(paramGrid, k, g2, s2);
             }
 
             maxEpsilon = Math.max(maxEpsilon, matrixEpsilon);

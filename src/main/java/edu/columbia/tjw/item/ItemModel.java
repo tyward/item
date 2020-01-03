@@ -46,7 +46,11 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private static final Logger LOG = LogUtil.getLogger(ItemModel.class);
     private final double ROUNDING_TOLERANCE = 1.0e-8;
     private final LogLikelihood<S> _likelihood;
+
+    // We need both params and packed because in some cases we will want derivatives with respect to only subsets of
+    // the parameters.
     private final ItemParameters<S, R, T> _params;
+    private final PackedParameters<S, R, T> _packed;
 
     private final double[][] _betas;
     private final int _reachableSize;
@@ -64,16 +68,25 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      */
     public ItemModel(final ItemParameters<S, R, T> params_)
     {
+        this(params_, params_.generatePacked());
+    }
+
+    public ItemModel(final PackedParameters<S, R, T> packed_)
+    {
+        this(packed_.generateParams(), packed_);
+    }
+
+    private ItemModel(final ItemParameters<S, R, T> params_, PackedParameters<S, R, T> packed_)
+    {
         synchronized (this)
         {
-            //This is synchronized so that clone may safely be called by any thread. 
-            //In this way, we can generate models that are detached form one another, 
+            //This is synchronized so that clone may safely be called by any thread.
+            //In this way, we can generate models that are detached from one another,
             //and may safely be used simultaneously in different threads without requiring
             //any additional synchronization.
             _params = params_;
+            _packed = packed_;
             final S status = params_.getStatus();
-
-            //_reachable = status.getReachable();
             _betas = params_.getBetas();
             _reachableSize = status.getReachableCount();
 
@@ -88,6 +101,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _entryWeights = new double[params_.getEntryCount()];
         }
     }
+
 
     public S getStatus()
     {
@@ -195,11 +209,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     }
 
 
-    public void computeGradient(final ParamFittingGrid<S, R, T> grid_, PackedParameters<S, R, T> packed_,
-                                final ItemParameters<S, R, T> generated_,
+    public void computeGradient(final ParamFittingGrid<S, R, T> grid_,
                                 final int index_, final double[] derivative_, final double[][] secondDerivative_)
     {
-        final int dimension = packed_.size();
+        final int dimension = _packed.size();
         final double[] modelProbabilities = _probWorkspace;
         // TODO: Fix this.
         final double[] powerScoreDerivatives = new double[derivative_.length]; // _actualProbWorkspace;
@@ -230,9 +243,9 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         for (int k = 0; k < dimension; k++)
         {
-            final int entry = packed_.getEntry(k);
-            final boolean isBetaDerivative = packed_.isBeta(k);
-            final int derivToStatus = packed_.getTransition(k);
+            final int entry = _packed.getEntry(k);
+            final boolean isBetaDerivative = _packed.isBeta(k);
+            final int derivToStatus = _packed.getTransition(k);
             final double delta;
 
             if (derivToStatus == actualOffset)
@@ -263,9 +276,9 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             {
                 // This is a derivative w.r.t. one of the elements of the weight.
                 // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
-                final double entryBeta2 = packed_.getEntryBeta(k);
+                final double entryBeta2 = _packed.getEntryBeta(k);
 
-                final double dw2 = computeWeightDerivative(rawReg, k, entryWeight, entry, packed_, generated_);
+                final double dw2 = computeWeightDerivative(rawReg, k, entryWeight, entry, _packed, _params);
                 pDeriv = entryBeta2 * dw2;
             }
 
@@ -275,7 +288,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         if (null != secondDerivative_)
         {
-            fillSecondDerivatives(rawReg, actualOffset, computedProbability, packed_, generated_,
+            fillSecondDerivatives(rawReg, actualOffset, computedProbability, _packed, _params,
                     modelProbabilities,
                     powerScoreDerivatives,
                     derivative_, secondDerivative_);

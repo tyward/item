@@ -52,7 +52,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         }
 
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, _grid);
-        final ItemModel<S, R, T> model = new ItemModel<>(params_);
+        final ItemModel<S, R, T> model = new ItemModel<>(packed_);
 
         double entropySum = 0.0;
         double x2 = 0.0;
@@ -111,11 +111,9 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
                 tmp2 = null;
             }
 
-            final ItemParameters<S, R, T> generated = packed_.generateParams();
-
             for (int i = 0; i < count; i++)
             {
-                model.computeGradient(grid, packed_, generated, i, tmp, tmp2);
+                model.computeGradient(grid, i, tmp, tmp2);
 
                 for (int k = 0; k < dimension; k++)
                 {
