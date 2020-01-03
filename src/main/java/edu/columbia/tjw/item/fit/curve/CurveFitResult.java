@@ -31,7 +31,6 @@ import edu.columbia.tjw.item.fit.FitResult;
 public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
 {
     private final FitResult<S, R, T> _fitResult;
-    private final int _rowCount;
     private final S _toState;
     private final ItemCurveParams<R, T> _curveParams;
 
@@ -39,7 +38,6 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
                           final int rowCount_)
     {
         _fitResult = result_;
-        _rowCount = rowCount_;
         _toState = toState_;
         _curveParams = curveParams_;
     }
@@ -57,11 +55,6 @@ public final class CurveFitResult<S extends ItemStatus<S>, R extends ItemRegress
     public ItemCurveParams<R, T> getCurveParams()
     {
         return _curveParams;
-    }
-
-    public ItemParameters<S, R, T> getStartingParams()
-    {
-        return _fitResult.getPrev().getParams();
     }
 
     public ItemParameters<S, R, T> getModelParams()

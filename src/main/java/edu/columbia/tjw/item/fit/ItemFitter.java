@@ -296,48 +296,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         final FitResult<S, R, T> trimmed = _modelFitter.trim(_chain.getLatestResults());
         _chain.pushResults("Trimmed", trimmed);
         return _chain.getLatestResults();
-
-//
-//        for (int i = 0; i < _chain.getBestParameters().getEntryCount(); i++)
-//        {
-//            final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain", _chain);
-//            final ItemParameters<S, R, T> base = subChain.getBestParameters();
-//
-//            if (i == base.getInterceptIndex())
-//            {
-//                continue;
-//            }
-//
-//            final ItemParameters<S, R, T> reduced = base.dropIndex(i);
-//
-//            subChain.forcePushResults("DropEntry", reduced);
-//
-//            if (exhaustiveCalibration_)
-//            {
-//                try
-//                {
-//                    _fitter.fit(subChain);
-//                }
-//                catch (final ConvergenceException e)
-//                {
-//                    LOG.info("Convergence Exception: " + e);
-//                }
-//            }
-//
-//            final double aic = subChain.getChainAicDiff();
-//
-//            //This entry is not good enough, so remove it.
-//            if (aic < -_settings.getAicCutoff())
-//            {
-//                LOG.info("Trimming an entry[" + i + "]");
-//                _chain.forcePushResults("Trim", reduced);
-//
-//                //Just step back, this entry has been removed, other entries slid up.
-//                i--;
-//            }
-//        }
-//
-//        return _chain.getLatestResults();
     }
 
     public FitResult<S, R, T> runAnnealingByEntry(final Set<R> curveFields_,

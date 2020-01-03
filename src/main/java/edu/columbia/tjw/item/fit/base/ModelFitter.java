@@ -10,6 +10,7 @@ import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Logger;
@@ -137,6 +138,61 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         return current;
+    }
+
+    public FitResult<S, R, T> expandModel(final FitResult<S, R, T> fitResult_, final Set<R> curveFields_,
+                                          final int maxParamCount_)
+    {
+        final int newParams = maxParamCount_ - fitResult_.getParams().getEffectiveParamCount();
+        FitResult<S, R, T> best = fitResult_;
+
+        //As a bare minimum, each expansion will consume at least one param, we'll break out before this most likely.
+        for (int i = 0; i < newParams; i++)
+        {
+            // N.B: Do we fit all parameters, or just coefficients?
+            final FitResult<S, R, T> recalibrated = this.fitAllParameters(best);
+
+            if (recalibrated.getAic() < best.getAic())
+            {
+                // First step, just calibrate all the parameters if we cann.
+                best = recalibrated;
+            }
+
+            // Now do the actual expansion....
+
+//            try
+//            {
+//                //Now, try to add a new curve.
+//                final boolean expansionBetter = _curveFitter.generateCurve(chain_, curveFields_);
+//
+//                if (!expansionBetter)
+//                {
+//                    LOG.info("Curve expansion unable to improve results, breaking out.");
+//                    break;
+//                }
+//
+//                if (chain_.getBestParameters().getEffectiveParamCount() >= paramCountLimit)
+//                {
+//                    LOG.info("Param count limit reached, breaking out.");
+//                    break;
+//                }
+//
+//            }
+//            finally
+//            {
+//                LOG.info("Completed one round of curve drawing, moving on.");
+//                LOG.info("Time marker: " + (System.currentTimeMillis() - start));
+//                LOG.info("Heap used: " + Runtime.getRuntime().totalMemory() / (1024 * 1024));
+//            }
+        }
+
+        if (best == fitResult_)
+        {
+            // We couldn't improve this at all, just return a result showing that this is the cases.
+            return new FitResult<>(fitResult_, fitResult_);
+        }
+
+        return best;
     }
 
 

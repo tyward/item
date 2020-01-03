@@ -442,15 +442,21 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return hasInteraction;
     }
 
-    private CurveFitResult<S, R, T> findBest(final Set<R> fields_, final FitResult<S, R, T> fitResult_)
+    public List<CurveFitResult<S, R, T>> generateCandidateResults(final Set<R> fields_,
+                                                                  final FitResult<S, R, T> fitResult_)
     {
+        final List<CurveFitResult<S, R, T>> fitResults = new ArrayList<>();
         final ItemParameters<S, R, T> params = fitResult_.getParams();
         final S fromStatus = params.getStatus();
-        CurveFitResult<S, R, T> bestResult = null;
-        double bestImprovement = 0.0;
 
         for (final S toStatus : fromStatus.getReachable())
         {
+            if (toStatus.equals(fromStatus))
+            {
+                // This is not allowed, so just skip it.
+                continue;
+            }
+
             fieldLoop:
             for (final R field : fields_)
             {
@@ -479,21 +485,39 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                             continue;
                         }
 
-                        final double improvement = res.calculateAicDifference();
-
-                        if (improvement < bestImprovement)
+                        if (res.getFitResult().getAicDiff() < _settings.getAicCutoff())
                         {
-                            LOG.info("New Best: " + res + " -> " + improvement + " vs. " + bestImprovement);
-                            bestImprovement = improvement;
-                            bestResult = res;
+                            fitResults.add(res);
                         }
                     }
                     catch (final IllegalArgumentException e)
                     {
                         LOG.log(Level.INFO, "Argument trouble (" + field + "), moving on to next curve.", e);
                     }
-
                 }
+            }
+        }
+
+        return fitResults;
+    }
+
+
+    private CurveFitResult<S, R, T> findBest(final Set<R> fields_, final FitResult<S, R, T> fitResult_)
+    {
+        final List<CurveFitResult<S, R, T>> candidates = generateCandidateResults(fields_, fitResult_);
+
+        CurveFitResult<S, R, T> bestResult = null;
+        double bestImprovement = 0.0;
+
+        for (final CurveFitResult<S, R, T> next : candidates)
+        {
+            final double improvement = next.calculateAicDifference();
+
+            if (improvement < bestImprovement)
+            {
+                LOG.info("New Best: " + next + " -> " + improvement + " vs. " + bestImprovement);
+                bestImprovement = improvement;
+                bestResult = next;
             }
         }
 
