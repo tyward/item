@@ -89,11 +89,11 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         // Make sure everything has the same (approximate) level of computed results.
         final int highWater = Math.max(aResult_.getNextBlock(BlockCalculationType.VALUE),
                 bResult_.getNextBlock(BlockCalculationType.VALUE));
-        final double meanA = aResult_.getMean(highWater);
-        final double meanB = bResult_.getMean(highWater);
+        final double meanA = getComparator().computeObjective(aResult_, highWater);
+        final double meanB = getComparator().computeObjective(bResult_, highWater);
 
-        final double stdDevA = aResult_.getStdDev(highWater);
-        final double stdDevB = bResult_.getStdDev(highWater);
+        final double stdDevA = getComparator().computeObjectiveStdDev(aResult_, highWater);
+        final double stdDevB = getComparator().computeObjectiveStdDev(bResult_, highWater);
 
         final double raw = Math.abs(meanA - meanB);
         final double adjusted = raw + this._stdDevThreshold * (stdDevA + stdDevB);

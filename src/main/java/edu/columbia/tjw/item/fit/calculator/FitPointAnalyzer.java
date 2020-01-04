@@ -4,11 +4,6 @@ import edu.columbia.tjw.item.algo.VarianceCalculator;
 
 public final class FitPointAnalyzer
 {
-    // How many blocks do we calculate at a time (to take advantage of threading). This should be several times the
-    // number of cores in the computer.
-    private static final int DEFAULT_SUPERBLOCK_SIZE = 100;
-    private static final double DEFAULT_MIN_STD_DEV = 5.0;
-
     private final int _superBlockSize;
     private final double _minStdDev;
 
@@ -16,11 +11,6 @@ public final class FitPointAnalyzer
     {
         _superBlockSize = superBlockSize_;
         _minStdDev = minStdDev_;
-    }
-
-    public FitPointAnalyzer()
-    {
-        this(DEFAULT_SUPERBLOCK_SIZE, DEFAULT_MIN_STD_DEV);
     }
 
     public double compare(final FitPoint a_, final FitPoint b_)
@@ -39,6 +29,19 @@ public final class FitPointAnalyzer
         final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
         return aggregated.getDerivative();
     }
+
+    public double computeObjective(final FitPoint point_, final int endBlock_)
+    {
+        point_.computeUntil(endBlock_, BlockCalculationType.VALUE);
+        final BlockResult aggregated = point_.getAggregated(BlockCalculationType.VALUE);
+        return aggregated.getEntropyMean();
+    }
+
+    public double computeObjectiveStdDev(final FitPoint point_, final int endBlock_)
+    {
+        return point_.getObjectiveStdDev(endBlock_);
+    }
+
 
     /**
      * How many sigma higher/lower than other_ is this block result. If positive, this is X sigma higher than other_.

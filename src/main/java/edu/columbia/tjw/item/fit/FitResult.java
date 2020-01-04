@@ -65,7 +65,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _iceSum2 = current_._iceSum2;
     }
 
-    protected FitResult(final ItemFitPoint<S, R, T> fitPoint_, final FitResult<S, R, T> prev_)
+    public FitResult(final ItemFitPoint<S, R, T> fitPoint_, final FitResult<S, R, T> prev_)
     {
         _params = fitPoint_.getParams();
         _packed = _params.generatePacked();

@@ -191,9 +191,9 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             highWater = Math.max(highWater, pointC.getNextBlock(valType));
 
 
-            final double aVal = pointA.getMean(highWater);
-            final double bVal = pointB.getMean(highWater);
-            final double cVal = pointC.getMean(highWater);
+            final double aVal = getComparator().computeObjective(pointA, highWater);
+            final double bVal = getComparator().computeObjective(pointB, highWater);
+            final double cVal = getComparator().computeObjective(pointC, highWater);
 
             //Assume f(x) is quadratic, (alpha)a^2 + (beta)a + (gamma) = value(a). 
             //Now we have three equations and three unknowns, solve....
@@ -449,15 +449,7 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
             final double comparison = comparator.compare(pointB, nextPoint);
             evalCount++;
 
-            BlockCalculationType valType = BlockCalculationType.VALUE;
-            int highWater = Math.max(pointA.getNextBlock(valType), pointB.getNextBlock(valType));
-            highWater = Math.max(highWater, pointC.getNextBlock(valType));
-
-            final double bMean = pointB.getMean(highWater);
-            final double nextMean = nextPoint.getMean(highWater);
-
             final boolean nextLower = (comparison > 0);
-            //final boolean dropA = (aSide ^ nextLower);
 
             //First, assume not aSide (so b < next), will fix later.
             if (nextLower)

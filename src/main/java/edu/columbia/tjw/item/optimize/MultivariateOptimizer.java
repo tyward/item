@@ -19,7 +19,6 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.util.LogUtil;
 
@@ -217,14 +216,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
                 final double zScore = this.getComparator().compare(
                         fitPointCurrent, fitPointNext);
-
-//                final double currentVal = currentResult.getMean();
-//                final double nextVal = nextResult.getMean();
-//                if (nextVal >= currentVal)
-//                {
-//                    System.out.println("Unable to make progress.");
-//                    break;
-//                }
+                
                 //LOG.info("Finished one line search: " + zScore);
                 if (zScore < STD_DEV_CUTOFF)
                 {
@@ -240,7 +232,6 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 stepMagnitude = currentPoint.distance(nextPoint);
                 currentPoint.copy(nextPoint);
                 currentResult = nextResult;
-                //currentFitPoint = fitPointNext;
             }
         }
         catch (final ConvergenceException e)

@@ -13,6 +13,9 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
 {
     private static final GeneralThreadPool POOL = GeneralThreadPool.singleton();
 
+    private static final boolean USE_ICE = false;
+    private static final boolean USE_TIC = false;
+
     private final List<BlockResultCalculator<S, R, T>> _blockCalculators;
     private final ItemModel<S, R, T> _model;
     private final int _blockSize;
@@ -147,26 +150,102 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     }
 
     @Override
-    public double getMean(int boundary_)
+    public double getObjective(int boundary_)
     {
         if (boundary_ == 0)
         {
             return 0.0;
         }
+
+
+//        if (!USE_ICE)
+//        {
         this.computeUntil(boundary_, BlockCalculationType.VALUE);
         return this.getAggregated(BlockCalculationType.VALUE).getEntropyMean();
+//        }
+//
+//        // TODO: This is extremely inefficient.....
+//        this.computeUntil(boundary_, BlockCalculationType.SECOND_DERIVATIVE);
+//        final BlockResult secondDerivative = this.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+//
+//        final double entropy = secondDerivative.getEntropyMean();
+//        final double entropyStdDev = secondDerivative.getEntropyMeanDev();
+//        final double[] _gradient = secondDerivative.getDerivative();
+//
+//        final RealMatrix jMatrix = secondDerivative.getSecondDerivative();
+//
+//
+//        final RealMatrix iMatrix = secondDerivative.getFisherInformation();
+//
+//        if (USE_TIC)
+//        {
+//            final SingularValueDecomposition iSvd = new SingularValueDecomposition(iMatrix);
+//            final SingularValueDecomposition jSvd = new SingularValueDecomposition(jMatrix);
+//            final RealMatrix jInverse = jSvd.getSolver().getInverse();
+//            final RealMatrix iInverse = iSvd.getSolver().getInverse();
+//
+//            final RealMatrix ticMatrix = jInverse.multiply(iMatrix);
+//
+//            double ticSum = 0.0;
+//
+//            for (int i = 0; i < ticMatrix.getRowDimension(); i++)
+//            {
+//                final double ticTerm = ticMatrix.getEntry(i, i);
+//                ticSum += ticTerm;
+//            }
+//
+//            final double tic = ticSum / this.getSize();
+//            return entropy + tic;
+//        }
+//        else
+//        {
+//            // This is basically the worst an entropy could ever be with a uniform model. It is a reasonable
+//            // level of
+//            // "an entropy bad enough that any realistic model should avoid it like the plague, but not so bad that
+//            // it causes any sort of numerical issues", telling the model that J must be pos. def.
+//            final double logM = Math.log(_model.getParams().getReachableSize());
+//            //final double iceBalance = 1.0 / (logM + _params.getEffectiveParamCount());
+//            final double iceBalance = 1.0 / logM;
+//
+//            double iceSum = 0.0;
+//            double iceSum2 = 0.0;
+//
+//            for (int i = 0; i < iMatrix.getRowDimension(); i++)
+//            {
+//                final double iTerm = iMatrix.getEntry(i, i); // Already squared, this one is.
+//                final double jTerm = jMatrix.getEntry(i, i);
+//                final double iceTerm = iTerm / jTerm;
+//
+//                final double iceTerm2 = iTerm / (Math.abs(jTerm) * (1.0 - iceBalance) + iTerm * iceBalance);
+//
+//                iceSum += iceTerm;
+//                iceSum2 += iceTerm2;
+//            }
+//
+//            final double iceAdjustment = iceSum2 / this.getSize();
+//            return entropy + iceAdjustment;
+//        }
     }
 
     @Override
-    public double getStdDev(int boundary_)
+    public double getObjectiveStdDev(int boundary_)
     {
         // TODO: Is this right, shouldn't we make sure the counts line up first?
         if (boundary_ == 0)
         {
             return 0.0;
         }
+
+        // To a first approximation, the std. dev. is about right, so just leave it.
+//        if (!USE_ICE)
+//        {
         this.computeUntil(boundary_, BlockCalculationType.VALUE);
         return this.getAggregated(BlockCalculationType.VALUE).getEntropyMeanDev();
+//        }
+//        else
+//        {
+//
+//        }
     }
 
     public int getSize()
