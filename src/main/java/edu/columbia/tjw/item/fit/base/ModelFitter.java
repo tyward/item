@@ -160,9 +160,8 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             }
 
             // Now do the actual expansion....
-//            final List<CurveFitResult<S, R, T>> candidates = _curveFitter
-//                    .generateCandidateResults(curveFields_, fitResult_);
-
+            // N.B: It is MUCH worse to try to do these in batches. We always need to use the greedy algorithm and
+            // search for new curves each time.
             final CurveFitResult<S, R, T> curveFit = _curveFitter.findBest(curveFields_, best);
 
             if (null == curveFit)
@@ -185,30 +184,6 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
             // TODO: Consider interactions here?
 
-//            try
-//            {
-//                //Now, try to add a new curve.
-//                final boolean expansionBetter = _curveFitter.generateCurve(chain_, curveFields_);
-//
-//                if (!expansionBetter)
-//                {
-//                    LOG.info("Curve expansion unable to improve results, breaking out.");
-//                    break;
-//                }
-//
-//                if (chain_.getBestParameters().getEffectiveParamCount() >= paramCountLimit)
-//                {
-//                    LOG.info("Param count limit reached, breaking out.");
-//                    break;
-//                }
-//
-//            }
-//            finally
-//            {
-//                LOG.info("Completed one round of curve drawing, moving on.");
-//                LOG.info("Time marker: " + (System.currentTimeMillis() - start));
-//                LOG.info("Heap used: " + Runtime.getRuntime().totalMemory() / (1024 * 1024));
-//            }
         }
 
         if (best == fitResult_)
@@ -224,6 +199,16 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     public EntropyCalculator<S, R, T> getCalculator()
     {
         return _base.getCalc();
+    }
+
+    public ParamFitter<S, R, T> getParamFitter()
+    {
+        return _fitter;
+    }
+
+    public CurveFitter<S, R, T> getCurveFitter()
+    {
+        return _curveFitter;
     }
 
 }

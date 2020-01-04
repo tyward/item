@@ -27,8 +27,15 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double _tic;
     private final double _ice;
 
+    // These are really only here for debugging.
     private final double[] _gradient;
     private final double[] _paramStdDev;
+    private final PackedParameters<S, R, T> _packed;
+
+    private final double _ice2;
+    private final double _iceSum;
+    private final double _iceSum2;
+    private final double _ticSum;
 
     /**
      * Make a new fit result based on current_, but with a new prev_.
@@ -49,11 +56,19 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _ice = current_._ice;
         _gradient = current_._gradient;
         _paramStdDev = current_._paramStdDev;
+        _packed = current_._packed;
+
+        _iceSum = current_._iceSum;
+        _ticSum = current_._ticSum;
+
+        _ice2 = current_._ice2;
+        _iceSum2 = current_._iceSum2;
     }
 
     protected FitResult(final ItemFitPoint<S, R, T> fitPoint_, final FitResult<S, R, T> prev_)
     {
         _params = fitPoint_.getParams();
+        _packed = _params.generatePacked();
         _prev = prev_;
 
         final int rowCount = fitPoint_.getSize();
@@ -75,12 +90,25 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             final double minInverseCondition = Math
                     .min(jSvd.getInverseConditionNumber(), iSvd.getInverseConditionNumber());
 
+            // This is basically the worst an entropy could ever be with a uniform model. It is a reasonable level of
+            // "an entropy bad enough that any realistic model should avoid it like the plague, but not so bad that
+            // it causes any sort of numerical issues", telling the model that J must be pos. def.
+            final double logM = Math.log(_params.getReachableSize());
+            //final double iceBalance = 1.0 / (logM + _params.getEffectiveParamCount());
+            final double iceBalance = 1.0 / logM;
+
             if (minInverseCondition < 1.0e-200)
             {
                 // TIC cannot be computed accurately for these parameters, just leave it undefined.
                 _tic = Double.NaN;
                 _ice = Double.NaN;
                 _paramStdDev = null;
+
+                _ticSum = Double.NaN;
+                _iceSum = Double.NaN;
+
+                _iceSum2 = Double.NaN;
+                _ice2 = Double.NaN;
             }
             else
             {
@@ -105,18 +133,29 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
                     ticSum += ticTerm;
                 }
 
+                _tic = 2.0 * ((_entropy * rowCount) + ticSum);
+                _ticSum = ticSum;
+
                 double iceSum = 0.0;
+                double iceSum2 = 0.0;
 
                 for (int i = 0; i < ticMatrix.getRowDimension(); i++)
                 {
                     final double iTerm = iMatrix.getEntry(i, i); // Already squared, this one is.
                     final double jTerm = jMatrix.getEntry(i, i);
                     final double iceTerm = iTerm / jTerm;
+
+                    final double iceTerm2 = iTerm / (Math.abs(jTerm) * (1.0 - iceBalance) + iTerm * iceBalance);
+
                     iceSum += iceTerm;
+                    iceSum2 += iceTerm2;
                 }
 
                 _ice = 2.0 * ((_entropy * rowCount) + iceSum);
-                _tic = 2.0 * ((_entropy * rowCount) + ticSum);
+                _iceSum = iceSum;
+
+                _iceSum2 = iceSum2;
+                _ice2 = 2.0 * ((_entropy * rowCount) + iceSum2);
             }
         }
         else
@@ -128,6 +167,12 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _paramStdDev = null;
             _tic = Double.NaN;
             _ice = Double.NaN;
+
+            _ticSum = Double.NaN;
+            _iceSum = Double.NaN;
+
+            _iceSum2 = Double.NaN;
+            _ice2 = Double.NaN;
         }
 
         _aic = computeAic(_entropy, rowCount, _params.getEffectiveParamCount());

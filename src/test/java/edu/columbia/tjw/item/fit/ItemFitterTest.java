@@ -34,10 +34,11 @@ public class ItemFitterTest
         final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
-                .fitCoefficients();
+                .getChain().getLatestResults();
         Assertions.assertEquals(0.2023112681060799, result.getEntropy());
 
-        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.expandModel(curveRegs, 2);
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
+                curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
         Assertions.assertEquals(0.19025716309892124, r3.getEntropy());
@@ -59,17 +60,14 @@ public class ItemFitterTest
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
                 makeFitter(false);
 
-
         final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
-                .fitCoefficients();
+                .getChain().getLatestResults();
         Assertions.assertEquals(0.2023112681060799, result.getEntropy());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
                 curveRegs, 20, false);
-//        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 =
-//                fitter.expandModel(curveRegs, 20);
 
         System.out.println("Revised: " + r3.getParams());
         Assertions.assertEquals(0.18960145080215177, r3.getEntropy());
@@ -81,6 +79,45 @@ public class ItemFitterTest
 
         System.out.println("Done!");
     }
+
+//    @Test
+//    void mediumOutOfSample() throws Exception
+//    {
+//        final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
+//                makeFitter(false);
+//
+//        final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
+//
+//        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
+//                .fitCoefficients();
+//        Assertions.assertEquals(0.2023112681060799, result.getEntropy());
+//
+//        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
+//                curveRegs, 20, false);
+//
+//        System.out.println("Revised: " + r3.getParams());
+//        Assertions.assertEquals(0.18960145080215177, r3.getEntropy());
+//
+//        final ItemFittingGrid<SimpleStatus, SimpleRegressor> largeGrid = loadData(true);
+//
+//        final EntropyCalculator<SimpleStatus, SimpleRegressor, StandardCurveType> calc = new EntropyCalculator<>(
+//                largeGrid);
+//
+//        final FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> oos = calc.computeFitResult(r3.getParams(),
+//                r3);
+//
+//        System.out.println("Out of sample entropy: " + oos.getEntropy());
+//        Assertions.assertEquals(0.18960145080215177, oos.getEntropy());
+//
+////        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3a = fitter.trim(true);
+////        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> refit = fitter.fitAllParameters();
+//
+//        fitter.getCalculator().computeFitResult(r3.getParams(), r3);
+//
+//
+//        System.out.println("Done!");
+//    }
+
 
 //    @Test
 //    void largeTest() throws Exception
@@ -109,7 +146,7 @@ public class ItemFitterTest
                 .collect(Collectors.toSet());
     }
 
-    private ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> makeFitter(final boolean large_)
+    private ItemFittingGrid<SimpleStatus, SimpleRegressor> loadData(final boolean large_)
     {
         final String fileName;
 
@@ -126,22 +163,28 @@ public class ItemFitterTest
         {
             final ItemFittingGrid<SimpleStatus, SimpleRegressor> rawData = RawFittingGrid.readFromStream(iStream,
                     SimpleStatus.class, SimpleRegressor.class);
-            final SimpleRegressor intercept = rawData.getRegressorFamily().getFromName("INTERCEPT");
-
-            ItemSettings settings = ItemSettings.newBuilder()
-                    .setRand(RandomTool.getRandom(PrngType.SECURE, 0xcafebabe)).build();
-
-            final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-                    new ItemFitter<>(new StandardCurveFactory<>(),
-                            intercept,
-                            rawData.getFromStatus(), rawData, settings);
-
-            return fitter;
+            return rawData;
         }
         catch (final IOException e)
         {
             throw new RuntimeException(e);
         }
+    }
+
+    private ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> makeFitter(final boolean large_)
+    {
+        final ItemFittingGrid<SimpleStatus, SimpleRegressor> rawData = loadData(large_);
+        final SimpleRegressor intercept = rawData.getRegressorFamily().getFromName("INTERCEPT");
+
+        ItemSettings settings = ItemSettings.newBuilder()
+                .setRand(RandomTool.getRandom(PrngType.SECURE, 0xcafebabe)).build();
+
+        final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
+                new ItemFitter<>(new StandardCurveFactory<>(),
+                        intercept,
+                        rawData.getFromStatus(), rawData, settings);
+
+        return fitter;
     }
 
 }
