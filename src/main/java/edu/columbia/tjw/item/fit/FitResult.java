@@ -15,7 +15,7 @@ import java.io.Serializable;
 public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         implements Serializable
 {
-    private static final boolean USE_COMPLEX_RESULTS = false;
+    private static final boolean USE_COMPLEX_RESULTS = true;
     private static final long serialVersionUID = 0x606e4b6c2343db26L;
 
     private final FitResult<S, R, T> _prev;
@@ -25,6 +25,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double _entropyStdDev;
     private final double _aic;
     private final double _tic;
+    private final double _ice;
 
     private final double[] _gradient;
     private final double[] _paramStdDev;
@@ -45,6 +46,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _entropyStdDev = current_.getEntropyStdDev();
         _aic = current_.getInformationCriterion();
         _tic = current_.getTic();
+        _ice = current_._ice;
         _gradient = current_._gradient;
         _paramStdDev = current_._paramStdDev;
     }
@@ -73,10 +75,11 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             final double minInverseCondition = Math
                     .min(jSvd.getInverseConditionNumber(), iSvd.getInverseConditionNumber());
 
-            if (minInverseCondition < 1.0e-16)
+            if (minInverseCondition < 1.0e-200)
             {
                 // TIC cannot be computed accurately for these parameters, just leave it undefined.
                 _tic = Double.NaN;
+                _ice = Double.NaN;
                 _paramStdDev = null;
             }
             else
@@ -98,9 +101,21 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
                 for (int i = 0; i < ticMatrix.getRowDimension(); i++)
                 {
-                    ticSum += ticMatrix.getEntry(i, i);
+                    final double ticTerm = ticMatrix.getEntry(i, i);
+                    ticSum += ticTerm;
                 }
 
+                double iceSum = 0.0;
+
+                for (int i = 0; i < ticMatrix.getRowDimension(); i++)
+                {
+                    final double iTerm = iMatrix.getEntry(i, i); // Already squared, this one is.
+                    final double jTerm = jMatrix.getEntry(i, i);
+                    final double iceTerm = iTerm / jTerm;
+                    iceSum += iceTerm;
+                }
+
+                _ice = 2.0 * ((_entropy * rowCount) + iceSum);
                 _tic = 2.0 * ((_entropy * rowCount) + ticSum);
             }
         }
@@ -112,6 +127,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _gradient = null;
             _paramStdDev = null;
             _tic = Double.NaN;
+            _ice = Double.NaN;
         }
 
         _aic = computeAic(_entropy, rowCount, _params.getEffectiveParamCount());

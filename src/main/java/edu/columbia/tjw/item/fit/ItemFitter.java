@@ -191,7 +191,10 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         }
 
         // Add the curves.
-        expandModel(curveFields_, paramCount_);
+        if (!curveFields_.isEmpty())
+        {
+            expandModel(curveFields_, paramCount_);
+        }
 
         // Fit all the parameters together.
         fitAllParameters();
@@ -291,7 +294,11 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public FitResult<S, R, T> trim(final boolean exhaustiveCalibration_)
     {
         final FitResult<S, R, T> trimmed = _modelFitter.trim(_chain.getLatestResults());
-        _chain.pushResults("Trimmed", trimmed);
+
+        // Rebase the trimmed on top of the latest.
+        final FitResult<S, R, T> rebased = new FitResult<>(trimmed, _chain.getLatestResults());
+
+        _chain.pushResults("Trimmed", rebased);
         return _chain.getLatestResults();
     }
 

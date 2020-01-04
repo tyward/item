@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -57,19 +58,26 @@ public class ItemFitterTest
     {
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
                 makeFitter(false);
+
+
         final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
                 .fitCoefficients();
         Assertions.assertEquals(0.2023112681060799, result.getEntropy());
 
-        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 =
-                fitter.expandModel(curveRegs, 20);
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
+                curveRegs, 20, false);
+//        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 =
+//                fitter.expandModel(curveRegs, 20);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.18960350822925431, r3.getEntropy());
+        Assertions.assertEquals(0.18960145080215177, r3.getEntropy());
 //        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3a = fitter.trim(true);
 //        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> refit = fitter.fitAllParameters();
+
+        fitter.getCalculator().computeFitResult(r3.getParams(), r3);
+
 
         System.out.println("Done!");
     }
