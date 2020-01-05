@@ -215,7 +215,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
 
     public void computeGradient(final ParamFittingGrid<S, R, T> grid_,
-                                final int index_, final double[] derivative_, final double[][] secondDerivative_)
+                                final int index_, final double[] derivative_,
+                                final double[] jDiag_, final double[][] secondDerivative_)
     {
         final int dimension = _packed.size();
 
@@ -295,12 +296,12 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             derivative_[k] = derivCore * pDeriv;
         }
 
-        if (null != secondDerivative_)
+        if (null != secondDerivative_ || null != jDiag_)
         {
             fillSecondDerivatives(rawReg, actualOffset, computedProbability,
                     modelProbabilities,
                     powerScoreDerivatives,
-                    derivative_, secondDerivative_);
+                    derivative_, jDiag_, secondDerivative_);
         }
 
         // Rescale after we computed the second derivative, if applicable. We need dg more than we need d ln[g].
@@ -346,10 +347,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
     private void fillSecondDerivatives(final double[] x_, final int actualOffset_, final double computedProb,
                                        final double[] modelProbabilities_, final double[] pDeriv_,
-                                       final double[] derivative_,
+                                       final double[] derivative_, final double[] jDiag_,
                                        final double[][] secondDerivative_)
     {
-        if (secondDerivative_.length != derivative_.length)
+        if (null != secondDerivative_ && secondDerivative_.length != derivative_.length)
         {
             throw new IllegalArgumentException("Mismatched sizes! " + secondDerivative_.length +
                     " != " + derivative_.length);
@@ -361,7 +362,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         for (int w = 0; w < derivative_.length; w++)
         {
-            if (secondDerivative_[w].length != derivative_.length)
+            if (null != secondDerivative_ && secondDerivative_[w].length != derivative_.length)
             {
                 throw new IllegalArgumentException("Mismatched sizes! " + secondDerivative_[w].length +
                         " != " + derivative_.length);
@@ -385,7 +386,18 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             final double dm = (delta_wk - gw);
 
-            for (int z = w; z < derivative_.length; z++)
+            final int end;
+
+            if (secondDerivative_ != null)
+            {
+                end = derivative_.length;
+            }
+            else
+            {
+                end = w + 1;
+            }
+
+            for (int z = w; z < end; z++)
             {
                 final int zToStatus = _packed.getTransition(z);
                 final double delta_wz;
@@ -428,10 +440,18 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 // Now compute the second derivative of the log likelihood, which is -dwz/gk + (dw * dz) / gk*gk
                 final double d2 = (-dwz / gk) + (dw * dz) / (gk2);
 
-                // I don't know where the extra - sign comes from, but FD approx shows
-                // that it's needed.
-                secondDerivative_[w][z] = -d2;
-                secondDerivative_[z][w] = -d2;
+                if (z == w)
+                {
+                    jDiag_[z] = -d2;
+                }
+
+                if (secondDerivative_ != null)
+                {
+                    // I don't know where the extra - sign comes from, but FD approx shows
+                    // that it's needed.
+                    secondDerivative_[w][z] = -d2;
+                    secondDerivative_[z][w] = -d2;
+                }
             }
         }
 

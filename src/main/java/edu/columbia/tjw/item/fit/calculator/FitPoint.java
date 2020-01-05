@@ -16,9 +16,5 @@ public interface FitPoint
 
     BlockResult getBlock(int index_, BlockCalculationType type_);
 
-    double getObjective(int boundary_);
-
-    double getObjectiveStdDev(int boundary_);
-
     int getSize();
 }

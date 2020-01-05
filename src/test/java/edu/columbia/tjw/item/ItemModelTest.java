@@ -100,6 +100,7 @@ class ItemModelTest
         final int paramCount = beta.length;
         final double[] gradient = new double[paramCount];
         final double[] fdGradient = new double[paramCount];
+        final double[] jDiag = new double[paramCount];
         final double[][] secondDerivative = new double[paramCount][paramCount];
         final double[][] fdSecondDerivative = new double[paramCount][paramCount];
 
@@ -109,7 +110,7 @@ class ItemModelTest
 
         for (int k = 0; k < Math.min(10000, paramGrid.size()); k++)
         {
-            orig.computeGradient(paramGrid, k, gradient, secondDerivative);
+            orig.computeGradient(paramGrid, k, gradient, jDiag, secondDerivative);
 
             final double sdSymmEpsilon = checkSymmetry(secondDerivative);
 
@@ -135,7 +136,7 @@ class ItemModelTest
                 fdGradient[i] = fdd;
 
                 // Now same for gradient.
-                adjusted.computeGradient(paramGrid, k, fdSecondDerivative[i],
+                adjusted.computeGradient(paramGrid, k, fdSecondDerivative[i], jDiag,
                         null);
 
                 for (int z = 0; z < paramCount; z++)
@@ -173,7 +174,7 @@ class ItemModelTest
                 checkEquality(fdSecondDerivative, secondDerivative);
                 final double[] g2 = new double[paramCount];
                 final double[][] s2 = new double[paramCount][paramCount];
-                orig.computeGradient(paramGrid, k, g2, s2);
+                orig.computeGradient(paramGrid, k, g2, jDiag, s2);
             }
 
             maxEpsilon = Math.max(maxEpsilon, matrixEpsilon);

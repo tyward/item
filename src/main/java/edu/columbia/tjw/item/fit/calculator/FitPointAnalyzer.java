@@ -1,9 +1,15 @@
 package edu.columbia.tjw.item.fit.calculator;
 
 import edu.columbia.tjw.item.algo.VarianceCalculator;
+import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.linear.SingularValueDecomposition;
 
 public final class FitPointAnalyzer
 {
+    private static final double EPSILON = Math.ulp(4.0); // Just a bit bigger than machine epsilon.
+    private static final boolean USE_ICE = false;
+    private static final boolean USE_TIC = false;
+
     private final int _superBlockSize;
     private final double _minStdDev;
 
@@ -32,14 +38,119 @@ public final class FitPointAnalyzer
 
     public double computeObjective(final FitPoint point_, final int endBlock_)
     {
-        point_.computeUntil(endBlock_, BlockCalculationType.VALUE);
-        final BlockResult aggregated = point_.getAggregated(BlockCalculationType.VALUE);
-        return aggregated.getEntropyMean();
+        if (!USE_ICE)
+        {
+            point_.computeUntil(endBlock_, BlockCalculationType.VALUE);
+            final BlockResult aggregated = point_.getAggregated(BlockCalculationType.VALUE);
+            return aggregated.getEntropyMean();
+        }
+
+//        // TODO: This is extremely inefficient.....
+//        point_.computeUntil(endBlock_, BlockCalculationType.SECOND_DERIVATIVE);
+//        final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+//
+//        final double entropy = secondDerivative.getEntropyMean();
+//        final double entropyStdDev = secondDerivative.getEntropyMeanDev();
+//        final double[] _gradient = secondDerivative.getDerivative();
+//
+//        final RealMatrix jMatrix = secondDerivative.getSecondDerivative();
+//        final RealMatrix iMatrix = secondDerivative.getFisherInformation();
+
+        if (USE_TIC)
+        {
+            // TODO: This is extremely inefficient.....
+            point_.computeUntil(endBlock_, BlockCalculationType.SECOND_DERIVATIVE);
+            final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+
+            final double entropy = secondDerivative.getEntropyMean();
+            final double entropyStdDev = secondDerivative.getEntropyMeanDev();
+            final double[] _gradient = secondDerivative.getDerivative();
+
+            final RealMatrix jMatrix = secondDerivative.getSecondDerivative();
+            final RealMatrix iMatrix = secondDerivative.getFisherInformation();
+
+            final SingularValueDecomposition jSvd = new SingularValueDecomposition(jMatrix);
+            final RealMatrix jInverse = jSvd.getSolver().getInverse();
+
+            final RealMatrix ticMatrix = jInverse.multiply(iMatrix);
+
+            double ticSum = 0.0;
+
+            for (int i = 0; i < ticMatrix.getRowDimension(); i++)
+            {
+                final double ticTerm = ticMatrix.getEntry(i, i);
+                ticSum += ticTerm;
+            }
+
+            final double tic = ticSum / point_.getSize();
+            return entropy + tic;
+        }
+        else
+        {
+            point_.computeUntil(endBlock_, BlockCalculationType.FIRST_DERIVATIVE);
+            final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+
+            final double entropy = secondDerivative.getEntropyMean();
+            final double entropyStdDev = secondDerivative.getEntropyMeanDev();
+            final double[] _gradient = secondDerivative.getDerivative();
+
+            // This is basically the worst an entropy could ever be with a uniform model. It is a reasonable
+            // level of
+            // "an entropy bad enough that any realistic model should avoid it like the plague, but not so bad that
+            // it causes any sort of numerical issues", telling the model that J must be pos. def.
+
+            // TODO: Fix this, we have no way to get this number here, so hard coding it.
+            final double logM = Math.log(3) * point_.getSize();
+            //final double iceBalance = 1.0 / (logM + _params.getEffectiveParamCount());
+            final double iceBalance = 1.0 / logM;
+
+            double iTermMax = 0.0;
+
+            for (int i = 0; i < secondDerivative.getDerivativeDimension(); i++)
+            {
+                iTermMax = Math.max(iTermMax, secondDerivative.getD2Entry(i));
+            }
+
+            if (iTermMax == 0.0)
+            {
+                return entropy;
+            }
+
+            final double iTermCutoff = iTermMax * EPSILON;
+
+            double iceSum = 0.0;
+            double iceSum2 = 0.0;
+
+            for (int i = 0; i < secondDerivative.getDerivativeDimension(); i++)
+            {
+                final double iTerm = secondDerivative.getD2Entry(i); // Already squared, this one is.
+
+                if (iTerm < iTermCutoff)
+                {
+                    // This particular term is irrelevant, its gradient is basically zero so just skip it.
+                    continue;
+                }
+
+                final double jTerm = secondDerivative.getJDiagEntry(i);
+                final double iceTerm = iTerm / jTerm;
+
+                final double iceTerm2 = iTerm / (Math.max(jTerm, 0) * (1.0 - iceBalance) + iTerm * iceBalance);
+
+                iceSum += iceTerm;
+                iceSum2 += iceTerm2;
+            }
+
+            final double iceAdjustment = iceSum2 / point_.getSize();
+            return entropy + iceAdjustment;
+        }
+
+
     }
 
     public double computeObjectiveStdDev(final FitPoint point_, final int endBlock_)
     {
-        return point_.getObjectiveStdDev(endBlock_);
+        point_.computeUntil(endBlock_, BlockCalculationType.VALUE);
+        return point_.getAggregated(BlockCalculationType.VALUE).getEntropyMeanDev();
     }
 
 
@@ -137,7 +248,13 @@ public final class FitPointAnalyzer
             dev = 0.5 * (devA + devB);
         }
 
-        final double zScore = meanDiff / dev;
+        // This is slightly rephrased in order to make later computations much easier.
+        final int nextBlock = Math.max(a_.getNextBlock(BlockCalculationType.VALUE),
+                b_.getNextBlock(BlockCalculationType.VALUE));
+        final double zScore = (computeObjective(a_, nextBlock) - computeObjective(b_, nextBlock)) / dev;
+
+
+        //final double zScore2 = meanDiff / dev;
         return zScore;
     }
 

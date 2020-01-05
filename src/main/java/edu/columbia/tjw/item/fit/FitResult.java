@@ -36,6 +36,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double _iceSum;
     private final double _iceSum2;
     private final double _ticSum;
+    private final double _invConditionNumber;
 
     /**
      * Make a new fit result based on current_, but with a new prev_.
@@ -63,6 +64,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         _ice2 = current_._ice2;
         _iceSum2 = current_._iceSum2;
+        _invConditionNumber = current_._invConditionNumber;
     }
 
     public FitResult(final ItemFitPoint<S, R, T> fitPoint_, final FitResult<S, R, T> prev_)
@@ -89,6 +91,8 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             final double minInverseCondition = Math
                     .min(jSvd.getInverseConditionNumber(), iSvd.getInverseConditionNumber());
+
+            _invConditionNumber = minInverseCondition;
 
             // This is basically the worst an entropy could ever be with a uniform model. It is a reasonable level of
             // "an entropy bad enough that any realistic model should avoid it like the plague, but not so bad that
@@ -173,6 +177,8 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             _iceSum2 = Double.NaN;
             _ice2 = Double.NaN;
+
+            _invConditionNumber = Double.NaN;
         }
 
         _aic = computeAic(_entropy, rowCount, _params.getEffectiveParamCount());

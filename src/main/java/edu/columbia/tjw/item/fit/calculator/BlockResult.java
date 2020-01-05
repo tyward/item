@@ -12,12 +12,14 @@ public final class BlockResult
     private final double _sumEntropy;
     private final double _sumEntropy2;
     private final double[] _derivative;
+    private final double[] _derivativeSquared;
+    private final double[] _jDiag;
     private final double[][] _secondDerivative;
     private final double[][] _fisherInformation;
     private final int _size;
 
     public BlockResult(final int rowStart_, final int rowEnd_, final double sumEntropy_, final double sumEntropy2_,
-                       final double[] derivative_,
+                       final double[] derivative_, final double[] derivativeSquared_, final double[] jDiag_,
                        final double[][] fisherInformation_, final double[][] secondDerivative_)
     {
         if (rowStart_ < 0)
@@ -47,6 +49,8 @@ public final class BlockResult
         _sumEntropy2 = sumEntropy2_;
         _size = size;
         _derivative = derivative_;
+        _jDiag = jDiag_;
+        _derivativeSquared = derivativeSquared_;
         _secondDerivative = secondDerivative_;
         _fisherInformation = fisherInformation_;
     }
@@ -65,6 +69,8 @@ public final class BlockResult
         int count = 0;
 
         final double[] derivative;
+        final double[] d2;
+        final double[] jDiag;
         final double[][] fisherInformation;
         final double[][] secondDerivative;
 
@@ -75,6 +81,8 @@ public final class BlockResult
         {
             final int dimension = analysisList_.get(0).getDerivativeDimension();
             derivative = new double[dimension];
+            d2 = new double[dimension];
+            jDiag = new double[dimension];
             fisherInformation = new double[dimension][dimension];
 
             if (hasSecondDerivative)
@@ -89,6 +97,9 @@ public final class BlockResult
         else
         {
             derivative = null;
+            d2 = null;
+            jDiag = null;
+
             fisherInformation = null;
             secondDerivative = null;
         }
@@ -108,7 +119,10 @@ public final class BlockResult
 
                 for (int i = 0; i < dimension; i++)
                 {
-                    derivative[i] += weight * next.getDerivativeEntry(i);
+                    final double entry = next.getDerivativeEntry(i);
+                    derivative[i] += weight * entry;
+                    d2[i] += weight * next._derivativeSquared[i];
+                    jDiag[i] += weight * next._jDiag[i];
 
                     for (int j = 0; j < dimension; j++)
                     {
@@ -139,6 +153,8 @@ public final class BlockResult
             for (int i = 0; i < dimension; i++)
             {
                 derivative[i] = invWeight * derivative[i];
+                d2[i] = invWeight * d2[i];
+                jDiag[i] = invWeight * jDiag[i];
 
                 for (int j = 0; j < dimension; j++)
                 {
@@ -161,6 +177,8 @@ public final class BlockResult
         _sumEntropy2 = h2;
         _size = count;
         _derivative = derivative;
+        _derivativeSquared = d2;
+        _jDiag = jDiag;
         _fisherInformation = fisherInformation;
         _secondDerivative = secondDerivative;
     }
@@ -261,6 +279,16 @@ public final class BlockResult
         }
 
         return _derivative[index_];
+    }
+
+    public double getD2Entry(final int index_)
+    {
+        return _derivativeSquared[index_];
+    }
+
+    public double getJDiagEntry(final int index_)
+    {
+        return _jDiag[index_];
     }
 
     public double[] getDerivative()

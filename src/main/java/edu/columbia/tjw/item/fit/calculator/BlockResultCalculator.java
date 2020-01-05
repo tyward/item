@@ -66,6 +66,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         }
 
         final double[] derivative;
+        final double[] d2;
+        final double[] jDiag;
         final double[][] secondDerivative;
         final double[][] fisherInformation;
 
@@ -73,6 +75,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         {
             final int dimension = model_.getDerivativeSize();
             derivative = new double[dimension];
+            d2 = new double[dimension];
+            jDiag = new double[dimension];
             fisherInformation = new double[dimension][dimension];
             secondDerivative = new double[dimension][dimension];
         }
@@ -80,12 +84,16 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         {
             final int dimension = model_.getDerivativeSize();
             derivative = new double[dimension];
+            d2 = new double[dimension];
+            jDiag = new double[dimension];
             fisherInformation = new double[dimension][dimension];
             secondDerivative = null;
         }
         else
         {
             derivative = null;
+            d2 = null;
+            jDiag = null;
             fisherInformation = null;
             secondDerivative = null;
         }
@@ -94,6 +102,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         {
             final int dimension = derivative.length;
             final double[] tmp = new double[dimension];
+            final double[] diagTmp = new double[dimension];
             final double[][] tmp2;
 
             if (secondDerivative != null)
@@ -107,11 +116,13 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
             for (int i = 0; i < count; i++)
             {
-                model_.computeGradient(grid, i, tmp, tmp2);
+                model_.computeGradient(grid, i, tmp, diagTmp, tmp2);
 
                 for (int k = 0; k < dimension; k++)
                 {
                     derivative[k] += tmp[k];
+                    d2[k] += tmp[k] * tmp[k];
+                    jDiag[k] += diagTmp[k];
 
                     for (int w = 0; w < dimension; w++)
                     {
@@ -136,6 +147,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
                 for (int i = 0; i < dimension; i++)
                 {
                     derivative[i] = derivative[i] * invCount;
+                    d2[i] = d2[i] * invCount;
+                    jDiag[i] = jDiag[i] * invCount;
 
                     for (int w = 0; w < dimension; w++)
                     {
@@ -154,6 +167,6 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         }
 
         return new BlockResult(_rowOffset, _rowOffset + count, entropySum, x2,
-                derivative, fisherInformation, secondDerivative);
+                derivative, d2, jDiag, fisherInformation, secondDerivative);
     }
 }
