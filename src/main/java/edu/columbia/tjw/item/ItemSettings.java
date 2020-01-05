@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item;
 
+import edu.columbia.tjw.item.optimize.OptimizationTarget;
 import edu.columbia.tjw.item.util.random.RandomTool;
 
 import java.io.Serializable;
@@ -81,6 +82,8 @@ public final class ItemSettings implements Serializable
 
     private final boolean _validate;
 
+    private final OptimizationTarget _target;
+
     public ItemSettings()
     {
         _rand = RandomTool.getRandom();
@@ -99,6 +102,7 @@ public final class ItemSettings implements Serializable
         _blockSize = BLOCK_SIZE;
         _threadBlockSize = THREAD_BLOCK_SIZE;
         _validate = DEFAULT_VALIDATE;
+        _target = OptimizationTarget.ENTROPY;
     }
 
     public ItemSettings(final Builder builder_)
@@ -119,6 +123,7 @@ public final class ItemSettings implements Serializable
         _blockSize = builder_.getBlockSize();
         _threadBlockSize = builder_.getThreadBlockSize();
         _validate = builder_.isValidate();
+        _target = builder_.getTarget();
     }
 
     public double getExhaustiveImprovementLimit()
@@ -201,6 +206,11 @@ public final class ItemSettings implements Serializable
         return _approximateDerivatives;
     }
 
+    public OptimizationTarget getTarget()
+    {
+        return _target;
+    }
+
     public Builder toBuilder()
     {
         return new Builder(this);
@@ -229,6 +239,7 @@ public final class ItemSettings implements Serializable
         private int _blockSize;
         private int _threadBlockSize;
         private boolean _validate;
+        private OptimizationTarget _target;
 
         public Builder()
         {
@@ -253,6 +264,7 @@ public final class ItemSettings implements Serializable
             _blockSize = base_.getBlockSize();
             _threadBlockSize = base_.getThreadBlockSize();
             _validate = base_.getDoValidate();
+            _target = base_.getTarget();
         }
 
         public ItemSettings build()
@@ -448,6 +460,17 @@ public final class ItemSettings implements Serializable
         public Builder setValidate(boolean _validate)
         {
             this._validate = _validate;
+            return this;
+        }
+
+        public OptimizationTarget getTarget()
+        {
+            return _target;
+        }
+
+        public Builder setTarget(final OptimizationTarget target_)
+        {
+            _target = target_;
             return this;
         }
 

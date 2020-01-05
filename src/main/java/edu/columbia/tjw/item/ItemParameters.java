@@ -1129,6 +1129,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     private final class ItemParametersVector implements PackedParameters<S, R, T>
     {
+        private static final long serialVersionUID = 0x72174035ac14e56L;
+
         private final double[] _paramValues;
         private final int[] _toStatus;
         private final int[] _entryIndex;

@@ -38,9 +38,9 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
     private final GoldenSectionOptimizer<MultivariatePoint, MultivariateDifferentiableFunction> _optimizer;
 
     public MultivariateOptimizer(final int blockSize_, int maxEvalCount_, final int loopEvalCount_,
-                                 final double thetaPrecision_)
+                                 final double thetaPrecision_, final OptimizationTarget target_)
     {
-        super(blockSize_, maxEvalCount_);
+        super(blockSize_, maxEvalCount_, target_);
 
         if (thetaPrecision_ < 0.0 || thetaPrecision_ > Math.PI)
         {
@@ -53,7 +53,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
         }
 
         _thetaPrecision = thetaPrecision_;
-        _optimizer = new GoldenSectionOptimizer<>(LINE_SEARCH_XTOL, LINE_SEARCH_YTOL, blockSize_, loopEvalCount_);
+        _optimizer = new GoldenSectionOptimizer<>(LINE_SEARCH_XTOL, LINE_SEARCH_YTOL, blockSize_, loopEvalCount_,
+                target_);
     }
 
     @Override
@@ -216,7 +217,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
                 final double zScore = this.getComparator().compare(
                         fitPointCurrent, fitPointNext);
-                
+
                 //LOG.info("Finished one line search: " + zScore);
                 if (zScore < STD_DEV_CUTOFF)
                 {

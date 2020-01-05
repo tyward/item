@@ -41,19 +41,20 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
 
     private final FitPointAnalyzer _comparator;
 
-    public Optimizer(final int blockSize_, final int maxEvalCount_)
+    public Optimizer(final int blockSize_, final int maxEvalCount_, final OptimizationTarget target_)
     {
-        this(DEFAULT_XTOL, DEFAULT_YTOL, blockSize_, maxEvalCount_);
+        this(DEFAULT_XTOL, DEFAULT_YTOL, blockSize_, maxEvalCount_, target_);
     }
 
-    public Optimizer(final double xTol_, final double yTol_, final int blockSize_, final int maxEvalCount_)
+    public Optimizer(final double xTol_, final double yTol_, final int blockSize_, final int maxEvalCount_,
+                     final OptimizationTarget target_)
     {
         _blockSize = blockSize_;
         _xTol = xTol_;
         _yTol = yTol_;
         _maxEvalCount = maxEvalCount_;
 
-        _comparator = new FitPointAnalyzer(_blockSize, _stdDevThreshold);
+        _comparator = new FitPointAnalyzer(_blockSize, _stdDevThreshold, target_);
     }
 
     public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_)

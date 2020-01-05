@@ -31,7 +31,7 @@ import java.util.logging.Logger;
  * @param <F> The type of function this can optimize
  * @author tyler
  */
-public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>>
+public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>>
         extends Optimizer<V, F>
 {
     private static final double MAX_BRACKET_SCALE = 2000.0;
@@ -40,14 +40,10 @@ public class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends Opti
     private static final double PHI = 0.5 * (1.0 + Math.sqrt(5.0));
     private static final double INV_PHI = 1.0 / PHI;
 
-    public GoldenSectionOptimizer(final int bloackSize_, int maxEvalCount_)
+    public GoldenSectionOptimizer(final double xTol_, final double yTol_, final int bloackSize_, int maxEvalCount_,
+                                  final OptimizationTarget target_)
     {
-        super(bloackSize_, maxEvalCount_);
-    }
-
-    public GoldenSectionOptimizer(final double xTol_, final double yTol_, final int bloackSize_, int maxEvalCount_)
-    {
-        super(xTol_, yTol_, bloackSize_, maxEvalCount_);
+        super(xTol_, yTol_, bloackSize_, maxEvalCount_, target_);
     }
 
     @Override

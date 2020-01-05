@@ -5,8 +5,10 @@ import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 
+import java.io.Serializable;
+
 public interface PackedParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>,
-        T extends ItemCurveType<T>> extends Cloneable
+        T extends ItemCurveType<T>> extends Cloneable, Serializable
 {
 
     public int size();
