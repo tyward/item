@@ -58,8 +58,9 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
      * @param underlying_
      * @return
      */
-    public static <V extends ItemRegressor<V>> EnumFamily<SimpleRegressor> generateFamily(final EnumFamily<V> underlying_,
-                                                                                          final Set<V> allowed_)
+    public static <V extends ItemRegressor<V>> EnumFamily<SimpleRegressor> generateFamily(
+            final EnumFamily<V> underlying_,
+            final Set<V> allowed_)
     {
         final List<String> names = new ArrayList<>(underlying_.size());
 
@@ -169,4 +170,14 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
         return "SimpleRegressor[" + name() + "]";
     }
 
+    private Object readResolve()
+    {
+        if (this._family.getMembers() == null)
+        {
+            // Happens when the family is still being initialized.
+            return this;
+        }
+
+        return this._family.getFromOrdinal(this.ordinal());
+    }
 }
