@@ -11,6 +11,7 @@ import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         implements Serializable
@@ -37,6 +38,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double _iceSum2;
     private final double _ticSum;
     private final double _invConditionNumber;
+
 
     /**
      * Make a new fit result based on current_, but with a new prev_.
@@ -214,6 +216,26 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return _aic;
     }
 
+    public double getTic()
+    {
+        return _tic;
+    }
+
+    public double getIce()
+    {
+        return _ice;
+    }
+
+    public double[] getParamStdDev()
+    {
+        return _paramStdDev.clone();
+    }
+
+    public double[] getGradient()
+    {
+        return _gradient.clone();
+    }
+
     public double getInformationCriterion()
     {
         // For now, this is AIC, but it could be TIC later on.
@@ -224,14 +246,36 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     {
         if (null == _prev)
         {
-            return getInformationCriterion();
+            return Double.NaN;
+            //return getInformationCriterion();
         }
 
         return getInformationCriterion() - getPrev().getInformationCriterion();
     }
 
-    public double getTic()
+    public String toString()
     {
-        return _tic;
+        final StringBuilder builder = new StringBuilder();
+        builder.append("FitResult[" + Integer.toHexString(System.identityHashCode(this)) + "][\n");
+        builder.append("Params: ");
+        builder.append(_params.toString());
+        builder.append("\nPrev Hash: " + System.identityHashCode(_prev));
+        builder.append("\nEntropy: " + _entropy);
+        builder.append("\nAIC: " + _aic);
+        builder.append("\nTIC: " + _tic);
+        builder.append("\nICE: " + _ice);
+        builder.append("\nICE2: " + _ice2);
+
+        builder.append("\nTIC Adjustment: " + _ticSum);
+        builder.append("\nICE Adjustment: " + _iceSum);
+        builder.append("\nICE2 Adjustment: " + _iceSum2);
+
+        builder.append("\nInv Condition Number: " + _invConditionNumber);
+
+        builder.append("\nGradient: " + Arrays.toString(_gradient));
+        builder.append("\nParamStdDev: " + Arrays.toString(_paramStdDev));
+        builder.append("\n]");
+
+        return builder.toString();
     }
 }

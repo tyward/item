@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item;
 
 import edu.columbia.tjw.item.optimize.OptimizationTarget;
+import edu.columbia.tjw.item.util.random.PrngType;
 import edu.columbia.tjw.item.util.random.RandomTool;
 
 import java.io.Serializable;
@@ -275,6 +276,11 @@ public final class ItemSettings implements Serializable
         public Random getRand()
         {
             return _rand;
+        }
+
+        public Builder setRand(final long seed_)
+        {
+            return this.setRand(RandomTool.getRandom(PrngType.SECURE, seed_));
         }
 
         public Builder setRand(Random _rand)

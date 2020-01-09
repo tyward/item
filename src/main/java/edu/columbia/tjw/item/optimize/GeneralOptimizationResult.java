@@ -75,6 +75,12 @@ public class GeneralOptimizationResult<V extends EvaluationPoint<V>> implements 
     @Override
     public final double minEntropy()
     {
+        if (_minResult.getNextBlock(BlockCalculationType.VALUE) < 1)
+        {
+            // If we really don't know the answer, just say so.
+            return Double.NaN;
+        }
+
         return _minResult.getAggregated(BlockCalculationType.VALUE).getEntropyMean();
     }
 

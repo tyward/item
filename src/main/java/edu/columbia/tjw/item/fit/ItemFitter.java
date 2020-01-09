@@ -59,11 +59,16 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private final FittingProgressChain<S, R, T> _chain;
     private final EnumFamily<T> _curveFamily;
 
-
     public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
                       final ItemStatusGrid<S, R> grid_)
     {
-        this(factory_, intercept_, status_, randomizeGrid(grid_, new ItemSettings(), status_), new ItemSettings());
+        this(factory_, intercept_, status_, grid_, new ItemSettings());
+    }
+
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
+                      final ItemStatusGrid<S, R> grid_, ItemSettings settings_)
+    {
+        this(factory_, intercept_, status_, randomizeGrid(grid_, settings_, status_), settings_);
     }
 
     public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
@@ -99,7 +104,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         _settings = settings_;
         _intercept = intercept_;
         _status = status_;
-        _calc = new EntropyCalculator<>(grid_);
+        _calc = new EntropyCalculator<>(grid_, _settings);
         _curveFamily = factory_.getFamily();
 
         final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept,

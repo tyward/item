@@ -998,7 +998,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             builder.append("\t\t\t Entry Beta Restricted: " + _uniqueBeta[i] + "\n");
         }
 
-        builder.append("]\n\n");
+        builder.append("]");
 
         return builder.toString();
     }
