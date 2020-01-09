@@ -2,6 +2,7 @@ package edu.columbia.tjw.item.fit.calculator;
 
 import edu.columbia.tjw.item.algo.VarianceCalculator;
 import edu.columbia.tjw.item.optimize.OptimizationTarget;
+import edu.columbia.tjw.item.util.MathTools;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
 
@@ -32,9 +33,89 @@ public final class FitPointAnalyzer
 
     public double[] getDerivative(final FitPoint point_)
     {
-        point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
-        final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
-        return aggregated.getDerivative();
+        switch (_target)
+        {
+            case ENTROPY:
+            {
+                point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+                return aggregated.getDerivative();
+            }
+            case TIC:
+            {
+                // There is no realistic way to compute this efficiently, just fall through and use the ICE
+                // derivatives instead.
+            }
+            case ICE:
+            case ICE2:
+            {
+                point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+
+                final int dimension = aggregated.getDerivativeDimension();
+                final double[] entropyDerivative = aggregated.getDerivative();
+                final double[] extraDerivative = new double[dimension];
+
+                // TODO: Fix this, we have no way to get this number here, so hard coding it.
+                final double logM = Math.log(3) * point_.getSize();
+                //final double iceBalance = 1.0 / (logM + _params.getEffectiveParamCount());
+                final double iceBalance = 1.0 / logM;
+
+                double iTermMax = 0.0;
+
+                for (int i = 0; i < dimension; i++)
+                {
+                    iTermMax = Math.max(iTermMax, Math.abs(aggregated.getD2Entry(i)));
+                }
+
+                if (iTermMax == 0.0)
+                {
+                    return entropyDerivative;
+                }
+
+                final double iTermCutoff = iTermMax * EPSILON;
+
+                for (int i = 0; i < dimension; i++)
+                {
+                    final double numerator = aggregated.getShiftGradientEntry(i);
+
+                    if (numerator < iTermCutoff)
+                    {
+                        // The adjustment here is zero....
+                        continue;
+                    }
+
+                    final double iTerm = aggregated.getD2Entry(i); // Already squared, this one is.
+
+                    if (iTerm < iTermCutoff)
+                    {
+                        // This particular term is irrelevant, its gradient is basically zero so just skip it.
+                        continue;
+                    }
+
+                    final double jTerm = aggregated.getJDiagEntry(i);
+                    final double denominator = (Math.max(jTerm, 0) * (1.0 - iceBalance) + iTerm * iceBalance);
+
+                    // Assume that the third (and neglected) term roughly cancels one of these two terms, eliminating
+                    // the 2.0.
+                    extraDerivative[i] = (numerator / denominator) / point_.getSize();
+                }
+
+                final double cosCheck = MathTools.cos(extraDerivative, entropyDerivative);
+                final double magDiff = MathTools.magnitude(extraDerivative) / MathTools.magnitude(entropyDerivative);
+
+                System.out.println("Gradient comparison[" + magDiff + "]: " + cosCheck);
+
+                for (int i = 0; i < dimension; i++)
+                {
+                    entropyDerivative[i] += extraDerivative[i];
+                }
+
+                return entropyDerivative;
+            }
+            default:
+                throw new UnsupportedOperationException("Unknown target type.");
+        }
     }
 
     public double computeObjective(final FitPoint point_, final int endBlock_)

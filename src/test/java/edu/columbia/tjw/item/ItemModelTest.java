@@ -5,8 +5,12 @@ import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.StandardCurveType;
 import edu.columbia.tjw.item.base.raw.RawFittingGrid;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
+import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
+import edu.columbia.tjw.item.optimize.OptimizationTarget;
 import edu.columbia.tjw.item.util.MathTools;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
@@ -19,15 +23,15 @@ import java.io.*;
 
 class ItemModelTest
 {
+    private static final double EPSILON = Math.ulp(1.0);
+
     private final ItemFittingGrid<SimpleStatus, SimpleRegressor> _rawData;
-    private final SimpleRegressor _intercept;
 
     public ItemModelTest()
     {
         try (final InputStream iStream = ItemModelTest.class.getResourceAsStream("/raw_data.dat"))
         {
             _rawData = RawFittingGrid.readFromStream(iStream, SimpleStatus.class, SimpleRegressor.class);
-            _intercept = _rawData.getRegressorFamily().getFromName("INTERCEPT");
         }
         catch (final IOException e)
         {
@@ -88,23 +92,133 @@ class ItemModelTest
         return valRatio;
     }
 
-    private void testGradients(ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params)
+    private void testIceGradients(ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params)
     {
         PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> origPacked = params.generatePacked();
         ParamFittingGrid<SimpleStatus, SimpleRegressor, StandardCurveType> paramGrid = new ParamFittingGrid<>(params,
                 _rawData);
-        final double[] beta = origPacked.getPacked();
-        ItemModel<SimpleStatus, SimpleRegressor, StandardCurveType> orig = new ItemModel<>(params);
 
-        PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> repacked = origPacked.clone();
+        final double[] beta = origPacked.getPacked();
+        final ItemModel<SimpleStatus, SimpleRegressor, StandardCurveType> orig = new ItemModel<>(params);
+
+        ItemSettings settings = new ItemSettings();
+
+        final EntropyCalculator<SimpleStatus, SimpleRegressor, StandardCurveType> calculator =
+                new EntropyCalculator<>(paramGrid);
+        final FitPointAnalyzer entropyAnalyzer = new FitPointAnalyzer(settings.getBlockSize(), 5.0,
+                OptimizationTarget.ENTROPY);
+        final FitPointAnalyzer ticAnalyzer = new FitPointAnalyzer(settings.getBlockSize(), 5.0,
+                OptimizationTarget.TIC);
+        final FitPointAnalyzer iceAnalyzer = new FitPointAnalyzer(settings.getBlockSize(), 5.0,
+                OptimizationTarget.ICE);
+        final FitPointAnalyzer ice2Analyzer = new FitPointAnalyzer(settings.getBlockSize(), 5.0,
+                OptimizationTarget.ICE2);
+
+        final FitPoint point = calculator.generatePoint(params);
+
+        final double entropy = entropyAnalyzer.computeObjective(point, point.getBlockCount());
+        final double tic = ticAnalyzer.computeObjective(point, point.getBlockCount());
+        final double ice = iceAnalyzer.computeObjective(point, point.getBlockCount());
+        final double ice2 = ice2Analyzer.computeObjective(point, point.getBlockCount());
+
+        final double[] grad = entropyAnalyzer.getDerivative(point);
+        final double[] ticGrad = ticAnalyzer.getDerivative(point);
+        final double[] iceGrad = iceAnalyzer.getDerivative(point);
+        final double[] ice2Grad = ice2Analyzer.getDerivative(point);
+
+        final int dimension = grad.length;
+
+        final double[] fdGrad = new double[dimension];
+        final double[] fdTicGrad = new double[dimension];
+        final double[] fdIceGrad = new double[dimension];
+        final double[] fdIce2Grad = new double[dimension];
+
+        //final FitPoint[] shiftPoints = new FitPoint[dimension];
+        //final double[] shiftSizes = new double[dimension];
+        final double gradEpsilon = EPSILON * MathTools.maxAbsElement(grad);
+
+        for (int i = 0; i < dimension; i++)
+        {
+            final double h = 1.0e-8;
+            final double absGrad = Math.abs(grad[i]);
+            final double shiftSize;
+
+            if (absGrad > gradEpsilon)
+            {
+                // Generate an appropriate level of
+                shiftSize = h / absGrad;
+            }
+            else
+            {
+                // Doesn't really matter what we put here...
+                shiftSize = h;
+            }
+
+            final PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> repacked = origPacked.clone();
+            repacked.setParameter(i, beta[i] + shiftSize);
+            final FitPoint shiftPoint = calculator.generatePoint(repacked.generateParams());
+
+            final double shiftEntropy = entropyAnalyzer.computeObjective(shiftPoint, shiftPoint.getBlockCount());
+            final double shiftTic = ticAnalyzer.computeObjective(shiftPoint, shiftPoint.getBlockCount());
+            final double shiftIce = iceAnalyzer.computeObjective(shiftPoint, shiftPoint.getBlockCount());
+            final double shiftIce2 = ice2Analyzer.computeObjective(shiftPoint, shiftPoint.getBlockCount());
+
+            fdGrad[i] = (shiftEntropy - entropy) / shiftSize;
+            fdTicGrad[i] = (shiftTic - tic) / shiftSize;
+            fdIceGrad[i] = (shiftIce - ice) / shiftSize;
+            fdIce2Grad[i] = (shiftIce2 - ice2) / shiftSize;
+        }
+
+        System.out.println("ICE Cos: " + MathTools.cos(iceGrad, grad));
+        System.out.println("ICE2 Cos: " + MathTools.cos(ice2Grad, grad));
+
+        System.out.println("Entropy FD Cos: " + MathTools.cos(grad, fdGrad));
+        System.out.println("ICE FD Cos: " + MathTools.cos(iceGrad, fdIceGrad));
+        System.out.println("ICE2 FD Cos: " + MathTools.cos(ice2Grad, fdIce2Grad));
+
+        final double[] fdTicAdj = new double[dimension];
+        final double[] fdIceAdj = new double[dimension];
+        final double[] fdIce2Adj = new double[dimension];
+
+        final double[] ticAdj = new double[dimension];
+        final double[] iceAdj = new double[dimension];
+        final double[] ice2Adj = new double[dimension];
+
+        for (int i = 0; i < dimension; i++)
+        {
+            fdTicAdj[i] = fdTicGrad[i] - fdGrad[i];
+            fdIceAdj[i] = fdIceGrad[i] - fdGrad[i];
+            fdIce2Adj[i] = fdIce2Grad[i] - fdGrad[i];
+
+            ticAdj[i] = ticGrad[i] - grad[i];
+            iceAdj[i] = iceGrad[i] - grad[i];
+            ice2Adj[i] = ice2Grad[i] - grad[i];
+        }
+
+        System.out.println("TIC FD Adj Cos: " + MathTools.cos(fdTicAdj, ticAdj));
+        System.out.println("ICE FD Adj Cos: " + MathTools.cos(fdIceAdj, iceAdj));
+        System.out.println("ICE2 FD Adj Cos: " + MathTools.cos(fdIce2Adj, ice2Adj));
+
+        System.out.println("Done!");
+    }
+
+
+    private void testGradients(ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params)
+    {
+        final PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> origPacked = params.generatePacked();
+        final ParamFittingGrid<SimpleStatus, SimpleRegressor, StandardCurveType> paramGrid =
+                new ParamFittingGrid<>(params,
+                        _rawData);
+        final double[] beta = origPacked.getPacked();
+        final ItemModel<SimpleStatus, SimpleRegressor, StandardCurveType> orig = new ItemModel<>(params);
+
+        final PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> repacked = origPacked.clone();
         final int paramCount = beta.length;
         final double[] gradient = new double[paramCount];
         final double[] fdGradient = new double[paramCount];
         final double[] jDiag = new double[paramCount];
         final double[][] secondDerivative = new double[paramCount][paramCount];
         final double[][] fdSecondDerivative = new double[paramCount][paramCount];
-
-        final double[] workspace = new double[paramCount];
 
         double maxEpsilon = Double.MIN_VALUE;
 
@@ -114,6 +228,8 @@ class ItemModelTest
 
             final double sdSymmEpsilon = checkSymmetry(secondDerivative);
 
+            final double gradEpsilon = EPSILON * MathTools.maxAbsElement(gradient);
+
             // Roughly speaking, we want this less than sqrt(machineEpsilon).
             Assertions.assertTrue(sdSymmEpsilon < 1.0e-8);
 
@@ -121,8 +237,23 @@ class ItemModelTest
             {
                 final double[] testBeta = beta.clone();
                 //final double h = Math.abs(testBeta[i] * 0.00001) + 1.0e-8;
-                final double h = 1.0e-6;
-                testBeta[i] = testBeta[i] + h;
+                final double h = 1.0e-8;
+                final double absGrad = Math.abs(gradient[i]);
+                final double shiftSize;
+
+                if (absGrad > gradEpsilon)
+                {
+                    // Generate an appropriate level of
+                    shiftSize = h / absGrad;
+                }
+                else
+                {
+                    // Doesn't really matter what we put here...
+                    shiftSize = h;
+                }
+
+                testBeta[i] = testBeta[i] + shiftSize;
+
                 repacked.updatePacked(testBeta);
 
                 ItemModel<SimpleStatus, SimpleRegressor, StandardCurveType> adjusted = new ItemModel<>(
@@ -131,7 +262,7 @@ class ItemModelTest
                 final double origLL = orig.logLikelihood(paramGrid, k);
                 final double shiftLL = adjusted.logLikelihood(paramGrid, k);
 
-                final double fdd = (shiftLL - origLL) / h;
+                final double fdd = (shiftLL - origLL) / shiftSize;
 
                 fdGradient[i] = fdd;
 
@@ -141,7 +272,7 @@ class ItemModelTest
 
                 for (int z = 0; z < paramCount; z++)
                 {
-                    fdSecondDerivative[i][z] = (fdSecondDerivative[i][z] - gradient[z]) / h;
+                    fdSecondDerivative[i][z] = (fdSecondDerivative[i][z] - gradient[z]) / shiftSize;
                 }
             }
 
@@ -243,7 +374,18 @@ class ItemModelTest
                 readParams(ItemModelTest.class.getResourceAsStream("/test_model_medium.dat"));
 
         testGradients(params);
+        //testIceGradients(params);
     }
+
+//    @Test
+//    void testLargeGradient() throws Exception
+//    {
+//        ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params =
+//                readParams(ItemModelTest.class.getResourceAsStream("/test_model_large.dat"));
+//
+//        //testGradients(params);
+//        testIceGradients(params);
+//    }
 
 
 //    @Test

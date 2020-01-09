@@ -41,7 +41,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
     public synchronized BlockResult compute(final ItemModel<S, R, T> model_,
                                             final BlockCalculationType type_)
     {
-        if (model_.getParams().getStatus() != _grid.getFromStatus())
+        if (!model_.getParams().getStatus().equals(_grid.getFromStatus()))
         {
             throw new IllegalArgumentException("Status mismatch.");
         }
@@ -68,6 +68,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         final double[] derivative;
         final double[] d2;
         final double[] jDiag;
+        final double[] shiftGradient;
         final double[][] secondDerivative;
         final double[][] fisherInformation;
 
@@ -77,6 +78,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             derivative = new double[dimension];
             d2 = new double[dimension];
             jDiag = new double[dimension];
+            shiftGradient = new double[dimension];
             fisherInformation = new double[dimension][dimension];
             secondDerivative = new double[dimension][dimension];
         }
@@ -88,6 +90,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             jDiag = new double[dimension];
             fisherInformation = new double[dimension][dimension];
             secondDerivative = null;
+            shiftGradient = null;
         }
         else
         {
@@ -96,6 +99,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             jDiag = null;
             fisherInformation = null;
             secondDerivative = null;
+            shiftGradient = null;
         }
 
         if (derivative != null)
@@ -117,6 +121,22 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             for (int i = 0; i < count; i++)
             {
                 model_.computeGradient(grid, i, tmp, diagTmp, tmp2);
+
+                if (tmp2 != null)
+                {
+                    for (int k = 0; k < dimension; k++)
+                    {
+                        double shiftSum = 0.0;
+
+                        for (int w = 0; w < dimension; w++)
+                        {
+                            shiftSum += tmp[w] * tmp2[k][w];
+                        }
+
+                        shiftGradient[k] += shiftSum;
+                    }
+                }
+
 
                 for (int k = 0; k < dimension; k++)
                 {
@@ -157,6 +177,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
                     if (secondDerivative != null)
                     {
+                        shiftGradient[i] *= invCount;
+
                         for (int w = 0; w < dimension; w++)
                         {
                             secondDerivative[i][w] *= invCount;
@@ -167,6 +189,6 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         }
 
         return new BlockResult(_rowOffset, _rowOffset + count, entropySum, x2,
-                derivative, d2, jDiag, fisherInformation, secondDerivative);
+                derivative, d2, jDiag, shiftGradient, fisherInformation, secondDerivative);
     }
 }

@@ -55,5 +55,4 @@ public interface EnumMember<V extends EnumMember<V>> extends Comparable<V>, Seri
      * @return The family describing all members of this enum.
      */
     public EnumFamily<V> getFamily();
-
 }

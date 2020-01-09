@@ -14,12 +14,14 @@ public final class BlockResult
     private final double[] _derivative;
     private final double[] _derivativeSquared;
     private final double[] _jDiag;
+    private final double[] _shiftGradient;
     private final double[][] _secondDerivative;
     private final double[][] _fisherInformation;
     private final int _size;
 
     public BlockResult(final int rowStart_, final int rowEnd_, final double sumEntropy_, final double sumEntropy2_,
                        final double[] derivative_, final double[] derivativeSquared_, final double[] jDiag_,
+                       final double[] shiftGradient_,
                        final double[][] fisherInformation_, final double[][] secondDerivative_)
     {
         if (rowStart_ < 0)
@@ -50,6 +52,7 @@ public final class BlockResult
         _size = size;
         _derivative = derivative_;
         _jDiag = jDiag_;
+        _shiftGradient = shiftGradient_;
         _derivativeSquared = derivativeSquared_;
         _secondDerivative = secondDerivative_;
         _fisherInformation = fisherInformation_;
@@ -71,6 +74,7 @@ public final class BlockResult
         final double[] derivative;
         final double[] d2;
         final double[] jDiag;
+        final double[] shiftGradient;
         final double[][] fisherInformation;
         final double[][] secondDerivative;
 
@@ -88,10 +92,12 @@ public final class BlockResult
             if (hasSecondDerivative)
             {
                 secondDerivative = new double[dimension][dimension];
+                shiftGradient = new double[dimension];
             }
             else
             {
                 secondDerivative = null;
+                shiftGradient = null;
             }
         }
         else
@@ -102,6 +108,7 @@ public final class BlockResult
 
             fisherInformation = null;
             secondDerivative = null;
+            shiftGradient = null;
         }
 
         for (final BlockResult next : analysisList_)
@@ -131,6 +138,8 @@ public final class BlockResult
 
                     if (null != secondDerivative)
                     {
+                        shiftGradient[i] = weight * next.getShiftGradientEntry(i);
+
                         for (int j = 0; j < dimension; j++)
                         {
                             secondDerivative[i][j] += weight * next.getSecondDerivativeEntry(i, j);
@@ -163,6 +172,8 @@ public final class BlockResult
 
                 if (null != secondDerivative)
                 {
+                    shiftGradient[i] *= invWeight;
+
                     for (int j = 0; j < dimension; j++)
                     {
                         secondDerivative[i][j] = invWeight * secondDerivative[i][j];
@@ -179,6 +190,7 @@ public final class BlockResult
         _derivative = derivative;
         _derivativeSquared = d2;
         _jDiag = jDiag;
+        _shiftGradient = shiftGradient;
         _fisherInformation = fisherInformation;
         _secondDerivative = secondDerivative;
     }
@@ -304,6 +316,11 @@ public final class BlockResult
     public RealMatrix getFisherInformation()
     {
         return new Array2DRowRealMatrix(_fisherInformation);
+    }
+
+    public double getShiftGradientEntry(final int index_)
+    {
+        return _shiftGradient[index_];
     }
 
 //    @Override

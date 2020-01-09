@@ -23,6 +23,8 @@ import java.util.stream.Collectors;
 
 public class ItemFitterTest
 {
+    private static final double SQRT_EPSILON = Math.sqrt(Math.ulp(4.0));
+
     public ItemFitterTest()
     {
     }
@@ -65,13 +67,13 @@ public class ItemFitterTest
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
                 .getChain().getLatestResults();
-        Assertions.assertEquals(0.20231126684282705, result.getEntropy());
+        Assertions.assertEquals(0.20231126681155956, result.getEntropy());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.1903579219656762, r3.getEntropy());
+        Assertions.assertEquals(0.19035792370439872, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
@@ -84,13 +86,13 @@ public class ItemFitterTest
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
                 .getChain().getLatestResults();
-        Assertions.assertEquals(0.2023112681481598, result.getEntropy());
+        Assertions.assertEquals(0.20231126811689382, result.getEntropy());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.1902493465270004, r3.getEntropy());
+        Assertions.assertEquals(0.19024934970891585, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
@@ -103,13 +105,13 @@ public class ItemFitterTest
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
                 .getChain().getLatestResults();
-        Assertions.assertEquals(0.20231126814816508, result.getEntropy());
+        Assertions.assertEquals(0.20231126811689862, result.getEntropy());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19024934651165779, r3.getEntropy());
+        Assertions.assertEquals(0.19024934970870488, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
