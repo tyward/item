@@ -24,10 +24,9 @@ import java.io.*;
 class ItemModelTest
 {
     private static final double EPSILON = Math.ulp(1.0);
-
     private final ItemFittingGrid<SimpleStatus, SimpleRegressor> _rawData;
 
-    public ItemModelTest()
+    ItemModelTest()
     {
         try (final InputStream iStream = ItemModelTest.class.getResourceAsStream("/raw_data.dat"))
         {
@@ -377,41 +376,6 @@ class ItemModelTest
         //testIceGradients(params);
     }
 
-//    @Test
-//    void testLargeGradient() throws Exception
-//    {
-//        ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params =
-//                readParams(ItemModelTest.class.getResourceAsStream("/test_model_large.dat"));
-//
-//        //testGradients(params);
-//        testIceGradients(params);
-//    }
-
-
-//    @Test
-//    void computeGradient() throws Exception
-//    {
-//        final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-//                makeFitter();
-//
-//        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
-//                .fitCoefficients();
-//        Assertions.assertTrue(result.getEndingLL() < 0.2024);
-//
-//        ParamFitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.expandModel(_curveRegs, 12);
-//
-//        System.out.println(fitter.getChain());
-//        System.out.println("Next param: " + r3.getEndingParams());
-//        //Assertions.assertTrue(r3.getEndingLL() < 0.195);
-//
-//        ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params = r3.getEndingParams();
-//
-//        final File outputFolder = new File("/Users/tyler/sync-workspace/code/outputModels");
-//
-//        writeParams(new File(outputFolder, "test_model.dat"), params);
-//
-//        testGradients(params);
-//    }
 
     @Test
     void transitionProbability()
