@@ -7,6 +7,7 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
+import edu.columbia.tjw.item.util.IceTools;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
 
@@ -16,6 +17,8 @@ import java.util.Arrays;
 public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         implements Serializable
 {
+    private static final double EPSILON = Math.ulp(4.0); // Just a bit bigger than machine epsilon.
+    private static final double SQRT_EPSILON = Math.sqrt(EPSILON);
     private static final boolean USE_COMPLEX_RESULTS = true;
     private static final long serialVersionUID = 0x606e4b6c2343db26L;
 
@@ -84,6 +87,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _entropy = secondDerivative.getEntropyMean();
             _entropyStdDev = secondDerivative.getEntropyMeanDev();
             _gradient = secondDerivative.getDerivative();
+            final int dimension = _gradient.length;
 
             final RealMatrix jMatrix = secondDerivative.getSecondDerivative();
             final SingularValueDecomposition jSvd = new SingularValueDecomposition(jMatrix);
@@ -96,73 +100,39 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             _invConditionNumber = minInverseCondition;
 
-            // This is basically the worst an entropy could ever be with a uniform model. It is a reasonable level of
-            // "an entropy bad enough that any realistic model should avoid it like the plague, but not so bad that
-            // it causes any sort of numerical issues", telling the model that J must be pos. def.
-            final double logM = Math.log(_params.getReachableSize());
-            //final double iceBalance = 1.0 / (logM + _params.getEffectiveParamCount());
-            final double iceBalance = 1.0 / logM;
+            final RealMatrix jInverse = jSvd.getSolver().getInverse();
+            final RealMatrix iInverse = iSvd.getSolver().getInverse();
 
-            if (minInverseCondition < 1.0e-200)
+            final double inverseSqrtN = 1.0 / Math.sqrt(rowCount);
+            _paramStdDev = new double[dimension];
+
+            for (int i = 0; i < dimension; i++)
             {
-                // TIC cannot be computed accurately for these parameters, just leave it undefined.
-                _tic = Double.NaN;
-                _ice = Double.NaN;
-                _paramStdDev = null;
-
-                _ticSum = Double.NaN;
-                _iceSum = Double.NaN;
-
-                _iceSum2 = Double.NaN;
-                _ice2 = Double.NaN;
+                _paramStdDev[i] = inverseSqrtN * Math.sqrt(iInverse.getEntry(i, i));
             }
-            else
+
+            final RealMatrix ticMatrix = jInverse.multiply(iMatrix);
+
+            double ticSum = 0.0;
+
+            for (int i = 0; i < dimension; i++)
             {
-                final RealMatrix jInverse = jSvd.getSolver().getInverse();
-                final RealMatrix iInverse = iSvd.getSolver().getInverse();
-
-                final double inverseSqrtN = 1.0 / Math.sqrt(rowCount);
-                _paramStdDev = new double[_gradient.length];
-
-                for (int i = 0; i < _paramStdDev.length; i++)
-                {
-                    _paramStdDev[i] = inverseSqrtN * Math.sqrt(iInverse.getEntry(i, i));
-                }
-
-                final RealMatrix ticMatrix = jInverse.multiply(iMatrix);
-
-                double ticSum = 0.0;
-
-                for (int i = 0; i < ticMatrix.getRowDimension(); i++)
-                {
-                    final double ticTerm = ticMatrix.getEntry(i, i);
-                    ticSum += ticTerm;
-                }
-
-                _tic = 2.0 * ((_entropy * rowCount) + ticSum);
-                _ticSum = ticSum;
-
-                double iceSum = 0.0;
-                double iceSum2 = 0.0;
-
-                for (int i = 0; i < ticMatrix.getRowDimension(); i++)
-                {
-                    final double iTerm = iMatrix.getEntry(i, i); // Already squared, this one is.
-                    final double jTerm = jMatrix.getEntry(i, i);
-                    final double iceTerm = iTerm / jTerm;
-
-                    final double iceTerm2 = iTerm / (Math.abs(jTerm) * (1.0 - iceBalance) + iTerm * iceBalance);
-
-                    iceSum += iceTerm;
-                    iceSum2 += iceTerm2;
-                }
-
-                _ice = 2.0 * ((_entropy * rowCount) + iceSum);
-                _iceSum = iceSum;
-
-                _iceSum2 = iceSum2;
-                _ice2 = 2.0 * ((_entropy * rowCount) + iceSum2);
+                final double ticTerm = ticMatrix.getEntry(i, i);
+                ticSum += ticTerm;
             }
+
+            _tic = 2.0 * ((_entropy * rowCount) + ticSum);
+            _ticSum = ticSum;
+
+            final double iceSum = IceTools.computeIceSum(secondDerivative);
+            final double iceSum2 = IceTools.computeIce2Sum(secondDerivative);
+
+            _ice = 2.0 * ((_entropy * rowCount) + iceSum);
+            _iceSum = iceSum;
+
+            _iceSum2 = iceSum2;
+            _ice2 = 2.0 * ((_entropy * rowCount) + iceSum2);
+
         }
         else
         {

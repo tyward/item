@@ -1,5 +1,6 @@
 package edu.columbia.tjw.item.fit;
 
+import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
@@ -28,6 +29,18 @@ public class ItemFitterTest
     public ItemFitterTest()
     {
     }
+
+//    @Test
+//    void confirmationTest() throws Exception
+//    {
+//        final ItemFittingGrid<SimpleStatus, SimpleRegressor> grid = loadData("/tmp/rawGrid.dat");
+//        final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params = loadParams("/tmp/rawModel.dat");
+//        final EntropyCalculator<SimpleStatus, SimpleRegressor, StandardCurveType> calc = new EntropyCalculator<>(grid);
+//
+//        final FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = calc.computeFitResult(params, null);
+//
+//        System.out.println("Result: " + result);
+//    }
 
     @Test
     void basicTest() throws Exception
@@ -218,11 +231,31 @@ public class ItemFitterTest
         {
             fileName = "/raw_data.dat";
         }
+        return loadData(fileName);
+    }
 
-        try (final InputStream iStream = this.getClass().getResourceAsStream(fileName))
+
+    private ItemFittingGrid<SimpleStatus, SimpleRegressor> loadData(final String fileName_)
+    {
+        try (final InputStream iStream = this.getClass().getResourceAsStream(fileName_))
         {
             final ItemFittingGrid<SimpleStatus, SimpleRegressor> rawData = RawFittingGrid.readFromStream(iStream,
                     SimpleStatus.class, SimpleRegressor.class);
+            return rawData;
+        }
+        catch (final IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> loadParams(final String fileName_)
+    {
+        try (final InputStream iStream = this.getClass().getResourceAsStream(fileName_))
+        {
+            final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> rawData = ItemParameters
+                    .readFromStream(iStream,
+                            SimpleStatus.class, SimpleRegressor.class, StandardCurveType.class);
             return rawData;
         }
         catch (final IOException e)
