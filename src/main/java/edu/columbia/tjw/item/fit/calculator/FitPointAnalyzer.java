@@ -2,6 +2,7 @@ package edu.columbia.tjw.item.fit.calculator;
 
 import edu.columbia.tjw.item.algo.VarianceCalculator;
 import edu.columbia.tjw.item.optimize.OptimizationTarget;
+import edu.columbia.tjw.item.util.IceTools;
 import edu.columbia.tjw.item.util.MathTools;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
@@ -104,7 +105,7 @@ public final class FitPointAnalyzer
                 final double cosCheck = MathTools.cos(extraDerivative, entropyDerivative);
                 final double magDiff = MathTools.magnitude(extraDerivative) / MathTools.magnitude(entropyDerivative);
 
-                System.out.println("Gradient comparison[" + magDiff + "]: " + cosCheck);
+                //System.out.println("Gradient comparison[" + magDiff + "]: " + cosCheck);
 
                 for (int i = 0; i < dimension; i++)
                 {
@@ -164,62 +165,16 @@ public final class FitPointAnalyzer
                 final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
 
                 final double entropy = secondDerivative.getEntropyMean();
-                final double entropyStdDev = secondDerivative.getEntropyMeanDev();
-                final double[] _gradient = secondDerivative.getDerivative();
-
-                // This is basically the worst an entropy could ever be with a uniform model. It is a reasonable
-                // level of
-                // "an entropy bad enough that any realistic model should avoid it like the plague, but not so bad that
-                // it causes any sort of numerical issues", telling the model that J must be pos. def.
-
-                // TODO: Fix this, we have no way to get this number here, so hard coding it.
-                final double logM = Math.log(3) * point_.getSize();
-                //final double iceBalance = 1.0 / (logM + _params.getEffectiveParamCount());
-                final double iceBalance = 1.0 / logM;
-
-                double iTermMax = 0.0;
-
-                for (int i = 0; i < secondDerivative.getDerivativeDimension(); i++)
-                {
-                    iTermMax = Math.max(iTermMax, secondDerivative.getD2Entry(i));
-                }
-
-                if (iTermMax == 0.0)
-                {
-                    return entropy;
-                }
-
-                final double iTermCutoff = iTermMax * EPSILON;
-
-                double iceSum = 0.0;
-                double iceSum2 = 0.0;
-
-                for (int i = 0; i < secondDerivative.getDerivativeDimension(); i++)
-                {
-                    final double iTerm = secondDerivative.getD2Entry(i); // Already squared, this one is.
-
-                    if (iTerm < iTermCutoff)
-                    {
-                        // This particular term is irrelevant, its gradient is basically zero so just skip it.
-                        continue;
-                    }
-
-                    final double jTerm = secondDerivative.getJDiagEntry(i);
-                    final double iceTerm = iTerm / jTerm;
-
-                    final double iceTerm2 = iTerm / (Math.max(jTerm, 0) * (1.0 - iceBalance) + iTerm * iceBalance);
-
-                    iceSum += iceTerm;
-                    iceSum2 += iceTerm2;
-                }
 
                 if (_target == OptimizationTarget.ICE2)
                 {
+                    final double iceSum2 = IceTools.computeIce2Sum(secondDerivative);
                     final double iceAdjustment = iceSum2 / point_.getSize();
                     return entropy + iceAdjustment;
                 }
                 else
                 {
+                    final double iceSum = IceTools.computeIceSum(secondDerivative);
                     final double iceAdjustment = iceSum / point_.getSize();
                     return entropy + iceAdjustment;
                 }
