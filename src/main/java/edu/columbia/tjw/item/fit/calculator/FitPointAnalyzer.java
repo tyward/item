@@ -55,52 +55,7 @@ public final class FitPointAnalyzer
 
                 final int dimension = aggregated.getDerivativeDimension();
                 final double[] entropyDerivative = aggregated.getDerivative();
-                final double[] extraDerivative = new double[dimension];
-
-                // TODO: Fix this, we have no way to get this number here, so hard coding it.
-                final double logM = Math.log(3) * point_.getSize();
-                //final double iceBalance = 1.0 / (logM + _params.getEffectiveParamCount());
-                final double iceBalance = 1.0 / logM;
-
-                double iTermMax = 0.0;
-
-                for (int i = 0; i < dimension; i++)
-                {
-                    iTermMax = Math.max(iTermMax, Math.abs(aggregated.getD2Entry(i)));
-                }
-
-                if (iTermMax == 0.0)
-                {
-                    return entropyDerivative;
-                }
-
-                final double iTermCutoff = iTermMax * EPSILON;
-
-                for (int i = 0; i < dimension; i++)
-                {
-                    final double numerator = aggregated.getShiftGradientEntry(i);
-
-                    if (numerator < iTermCutoff)
-                    {
-                        // The adjustment here is zero....
-                        continue;
-                    }
-
-                    final double iTerm = aggregated.getD2Entry(i); // Already squared, this one is.
-
-                    if (iTerm < iTermCutoff)
-                    {
-                        // This particular term is irrelevant, its gradient is basically zero so just skip it.
-                        continue;
-                    }
-
-                    final double jTerm = aggregated.getJDiagEntry(i);
-                    final double denominator = (Math.max(jTerm, 0) * (1.0 - iceBalance) + iTerm * iceBalance);
-
-                    // Assume that the third (and neglected) term roughly cancels one of these two terms, eliminating
-                    // the 2.0.
-                    extraDerivative[i] = (numerator / denominator) / point_.getSize();
-                }
+                final double[] extraDerivative = IceTools.fillIceExtraDerivative(aggregated);
 
                 final double cosCheck = MathTools.cos(extraDerivative, entropyDerivative);
                 final double magDiff = MathTools.magnitude(extraDerivative) / MathTools.magnitude(entropyDerivative);

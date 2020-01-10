@@ -94,4 +94,54 @@ public final class IceTools
         return iceSum2;
     }
 
+    public static double[] fillIceExtraDerivative(final BlockResult resultBlock_)
+    {
+        final int dimension = resultBlock_.getDerivativeDimension();
+        final int size = resultBlock_.getSize();
+        final double[] extraDerivative = new double[dimension];
+        final double iTermCutoff = computeITermCutoff(resultBlock_);
+
+        if (iTermCutoff == 0.0)
+        {
+            return extraDerivative;
+        }
+        if (size == 0)
+        {
+            return extraDerivative;
+        }
+
+        // TODO: Fix this, we have no way to get this number here, so hard coding it.
+        final double logM = Math.log(3) * size;
+        //final double iceBalance = 1.0 / (logM + _params.getEffectiveParamCount());
+        final double iceBalance = 1.0 / logM;
+
+        for (int i = 0; i < dimension; i++)
+        {
+            final double numerator = resultBlock_.getShiftGradientEntry(i);
+
+            if (numerator < iTermCutoff)
+            {
+                // The adjustment here is zero....
+                continue;
+            }
+
+            final double iTerm = resultBlock_.getD2Entry(i); // Already squared, this one is.
+
+            if (iTerm < iTermCutoff)
+            {
+                // This particular term is irrelevant, its gradient is basically zero so just skip it.
+                continue;
+            }
+
+            final double jTerm = resultBlock_.getJDiagEntry(i);
+            final double denominator = (Math.max(jTerm, 0) * (1.0 - iceBalance) + iTerm * iceBalance);
+
+            // Assume that the third (and neglected) term roughly cancels one of these two terms, eliminating
+            // the 2.0.
+            extraDerivative[i] = numerator / (denominator * size);
+        }
+
+        return extraDerivative;
+    }
+
 }
