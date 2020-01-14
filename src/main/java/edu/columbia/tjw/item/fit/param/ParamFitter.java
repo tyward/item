@@ -21,10 +21,8 @@ package edu.columbia.tjw.item.fit.param;
 
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.fit.*;
+import edu.columbia.tjw.item.fit.base.BaseFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
-import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.logging.Logger;
@@ -39,77 +37,44 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 {
     private static final Logger LOG = LogUtil.getLogger(ParamFitter.class);
 
-    private final MultivariateOptimizer _optimizer;
-    private final ItemSettings _settings;
-    private final EntropyCalculator<S, R, T> _calc;
+    private final BaseFitter<S, R, T> _base;
 
-//    ItemParameters<S, R, T> _cacheParams;
-//    LogisticModelFunction<S, R, T> _cacheFunction;
+    public ParamFitter(final BaseFitter<S, R, T> base_)
+    {
+        if (null == base_)
+        {
+            throw new NullPointerException("Base cannot be null.");
+        }
+
+        _base = base_;
+    }
 
     public ParamFitter(final EntropyCalculator<S, R, T> calc_, final ItemSettings settings_)
     {
-        _calc = calc_;
-        _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1);
-        _settings = settings_;
+        this(new BaseFitter<>(calc_, settings_));
     }
 
-    public ParamFitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_) throws ConvergenceException
+    public FitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_) throws ConvergenceException
     {
         return fit(chain_, chain_.getBestParameters());
     }
 
-    public ParamFitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_) throws ConvergenceException
+    public FitResult<S, R, T> fit(final FittingProgressChain<S, R, T> chain_, ItemParameters<S, R, T> params_)
     {
-        final double entropy = chain_.getLogLikelihood();
-
-//        if (params_ != _cacheParams)
-//        {
-//            _cacheParams = params_;
-//            _cacheFunction = generateFunction(params_);
-//        }
-
-        final LogisticModelFunction<S, R, T> function = generateFunction(params_);
-        final double[] beta = function.getBeta();
-        final MultivariatePoint point = new MultivariatePoint(beta);
-        final int numRows = function.numRows();
-
-        final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(function, point);
-        final MultivariatePoint optimumPoint = result.getOptimum();
-
-        for (int i = 0; i < beta.length; i++)
-        {
-            beta[i] = optimumPoint.getElement(i);
-        }
-
-        final double newLL = result.minValue();
-        LOG.info("Fitting coefficients, LL improvement: " + entropy + " -> " + newLL + "(" + (newLL - entropy) + ")");
-
-        if (!result.converged())
-        {
-            LOG.info("Exhausted dataset before convergence, moving on.");
-        }
-
-        final ParamFitResult<S, R, T> output;
-
-        if (newLL > entropy)
-        {
-            output = new ParamFitResult<>(chain_.getBestParameters(), chain_.getBestParameters(), entropy, entropy,
-                    numRows);
-            chain_.pushResults("ParamFit", output.getEndingParams(), output.getEndingLL());
-        }
-        else
-        {
-            final ItemParameters<S, R, T> updated = function.generateParams(beta);
-
-            final double recalcEntropy = _calc.computeEntropy(updated).getEntropyMean();
-            output = new ParamFitResult<>(params_, updated, recalcEntropy, entropy, numRows);
-            chain_.pushResults("ParamFit", output.getEndingParams(), output.getEndingLL());
-        }
-
-        return output;
+        final FitResult<S, R, T> prev = chain_.getLatestResults();
+        final FitResult<S, R, T> fitResult = fitBetas(prev.getParams(), prev); //_base.doFit(packed, chain_
+        chain_.pushResults("ParamFit", fitResult);
+        return fitResult;
     }
 
-    private LogisticModelFunction<S, R, T> generateFunction(final ItemParameters<S, R, T> params_)
+    public FitResult<S, R, T> fitBetas(final ItemParameters<S, R, T> params_, final FitResult<S, R, T> prev_)
+    {
+        final PackedParameters<S, R, T> packed = packParameters(params_);
+        final FitResult<S, R, T> fitResult = _base.doFit(packed, prev_);
+        return fitResult;
+    }
+
+    private PackedParameters<S, R, T> packParameters(final ItemParameters<S, R, T> params_)
     {
         final PackedParameters<S, R, T> packed = params_.generatePacked();
         final boolean[] active = new boolean[params_.getEffectiveParamCount()];
@@ -129,10 +94,8 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         final PackedParameters<S, R, T> reduced = new ReducedParameterVector<>(active, packed);
-
-        final LogisticModelFunction<S, R, T> function = new LogisticModelFunction<>(params_, _calc.getGrid(),
-                new ItemModel<>(params_), _settings, reduced);
-        return function;
+        return reduced;
     }
+
 
 }

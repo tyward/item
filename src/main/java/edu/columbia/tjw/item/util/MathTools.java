@@ -15,13 +15,13 @@
  */
 package edu.columbia.tjw.item.util;
 
-import java.util.Random;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
 
+import java.util.Random;
+
 /**
- *
  * @author tyler
  */
 public final class MathTools
@@ -129,6 +129,18 @@ public final class MathTools
         }
 
         return dot;
+    }
+
+    public static double maxAbsElement(final double[] x_)
+    {
+        double maxAbs = 0.0;
+
+        for (int i = 0; i < x_.length; i++)
+        {
+            maxAbs = Math.max(maxAbs, Math.abs(x_[i]));
+        }
+
+        return maxAbs;
     }
 
     public static double magnitude(final double[] x_)

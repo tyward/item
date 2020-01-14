@@ -34,15 +34,14 @@ import java.util.Set;
  */
 public abstract class ItemParamGrid<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements ItemGrid<R>
 {
-    private final ItemParameters<S, R, T> _params;
+    //private final ItemParameters<S, R, T> _params;
     private final List<R> _uniqueRegressors;
     private final ItemRegressorReader[] _readers;
     private final int _uniqueCount;
 
     public ItemParamGrid(final ItemParameters<S, R, T> params_, final ItemGrid<R> grid_)
     {
-        _params = params_;
-        _uniqueRegressors = _params.getUniqueRegressors();
+        _uniqueRegressors = params_.getUniqueRegressors();
 
         _uniqueCount = _uniqueRegressors.size();
         _readers = new ItemRegressorReader[_uniqueCount];

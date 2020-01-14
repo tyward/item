@@ -20,25 +20,33 @@
 package edu.columbia.tjw.item;
 
 import edu.columbia.tjw.item.fit.PackedParameters;
+import edu.columbia.tjw.item.util.EnumFamily;
 
-import java.io.Serializable;
+import java.io.*;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 /**
+ * ItemParameters encapsulates everything needed to fully describe an item model. It has a fair bit of type-checking
+ * logic as well, to ensure that the status types are compatible, and the regressors as well. This should prevent
+ * issues like mismatched regressor names, shifting curve definitions, or status transition matrices that don't match
+ * what the model was fit on.
+ *
  * @param <S> The status type for this model
  * @param <R> The regressor type for this model
  * @param <T> The curve type for this model
  * @author tyler
  */
-public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
+public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+        implements Serializable
 {
     //This is just to make it clear that the 0th entry is always the intercept.
     private static final int INTERCEPT_INDEX = 0;
-    private static final long serialVersionUID = 0x35c74a5424d6cf48L;
+    private static final long serialVersionUID = 0x20315705d45eb662L;
 
     private final S _status;
     private final int _selfIndex;
-    private R _intercept; // deprecated.
     private final List<ItemCurve<T>> _trans;
     private final List<ParamFilter<S, R, T>> _filters;
     private final UniqueBetaFilter _uniqFilter = new UniqueBetaFilter();
@@ -56,7 +64,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     private final int _effectiveParamCount;
 
-    public ItemParameters(final S status_, final R intercept_)
+    private final EnumFamily<T> _typeFamily;
+    private final EnumFamily<R> _regFamily;
+
+    public ItemParameters(final S status_, final R intercept_, final EnumFamily<T> typeFamily_)
     {
         if (null == status_)
         {
@@ -65,6 +76,10 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         if (null == intercept_)
         {
             throw new NullPointerException("Intercept cannot be null.");
+        }
+        if (null == typeFamily_)
+        {
+            throw new NullPointerException("Type family cannot be null.");
         }
 
         _status = status_;
@@ -86,6 +101,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
         _selfIndex = _status.getReachable().indexOf(_status);
         _effectiveParamCount = calculateEffectiveParamCount();
+
+        _regFamily = intercept_.getFamily();
+        _typeFamily = typeFamily_;
     }
 
     /**
@@ -105,7 +123,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _transOffsets = base_._transOffsets;
         _uniqueBeta = base_._uniqueBeta;
         _effectiveParamCount = base_._effectiveParamCount;
-
+        _regFamily = base_._regFamily;
+        _typeFamily = base_._typeFamily;
 
         // We will go through and replace each of these curves...
         final List<ItemCurve<T>> trans = new ArrayList<>(base_._trans);
@@ -167,7 +186,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
                     for (int w = 0; w < curveParamCount; w++)
                     {
-                        if (!packed_.isCurve(pointer) || packed_.getDepth(pointer) != z || packed_.getCurveIndex(pointer) != w)
+                        if (!packed_.isCurve(pointer) || packed_.getDepth(pointer) != z || packed_
+                                .getCurveIndex(pointer) != w)
                         {
                             throw new IllegalArgumentException("Impossible.");
                         }
@@ -208,6 +228,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _fieldOffsets = base_._fieldOffsets;
         _transOffsets = base_._transOffsets;
         _uniqueBeta = base_._uniqueBeta;
+
+        _regFamily = base_._regFamily;
+        _typeFamily = base_._typeFamily;
 
         if (null != betas_)
         {
@@ -267,6 +290,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _status = base_._status;
         _selfIndex = base_._selfIndex;
         _filters = base_._filters;
+        _regFamily = base_._regFamily;
+        _typeFamily = base_._typeFamily;
 
         final SortedSet<R> newFields = new TreeSet<>();
         newFields.addAll(base_._uniqueFields);
@@ -387,6 +412,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _status = base_._status;
         _selfIndex = base_._selfIndex;
         _filters = base_._filters;
+        _regFamily = base_._regFamily;
+        _typeFamily = base_._typeFamily;
 
         final int startSize = base_.getEntryCount();
         final boolean[] drop = new boolean[startSize];
@@ -548,6 +575,15 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return toIndex;
     }
 
+    public EnumFamily<T> getCurveFamily()
+    {
+        return _typeFamily;
+    }
+
+    public EnumFamily<R> getRegressorFamily()
+    {
+        return _regFamily;
+    }
 
     public int getInterceptIndex()
     {
@@ -962,7 +998,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             builder.append("\t\t\t Entry Beta Restricted: " + _uniqueBeta[i] + "\n");
         }
 
-        builder.append("]\n\n");
+        builder.append("]");
 
         return builder.toString();
     }
@@ -1010,6 +1046,50 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return new ItemParametersVector();
     }
 
+    public void writeToStream(final OutputStream stream_) throws IOException
+    {
+        try (final GZIPOutputStream zipout = new GZIPOutputStream(stream_);
+             final ObjectOutputStream oOut = new ObjectOutputStream(zipout))
+        {
+            oOut.writeObject(this);
+            oOut.flush();
+        }
+    }
+
+    public static <S2 extends ItemStatus<S2>, R2 extends ItemRegressor<R2>, T2 extends ItemCurveType<T2>>
+    ItemParameters<S2, R2, T2> readFromStream(final InputStream stream_,
+                                              final Class<S2> statusClass_, final Class<R2> regClass_,
+                                              final Class<T2> typeClass_)
+            throws IOException
+    {
+        try (final GZIPInputStream zipin = new GZIPInputStream(stream_);
+             final ObjectInputStream oIn = new ObjectInputStream(zipin))
+        {
+            final ItemParameters<?, ?, ?> raw = (ItemParameters<?, ?, ?>) oIn.readObject();
+
+            if (raw.getStatus().getClass() != statusClass_)
+            {
+                throw new IOException("Status class mismatch.");
+            }
+            if (raw._regFamily.getComponentType() != regClass_)
+            {
+                throw new IOException("Regressor class mismatch.");
+            }
+            if (raw._typeFamily.getComponentType() != typeClass_)
+            {
+                throw new IOException("Curve Type class mismatch.");
+            }
+
+            final ItemParameters<S2, R2, T2> typed = (ItemParameters<S2, R2, T2>) raw;
+            return typed;
+        }
+        catch (ClassNotFoundException e)
+        {
+            throw new IOException(e);
+        }
+    }
+
+
     private final class UniqueBetaFilter implements ParamFilter<S, R, T>
     {
         private static final long serialVersionUID = 0x49e89a36e4553a69L;
@@ -1049,21 +1129,26 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     private final class ItemParametersVector implements PackedParameters<S, R, T>
     {
+        private static final long serialVersionUID = 0x72174035ac14e56L;
+
         private final double[] _paramValues;
         private final int[] _toStatus;
         private final int[] _entryIndex;
         private final int[] _curveDepth;
         private final int[] _curveIndex;
+        private final int[] _betaIndex;
         private final boolean[] _betaIsFrozen;
 
         private ItemParameters<S, R, T> _generated = null;
 
-        public ItemParametersVector(final ItemParametersVector vec_) {
+        public ItemParametersVector(final ItemParametersVector vec_)
+        {
             _paramValues = vec_._paramValues.clone();
             _toStatus = vec_._toStatus;
             _entryIndex = vec_._entryIndex;
             _curveDepth = vec_._curveDepth;
             _curveIndex = vec_._curveIndex;
+            _betaIndex = vec_._betaIndex;
             _betaIsFrozen = vec_._betaIsFrozen;
         }
 
@@ -1076,6 +1161,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             _entryIndex = new int[paramCount];
             _curveDepth = new int[paramCount];
             _curveIndex = new int[paramCount];
+            _betaIndex = new int[paramCount];
             _betaIsFrozen = new boolean[paramCount];
 
             int pointer = 0;
@@ -1134,6 +1220,19 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             {
                 throw new IllegalArgumentException("Impossible: " + pointer + " != " + paramCount);
             }
+
+            // Basically we are just getting the parameters that represent the actual betas.
+            for (int i = 0; i < paramCount; i++)
+            {
+                if (this._curveDepth[i] < 0)
+                {
+                    _betaIndex[i] = i;
+                }
+                else
+                {
+                    _betaIndex[i] = _betaIndex[i - 1];
+                }
+            }
         }
 
         private int fillBeta(final S toStatus_, final int entryIndex_, final int pointer_)
@@ -1186,9 +1285,20 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         @Override
+        public double getEntryBeta(int index_)
+        {
+            return _paramValues[_betaIndex[index_]];
+        }
+
+        @Override
         public synchronized void setParameter(int index_, double value_)
         {
-            _generated = null;
+            if (_paramValues[index_] != value_)
+            {
+                // We only reset the generated params if a parameter actually changed.
+                _generated = null;
+            }
+
             _paramValues[index_] = value_;
         }
 
@@ -1237,7 +1347,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         @Override
         public synchronized ItemParameters<S, R, T> generateParams()
         {
-            if(null != _generated) {
+            if (null != _generated)
+            {
                 return _generated;
             }
 
@@ -1251,7 +1362,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             return ItemParameters.this;
         }
 
-        public PackedParameters<S, R, T> clone() {
+        public PackedParameters<S, R, T> clone()
+        {
             return new ItemParametersVector(this);
         }
     }

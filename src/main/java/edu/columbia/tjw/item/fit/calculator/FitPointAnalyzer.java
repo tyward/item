@@ -1,26 +1,148 @@
 package edu.columbia.tjw.item.fit.calculator;
 
 import edu.columbia.tjw.item.algo.VarianceCalculator;
+import edu.columbia.tjw.item.optimize.OptimizationTarget;
+import edu.columbia.tjw.item.util.IceTools;
+import edu.columbia.tjw.item.util.MathTools;
+import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.linear.SingularValueDecomposition;
 
 public final class FitPointAnalyzer
 {
-    // How many blocks do we calculate at a time (to take advantage of threading). This should be several times the number of cores in the computer.
-    private static final int DEFAULT_SUPERBLOCK_SIZE = 100;
-    private static final double DEFAULT_MIN_STD_DEV = 5.0;
+    private static final double EPSILON = Math.ulp(4.0); // Just a bit bigger than machine epsilon.
 
     private final int _superBlockSize;
     private final double _minStdDev;
+    private final OptimizationTarget _target;
 
-
-    public FitPointAnalyzer()
+    public FitPointAnalyzer(final int superBlockSize_, final double minStdDev_, final OptimizationTarget target_)
     {
-        _superBlockSize = DEFAULT_SUPERBLOCK_SIZE;
-        _minStdDev = DEFAULT_MIN_STD_DEV;
+        _superBlockSize = superBlockSize_;
+        _minStdDev = minStdDev_;
+        _target = target_;
     }
 
-    public double compareEntropies(final FitPoint a_, final FitPoint b_)
+    public double compare(final FitPoint a_, final FitPoint b_)
     {
-        return compareEntropies(a_, b_, _minStdDev);
+        return compare(a_, b_, _minStdDev);
+    }
+
+    public double getSigmaTarget()
+    {
+        return _minStdDev;
+    }
+
+    public double[] getDerivative(final FitPoint point_)
+    {
+        switch (_target)
+        {
+            case ENTROPY:
+            {
+                point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+                return aggregated.getDerivative();
+            }
+            case TIC:
+            {
+                // There is no realistic way to compute this efficiently, just fall through and use the ICE
+                // derivatives instead.
+            }
+            case ICE:
+            case ICE2:
+            {
+                point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+
+                final int dimension = aggregated.getDerivativeDimension();
+                final double[] entropyDerivative = aggregated.getDerivative();
+                final double[] extraDerivative = IceTools.fillIceExtraDerivative(aggregated);
+
+                final double cosCheck = MathTools.cos(extraDerivative, entropyDerivative);
+                final double magDiff = MathTools.magnitude(extraDerivative) / MathTools.magnitude(entropyDerivative);
+
+                //System.out.println("Gradient comparison[" + magDiff + "]: " + cosCheck);
+
+                for (int i = 0; i < dimension; i++)
+                {
+                    entropyDerivative[i] += extraDerivative[i];
+                }
+
+                return entropyDerivative;
+            }
+            default:
+                throw new UnsupportedOperationException("Unknown target type.");
+        }
+    }
+
+    public double computeObjective(final FitPoint point_, final int endBlock_)
+    {
+        switch (_target)
+        {
+            case ENTROPY:
+            {
+                point_.computeUntil(endBlock_, BlockCalculationType.VALUE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.VALUE);
+                return aggregated.getEntropyMean();
+            }
+            case TIC:
+            {
+                // TODO: This is extremely inefficient.....
+                point_.computeUntil(endBlock_, BlockCalculationType.SECOND_DERIVATIVE);
+                final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+
+                final double entropy = secondDerivative.getEntropyMean();
+                final double entropyStdDev = secondDerivative.getEntropyMeanDev();
+                final double[] _gradient = secondDerivative.getDerivative();
+
+                final RealMatrix jMatrix = secondDerivative.getSecondDerivative();
+                final RealMatrix iMatrix = secondDerivative.getFisherInformation();
+
+                final SingularValueDecomposition jSvd = new SingularValueDecomposition(jMatrix);
+                final RealMatrix jInverse = jSvd.getSolver().getInverse();
+
+                final RealMatrix ticMatrix = jInverse.multiply(iMatrix);
+
+                double ticSum = 0.0;
+
+                for (int i = 0; i < ticMatrix.getRowDimension(); i++)
+                {
+                    final double ticTerm = ticMatrix.getEntry(i, i);
+                    ticSum += ticTerm;
+                }
+
+                final double tic = ticSum / point_.getSize();
+                return entropy + tic;
+            }
+            case ICE:
+            case ICE2:
+            {
+                point_.computeUntil(endBlock_, BlockCalculationType.FIRST_DERIVATIVE);
+                final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+
+                final double entropy = secondDerivative.getEntropyMean();
+
+                if (_target == OptimizationTarget.ICE2)
+                {
+                    final double iceSum2 = IceTools.computeIce2Sum(secondDerivative);
+                    final double iceAdjustment = iceSum2 / point_.getSize();
+                    return entropy + iceAdjustment;
+                }
+                else
+                {
+                    final double iceSum = IceTools.computeIceSum(secondDerivative);
+                    final double iceAdjustment = iceSum / point_.getSize();
+                    return entropy + iceAdjustment;
+                }
+            }
+            default:
+                throw new UnsupportedOperationException("Unknown target type.");
+        }
+    }
+
+    public double computeObjectiveStdDev(final FitPoint point_, final int endBlock_)
+    {
+        point_.computeUntil(endBlock_, BlockCalculationType.VALUE);
+        return point_.getAggregated(BlockCalculationType.VALUE).getEntropyMeanDev();
     }
 
 
@@ -36,17 +158,24 @@ public final class FitPointAnalyzer
      * @param b_
      * @return
      */
-    public double compareEntropies(final FitPoint a_, final FitPoint b_, final double minStdDev_)
+    public double compare(final FitPoint a_, final FitPoint b_, final double minStdDev_)
     {
+        if (a_ == b_)
+        {
+            // These are identical objects, the answer would always be zero.
+            return 0.0;
+        }
         if (a_.getBlockCount() != b_.getBlockCount())
         {
             throw new IllegalArgumentException("Incomparable points.");
         }
 
-        if (a_.getNextBlock() > b_.getNextBlock())
+        if (a_.getNextBlock(BlockCalculationType.VALUE) > b_.getNextBlock(BlockCalculationType.VALUE))
         {
-            return -1.0 * compareEntropies(b_, a_, minStdDev_);
+            return -1.0 * compare(b_, a_, minStdDev_);
         }
+
+        final BlockCalculationType valType = BlockCalculationType.VALUE;
 
         // b_ has at least as many values as a_
         final VarianceCalculator vcalc = new VarianceCalculator();
@@ -54,7 +183,7 @@ public final class FitPointAnalyzer
 
         for (int i = 0; i < a_.getBlockCount(); i++)
         {
-            if (i >= a_.getNextBlock())
+            if (i >= a_.getNextBlock(valType))
             {
                 if (i >= _superBlockSize && vcalc.getMean() != 0.0)
                 {
@@ -70,13 +199,13 @@ public final class FitPointAnalyzer
                 }
 
                 final int target = Math.min(i + _superBlockSize, a_.getBlockCount());
-                a_.computeUntil(target);
-                b_.computeUntil(target);
+                a_.computeUntil(target, valType);
+                b_.computeUntil(target, valType);
                 // OK, carry on now that data has been computed.
             }
 
-            final BlockResult a = a_.getBlock(i);
-            final BlockResult b = b_.getBlock(i);
+            final BlockResult a = a_.getBlock(i, valType);
+            final BlockResult b = b_.getBlock(i, valType);
 
             if (a.getRowStart() != b.getRowStart())
             {
@@ -93,7 +222,7 @@ public final class FitPointAnalyzer
             vcalc.update(diff);
         }
 
-        if (a_.getNextBlock() < 1)
+        if (a_.getNextBlock(valType) < 1)
         {
             // No data, can't tell which is better.
             return 0.0;
@@ -106,12 +235,18 @@ public final class FitPointAnalyzer
         {
             // Special case, can't do much else about the variance.
             // This is a considerable overestimate.
-            final double devA = a_.getBlock(0).getEntropyMeanDev();
-            final double devB = b_.getBlock(0).getEntropyMeanDev();
+            final double devA = a_.getBlock(0, valType).getEntropyMeanDev();
+            final double devB = b_.getBlock(0, valType).getEntropyMeanDev();
             dev = 0.5 * (devA + devB);
         }
 
-        final double zScore = meanDiff / dev;
+        // This is slightly rephrased in order to make later computations much easier.
+        final int nextBlock = Math.max(a_.getNextBlock(BlockCalculationType.VALUE),
+                b_.getNextBlock(BlockCalculationType.VALUE));
+        final double zScore = (computeObjective(a_, nextBlock) - computeObjective(b_, nextBlock)) / dev;
+
+
+        //final double zScore2 = meanDiff / dev;
         return zScore;
     }
 

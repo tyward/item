@@ -49,7 +49,7 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
     public static <S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> ItemCurveParams<R
             , T> polishCurveParameters(final ItemCurveFactory<R, T> factory_,
                                        final ItemSettings settings_, final QuantileStatistics dist_,
-                                       final R regressor_, final ItemCurveParams<R, T> params_)
+                                       final ItemCurveParams<R, T> params_)
     {
         if (params_.getEntryDepth() > 1)
         {
@@ -80,7 +80,8 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
             final double end = result.getValue();
             final double[] endPoint = result.getPointRef();
 
-            LOG.info("Polish run completed (" + start + " -> " + end + ")[" + optim.getIterations() + "]: " + Arrays.toString(rawParams) + " -> " + Arrays.toString(endPoint));
+            LOG.info("Polish run completed (" + start + " -> " + end + ")[" + optim.getIterations() + "]: " + Arrays
+                    .toString(rawParams) + " -> " + Arrays.toString(endPoint));
 
             if (end < start)
             {

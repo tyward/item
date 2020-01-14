@@ -24,11 +24,9 @@ import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
 import edu.columbia.tjw.item.util.LogUtil;
-import edu.columbia.tjw.item.util.MathTools;
 import edu.columbia.tjw.item.util.MultiLogistic;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -42,12 +40,18 @@ import java.util.logging.Logger;
  * @param <T> The curve type for this model
  * @author tyler
  */
-public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Cloneable
+public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+        implements Cloneable
 {
     private static final Logger LOG = LogUtil.getLogger(ItemModel.class);
     private final double ROUNDING_TOLERANCE = 1.0e-8;
     private final LogLikelihood<S> _likelihood;
+
+    // We need both params and packed because in some cases we will want derivatives with respect to only subsets of
+    // the parameters. However, we allow users to specify only one or the other, so they are guaranteed consistent at
+    // this point.
     private final ItemParameters<S, R, T> _params;
+    private final PackedParameters<S, R, T> _packed;
 
     private final double[][] _betas;
     private final int _reachableSize;
@@ -55,7 +59,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double[] _rawRegWorkspace;
     private final double[] _regWorkspace;
     private final double[] _probWorkspace;
-    private final double[] _actualProbWorkspace;
+    private final double[] _psDerivativeWorkspace;
 
     /**
      * Create a new item model from its parameters.
@@ -64,16 +68,26 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      */
     public ItemModel(final ItemParameters<S, R, T> params_)
     {
+        this(params_, params_.generatePacked());
+    }
+
+    public ItemModel(final PackedParameters<S, R, T> packed_)
+    {
+        // We need to clone here so that nobody can be adjusting our packed params from outside.
+        this(packed_.generateParams(), packed_.clone());
+    }
+
+    private ItemModel(final ItemParameters<S, R, T> params_, PackedParameters<S, R, T> packed_)
+    {
         synchronized (this)
         {
-            //This is synchronized so that clone may safely be called by any thread. 
-            //In this way, we can generate models that are detached form one another, 
+            //This is synchronized so that clone may safely be called by any thread.
+            //In this way, we can generate models that are detached from one another,
             //and may safely be used simultaneously in different threads without requiring
-            //any additiona synchronization. 
+            //any additional synchronization.
             _params = params_;
+            _packed = packed_;
             final S status = params_.getStatus();
-
-            //_reachable = status.getReachable();
             _betas = params_.getBetas();
             _reachableSize = status.getReachableCount();
 
@@ -84,9 +98,10 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _rawRegWorkspace = new double[params_.getUniqueRegressors().size()];
             _regWorkspace = new double[entryCount];
             _probWorkspace = new double[_reachableSize];
-            _actualProbWorkspace = new double[_reachableSize];
+            _psDerivativeWorkspace = new double[_packed.size()];
         }
     }
+
 
     public S getStatus()
     {
@@ -96,6 +111,11 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     public final ItemParameters<S, R, T> getParams()
     {
         return _params;
+    }
+
+    public int getDerivativeSize()
+    {
+        return _packed.size();
     }
 
     /**
@@ -124,7 +144,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return logLikelihood;
     }
 
-    public double computeEntryWeight(final double[] rawRegressors_, final int entry_)
+    private double computeEntryWeight(final double[] rawRegressors_, final int entry_)
     {
         if (rawRegressors_.length != _rawRegWorkspace.length)
         {
@@ -143,7 +163,8 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             if (null == curve)
             {
                 weight *= rawReg;
-            } else
+            }
+            else
             {
                 weight *= curve.transform(rawReg);
             }
@@ -160,7 +181,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
      * @param entry_
      * @param powerScoreOutput_
      */
-    public void addEntryPowerScores(final double[] rawRegressors_, final int entry_, final double[] powerScoreOutput_)
+    private void addEntryPowerScores(final double[] rawRegressors_, final int entry_, final double[] powerScoreOutput_)
     {
         if (powerScoreOutput_.length != _betas.length)
         {
@@ -192,72 +213,28 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
-    /**
-     * This will take packed probabilities (only the reachable states for this
-     * status), and fill out a vector of unpacked probabilities (all statuses
-     * are represented).
-     *
-     * @param packed_   The probabilities for reachable statuses. (input)
-     * @param unpacked_ A vector to hold the probabilities for all statuses.
-     *                  Unreachable statuses will get 0.0.
-     */
-    public void unpackProbabilities(final double[] packed_, final double[] unpacked_)
+
+    public void computeGradient(final ParamFittingGrid<S, R, T> grid_,
+                                final int index_, final double[] derivative_,
+                                final double[] jDiag_, final double[][] secondDerivative_)
     {
-        final S status = getStatus();
-        //final List<S> reachable = status.getReachable();
-        final int reachableCount = status.getReachableCount();
-        final int statCount = status.getFamily().size();
+        final int dimension = _packed.size();
 
-        if (packed_.length != reachableCount)
+        if (derivative_.length != dimension)
         {
-            throw new IllegalArgumentException("Input is the wrong size: " + packed_.length);
-        }
-        if (unpacked_.length != statCount)
-        {
-            throw new IllegalArgumentException("Output is the wrong size: " + packed_.length);
+            throw new IllegalArgumentException("Derivative size mismatch.");
         }
 
-        Arrays.fill(unpacked_, 0.0);
-        double sum = 0.0;
-
-        for (int i = 0; i < statCount; i++)
-        {
-            final int reachableOrdinal = _likelihood.ordinalToOffset(i);
-
-            if (reachableOrdinal < 0)
-            {
-                unpacked_[i] = 0.0;
-                continue;
-            }
-
-            final double prob = packed_[reachableOrdinal];
-            sum += prob;
-            unpacked_[i] = prob;
-        }
-
-        final double diff = Math.abs(sum - 1.0);
-
-        if (!(diff < ROUNDING_TOLERANCE))
-        {
-            throw new IllegalArgumentException("Rounding tolerance exceeded by probability vector: " + diff);
-        }
-    }
-
-    public void computeGradient(final ParamFittingGrid<S, R, T> grid_, PackedParameters<S, R, T> packed_,
-                                final int index_, final double[] derivative_, final double[][] secondDerivative_)
-    {
-        final int dimension = packed_.size();
-        final double[] computed = _probWorkspace;
-        final double[] actual = _actualProbWorkspace;
+        final double[] modelProbabilities = _probWorkspace;
+        final double[] powerScoreDerivatives = _psDerivativeWorkspace;
         final double[] entryWeights = _regWorkspace;
         final double[] rawReg = _rawRegWorkspace;
-        final List<S> reachable = getParams().getStatus().getReachable();
 
         //We inline a bunch of these calcs to reduce duplication of effort.
         grid_.getRegressors(index_, rawReg);
         this.fillEntryWeights(rawReg, entryWeights);
-        rawPowerScores(entryWeights, computed);
-        MultiLogistic.multiLogisticFunction(computed, computed);
+        rawPowerScores(entryWeights, modelProbabilities);
+        MultiLogistic.multiLogisticFunction(modelProbabilities, modelProbabilities);
 
         // don't loop over this stuff, just do the one transition we know happened.
         final int actualTransition = grid_.getNextStatus(index_);
@@ -270,67 +247,294 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
 
         // d -ln(L) = - dL / L, so scale = -1/L
-        final double computedProbability = computed[actualOffset];
+        final double computedProbability = modelProbabilities[actualOffset];
         //final double entropy = LogLikelihood.calcEntropy(computedProbability);
         final double scale = -1.0 / computedProbability;
 
-        for (int k = 0; k < packed_.size(); k++)
+        for (int k = 0; k < dimension; k++)
         {
-            final int entry = packed_.getEntry(k);
-            final boolean isBetaDerivative = packed_.isBeta(k);
-            final int derivToStatus = packed_.getTransition(k);
+            final int entry = _packed.getEntry(k);
+            final boolean isBetaDerivative = _packed.isBeta(k);
+            final int derivToStatus = _packed.getTransition(k);
             final double delta;
 
             if (derivToStatus == actualOffset)
             {
                 delta = 1.0;
-            } else
+            }
+            else
             {
                 delta = 0.0;
             }
 
             // This is common whether we are taking deriv w.r.t. w or beta.
-            final double derivCore = (delta - computed[derivToStatus]) * computedProbability;
+            final double derivCore = (delta - modelProbabilities[derivToStatus]) * computedProbability;
             final double entryWeight = this.computeEntryWeight(rawReg, entry);
-            final double deriv;
+
+            if (entryWeight != entryWeights[entry])
+            {
+                throw new IllegalStateException("Error.");
+            }
+
+            final double pDeriv;
 
             if (isBetaDerivative)
             {
-                deriv = entryWeight * derivCore;
-            } else
+                pDeriv = entryWeight;
+            }
+            else
             {
                 // This is a derivative w.r.t. one of the elements of the weight.
                 // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
-                //final double entryBeta = packed_.getParameter(k);
-                final double entryBeta = this._params.getBeta(derivToStatus, entry);
-                final int curveDepth = packed_.getDepth(k);
-                final ItemCurve<T> curve = _params.getEntryCurve(entry, curveDepth);
+                final double entryBeta2 = _packed.getEntryBeta(k);
 
-                final int regOffset = _params.getEntryRegressorOffset(entry, curveDepth);
-                final double reg = rawReg[regOffset];
-
-                final int curveParamIndex = packed_.getCurveIndex(k);
-
-                final double curveValue = curve.transform(reg);
-                final double curveDeriv = curve.derivative(curveParamIndex, reg);
-
-                if (curveDeriv == 0.0)
-                {
-                    // Dealing with some special over/underflow cases.
-                    deriv = 0.0;
-                } else
-                {
-                    final double valRatio = curveDeriv / curveValue;
-
-                    final double dw = entryWeight * valRatio;
-                    deriv = entryBeta * derivCore * dw;
-                }
+                final double dw2 = computeWeightDerivative(rawReg, k, entryWeight, entry);
+                pDeriv = entryBeta2 * dw2;
             }
 
-            derivative_[k] = scale * deriv;
+            powerScoreDerivatives[k] = pDeriv;
+            derivative_[k] = derivCore * pDeriv;
+        }
+
+        if (null != secondDerivative_ || null != jDiag_)
+        {
+            fillSecondDerivatives(rawReg, actualOffset, computedProbability,
+                    modelProbabilities,
+                    powerScoreDerivatives,
+                    derivative_, jDiag_, secondDerivative_);
+        }
+
+        // Rescale after we computed the second derivative, if applicable. We need dg more than we need d ln[g].
+        for (int k = 0; k < derivative_.length; k++)
+        {
+            derivative_[k] = derivative_[k] * scale;
+        }
+
+    }
+
+    private double computeWeightDerivative(final double[] x_, final int k, double entryWeight_,
+                                           final int entry_)
+    {
+        // This is a derivative w.r.t. one of the elements of the weight.
+        // N.B: We know the weight will only apply to a single transition, greatly simplifying the calculation.
+        //final double entryBeta = packed_.getParameter(k);
+        final int curveDepth = _packed.getDepth(k);
+        final ItemCurve<T> curve = _params.getEntryCurve(entry_, curveDepth);
+
+        final int regOffset = _params.getEntryRegressorOffset(entry_, curveDepth);
+        final double reg = x_[regOffset];
+
+        final int curveParamIndex = _packed.getCurveIndex(k);
+
+        final double curveValue = curve.transform(reg);
+        final double curveDeriv = curve.derivative(curveParamIndex, reg);
+
+        if (curveDeriv == 0.0)
+        {
+            // Dealing with some special over/underflow cases.
+            // This can't actually be zero.
+            return 0.0;
+        }
+        else
+        {
+            final double valRatio = curveDeriv / curveValue;
+
+            final double dw = entryWeight_ * valRatio;
+            return dw;
+        }
+    }
+
+
+    private void fillSecondDerivatives(final double[] x_, final int actualOffset_, final double computedProb,
+                                       final double[] modelProbabilities_, final double[] pDeriv_,
+                                       final double[] derivative_, final double[] jDiag_,
+                                       final double[][] secondDerivative_)
+    {
+        if (null != secondDerivative_ && secondDerivative_.length != derivative_.length)
+        {
+            throw new IllegalArgumentException("Mismatched sizes! " + secondDerivative_.length +
+                    " != " + derivative_.length);
+        }
+
+        // First step, fill the top half of the derivative matrix.
+        final double gk = computedProb;
+        final double gk2 = computedProb * computedProb;
+
+        for (int w = 0; w < derivative_.length; w++)
+        {
+            if (null != secondDerivative_ && secondDerivative_[w].length != derivative_.length)
+            {
+                throw new IllegalArgumentException("Mismatched sizes! " + secondDerivative_[w].length +
+                        " != " + derivative_.length);
+            }
+
+            final int wToStatus = _packed.getTransition(w);
+            final double gw = modelProbabilities_[wToStatus];
+            final double pw = pDeriv_[w];
+            final double dw = derivative_[w];
+            final int entryW = _packed.getEntry(w);
+            final double delta_wk;
+
+            if (wToStatus == actualOffset_)
+            {
+                delta_wk = 1.0;
+            }
+            else
+            {
+                delta_wk = 0.0;
+            }
+
+            final double dm = (delta_wk - gw);
+
+            final int end;
+
+            if (secondDerivative_ != null)
+            {
+                end = derivative_.length;
+            }
+            else
+            {
+                end = w + 1;
+            }
+
+            for (int z = w; z < end; z++)
+            {
+                final int zToStatus = _packed.getTransition(z);
+                final double delta_wz;
+                final double pz = pDeriv_[z];
+                final double gz = modelProbabilities_[zToStatus];
+                final int entryZ = _packed.getEntry(z);
+
+                if (wToStatus == zToStatus)
+                {
+                    delta_wz = 1.0;
+                }
+                else
+                {
+                    delta_wz = 0.0;
+                }
+
+                final double dz = derivative_[z];
+
+                final double term1;
+
+                if (entryW != entryZ)
+                {
+                    term1 = 0.0;
+                }
+                else
+                {
+                    // N.B: We know wToStatus == zToStatus because their entries match and they have at least one curve
+                    // (otherwise both are betas, and this is zero).
+                    final double psd = powerScoreSecondDerivative(x_, w, z, wToStatus, entryW
+                    );
+
+                    // TODO: This minus sign seems stray.
+                    term1 = -psd * gk * dm;
+                }
+
+                final double term2 = pw * dz * dm;
+                final double term3 = pw * pz * gk * gw * (delta_wz - gz);
+                final double dwz = term1 + term2 + term3;
+
+                // Now compute the second derivative of the log likelihood, which is -dwz/gk + (dw * dz) / gk*gk
+                final double d2 = (-dwz / gk) + (dw * dz) / (gk2);
+
+                if (z == w)
+                {
+                    jDiag_[z] = -d2;
+                }
+
+                if (secondDerivative_ != null)
+                {
+                    // I don't know where the extra - sign comes from, but FD approx shows
+                    // that it's needed.
+                    secondDerivative_[w][z] = -d2;
+                    secondDerivative_[z][w] = -d2;
+                }
+            }
         }
 
 
+    }
+
+    private double powerScoreSecondDerivative(final double[] x_, final int w, final int z, final int toStatus_,
+                                              final int entry_)
+    {
+        final boolean isBetaW = _packed.isBeta(w);
+        final boolean isBetaZ = _packed.isBeta(z);
+
+        if (isBetaW && isBetaZ)
+        {
+            // This is a second derivative with respect to a beta (i.e. linear term), hence zero.
+            return 0.0;
+        }
+
+        final double entryWeight = this.computeEntryWeight(x_, entry_);
+
+        if (isBetaW)
+        {
+            // This is a single derivative w.r.t. a single curve and also its beta. Hence just the derivative w.r.t.
+            // the weights.
+            final double dw = computeWeightDerivative(x_, z, entryWeight, entry_);
+            return dw;
+        }
+        else if (isBetaZ)
+        {
+            // Same thing, just reversed.
+            final double dw = computeWeightDerivative(x_, w, entryWeight, entry_);
+            return dw;
+        }
+
+        // OK, neither of these is a beta derivative, both are on curves.
+        // Could use either w or z, get the same result.
+        final double entryBeta = _packed.getEntryBeta(w);
+        final int curveDepthW = _packed.getDepth(w);
+        final int curveDepthZ = _packed.getDepth(z);
+        final int curveParamW = _packed.getCurveIndex(w);
+        final int curveParamZ = _packed.getCurveIndex(z);
+
+        final ItemCurve<T> curveW = _params.getEntryCurve(entry_, curveDepthW);
+        final int regOffsetW = _params.getEntryRegressorOffset(entry_, curveDepthW);
+        final double regW = x_[regOffsetW];
+        final double curveValueW = curveW.transform(regW);
+
+        if (curveDepthW == curveDepthZ)
+        {
+            // This is a single derivative w.r.t. a single curve and also its beta. Hence just the derivative w.r.t.
+            // the weights.
+            final double curveSecondDeriv = curveW.secondDerivative(curveParamW, curveParamZ, regW);
+
+            if (curveSecondDeriv == 0.0)
+            {
+                return 0.0;
+            }
+
+            // Just replace the curve value with its second derivative in the entry.
+            return entryBeta * entryWeight * (curveSecondDeriv / curveValueW);
+        }
+        else
+        {
+            // These are different curves, need to swap out both of them.
+            final ItemCurve<T> curveZ = _params.getEntryCurve(entry_, curveDepthZ);
+            final int regOffsetZ = _params.getEntryRegressorOffset(entry_, curveDepthZ);
+            final double regZ = x_[regOffsetZ];
+            final double curveValueZ = curveZ.transform(regZ);
+
+            final double derivW = curveW.derivative(curveParamW, regW);
+            final double derivZ = curveZ.derivative(curveParamZ, regZ);
+
+            if (derivW == 0.0)
+            {
+                return 0.0;
+            }
+            if (derivZ == 0.0)
+            {
+                return 0.0;
+            }
+
+            return entryBeta * entryWeight * (derivW / curveValueW) * (derivZ / curveValueZ);
+        }
     }
 
     /**
@@ -364,7 +568,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return _betas.length;
     }
 
-    public void powerScores(final double[] regressors_, final double[] workspace_)
+    private void powerScores(final double[] regressors_, final double[] workspace_)
     {
         Arrays.fill(workspace_, 0.0);
 
@@ -399,14 +603,6 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         MultiLogistic.multiLogisticFunction(workspace_, workspace_);
     }
 
-    public double betaDerivative(final double[] regressors_, final double[] computedProbabilities_,
-                                 final int regressorIndex_, final int toStateIndex_, final int toStateBetaIndex_)
-    {
-        final double output = MultiLogistic.multiLogisticBetaDerivative(regressors_, computedProbabilities_,
-                regressorIndex_, toStateIndex_, toStateBetaIndex_);
-        return output;
-    }
-
     /**
      * Note that this method is synchronized. Therefore, it may be called from
      * any thread, and you are guaranteed to get a viable model within that
@@ -420,6 +616,9 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         //Yes, yes, this is bad form. However, this class is final and I don't feel like
         //making all its internal variables not-final so that I can use the proper clone
         //idiom.
-        return new ItemModel<>(this.getParams());
+
+        // N.B: It's OK for these models to share the packed params, since these are never modified or given out
+        // (were cloned in the initial construction), so _packed is effectively immutable here.
+        return new ItemModel<>(this._params, this._packed);
     }
 }

@@ -19,7 +19,6 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.util.LogUtil;
 
@@ -39,9 +38,9 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
     private final GoldenSectionOptimizer<MultivariatePoint, MultivariateDifferentiableFunction> _optimizer;
 
     public MultivariateOptimizer(final int blockSize_, int maxEvalCount_, final int loopEvalCount_,
-                                 final double thetaPrecision_)
+                                 final double thetaPrecision_, final OptimizationTarget target_)
     {
-        super(blockSize_, maxEvalCount_);
+        super(blockSize_, maxEvalCount_, target_);
 
         if (thetaPrecision_ < 0.0 || thetaPrecision_ > Math.PI)
         {
@@ -54,7 +53,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
         }
 
         _thetaPrecision = thetaPrecision_;
-        _optimizer = new GoldenSectionOptimizer<>(LINE_SEARCH_XTOL, LINE_SEARCH_YTOL, blockSize_, loopEvalCount_);
+        _optimizer = new GoldenSectionOptimizer<>(LINE_SEARCH_XTOL, LINE_SEARCH_YTOL, blockSize_, loopEvalCount_,
+                target_);
     }
 
     @Override
@@ -73,10 +73,9 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
         // Testing code.
         final FitPoint point = f_.evaluateGradient(startingPoint_);
-        point.computeUntil(point.getBlockCount());
-        final BlockResult aggregated = point.getAggregated();
+        final double[] derivative = this.getComparator().getDerivative(point);
 
-        final MultivariateGradient gradient = new MultivariateGradient(aggregated.getDerivative(), null);
+        final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
 
         final MultivariatePoint direction = new MultivariatePoint(gradient.getGradient());
         direction.scale(-1.0);
@@ -114,10 +113,9 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 if (!firstLoop)
                 {
                     final FitPoint point = f_.evaluateGradient(currentPoint);
-                    point.computeUntil(point.getBlockCount());
-                    final BlockResult aggregated = point.getAggregated();
+                    final double[] derivative = this.getComparator().getDerivative(point);
 
-                    final MultivariateGradient gradient = new MultivariateGradient(aggregated.getDerivative(), null);
+                    final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
 
                     evaluationCount += (2 * dimension);
 
@@ -126,7 +124,6 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
                     final MultivariatePoint pointA = new MultivariatePoint(gradient.getGradient());
                     pointA.scale(-1.0);
-
 
                     if (null == gradient.getSecondDerivative())
                     {
@@ -203,7 +200,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         }
                     }
 
-                    result = _optimizer.optimize(f_, currentPoint, fitPointCurrent, trialPoint, f_.evaluate(trialPoint));
+                    result = _optimizer
+                            .optimize(f_, currentPoint, fitPointCurrent, trialPoint, f_.evaluate(trialPoint));
                 }
                 else
                 {
@@ -220,13 +218,6 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 final double zScore = this.getComparator().compare(
                         fitPointCurrent, fitPointNext);
 
-//                final double currentVal = currentResult.getMean();
-//                final double nextVal = nextResult.getMean();
-//                if (nextVal >= currentVal)
-//                {
-//                    System.out.println("Unable to make progress.");
-//                    break;
-//                }
                 //LOG.info("Finished one line search: " + zScore);
                 if (zScore < STD_DEV_CUTOFF)
                 {
@@ -242,7 +233,6 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 stepMagnitude = currentPoint.distance(nextPoint);
                 currentPoint.copy(nextPoint);
                 currentResult = nextResult;
-                //currentFitPoint = fitPointNext;
             }
         }
         catch (final ConvergenceException e)

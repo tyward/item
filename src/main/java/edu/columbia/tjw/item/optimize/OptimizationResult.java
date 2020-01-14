@@ -32,7 +32,7 @@ public interface OptimizationResult<V extends EvaluationPoint<V>>
 
     public int evaluationCount();
 
-    public double minValue();
+    public double minEntropy();
 
     public FitPoint minResult();
 

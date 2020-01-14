@@ -42,7 +42,6 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     private final ParamFittingGrid<S, R, T> _grid;
     private final PackedParameters<S, R, T> _packed;
 
-    private ItemModel<S, R, T> _model;
 
     public LogisticModelFunction(
             final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_,
@@ -52,9 +51,8 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
 
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
 
-        _generator = new FitPointGenerator<S, R, T>(grid_);
+        _generator = new FitPointGenerator<>(grid_);
         _grid = grid;
-        _model = model_;
         _packed = packed_;
     }
 
@@ -110,14 +108,6 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
                 changed = true;
             }
         }
-
-        if (!changed)
-        {
-            return;
-        }
-
-        final ItemParameters<S, R, T> updated = _packed.generateParams();
-        _model = new ItemModel<>(updated);
     }
 
     @Override

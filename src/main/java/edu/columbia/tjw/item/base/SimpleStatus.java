@@ -19,10 +19,7 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.HashUtil;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * This is a simple fully connected status family generated from a set of names.
@@ -47,9 +44,56 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
         _indistinguishable = Collections.singletonList(this);
     }
 
-    public static EnumFamily<SimpleStatus> generateFamily(final Collection<String> regressorNames_)
+    /**
+     * Constructs a simple status family from the given enum family. The generated family matches names and ordinals
+     * exactly, but has lost any other information.
+     *
+     * @param underlying_
+     * @return
+     */
+    public static <V extends ItemStatus<V>> EnumFamily<SimpleStatus> generateFamily(final EnumFamily<V> underlying_,
+                                                                                    final Set<V> allowed_)
     {
-        final EnumFamily<SimpleStringEnum> baseFamily = SimpleStringEnum.generateFamily(regressorNames_);
+        final List<String> names = new ArrayList<>(underlying_.size());
+
+        for (final V next : underlying_.getMembers())
+        {
+//            if (!allowed_.contains(next))
+//            {
+//                continue;
+//            }
+
+            names.add(next.name());
+        }
+
+        EnumFamily<SimpleStatus> output = generateFamily(names);
+
+        for (SimpleStatus next : output.getMembers())
+        {
+            final String nextName = next.name();
+            final V orig = underlying_.getFromName(nextName);
+
+            List<SimpleStatus> reachable = new ArrayList<>();
+
+            for (final V nextReachable : orig.getReachable())
+            {
+                if (!allowed_.contains(nextReachable))
+                {
+                    continue;
+                }
+
+                reachable.add(output.getFromName(nextReachable.name()));
+            }
+
+            next._reachable = Collections.unmodifiableList(reachable);
+        }
+
+        return output;
+    }
+
+    public static EnumFamily<SimpleStatus> generateFamily(final Collection<String> statusNames_)
+    {
+        final EnumFamily<SimpleStringEnum> baseFamily = SimpleStringEnum.generateFamily(statusNames_);
 
         final SimpleStatus[] regs = new SimpleStatus[baseFamily.size()];
         int pointer = 0;
@@ -143,7 +187,7 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
     @Override
     public int getReachableCount()
     {
-        return _family.size();
+        return getReachable().size();
     }
 
     /**
@@ -173,5 +217,17 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
     public String toString()
     {
         return "SimpleStatus[" + name() + "]";
+    }
+
+
+    private Object readResolve()
+    {
+        if (this._family.getMembers() == null)
+        {
+            // Happens when the family is still being initialized.
+            return this;
+        }
+
+        return this._family.getFromOrdinal(this.ordinal());
     }
 }

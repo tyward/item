@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 
 /**
@@ -72,9 +73,15 @@ public class GeneralOptimizationResult<V extends EvaluationPoint<V>> implements 
     }
 
     @Override
-    public final double minValue()
+    public final double minEntropy()
     {
-        return _minResult.getMean(_minResult.getBlockCount());
+        if (_minResult.getNextBlock(BlockCalculationType.VALUE) < 1)
+        {
+            // If we really don't know the answer, just say so.
+            return Double.NaN;
+        }
+
+        return _minResult.getAggregated(BlockCalculationType.VALUE).getEntropyMean();
     }
 
     @Override

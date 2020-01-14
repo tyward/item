@@ -19,7 +19,10 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.HashUtil;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 
 /**
  * This is a simple regressor. Ideally, it's slightly cleaner to make your own
@@ -46,6 +49,31 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
     private SimpleRegressor(final SimpleStringEnum base_)
     {
         _base = base_;
+    }
+
+    /**
+     * Constructs a simple regressor family from the given enum family. The generated family matches names and ordinals
+     * exactly, but has lost any other information.
+     *
+     * @param underlying_
+     * @return
+     */
+    public static <V extends ItemRegressor<V>> EnumFamily<SimpleRegressor> generateFamily(
+            final EnumFamily<V> underlying_,
+            final Set<V> allowed_)
+    {
+        final List<String> names = new ArrayList<>(underlying_.size());
+
+        for (final V next : underlying_.getMembers())
+        {
+//            if (!allowed_.contains(next))
+//            {
+//                continue;
+//            }
+            names.add(next.name());
+        }
+
+        return generateFamily(names);
     }
 
     public static EnumFamily<SimpleRegressor> generateFamily(final Collection<String> regressorNames_)
@@ -142,4 +170,14 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
         return "SimpleRegressor[" + name() + "]";
     }
 
+    private Object readResolve()
+    {
+        if (this._family.getMembers() == null)
+        {
+            // Happens when the family is still being initialized.
+            return this;
+        }
+
+        return this._family.getFromOrdinal(this.ordinal());
+    }
 }

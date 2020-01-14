@@ -19,7 +19,9 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
+import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
 
 /**
  * @param <V> The type of points over which this can optimize
@@ -37,24 +39,26 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
     private final int _blockSize;
     private final int _maxEvalCount;
 
-    private final AdaptiveComparator<V, F> _comparator;
+    private final FitPointAnalyzer _comparator;
 
-    public Optimizer(final int blockSize_, final int maxEvalCount_)
+    public Optimizer(final int blockSize_, final int maxEvalCount_, final OptimizationTarget target_)
     {
-        this(DEFAULT_XTOL, DEFAULT_YTOL, blockSize_, maxEvalCount_);
+        this(DEFAULT_XTOL, DEFAULT_YTOL, blockSize_, maxEvalCount_, target_);
     }
 
-    public Optimizer(final double xTol_, final double yTol_, final int blockSize_, final int maxEvalCount_)
+    public Optimizer(final double xTol_, final double yTol_, final int blockSize_, final int maxEvalCount_,
+                     final OptimizationTarget target_)
     {
         _blockSize = blockSize_;
         _xTol = xTol_;
         _yTol = yTol_;
         _maxEvalCount = maxEvalCount_;
 
-        _comparator = new BasicAdaptiveComparator<>(_blockSize, _stdDevThreshold);
+        _comparator = new FitPointAnalyzer(_blockSize, _stdDevThreshold, target_);
     }
 
-    public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_) throws ConvergenceException;
+    public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_)
+            throws ConvergenceException;
 
     public double getXTolerance()
     {
@@ -76,7 +80,7 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         return _maxEvalCount;
     }
 
-    public AdaptiveComparator<V, F> getComparator()
+    public FitPointAnalyzer getComparator()
     {
         return _comparator;
     }
@@ -84,12 +88,13 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
     protected boolean checkYTolerance(final FitPoint aResult_, final FitPoint bResult_)
     {
         // Make sure everything has the same (approximate) level of computed results.
-        final int highWater = Math.max(aResult_.getNextBlock(), bResult_.getNextBlock());
-        final double meanA = aResult_.getMean(highWater);
-        final double meanB = bResult_.getMean(highWater);
+        final int highWater = Math.max(aResult_.getNextBlock(BlockCalculationType.VALUE),
+                bResult_.getNextBlock(BlockCalculationType.VALUE));
+        final double meanA = getComparator().computeObjective(aResult_, highWater);
+        final double meanB = getComparator().computeObjective(bResult_, highWater);
 
-        final double stdDevA = aResult_.getStdDev(highWater);
-        final double stdDevB = bResult_.getStdDev(highWater);
+        final double stdDevA = getComparator().computeObjectiveStdDev(aResult_, highWater);
+        final double stdDevB = getComparator().computeObjectiveStdDev(bResult_, highWater);
 
         final double raw = Math.abs(meanA - meanB);
         final double adjusted = raw + this._stdDevThreshold * (stdDevA + stdDevB);
@@ -107,11 +112,14 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
                                       final FitPoint cResult_)
     {
         // Make sure everything has the same (approximate) level of computed results.
-        int highWater = Math.max(aResult_.getNextBlock(), bResult_.getNextBlock());
-        highWater = Math.max(cResult_.getNextBlock(), highWater);
-        aResult_.computeUntil(highWater);
-        bResult_.computeUntil(highWater);
-        cResult_.computeUntil(highWater);
+        final BlockCalculationType valType = BlockCalculationType.VALUE;
+
+        int highWater = Math.max(aResult_.getNextBlock(valType),
+                bResult_.getNextBlock(valType));
+        highWater = Math.max(cResult_.getNextBlock(valType), highWater);
+        aResult_.computeUntil(highWater, valType);
+        bResult_.computeUntil(highWater, valType);
+        cResult_.computeUntil(highWater, valType);
 
         final boolean checkA = checkYTolerance(aResult_, bResult_);
         final boolean checkB = checkYTolerance(bResult_, cResult_);

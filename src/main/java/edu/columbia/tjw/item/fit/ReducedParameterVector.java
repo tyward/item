@@ -11,7 +11,8 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     private final int[] _keepIndices;
     private final PackedParameters<S, R, T> _underlying;
 
-    private ReducedParameterVector(final ReducedParameterVector<S, R, T> cloneFrom_) {
+    private ReducedParameterVector(final ReducedParameterVector<S, R, T> cloneFrom_)
+    {
         _keepIndices = cloneFrom_._keepIndices;
         _underlying = cloneFrom_._underlying.clone();
     }
@@ -98,6 +99,12 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     }
 
     @Override
+    public double getEntryBeta(int index_)
+    {
+        return _underlying.getEntryBeta(translate(index_));
+    }
+
+    @Override
     public boolean isBeta(int index_)
     {
         return _underlying.isBeta(translate(index_));
@@ -156,7 +163,8 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
         return _keepIndices[index_];
     }
 
-    public PackedParameters<S, R, T> clone() {
+    public PackedParameters<S, R, T> clone()
+    {
         return new ReducedParameterVector<S, R, T>(this);
     }
 }
