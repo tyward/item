@@ -30,19 +30,22 @@ public class ItemFitterTest
     {
     }
 
-    @Test
-    void confirmationTest() throws Exception
-    {
-        final ItemFittingGrid<SimpleStatus, SimpleRegressor> grid = loadData("/tmp/rawGrid.dat");
-        final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params = loadParams("/tmp/rawModel.dat");
-        final EntropyCalculator<SimpleStatus, SimpleRegressor, StandardCurveType> calc = new EntropyCalculator<>(grid);
-
-        final FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = calc.computeFitResult(params, null);
-
-        final GradientResult gradientResult = calc.computeGradients(params);
-
-        System.out.println("Result: " + result);
-    }
+//    @Test
+//    void confirmationTest() throws Exception
+//    {
+//        final ItemFittingGrid<SimpleStatus, SimpleRegressor> grid = loadData("/tmp/rawGrid.dat");
+//        final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params = loadParams("/tmp/rawModel
+//        .dat");
+//        final EntropyCalculator<SimpleStatus, SimpleRegressor, StandardCurveType> calc = new EntropyCalculator<>
+//        (grid);
+//
+//        final FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = calc.computeFitResult(params,
+//        null);
+//
+//        final GradientResult gradientResult = calc.computeGradients(params);
+//
+//        System.out.println("Result: " + result);
+//    }
 
     @Test
     void basicTest() throws Exception
