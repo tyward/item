@@ -70,7 +70,6 @@ public final class IceTools
 
         // TODO: Fix this, we have no way to get this number here, so hard coding it.
         final double logM = Math.log(3) * resultBlock_.getSize();
-        //final double iceBalance = 1.0 / (logM + _params.getEffectiveParamCount());
         final double iceBalance = 1.0 / logM;
 
         double iceSum2 = 0.0;

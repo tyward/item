@@ -150,7 +150,7 @@ class ItemModelTest
             else
             {
                 // Doesn't really matter what we put here...
-                shiftSize = h;
+                shiftSize = 1.0e-2;
             }
 
             final PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> repacked = origPacked.clone();
@@ -248,7 +248,7 @@ class ItemModelTest
                 else
                 {
                     // Doesn't really matter what we put here...
-                    shiftSize = h;
+                    shiftSize = 1.0e-2;
                 }
 
                 testBeta[i] = testBeta[i] + shiftSize;

@@ -103,7 +103,7 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
             else
             {
                 // Doesn't really matter what we put here...
-                shiftSize = h;
+                shiftSize = 1.0e-2;
             }
 
             final PackedParameters<S, R, T> repacked = origPacked.clone();
