@@ -16,6 +16,7 @@
 package edu.columbia.tjw.item.base;
 
 import edu.columbia.tjw.item.ItemRegressor;
+import edu.columbia.tjw.item.util.AbstractEnumMember;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.HashUtil;
 
@@ -38,16 +39,17 @@ import java.util.Set;
  *
  * @author tyler
  */
-public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
+public final class SimpleRegressor extends AbstractEnumMember<SimpleRegressor> implements ItemRegressor<SimpleRegressor>
 {
     private static final int CLASS_HASH = HashUtil.startHash(SimpleRegressor.class);
-    private static final long serialVersionUID = 0x8787a642d5713061L;
+    private static final long serialVersionUID = 0x5d7e6fbd7c93394fL;
 
     private final SimpleStringEnum _base;
     private EnumFamily<SimpleRegressor> _family;
 
     private SimpleRegressor(final SimpleStringEnum base_)
     {
+        super(base_.ordinal(), base_.name(), base_.hashCode());
         _base = base_;
     }
 
@@ -89,7 +91,7 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
             regs[pointer++] = nextReg;
         }
 
-        final EnumFamily<SimpleRegressor> family = new EnumFamily<>(regs, false);
+        final EnumFamily<SimpleRegressor> family = EnumFamily.generateFamily(regs, false);
 
         for (final SimpleRegressor reg : regs)
         {
@@ -97,18 +99,6 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
         }
 
         return family;
-    }
-
-    @Override
-    public String name()
-    {
-        return _base.name();
-    }
-
-    @Override
-    public int ordinal()
-    {
-        return _base.ordinal();
     }
 
     @Override
@@ -123,61 +113,8 @@ public final class SimpleRegressor implements ItemRegressor<SimpleRegressor>
     }
 
     @Override
-    public int hashCode()
-    {
-        return HashUtil.mix(CLASS_HASH, _base.hashCode());
-    }
-
-    @Override
-    public boolean equals(final Object other_)
-    {
-        if (this == other_)
-        {
-            return true;
-        }
-        if (null == other_)
-        {
-            return false;
-        }
-        if (this.getClass() != other_.getClass())
-        {
-            return false;
-        }
-
-        final SimpleRegressor that = (SimpleRegressor) other_;
-
-        return this._base.equals(that._base);
-    }
-
-    @Override
-    public int compareTo(final SimpleRegressor that_)
-    {
-        if (this == that_)
-        {
-            return 0;
-        }
-        if (null == that_)
-        {
-            return 1;
-        }
-
-        return this._base.compareTo(that_._base);
-    }
-
-    @Override
     public String toString()
     {
         return "SimpleRegressor[" + name() + "]";
-    }
-
-    private Object readResolve()
-    {
-        if (this._family.getMembers() == null)
-        {
-            // Happens when the family is still being initialized.
-            return this;
-        }
-
-        return this._family.getFromOrdinal(this.ordinal());
     }
 }

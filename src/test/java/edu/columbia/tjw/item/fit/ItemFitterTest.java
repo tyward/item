@@ -14,6 +14,8 @@ import edu.columbia.tjw.item.util.random.RandomTool;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -65,14 +67,14 @@ public class ItemFitterTest
         Assertions.assertEquals(0.1903583318861118, r3.getEntropy());
 
 
-//        final File outputDir = new File("/Users/tyler/Documents/code/outputModels");
-//        final File dataFile = new File(outputDir, "test_model_small.dat");
-//        result.getParams().writeToStream(new FileOutputStream(dataFile));
-//
-//        final File dataFileMed = new File(outputDir, "test_model_medium.dat");
-//        r3.getParams().writeToStream(new FileOutputStream(dataFileMed));
-//
-//        System.out.println("Done!");
+        final File outputDir = new File("/Users/tyler/Documents/code/outputModels");
+        final File dataFile = new File(outputDir, "test_model_small.dat");
+        result.getParams().writeToStream(new FileOutputStream(dataFile));
+
+        final File dataFileMed = new File(outputDir, "test_model_medium.dat");
+        r3.getParams().writeToStream(new FileOutputStream(dataFileMed));
+
+        System.out.println("Done!");
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 

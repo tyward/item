@@ -79,11 +79,16 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
 
     public GradientResult computeGradients(final ItemParameters<S, R, T> params_)
     {
+        final PackedParameters<S, R, T> origPacked = params_.generatePacked();
+        return computeGradients(origPacked);
+    }
+
+    public GradientResult computeGradients(final PackedParameters<S, R, T> origPacked_)
+    {
         final FitPointAnalyzer analyzer = new FitPointAnalyzer(_settings.getBlockSize(), 5.0, _settings.getTarget());
-        final FitPoint point = _calc.generatePoint(params_);
+        final FitPoint point = _calc.generatePoint(origPacked_);
         final double objective = analyzer.computeObjective(point, point.getBlockCount());
         final double[] grad = analyzer.getDerivative(point);
-        final PackedParameters<S, R, T> origPacked = params_.generatePacked();
 
         final int dimension = grad.length;
         final double gradEpsilon = EPSILON * MathTools.maxAbsElement(grad);
@@ -106,8 +111,8 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
                 shiftSize = 1.0e-2;
             }
 
-            final PackedParameters<S, R, T> repacked = origPacked.clone();
-            repacked.setParameter(i, origPacked.getParameter(i) + shiftSize);
+            final PackedParameters<S, R, T> repacked = origPacked_.clone();
+            repacked.setParameter(i, origPacked_.getParameter(i) + shiftSize);
             final FitPoint shiftPoint = _calc.generatePoint(repacked.generateParams());
 
             final double shiftObjective = analyzer.computeObjective(shiftPoint, shiftPoint.getBlockCount());

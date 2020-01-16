@@ -33,7 +33,7 @@ public enum SplineCurveType implements ItemCurveType<SplineCurveType>
     STEP(2),
     BASIS(2);
 
-    public static final EnumFamily<SplineCurveType> FAMILY = new EnumFamily<>(values());
+    public static final EnumFamily<SplineCurveType> FAMILY = EnumFamily.generateFamily(values());
 
     private final int _paramCount;
 

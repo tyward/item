@@ -77,6 +77,12 @@ public final class HashTool
         return output;
     }
 
+    public String doHashString()
+    {
+        final byte[] hashBytes = doHash();
+        return ByteTool.bytesToHex(hashBytes);
+    }
+
     public long doHashLong()
     {
         final byte[] hash = doHash();

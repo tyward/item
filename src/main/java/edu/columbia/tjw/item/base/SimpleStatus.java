@@ -16,8 +16,8 @@
 package edu.columbia.tjw.item.base;
 
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.util.AbstractEnumMember;
 import edu.columbia.tjw.item.util.EnumFamily;
-import edu.columbia.tjw.item.util.HashUtil;
 
 import java.util.*;
 
@@ -26,10 +26,9 @@ import java.util.*;
  *
  * @author tyler
  */
-public class SimpleStatus implements ItemStatus<SimpleStatus>
+public class SimpleStatus extends AbstractEnumMember<SimpleStatus> implements ItemStatus<SimpleStatus>
 {
-    private static final int CLASS_HASH = HashUtil.startHash(SimpleStatus.class);
-    private static final long serialVersionUID = 0x8787a642d5713061L;
+    private static final long serialVersionUID = 0x66aa83672f316542L;
 
     private final SimpleStringEnum _base;
     private final List<SimpleStatus> _indistinguishable;
@@ -40,6 +39,7 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
 
     private SimpleStatus(final SimpleStringEnum base_)
     {
+        super(base_.ordinal(), base_.name(), base_.hashCode());
         _base = base_;
         _indistinguishable = Collections.singletonList(this);
     }
@@ -58,11 +58,6 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
 
         for (final V next : underlying_.getMembers())
         {
-//            if (!allowed_.contains(next))
-//            {
-//                continue;
-//            }
-
             names.add(next.name());
         }
 
@@ -104,7 +99,7 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
             regs[pointer++] = nextReg;
         }
 
-        final EnumFamily<SimpleStatus> family = new EnumFamily<>(regs, false);
+        final EnumFamily<SimpleStatus> family = EnumFamily.generateFamily(regs, false);
 
         for (final SimpleStatus reg : regs)
         {
@@ -112,18 +107,6 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
         }
 
         return family;
-    }
-
-    @Override
-    public String name()
-    {
-        return _base.name();
-    }
-
-    @Override
-    public int ordinal()
-    {
-        return _base.ordinal();
     }
 
     @Override
@@ -135,48 +118,6 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
     private void setFamily(final EnumFamily<SimpleStatus> family_)
     {
         _family = family_;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return HashUtil.mix(CLASS_HASH, _base.hashCode());
-    }
-
-    @Override
-    public boolean equals(final Object other_)
-    {
-        if (this == other_)
-        {
-            return true;
-        }
-        if (null == other_)
-        {
-            return false;
-        }
-        if (this.getClass() != other_.getClass())
-        {
-            return false;
-        }
-
-        final SimpleStatus that = (SimpleStatus) other_;
-
-        return this._base.equals(that._base);
-    }
-
-    @Override
-    public int compareTo(final SimpleStatus that_)
-    {
-        if (this == that_)
-        {
-            return 0;
-        }
-        if (null == that_)
-        {
-            return 1;
-        }
-
-        return this._base.compareTo(that_._base);
     }
 
     /**
@@ -217,17 +158,5 @@ public class SimpleStatus implements ItemStatus<SimpleStatus>
     public String toString()
     {
         return "SimpleStatus[" + name() + "]";
-    }
-
-
-    private Object readResolve()
-    {
-        if (this._family.getMembers() == null)
-        {
-            // Happens when the family is still being initialized.
-            return this;
-        }
-
-        return this._family.getFromOrdinal(this.ordinal());
     }
 }

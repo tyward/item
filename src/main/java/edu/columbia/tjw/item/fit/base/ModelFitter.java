@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FitResult;
+import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
@@ -111,9 +112,12 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     {
         FitResult<S, R, T> current = fitResult_;
 
+        double[] gradient = null;
+
         for (int i = 0; i < current.getParams().getEntryCount(); i++)
         {
             final ItemParameters<S, R, T> base = current.getParams();
+            final PackedParameters<S, R, T> basePacked = base.generatePacked();
 
             if (i == base.getInterceptIndex())
             {
@@ -121,9 +125,42 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             }
 
             final ItemParameters<S, R, T> reduced = base.dropIndex(i);
+            final S statusRestrict = base.getEntryStatusRestrict(i);
+            final PackedParameters<S, R, T> packed = reduced.generatePacked();
 
+            if (null != statusRestrict)
+            {
+                final int statusIndex = base.getStatus().getReachable().indexOf(statusRestrict);
+                final double dropBeta = base.getBeta(statusIndex, i);
+
+                if (Math.abs(dropBeta) > 8.0)
+                {
+                    if (null == gradient)
+                    {
+                        gradient = this.getCalculator().computeGradients(basePacked).getGradient();
+                    }
+
+                    final int betaIndex = basePacked.findBetaIndex(statusIndex, i);
+                    final int interceptIndex = basePacked.findBetaIndex(statusIndex, base.getInterceptIndex());
+                    final double gradBeta = gradient[betaIndex];
+                    final double gradIntercept = gradient[interceptIndex];
+
+                    // We think that beta * gradBeta / gradIntercept  is an adjustment to bring the intercept into
+                    // alignment with the zero beta case.
+                    final double interceptAdjustment = -dropBeta * gradBeta / gradIntercept;
+
+                    final int targetIndex = packed.findBetaIndex(statusIndex, base.getInterceptIndex());
+                    final double existing = packed.getParameter(targetIndex);
+                    final double updated = existing - interceptAdjustment;
+                    packed.setParameter(targetIndex, updated);
+
+                    // This should start us off with something that won't overflow, and we can optimize from there.
+                }
+
+
+            }
             // Try to recalibrate everything, don't short-circuit if we see worse results.
-            final FitResult<S, R, T> refit = _base.doFit(reduced.generatePacked(), current, false);
+            final FitResult<S, R, T> refit = _base.doFit(packed, current, false);
             final double aicDiff = refit.getInformationCriterionDiff();
 
             // Check to see if the reduced model is good enough that we would not be able to add this entry (i.e.

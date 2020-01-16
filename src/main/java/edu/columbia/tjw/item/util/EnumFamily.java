@@ -19,8 +19,7 @@
  */
 package edu.columbia.tjw.item.util;
 
-import edu.columbia.tjw.item.util.random.RandomTool;
-
+import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.util.*;
@@ -34,16 +33,7 @@ import java.util.*;
  */
 public final class EnumFamily<V extends EnumMember<V>> implements Serializable
 {
-    //private static final long serialVersionUID = 0x461722f9fc29060cL;
     private static final long serialVersionUID = 2720474101494526203L;
-
-    // This map last forever, mapping the class name to a GUID for the family.
-    // This also serves as the internal state mutex.
-    private static final Map<String, String> CLASS_MAP = new HashMap<>();
-
-    // This is a weak hash map, allowing items to be garbage collected when no longer 
-    // needed , but enforcing uniformity across instances otherwise.
-    private static final WeakHashMap<String, WeakReference<EnumFamily>> GUID_MAP = new WeakHashMap<>();
 
     private final V[] _members;
     private final SortedSet<V> _memberSet;
@@ -52,9 +42,9 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
     private final boolean _distinctFamily;
     private final String _familyGUID;
 
-    public EnumFamily(final V[] values_)
+    public static <V extends EnumMember<V>> EnumFamily<V> generateFamily(final V[] values_)
     {
-        this(values_, true);
+        return generateFamily(values_, true);
     }
 
     /**
@@ -65,29 +55,79 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
      *                        EnumFamily.
      */
     @SuppressWarnings("unchecked")
-    public EnumFamily(final V[] values_, final boolean distinctFamily_)
+    public static <V extends EnumMember<V>> EnumFamily<V> generateFamily(final V[] values_,
+                                                                         final boolean distinctFamily_)
     {
-        if (values_.length < 1)
+        synchronized (EnumFamilyRegistry.class)
         {
-            throw new IllegalArgumentException("Values must have positive length.");
-        }
-        for (final V value : values_)
-        {
-            if (null == value)
+            if (values_.length < 1)
             {
-                throw new NullPointerException("Enum members cannot be null.");
+                throw new IllegalArgumentException("Values must have positive length.");
             }
-        }
 
+            final SortedSet<V> memberSet = Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(values_)));
+
+            if (values_.length != memberSet.size())
+            {
+                throw new IllegalArgumentException("Members are not distinct!");
+            }
+
+            final Class<? extends V> componentClass = (Class<? extends V>) values_[0].getClass();
+
+            for (final V next : values_)
+            {
+                if (next.getClass() != componentClass)
+                {
+                    throw new ClassCastException("Members must all be the same class.");
+                }
+            }
+
+            final String familyGuid;
+            final HashTool tool = new HashTool();
+            tool.updateString(componentClass.getName());
+
+            if (distinctFamily_)
+            {
+                familyGuid = tool.doHashString();
+            }
+            else
+            {
+//                if (!AbstractEnumMember.class.isAssignableFrom(componentClass))
+//                {
+//                    throw new ClassCastException(
+//                            "Non distinct families must descen from " + AbstractEnumMember.class.getName());
+//                }
+
+                for (final V member : memberSet)
+                {
+                    tool.updateString(member.name());
+                    tool.updateLong(member.hashCode());
+                }
+
+                // If we have the same elements in the same order for the same class, this family will be viewed as
+                // identical.
+                familyGuid = tool.doHashString();
+            }
+
+
+            final EnumFamily<V> existing = EnumFamilyRegistry.lookupFamily(familyGuid, componentClass);
+
+            if (null != existing)
+            {
+                return existing;
+            }
+
+            return new EnumFamily<>(values_, memberSet, componentClass, familyGuid, distinctFamily_);
+        }
+    }
+
+
+    private EnumFamily(final V[] values_, final SortedSet<V> memberSet_,
+                       final Class<? extends V> componentClass_, String familyGuid_, final boolean distinctFamily_)
+    {
         _distinctFamily = distinctFamily_;
         _members = values_.clone();
-        _memberSet = Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(_members)));
-
-        if (_members.length != _memberSet.size())
-        {
-            throw new IllegalArgumentException("Members are not distinct!");
-        }
-
+        _memberSet = memberSet_;
         _nameMap = new HashMap<>();
         int pointer = 0;
 
@@ -102,104 +142,21 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
         }
 
         //we actually know that this cast is valid, provided values is actually of type V. 
-        _componentClass = (Class<? extends V>) _members[0].getClass();
+        _componentClass = componentClass_;
+        this._familyGUID = familyGuid_;
 
-        if (distinctFamily_)
-        {
-            this._familyGUID = _componentClass.getName();
-            registerFamilyForClass(_componentClass, this);
-        }
-        else
-        {
-            this._familyGUID = RandomTool.randomString(16);
-            registerFamily(this);
-        }
-
+        EnumFamilyRegistry.registerFamily(this);
     }
 
     @SuppressWarnings("unchecked")
-    public static <V extends EnumMember<V>> EnumFamily<V> getFamilyFromClass(final Class<? extends V> familyClass_,
-                                                                             final boolean throwOnMissing_)
+    public <W extends EnumMember<W>> EnumFamily<W> castFamily(final Class<? extends W> componentClass_)
     {
-        synchronized (CLASS_MAP)
+        if (_componentClass == componentClass_)
         {
-            final String guid = CLASS_MAP.get(familyClass_.getName());
-
-            if (null == guid && throwOnMissing_)
-            {
-                throw new IllegalArgumentException("No family for class: " + familyClass_);
-            }
-
-            final EnumFamily<V> family = (EnumFamily<V>) lookupFamily(guid);
-
-            if (null == family && throwOnMissing_)
-            {
-                throw new IllegalArgumentException("No family for class: " + familyClass_);
-            }
-
-            return family;
-        }
-    }
-
-    private static <V extends EnumMember<V>> void registerFamilyForClass(final Class<? extends V> familyClass_,
-                                                                         final EnumFamily<V> family_)
-    {
-        if (null == familyClass_ || null == family_)
-        {
-            throw new NullPointerException("Cannot be null.");
+            return (EnumFamily<W>) this;
         }
 
-        final String className = familyClass_.getName();
-
-        synchronized (CLASS_MAP)
-        {
-            if (CLASS_MAP.containsKey(className))
-            {
-                throw new IllegalArgumentException("Attempt to redefine an enum family.");
-            }
-
-            registerFamily(family_);
-            CLASS_MAP.put(className, family_._familyGUID);
-        }
-    }
-
-    private static EnumFamily<?> lookupFamily(final String guid_)
-    {
-        synchronized (CLASS_MAP)
-        {
-            final WeakReference<EnumFamily> ref = GUID_MAP.get(guid_);
-
-            if (null == ref)
-            {
-                return null;
-            }
-
-            return ref.get();
-        }
-    }
-
-    private static void registerFamily(final EnumFamily<?> family_)
-    {
-        synchronized (CLASS_MAP)
-        {
-            final WeakReference<EnumFamily> ref = GUID_MAP.get(family_._familyGUID);
-
-            if (null == ref)
-            {
-                GUID_MAP.put(family_._familyGUID, new WeakReference<>(family_));
-                return;
-            }
-
-            final EnumFamily current = ref.get();
-
-            if (null == current)
-            {
-                GUID_MAP.put(family_._familyGUID, new WeakReference<>(family_));
-                return;
-            }
-
-            throw new IllegalStateException("Family already exists: " + family_._familyGUID);
-        }
+        throw new ClassCastException("Improper cast: " + componentClass_ + " != " + _componentClass);
     }
 
     /**
@@ -254,40 +211,6 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
         return _nameMap.get(name_);
     }
 
-    private Object readResolve()
-    {
-        if (this._distinctFamily)
-        {
-            synchronized (CLASS_MAP)
-            {
-                final EnumFamily<?> existing = getFamilyFromClass(this._componentClass, false);
-
-                if (null != existing)
-                {
-                    return existing;
-                }
-
-                registerFamilyForClass(_componentClass, this);
-                return this;
-
-            }
-        }
-        else
-        {
-            synchronized (CLASS_MAP)
-            {
-                final EnumFamily<?> existing = lookupFamily(_familyGUID);
-
-                if (null != existing)
-                {
-                    return existing;
-                }
-
-                registerFamily(this);
-                return this;
-            }
-        }
-    }
 
     /**
      * Generates a new array of the type of the enum members with the given
@@ -303,6 +226,107 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
         final V[] output = Arrays.copyOf(_members, size_);
         Arrays.fill(output, null);
         return output;
+    }
+
+    public static <W extends EnumMember<W>> EnumFamily<W> canonicalize(final EnumFamily<W> family_)
+    {
+        synchronized (EnumFamilyRegistry.class)
+        {
+            EnumFamily<W> canonical = EnumFamilyRegistry.lookupFamily(family_._familyGUID, family_._componentClass);
+
+            if (null != canonical)
+            {
+                return canonical;
+            }
+
+            EnumFamilyRegistry.registerFamily(family_);
+            return family_;
+        }
+    }
+
+//    // TODO: Remove this, it's no longer needed.
+//    private Object readResolve()
+//    {
+//        return canonicalize(this);
+//    }
+
+//    private Object writeReplace() throws ObjectStreamException
+//    {
+//        return new WriteStub<>(this);
+//    }
+
+    private Object readResolve() throws ObjectStreamException
+    {
+        if (null == _familyGUID)
+        {
+            return EnumFamily.generateFamily(this._members, this._distinctFamily);
+            //throw new IllegalStateException("This should not be possible.");
+        }
+
+        final EnumFamily<V> existing = EnumFamilyRegistry.lookupFamily(_familyGUID, _componentClass);
+
+        if (null != existing)
+        {
+            return existing;
+        }
+
+        EnumFamilyRegistry.registerFamily(this);
+        return this;
+    }
+
+    private static final class EnumFamilyRegistry
+    {
+        // This is a weak hash map, allowing items to be garbage collected when no longer
+        // needed , but enforcing uniformity across instances otherwise.
+        private static final WeakHashMap<String, WeakReference<EnumFamily<?>>> GUID_MAP = new WeakHashMap<>();
+
+        private static synchronized void registerFamily(final EnumFamily<?> family_)
+        {
+            final WeakReference<EnumFamily<?>> ref = GUID_MAP.get(family_._familyGUID);
+
+            if (null == ref)
+            {
+                GUID_MAP.put(family_._familyGUID, new WeakReference<>(family_));
+                return;
+            }
+
+            final EnumFamily current = ref.get();
+
+            if (null == current)
+            {
+                GUID_MAP.put(family_._familyGUID, new WeakReference<>(family_));
+                return;
+            }
+
+            if (current == family_)
+            {
+                // Nothing to do here.
+                return;
+            }
+
+            throw new IllegalStateException("Family already exists: " + family_._familyGUID);
+        }
+
+        private static synchronized <W extends EnumMember<W>> EnumFamily<W> lookupFamily(final String guid_,
+                                                                                         Class<? extends W> componentClass_)
+        {
+            final WeakReference<EnumFamily<?>> ref = GUID_MAP.get(guid_);
+
+            if (null == ref)
+            {
+                return null;
+            }
+
+            EnumFamily<?> family = ref.get();
+
+            if (null == family)
+            {
+                GUID_MAP.remove(guid_);
+                return null;
+            }
+
+            return family.castFamily(componentClass_);
+        }
     }
 
 }

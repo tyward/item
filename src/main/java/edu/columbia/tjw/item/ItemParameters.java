@@ -1326,6 +1326,26 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
             return _toStatus[index_];
         }
 
+        public int findBetaIndex(final int toStatus_, final int entryIndex_)
+        {
+            for (int i = 0; i < _entryIndex.length; i++)
+            {
+                if (_entryIndex[i] != entryIndex_)
+                {
+                    continue;
+                }
+
+                if (_toStatus[i] != toStatus_)
+                {
+                    continue;
+                }
+
+                return _betaIndex[i];
+            }
+
+            return -1;
+        }
+
         @Override
         public int getEntry(int index_)
         {
