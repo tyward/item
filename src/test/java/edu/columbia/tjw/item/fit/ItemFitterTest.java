@@ -66,15 +66,15 @@ public class ItemFitterTest
         System.out.println("Revised: " + r3.getParams());
         Assertions.assertEquals(0.19398060647366872, r3.getEntropy());
 
-
-        final File outputDir = new File("/Users/tyler/Documents/code/outputModels");
-        final File dataFile = new File(outputDir, "test_model_small.dat");
-        result.getParams().writeToStream(new FileOutputStream(dataFile));
-
-        final File dataFileMed = new File(outputDir, "test_model_medium.dat");
-        r3.getParams().writeToStream(new FileOutputStream(dataFileMed));
-
-        System.out.println("Done!");
+//
+//        final File outputDir = new File("/Users/tyler/Documents/code/outputModels");
+//        final File dataFile = new File(outputDir, "test_model_small.dat");
+//        result.getParams().writeToStream(new FileOutputStream(dataFile));
+//
+//        final File dataFileMed = new File(outputDir, "test_model_medium.dat");
+//        r3.getParams().writeToStream(new FileOutputStream(dataFileMed));
+//
+//        System.out.println("Done!");
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 

@@ -69,6 +69,13 @@ public final class FitPointAnalyzer
 
                 return entropyDerivative;
             }
+            case ICE3:
+            {
+//                point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
+//                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+//                final int dimension = aggregated.getDerivativeDimension();
+//                final double[] entropyDerivative = aggregated.getDerivative();
+            }
             default:
                 throw new UnsupportedOperationException("Unknown target type.");
         }
@@ -115,22 +122,24 @@ public final class FitPointAnalyzer
             }
             case ICE:
             case ICE2:
+            case ICE3:
             {
                 point_.computeUntil(endBlock_, BlockCalculationType.FIRST_DERIVATIVE);
                 final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
 
                 final double entropy = secondDerivative.getEntropyMean();
 
-                if (_target == OptimizationTarget.ICE2)
+                if (_target == OptimizationTarget.ICE)
                 {
-                    final double iceSum2 = IceTools.computeIce2Sum(secondDerivative);
-                    final double iceAdjustment = iceSum2 / point_.getSize();
+                    final double iceSum = IceTools.computeIceSum(secondDerivative);
+                    final double iceAdjustment = iceSum / point_.getSize();
                     return entropy + iceAdjustment;
                 }
                 else
                 {
-                    final double iceSum = IceTools.computeIceSum(secondDerivative);
-                    final double iceAdjustment = iceSum / point_.getSize();
+                    // ICE2 and ICE3 share this logic.
+                    final double iceSum2 = IceTools.computeIce2Sum(secondDerivative);
+                    final double iceAdjustment = iceSum2 / point_.getSize();
                     return entropy + iceAdjustment;
                 }
             }
