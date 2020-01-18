@@ -68,16 +68,16 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
                       final ItemStatusGrid<S, R> grid_, ItemSettings settings_)
     {
-        this(factory_, intercept_, status_, randomizeGrid(grid_, settings_, status_), settings_);
+        this(factory_, intercept_, randomizeGrid(grid_, settings_, status_), settings_);
     }
 
-    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_,
                       final ItemFittingGrid<S, R> grid_)
     {
-        this(factory_, intercept_, status_, grid_, new ItemSettings());
+        this(factory_, intercept_, grid_, new ItemSettings());
     }
 
-    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_,
                       final ItemFittingGrid<S, R> grid_, ItemSettings settings_)
     {
         if (null == factory_)
@@ -92,10 +92,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         {
             throw new NullPointerException("Settings cannot be null.");
         }
-        if (null == status_)
-        {
-            throw new NullPointerException("Status cannot be null.");
-        }
+
         if (null == grid_)
         {
             throw new NullPointerException("Grid cannot be null.");
@@ -103,11 +100,11 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         _settings = settings_;
         _intercept = intercept_;
-        _status = status_;
+        _status = grid_.getFromStatus();
         _calc = new EntropyCalculator<>(grid_, _settings);
         _curveFamily = factory_.getFamily();
 
-        final ItemParameters<S, R, T> starting = new ItemParameters<>(status_, _intercept,
+        final ItemParameters<S, R, T> starting = new ItemParameters<>(_status, _intercept,
                 factory_.getFamily());
 
         _modelFitter = new ModelFitter(_curveFamily, _intercept, _status, grid_, settings_);

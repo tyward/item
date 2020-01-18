@@ -11,15 +11,17 @@ import edu.columbia.tjw.item.util.IceTools;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
 
-import java.io.Serializable;
+import java.io.*;
 import java.util.Arrays;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         implements Serializable
 {
     private static final double EPSILON = Math.ulp(4.0); // Just a bit bigger than machine epsilon.
     private static final double SQRT_EPSILON = Math.sqrt(EPSILON);
-    private static final boolean USE_COMPLEX_RESULTS = true;
+    private static final boolean USE_COMPLEX_RESULTS = false;
     private static final long serialVersionUID = 0x606e4b6c2343db26L;
 
     private final FitResult<S, R, T> _prev;
@@ -248,4 +250,49 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         return builder.toString();
     }
+
+    public void writeToStream(final OutputStream stream_) throws IOException
+    {
+        try (final GZIPOutputStream zipout = new GZIPOutputStream(stream_);
+             final ObjectOutputStream oOut = new ObjectOutputStream(zipout))
+        {
+            oOut.writeObject(this);
+            oOut.flush();
+        }
+    }
+
+
+    public static <S2 extends ItemStatus<S2>, R2 extends ItemRegressor<R2>, T2 extends ItemCurveType<T2>>
+    FitResult<S2, R2, T2> readFromStream(final InputStream stream_,
+                                         final Class<S2> statusClass_, final Class<R2> regClass_,
+                                         final Class<T2> typeClass_)
+            throws IOException
+    {
+        try (final GZIPInputStream zipin = new GZIPInputStream(stream_);
+             final ObjectInputStream oIn = new ObjectInputStream(zipin))
+        {
+            final FitResult<?, ?, ?> raw = (FitResult<?, ?, ?>) oIn.readObject();
+
+            if (raw.getParams().getStatus().getClass() != statusClass_)
+            {
+                throw new IOException("Status class mismatch.");
+            }
+            if (raw.getParams().getRegressorFamily().getComponentType() != regClass_)
+            {
+                throw new IOException("Regressor class mismatch.");
+            }
+            if (raw.getParams().getCurveFamily().getComponentType() != typeClass_)
+            {
+                throw new IOException("Curve Type class mismatch.");
+            }
+
+            final FitResult<S2, R2, T2> typed = (FitResult<S2, R2, T2>) raw;
+            return typed;
+        }
+        catch (ClassNotFoundException e)
+        {
+            throw new IOException(e);
+        }
+    }
+
 }

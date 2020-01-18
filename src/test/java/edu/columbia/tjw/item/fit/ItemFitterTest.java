@@ -14,8 +14,6 @@ import edu.columbia.tjw.item.util.random.RandomTool;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -284,8 +282,7 @@ public class ItemFitterTest
 
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
                 new ItemFitter<>(new StandardCurveFactory<>(),
-                        intercept,
-                        rawData.getFromStatus(), rawData, settings);
+                        intercept, rawData, settings);
 
         return fitter;
     }

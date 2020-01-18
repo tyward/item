@@ -77,7 +77,7 @@ public abstract class AbstractEnumMember<V extends AbstractEnumMember<V>> implem
             return 1;
         }
 
-        if (this.getFamily() != that_.getFamily())
+        if (!this.getFamily().equals(that_.getFamily()))
         {
             throw new IllegalArgumentException(
                     "Incomparable families: " + this.getFamily() + " != " + that_.getFamily());

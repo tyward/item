@@ -211,6 +211,29 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
         return _nameMap.get(name_);
     }
 
+    public int hashCode()
+    {
+        return _familyGUID.hashCode();
+    }
+
+    public boolean equals(final Object that_)
+    {
+        if (null == that_)
+        {
+            return false;
+        }
+        if (this == that_)
+        {
+            return true;
+        }
+        if (this.getClass() != that_.getClass())
+        {
+            return false;
+        }
+
+        final EnumFamily<?> other = (EnumFamily<?>) that_;
+        return this._familyGUID.equals(other._familyGUID);
+    }
 
     /**
      * Generates a new array of the type of the enum members with the given
