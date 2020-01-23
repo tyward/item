@@ -487,6 +487,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
                         if (res.getFitResult().getInformationCriterionDiff() < _settings.getAicCutoff())
                         {
+                            LOG.info("Generated Admissable Curve: " + res.getFitResult());
                             fitResults.add(res);
                         }
                     }

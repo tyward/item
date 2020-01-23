@@ -444,15 +444,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return results;
     }
 
-    private FitResult<S, R, T> expandModel(final FittingProgressChain<S, R, T> chain_, final Set<R> curveFields_
-            , final int paramCount_)
+    private void rebaseAndPush(final String label_, final FittingProgressChain<S, R, T> chain_,
+                               final FitResult<S, R, T> expansion_)
     {
-        final FitResult<S, R, T> expansion = _modelFitter.expandModel(chain_.getLatestResults(), curveFields_,
-                paramCount_ + chain_.getBestParameters().getEffectiveParamCount());
-
         final List<FitResult<S, R, T>> resultList = new ArrayList<>();
 
-        FitResult<S, R, T> target = expansion;
+        FitResult<S, R, T> target = expansion_;
 
         for (int i = 0; i < 1000; i++)
         {
@@ -472,11 +469,22 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             }
         }
 
+
         for (final FitResult<S, R, T> result : resultList)
         {
             final FitResult<S, R, T> rebased = new FitResult<>(result, chain_.getLatestResults());
-            chain_.pushResults("CurveGeneration", rebased);
+            chain_.pushResults(label_, rebased);
         }
+    }
+
+
+    private FitResult<S, R, T> expandModel(final FittingProgressChain<S, R, T> chain_, final Set<R> curveFields_
+            , final int paramCount_)
+    {
+        final FitResult<S, R, T> expansion = _modelFitter.expandModel(chain_.getLatestResults(), curveFields_,
+                paramCount_ + chain_.getBestParameters().getEffectiveParamCount());
+
+        rebaseAndPush("CurveGeneration", chain_, expansion);
 
         try
         {

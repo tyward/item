@@ -293,6 +293,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         builder.append("\nTIC Adjustment: " + _ticSum);
         builder.append("\nICE Adjustment: " + _iceSum);
         builder.append("\nICE2 Adjustment: " + _iceSum2);
+        builder.append("\nICE3 Adjustment: " + _iceSum3);
 
         builder.append("\nInv Condition Number: " + _invConditionNumber);
 

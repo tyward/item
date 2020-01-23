@@ -8,9 +8,15 @@ public interface FitPoint
 
     int getNextBlock(BlockCalculationType type_);
 
+    void clear();
+
+    void computeAll(BlockCalculationType type_, BlockResult prevDerivative_);
+
     void computeAll(BlockCalculationType type_);
 
     BlockResult getAggregated(BlockCalculationType type_);
+
+    void computeUntil(int endBlock_, BlockCalculationType type_, BlockResult prevDerivative_);
 
     void computeUntil(int endBlock_, BlockCalculationType type_);
 

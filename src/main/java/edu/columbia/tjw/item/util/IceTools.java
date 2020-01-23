@@ -56,6 +56,7 @@ public final class IceTools
         return iTermCutoff;
     }
 
+
     public static double computeIceSum(final BlockResult resultBlock_)
     {
         final int dimension = resultBlock_.getDerivativeDimension();
@@ -128,6 +129,63 @@ public final class IceTools
         return iceSum2;
     }
 
+    public static double[] computeJWeight(final double[] jVec)
+    {
+        final double jTermCutoff = MathTools.maxAbsElement(jVec) * SQRT_EPSILON;
+        final double[] jWeight = jVec.clone();
+
+        for (int i = 0; i < jVec.length; i++)
+        {
+            jWeight[i] = computeWeight(jVec[i], jTermCutoff);
+        }
+
+        return jWeight;
+    }
+
+
+    /**
+     * Compute the ice3 sum using the diagonals of I and J.
+     *
+     * @param iVec
+     * @param jVec
+     * @return
+     */
+    public static double computeIce3Sum(final double[] iVec, final double[] jVec, final double[] jWeight)
+    {
+        final int dimension = iVec.length;
+        final double iTermCutoff = MathTools.maxAbsElement(iVec) * EPSILON;
+
+        if (iTermCutoff == 0.0)
+        {
+            return 0.0;
+        }
+
+        double iceSum3 = 0.0;
+
+        for (int i = 0; i < dimension; i++)
+        {
+            final double iTerm = iVec[i]; // Already squared, this one is.
+
+            if (iTerm < iTermCutoff)
+            {
+                // This particular term is irrelevant, its gradient is basically zero so just skip it.
+                continue;
+            }
+
+            final double jTerm = jVec[i];
+
+            // As we shift this towards the case where J is not positive definite, we start relying more and more
+            // heavily on the I term portion, which makes this ratio close to 1.0.
+            final double weight = jWeight[i];
+            final double scaledJ = jTerm * weight;
+            final double scaledI = iTerm * (1.0 - weight);
+            final double iceTerm3 = iTerm / (scaledJ + scaledI);
+
+            iceSum3 += iceTerm3;
+        }
+
+        return iceSum3;
+    }
 
     public static double computeIce3Sum(final BlockResult resultBlock_)
     {

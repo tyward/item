@@ -102,6 +102,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
         boolean xTolFailed = true;
         boolean yTolFailed = true;
         boolean firstLoop = true;
+        FitPoint fitPointPrev = null;
 
         try
         {
@@ -113,7 +114,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 if (!firstLoop)
                 {
                     final FitPoint point = f_.evaluateGradient(currentPoint);
-                    final double[] derivative = this.getComparator().getDerivative(point);
+                    final double[] derivative = this.getComparator().getDerivative(point, fitPointPrev);
 
                     final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
 
@@ -233,6 +234,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 stepMagnitude = currentPoint.distance(nextPoint);
                 currentPoint.copy(nextPoint);
                 currentResult = nextResult;
+                fitPointPrev = fitPointCurrent;
             }
         }
         catch (final ConvergenceException e)
