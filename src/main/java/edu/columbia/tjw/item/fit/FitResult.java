@@ -21,7 +21,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 {
     private static final double EPSILON = Math.ulp(4.0); // Just a bit bigger than machine epsilon.
     private static final double SQRT_EPSILON = Math.sqrt(EPSILON);
-    private static final boolean USE_COMPLEX_RESULTS = false;
+    private static final boolean USE_COMPLEX_RESULTS = true;
     private static final long serialVersionUID = 0x606e4b6c2343db26L;
 
     private final FitResult<S, R, T> _prev;
@@ -41,8 +41,12 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double _ice2;
     private final double _iceSum;
     private final double _iceSum2;
+    private final double _iceSum3;
     private final double _ticSum;
     private final double _invConditionNumber;
+
+    private final double _invConditionNumberJ;
+    private final double _invConditionNumberI;
 
 
     /**
@@ -71,7 +75,11 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         _ice2 = current_._ice2;
         _iceSum2 = current_._iceSum2;
+        _iceSum3 = current_._iceSum3;
         _invConditionNumber = current_._invConditionNumber;
+
+        _invConditionNumberI = current_._invConditionNumberI;
+        _invConditionNumberJ = current_._invConditionNumberJ;
     }
 
     public FitResult(final ItemFitPoint<S, R, T> fitPoint_, final FitResult<S, R, T> prev_)
@@ -97,8 +105,11 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             final RealMatrix iMatrix = secondDerivative.getFisherInformation();
             final SingularValueDecomposition iSvd = new SingularValueDecomposition(iMatrix);
 
+            _invConditionNumberJ = jSvd.getInverseConditionNumber();
+            _invConditionNumberI = iSvd.getInverseConditionNumber();
+
             final double minInverseCondition = Math
-                    .min(jSvd.getInverseConditionNumber(), iSvd.getInverseConditionNumber());
+                    .min(_invConditionNumberJ, _invConditionNumberI);
 
             _invConditionNumber = minInverseCondition;
 
@@ -135,6 +146,8 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _iceSum2 = iceSum2;
             _ice2 = 2.0 * ((_entropy * rowCount) + iceSum2);
 
+            _iceSum3 = IceTools.computeIce3Sum(secondDerivative);
+
         }
         else
         {
@@ -150,9 +163,12 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _iceSum = Double.NaN;
 
             _iceSum2 = Double.NaN;
+            _iceSum3 = Double.NaN;
             _ice2 = Double.NaN;
 
             _invConditionNumber = Double.NaN;
+            _invConditionNumberJ = Double.NaN;
+            _invConditionNumberI = Double.NaN;
         }
 
         _aic = computeAic(_entropy, rowCount, _params.getEffectiveParamCount());
@@ -206,6 +222,42 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     public double[] getGradient()
     {
         return _gradient.clone();
+    }
+
+    public double getTicSum()
+    {
+        return _ticSum;
+    }
+
+    public double getIceSum()
+    {
+        return _iceSum;
+    }
+
+    public double getIce2Sum()
+    {
+        return _iceSum2;
+    }
+
+    public double getIce3Sum()
+    {
+        return _iceSum3;
+    }
+
+    public double getInvConditionNumber()
+    {
+        return _invConditionNumber;
+    }
+
+    public double getInvConditionNumberJ()
+    {
+        return _invConditionNumberJ;
+    }
+
+
+    public double getInvConditionNumberI()
+    {
+        return _invConditionNumberI;
     }
 
     public double getInformationCriterion()
