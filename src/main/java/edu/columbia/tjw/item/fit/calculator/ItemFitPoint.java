@@ -17,6 +17,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     private final ItemModel<S, R, T> _model;
     private final int _blockSize;
     private final int _totalSize;
+    private final int _dimension;
 
     private final BlockResultCompound[] _compound;
     private int[] _nextBlock;
@@ -32,6 +33,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
             throw new NullPointerException("Packed cannot be null.");
         }
 
+        _dimension = packed_.size();
         _blockCalculators = calculator_.getCalculators();
         _model = new ItemModel<>(packed_);
         _blockSize = calculator_.getBlockSize();
@@ -45,6 +47,12 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
             _compound[i] = new BlockResultCompound();
         }
 
+    }
+
+    @Override
+    public int getDimension()
+    {
+        return _dimension;
     }
 
     public ItemParameters<S, R, T> getParams()

@@ -10,6 +10,8 @@ public interface FitPoint
 
     void clear();
 
+    int getDimension();
+
     void computeAll(BlockCalculationType type_, BlockResult prevDerivative_);
 
     void computeAll(BlockCalculationType type_);

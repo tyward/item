@@ -32,6 +32,92 @@ public final class FitPointAnalyzer
         return _minStdDev;
     }
 
+    public double[] getDerivativeAdjustment(final FitPoint point_, final FitPoint prev_)
+    {
+        switch (_target)
+        {
+            case ENTROPY:
+            {
+                // No adjustment needed.
+                final double[] output = new double[point_.getDimension()];
+                return output;
+            }
+            case TIC:
+            {
+                // There is no realistic way to compute this efficiently, just fall through and use the ICE
+                // derivatives instead.
+            }
+            case ICE:
+            case ICE2:
+            {
+                point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+                final double[] extraDerivative = IceTools.fillIceExtraDerivative(aggregated);
+                return extraDerivative;
+            }
+            case ICE3:
+            {
+                point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+
+                final int dimension = aggregated.getDerivativeDimension();
+                final double[] extraDerivative = IceTools.fillIce3ExtraDerivative(aggregated);
+                final double[] extraDerivative2 = IceTools.fillIceExtraDerivative(aggregated);
+
+                System.out.println(
+                        "Derivative cos similarity[" + MathTools.magnitude(extraDerivative) + ", " + MathTools
+                                .magnitude(extraDerivative2) + "]: " +
+                                MathTools.cos(extraDerivative, extraDerivative2));
+
+                return extraDerivative;
+            }
+            case ICE4:
+            {
+                // Unfortunately, we have to clear here.
+                point_.clear();
+                final FitPoint jPoint;
+
+                if (prev_ != null)
+                {
+                    jPoint = prev_;
+                }
+                else
+                {
+                    jPoint = point_;
+                }
+
+                jPoint.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
+                final BlockResult jAgg = jPoint.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+
+                // Downgrade this to first derivative once the testing is done.
+                point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE, jAgg);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+
+                final int dimension = aggregated.getDerivativeDimension();
+                final double[] extraDerivative = IceTools.fillIce3ExtraDerivative(aggregated);
+                final double[] extraDerivative4 = aggregated.getScaledGradient();
+
+                for (int i = 0; i < extraDerivative4.length; i++)
+                {
+                    extraDerivative4[i] /= point_.getSize();
+                }
+
+                System.out.println(
+                        "Derivative cos similarity[" + MathTools.magnitude(extraDerivative) + ", " + MathTools
+                                .magnitude(extraDerivative4) + "]: " +
+                                MathTools.cos(extraDerivative, extraDerivative4));
+
+                System.out.println(
+                        "Entropy [" + aggregated.getEntropyMean() + "]: " + IceTools.computeIce3Sum(aggregated) / point_
+                                .getSize());
+                return extraDerivative4;
+            }
+            default:
+                throw new UnsupportedOperationException("Unknown target type.");
+        }
+    }
+
+
     public double[] getDerivative(final FitPoint point_)
     {
         return getDerivative(point_, null);
@@ -60,12 +146,7 @@ public final class FitPointAnalyzer
 
                 final int dimension = aggregated.getDerivativeDimension();
                 final double[] entropyDerivative = aggregated.getDerivative();
-                final double[] extraDerivative = IceTools.fillIceExtraDerivative(aggregated);
-
-                final double cosCheck = MathTools.cos(extraDerivative, entropyDerivative);
-                final double magDiff = MathTools.magnitude(extraDerivative) / MathTools.magnitude(entropyDerivative);
-
-                //System.out.println("Gradient comparison[" + magDiff + "]: " + cosCheck);
+                final double[] extraDerivative = this.getDerivativeAdjustment(point_, prev_);
 
                 for (int i = 0; i < dimension; i++)
                 {
@@ -81,18 +162,8 @@ public final class FitPointAnalyzer
 
                 final int dimension = aggregated.getDerivativeDimension();
                 final double[] entropyDerivative = aggregated.getDerivative();
+                final double[] extraDerivative = this.getDerivativeAdjustment(point_, prev_);
                 final double[] edClone = entropyDerivative.clone();
-                final double[] extraDerivative = IceTools.fillIce3ExtraDerivative(aggregated);
-                final double[] extraDerivative2 = IceTools.fillIceExtraDerivative(aggregated);
-
-                System.out.println(
-                        "Derivative cos similarity[" + MathTools.magnitude(extraDerivative) + ", " + MathTools
-                                .magnitude(extraDerivative2) + "]: " +
-                                MathTools.cos(extraDerivative, extraDerivative2));
-                System.out.println(
-                        "Underlying cos similarity[" + MathTools.magnitude(entropyDerivative) + "]: " + MathTools
-                                .cos(extraDerivative, entropyDerivative));
-
 
                 for (int i = 0; i < dimension; i++)
                 {
@@ -130,42 +201,13 @@ public final class FitPointAnalyzer
                 final int dimension = aggregated.getDerivativeDimension();
                 final double[] entropyDerivative = aggregated.getDerivative();
                 final double[] edClone = entropyDerivative.clone();
-                final double[] extraDerivative = IceTools.fillIce3ExtraDerivative(aggregated);
-                final double[] extraDerivative4 = aggregated.getScaledGradient();
-
-                for (int i = 0; i < extraDerivative4.length; i++)
-                {
-                    extraDerivative4[i] /= point_.getSize();
-                }
-
-                System.out.println(
-                        "Derivative cos similarity[" + MathTools.magnitude(extraDerivative) + ", " + MathTools
-                                .magnitude(extraDerivative4) + "]: " +
-                                MathTools.cos(extraDerivative, extraDerivative4));
-                System.out.println(
-                        "Underlying cos similarity[" + MathTools.magnitude(entropyDerivative) + "]: " + MathTools
-                                .cos(extraDerivative4, entropyDerivative));
-
-                final double[] altCombined = entropyDerivative.clone();
+                final double[] extraDerivative = this.getDerivativeAdjustment(point_, prev_);
 
                 for (int i = 0; i < dimension; i++)
                 {
-                    entropyDerivative[i] += extraDerivative4[i];
-                    altCombined[i] += extraDerivative[i];
+                    entropyDerivative[i] += extraDerivative[i];
                 }
-
-                System.out.println(
-                        "Combined cos similarity[" + MathTools.magnitude(entropyDerivative) + "]: " + MathTools
-                                .cos(edClone, entropyDerivative));
-                System.out.println(
-                        "Alt Combined cos similarity[" + MathTools.magnitude(altCombined) + "]: " + MathTools
-                                .cos(edClone, altCombined));
-                System.out.println(
-                        "Entropy [" + aggregated.getEntropyMean() + "]: " + IceTools.computeIce3Sum(aggregated) / point_
-                                .getSize());
                 return entropyDerivative;
-
-
             }
             default:
                 throw new UnsupportedOperationException("Unknown target type.");

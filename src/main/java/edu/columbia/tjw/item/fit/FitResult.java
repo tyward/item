@@ -21,7 +21,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 {
     private static final double EPSILON = Math.ulp(4.0); // Just a bit bigger than machine epsilon.
     private static final double SQRT_EPSILON = Math.sqrt(EPSILON);
-    private static final boolean USE_COMPLEX_RESULTS = true;
+    private static final boolean USE_COMPLEX_RESULTS = false;
     private static final long serialVersionUID = 0x606e4b6c2343db26L;
 
     private final FitResult<S, R, T> _prev;
