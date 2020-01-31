@@ -13,17 +13,19 @@ public final class GradientResult implements Serializable
     private final OptimizationTarget _target;
     private final double[] _gradient;
     private final double[] _fdGradient;
+    private final double[] _gradientAdjustment;
     private final double _objective;
     private final double _cos;
     private final double _fdMag;
     private final double _gradMag;
 
     public GradientResult(final OptimizationTarget target_, final double objective_, final double[] gradient_,
-                          final double[] fdGradient_)
+                          final double[] fdGradient_, final double[] gradAdj_)
     {
         _target = target_;
         _gradient = gradient_;
         _fdGradient = fdGradient_;
+        _gradientAdjustment = gradAdj_;
 
         _objective = objective_;
         _cos = MathTools.cos(_gradient, _fdGradient);
@@ -49,6 +51,11 @@ public final class GradientResult implements Serializable
     public double[] getFdGradient()
     {
         return _fdGradient.clone();
+    }
+
+    public double[] getGradientAdjustment()
+    {
+        return _gradientAdjustment;
     }
 
     public String toString()

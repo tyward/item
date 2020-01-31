@@ -13,5 +13,7 @@ public enum OptimizationTarget
     // Alternate stabilization formula for ICE.
     ICE3,
     // Objective is same as ICE3, but with optimized derivative computation.
-    ICE4;
+    ICE4,
+    // Objective is same as ICE3, but with alternate derivative computation.
+    ICE5;
 }

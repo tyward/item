@@ -16,6 +16,7 @@ public final class BlockResult
     private final double[] _jDiag;
     private final double[] _shiftGradient;
     private final double[] _scaledGradient;
+    private final double[] _scaledGradient2;
     private final double _gradientMass;
     private final double[][] _secondDerivative;
     private final double[][] _fisherInformation;
@@ -23,7 +24,8 @@ public final class BlockResult
 
     public BlockResult(final int rowStart_, final int rowEnd_, final double sumEntropy_, final double sumEntropy2_,
                        final double[] derivative_, final double[] derivativeSquared_, final double[] jDiag_,
-                       final double[] shiftGradient_, final double[] scaledGradient_, final double gradientMass_,
+                       final double[] shiftGradient_, final double[] scaledGradient_,
+                       final double[] scaledGradient2_, final double gradientMass_,
                        final double[][] fisherInformation_, final double[][] secondDerivative_)
     {
         if (rowStart_ < 0)
@@ -61,6 +63,7 @@ public final class BlockResult
 
         _gradientMass = gradientMass_;
         _scaledGradient = scaledGradient_;
+        _scaledGradient2 = scaledGradient2_;
     }
 
     public BlockResult(final List<BlockResult> analysisList_)
@@ -88,6 +91,7 @@ public final class BlockResult
             _jDiag = new double[dimension];
             _fisherInformation = new double[dimension][dimension];
             _scaledGradient = new double[dimension];
+            _scaledGradient2 = new double[dimension];
 
             if (hasSecondDerivative)
             {
@@ -104,6 +108,7 @@ public final class BlockResult
         {
             _derivative = null;
             _scaledGradient = null;
+            _scaledGradient2 = null;
             _derivativeSquared = null;
             _jDiag = null;
 
@@ -130,7 +135,8 @@ public final class BlockResult
                 {
                     final double entry = next.getDerivativeEntry(i);
                     _derivative[i] += weight * entry;
-                    _scaledGradient[i] += next._scaledGradient[i];
+                    _scaledGradient[i] += weight * next._scaledGradient[i];
+                    _scaledGradient2[i] += weight * next._scaledGradient2[i];
                     _derivativeSquared[i] += weight * next._derivativeSquared[i];
                     _jDiag[i] += weight * next._jDiag[i];
 
@@ -166,6 +172,7 @@ public final class BlockResult
             {
                 _derivative[i] = invWeight * _derivative[i];
                 _scaledGradient[i] = invWeight * _scaledGradient[i];
+                _scaledGradient2[i] = invWeight * _scaledGradient2[i];
                 _derivativeSquared[i] = invWeight * _derivativeSquared[i];
                 _jDiag[i] = invWeight * _jDiag[i];
 
@@ -275,6 +282,11 @@ public final class BlockResult
     public double[] getScaledGradient()
     {
         return _scaledGradient;
+    }
+
+    public double[] getScaledGradient2()
+    {
+        return _scaledGradient2;
     }
 
     public double getFisherInformationEntry(final int row_, final int column_)

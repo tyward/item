@@ -3,7 +3,6 @@ package edu.columbia.tjw.item.fit.calculator;
 import edu.columbia.tjw.item.algo.VarianceCalculator;
 import edu.columbia.tjw.item.optimize.OptimizationTarget;
 import edu.columbia.tjw.item.util.IceTools;
-import edu.columbia.tjw.item.util.MathTools;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
 
@@ -59,19 +58,11 @@ public final class FitPointAnalyzer
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
-
-                final int dimension = aggregated.getDerivativeDimension();
                 final double[] extraDerivative = IceTools.fillIce3ExtraDerivative(aggregated);
-                final double[] extraDerivative2 = IceTools.fillIceExtraDerivative(aggregated);
-
-                System.out.println(
-                        "Derivative cos similarity[" + MathTools.magnitude(extraDerivative) + ", " + MathTools
-                                .magnitude(extraDerivative2) + "]: " +
-                                MathTools.cos(extraDerivative, extraDerivative2));
-
                 return extraDerivative;
             }
             case ICE4:
+            case ICE5:
             {
                 // Unfortunately, we have to clear here.
                 point_.clear();
@@ -95,21 +86,23 @@ public final class FitPointAnalyzer
 
                 final int dimension = aggregated.getDerivativeDimension();
                 final double[] extraDerivative = IceTools.fillIce3ExtraDerivative(aggregated);
-                final double[] extraDerivative4 = aggregated.getScaledGradient();
+                final double[] extraDerivative4;
+
+                if (_target == OptimizationTarget.ICE4)
+                {
+                    extraDerivative4 = aggregated.getScaledGradient();
+                }
+                else
+                {
+                    // ICE5.
+                    extraDerivative4 = aggregated.getScaledGradient2();
+                }
 
                 for (int i = 0; i < extraDerivative4.length; i++)
                 {
                     extraDerivative4[i] /= point_.getSize();
                 }
 
-                System.out.println(
-                        "Derivative cos similarity[" + MathTools.magnitude(extraDerivative) + ", " + MathTools
-                                .magnitude(extraDerivative4) + "]: " +
-                                MathTools.cos(extraDerivative, extraDerivative4));
-
-                System.out.println(
-                        "Entropy [" + aggregated.getEntropyMean() + "]: " + IceTools.computeIce3Sum(aggregated) / point_
-                                .getSize());
                 return extraDerivative4;
             }
             default:
@@ -170,13 +163,14 @@ public final class FitPointAnalyzer
                     entropyDerivative[i] += extraDerivative[i];
                 }
 
-                System.out.println(
-                        "Combined cos similarity[" + MathTools.magnitude(entropyDerivative) + "]: " + MathTools
-                                .cos(edClone, entropyDerivative));
+//                System.out.println(
+//                        "Combined cos similarity[" + MathTools.magnitude(entropyDerivative) + "]: " + MathTools
+//                                .cos(edClone, entropyDerivative));
 
                 return entropyDerivative;
             }
             case ICE4:
+            case ICE5:
             {
                 // Unfortunately, we have to clear here.
                 point_.clear();
@@ -200,7 +194,6 @@ public final class FitPointAnalyzer
 
                 final int dimension = aggregated.getDerivativeDimension();
                 final double[] entropyDerivative = aggregated.getDerivative();
-                final double[] edClone = entropyDerivative.clone();
                 final double[] extraDerivative = this.getDerivativeAdjustment(point_, prev_);
 
                 for (int i = 0; i < dimension; i++)
@@ -257,6 +250,7 @@ public final class FitPointAnalyzer
             case ICE2:
             case ICE3:
             case ICE4:
+            case ICE5:
             {
                 point_.computeUntil(endBlock_, BlockCalculationType.FIRST_DERIVATIVE);
                 final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);

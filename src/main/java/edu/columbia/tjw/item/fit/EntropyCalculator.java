@@ -119,7 +119,10 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
             fdGrad[i] = (shiftObjective - objective) / shiftSize;
         }
 
-        return new GradientResult(_settings.getTarget(), objective, grad, fdGrad);
+        final double[] adj = analyzer.getDerivativeAdjustment(point, null);
+
+
+        return new GradientResult(_settings.getTarget(), objective, grad, fdGrad, adj);
     }
 
     public FitPoint generateFitPoint(final ItemParameters<S, R, T> params_)
