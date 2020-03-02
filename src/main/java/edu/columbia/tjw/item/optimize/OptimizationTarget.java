@@ -15,5 +15,7 @@ public enum OptimizationTarget
     // Objective is same as ICE3, but with optimized derivative computation.
     ICE4,
     // Objective is same as ICE3, but with alternate derivative computation.
-    ICE5;
+    ICE5,
+    // L2 regularization.
+    L2;
 }

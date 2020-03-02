@@ -2,6 +2,13 @@ package edu.columbia.tjw.item.fit.calculator;
 
 public interface FitPoint
 {
+    /**
+     * Returns the complete vector of parameters for this point.
+     *
+     * @return
+     */
+    double[] getParameters();
+
     int getBlockSize();
 
     int getBlockCount();

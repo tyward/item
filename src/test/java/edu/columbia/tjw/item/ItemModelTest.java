@@ -105,13 +105,13 @@ class ItemModelTest
         final EntropyCalculator<SimpleStatus, SimpleRegressor, StandardCurveType> calculator =
                 new EntropyCalculator<>(paramGrid);
         final FitPointAnalyzer entropyAnalyzer = new FitPointAnalyzer(settings.getBlockSize(), 5.0,
-                OptimizationTarget.ENTROPY);
+                OptimizationTarget.ENTROPY, settings);
         final FitPointAnalyzer ticAnalyzer = new FitPointAnalyzer(settings.getBlockSize(), 5.0,
-                OptimizationTarget.TIC);
+                OptimizationTarget.TIC, settings);
         final FitPointAnalyzer iceAnalyzer = new FitPointAnalyzer(settings.getBlockSize(), 5.0,
-                OptimizationTarget.ICE);
+                OptimizationTarget.ICE, settings);
         final FitPointAnalyzer ice2Analyzer = new FitPointAnalyzer(settings.getBlockSize(), 5.0,
-                OptimizationTarget.ICE2);
+                OptimizationTarget.ICE2, settings);
 
         final FitPoint point = calculator.generatePoint(params);
 

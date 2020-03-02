@@ -22,6 +22,8 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     private final BlockResultCompound[] _compound;
     private int[] _nextBlock;
 
+    private double[] _params;
+
     public ItemFitPoint(final FitPointGenerator<S, R, T> calculator_, final PackedParameters<S, R, T> packed_)
     {
         if (null == calculator_)
@@ -47,6 +49,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
             _compound[i] = new BlockResultCompound();
         }
 
+        _params = packed_.getPacked();
     }
 
     @Override
@@ -58,6 +61,12 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     public ItemParameters<S, R, T> getParams()
     {
         return _model.getParams();
+    }
+
+    @Override
+    public double[] getParameters()
+    {
+        return _params;
     }
 
     @Override

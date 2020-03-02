@@ -135,6 +135,14 @@ public final class MathTools
         return dot;
     }
 
+    public static void scalarMultiply(final double scalar_, final double[] vector_)
+    {
+        for (int i = 0; i < vector_.length; i++)
+        {
+            vector_[i] *= scalar_;
+        }
+    }
+
     public static double maxAbsElement(final double[] x_)
     {
         double maxAbs = 0.0;

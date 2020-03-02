@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
@@ -41,9 +42,9 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
     private static final double INV_PHI = 1.0 / PHI;
 
     public GoldenSectionOptimizer(final double xTol_, final double yTol_, final int bloackSize_, int maxEvalCount_,
-                                  final OptimizationTarget target_)
+                                  final OptimizationTarget target_, ItemSettings settings_)
     {
-        super(xTol_, yTol_, bloackSize_, maxEvalCount_, target_);
+        super(xTol_, yTol_, bloackSize_, maxEvalCount_, target_, settings_);
     }
 
     @Override

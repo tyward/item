@@ -1,8 +1,10 @@
 package edu.columbia.tjw.item.fit.calculator;
 
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.algo.VarianceCalculator;
 import edu.columbia.tjw.item.optimize.OptimizationTarget;
 import edu.columbia.tjw.item.util.IceTools;
+import edu.columbia.tjw.item.util.MathTools;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
 
@@ -13,12 +15,15 @@ public final class FitPointAnalyzer
     private final int _superBlockSize;
     private final double _minStdDev;
     private final OptimizationTarget _target;
+    private final ItemSettings _settings;
 
-    public FitPointAnalyzer(final int superBlockSize_, final double minStdDev_, final OptimizationTarget target_)
+    public FitPointAnalyzer(final int superBlockSize_, final double minStdDev_, final OptimizationTarget target_,
+                            ItemSettings settings_)
     {
         _superBlockSize = superBlockSize_;
         _minStdDev = minStdDev_;
         _target = target_;
+        _settings = settings_;
     }
 
     public double compare(final FitPoint a_, final FitPoint b_)
@@ -40,6 +45,15 @@ public final class FitPointAnalyzer
                 // No adjustment needed.
                 final double[] output = new double[point_.getDimension()];
                 return output;
+            }
+            case L2:
+            {
+                final double lambda = _settings.getL2Lambda();
+                final double[] params = point_.getParameters();
+
+                MathTools.scalarMultiply(2.0 * lambda, params);
+
+                return params;
             }
             case TIC:
             {
@@ -125,6 +139,23 @@ public final class FitPointAnalyzer
                 point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
                 return aggregated.getDerivative();
+            }
+            case L2:
+            {
+                point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+                final double[] entropyDerivative = aggregated.getDerivative();
+                final double lambda = _settings.getL2Lambda();
+                final double[] params = point_.getParameters();
+
+                MathTools.scalarMultiply(2.0 * lambda, params);
+
+                for (int i = 0; i < params.length; i++)
+                {
+                    entropyDerivative[i] += params[i];
+                }
+
+                return entropyDerivative;
             }
             case TIC:
             {
@@ -216,6 +247,18 @@ public final class FitPointAnalyzer
                 point_.computeUntil(endBlock_, BlockCalculationType.VALUE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.VALUE);
                 return aggregated.getEntropyMean();
+            }
+            case L2:
+            {
+                point_.computeUntil(endBlock_, BlockCalculationType.VALUE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.VALUE);
+                final double entropy = aggregated.getEntropyMean();
+
+                final double lambda = _settings.getL2Lambda();
+
+                final double[] params = point_.getParameters();
+                final double dot = MathTools.dot(params, params);
+                return entropy + lambda * dot;
             }
             case TIC:
             {

@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.util.LogUtil;
 
@@ -38,9 +39,9 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
     private final GoldenSectionOptimizer<MultivariatePoint, MultivariateDifferentiableFunction> _optimizer;
 
     public MultivariateOptimizer(final int blockSize_, int maxEvalCount_, final int loopEvalCount_,
-                                 final double thetaPrecision_, final OptimizationTarget target_)
+                                 final double thetaPrecision_, final OptimizationTarget target_, ItemSettings settings_)
     {
-        super(blockSize_, maxEvalCount_, target_);
+        super(blockSize_, maxEvalCount_, target_, settings_);
 
         if (thetaPrecision_ < 0.0 || thetaPrecision_ > Math.PI)
         {
@@ -54,7 +55,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
         _thetaPrecision = thetaPrecision_;
         _optimizer = new GoldenSectionOptimizer<>(LINE_SEARCH_XTOL, LINE_SEARCH_YTOL, blockSize_, loopEvalCount_,
-                target_);
+                target_, settings_);
     }
 
     @Override

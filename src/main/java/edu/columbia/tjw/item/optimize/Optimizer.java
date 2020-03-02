@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
@@ -41,20 +42,21 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
 
     private final FitPointAnalyzer _comparator;
 
-    public Optimizer(final int blockSize_, final int maxEvalCount_, final OptimizationTarget target_)
+    public Optimizer(final int blockSize_, final int maxEvalCount_, final OptimizationTarget target_,
+                     ItemSettings settings_)
     {
-        this(DEFAULT_XTOL, DEFAULT_YTOL, blockSize_, maxEvalCount_, target_);
+        this(DEFAULT_XTOL, DEFAULT_YTOL, blockSize_, maxEvalCount_, target_, settings_);
     }
 
     public Optimizer(final double xTol_, final double yTol_, final int blockSize_, final int maxEvalCount_,
-                     final OptimizationTarget target_)
+                     final OptimizationTarget target_, ItemSettings settings_)
     {
         _blockSize = blockSize_;
         _xTol = xTol_;
         _yTol = yTol_;
         _maxEvalCount = maxEvalCount_;
 
-        _comparator = new FitPointAnalyzer(_blockSize, _stdDevThreshold, target_);
+        _comparator = new FitPointAnalyzer(_blockSize, _stdDevThreshold, target_, settings_);
     }
 
     public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_)
