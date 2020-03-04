@@ -31,11 +31,12 @@ import java.util.logging.Logger;
 public class MultivariateOptimizer extends Optimizer<MultivariatePoint, MultivariateDifferentiableFunction>
 {
     private static final double STD_DEV_CUTOFF = 1.0;
-    private static final double LINE_SEARCH_XTOL = 1.0e-3;
-    private static final double LINE_SEARCH_YTOL = 1.0e-6;
+    private static final double LINE_SEARCH_XTOL = Math.sqrt(Math.ulp(1.0));
+    private static final double LINE_SEARCH_YTOL = Math.sqrt(Math.ulp(1.0));
     private static final double SCALE_MULTIPLE = 0.1;
     private static final Logger LOG = LogUtil.getLogger(MultivariateOptimizer.class);
-    private final double _thetaPrecision;
+
+    private final double _zTolerance;
     private final GoldenSectionOptimizer<MultivariatePoint, MultivariateDifferentiableFunction> _optimizer;
 
     public MultivariateOptimizer(final int blockSize_, int maxEvalCount_, final int loopEvalCount_,
@@ -53,7 +54,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
             throw new IllegalArgumentException("MaxEvalCount must be significantly larger than the loop count.");
         }
 
-        _thetaPrecision = thetaPrecision_;
+        _zTolerance = settings_.getZScoreCutoff();
         _optimizer = new GoldenSectionOptimizer<>(LINE_SEARCH_XTOL, LINE_SEARCH_YTOL, blockSize_, loopEvalCount_,
                 target_, settings_);
     }
@@ -221,7 +222,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         fitPointCurrent, fitPointNext);
 
                 //LOG.info("Finished one line search: " + zScore);
-                if (zScore < STD_DEV_CUTOFF)
+                if (zScore < _zTolerance)
                 {
                     LOG.info("Unable to make progress.");
                     currentResult = nextResult;

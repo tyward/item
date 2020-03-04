@@ -31,10 +31,11 @@ import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
  */
 public abstract class Optimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>>
 {
-    private static final double DEFAULT_XTOL = 1.0e-6;
+    private static final double SQRT_EPSILON = Math.sqrt(Math.ulp(1.0));
+    private static final double DEFAULT_XTOL = 0.0;
     private static final double DEFAULT_YTOL = 1.0e-6;
 
-    private final double _stdDevThreshold = 5.0;
+    private final double _stdDevThreshold;
     private final double _xTol;
     private final double _yTol;
     private final int _blockSize;
@@ -55,6 +56,7 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         _xTol = xTol_;
         _yTol = yTol_;
         _maxEvalCount = maxEvalCount_;
+        _stdDevThreshold = settings_.getZScoreCutoff();
 
         _comparator = new FitPointAnalyzer(_blockSize, _stdDevThreshold, target_, settings_);
     }
@@ -132,17 +134,27 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
 
     protected boolean checkXTolerance(final V a_, final V b_)
     {
+        final double scale = SQRT_EPSILON * 0.5 * (a_.getMagnitude() + b_.getMagnitude());
+        return checkXTolerance(a_, b_, scale);
+
+    }
+
+    protected boolean checkXTolerance(final V a_, final V b_, final double target_)
+    {
         final double distance = a_.distance(b_);
-
-        final double aMag = a_.getMagnitude();
-        final double bMag = b_.getMagnitude();
-
-        final double scale = Math.sqrt((aMag * aMag) + (bMag * bMag));
-
-        final double result = distance / scale;
-
-        final boolean output = result < this._xTol;
-        return output;
+        return distance < target_;
+//
+//
+//
+//        final double aMag = a_.getMagnitude();
+//        final double bMag = b_.getMagnitude();
+//
+//        final double scale = Math.sqrt((aMag * aMag) + (bMag * bMag));
+//
+//        final double result = distance / scale;
+//
+//        final boolean output = result < this._xTol;
+//        return output;
     }
 
 }

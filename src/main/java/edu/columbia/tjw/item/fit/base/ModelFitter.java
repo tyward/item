@@ -22,22 +22,18 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     private static final Logger LOG = LogUtil.getLogger(ModelFitter.class);
 
     private final ItemSettings _settings;
-    private final R _intercept;
-    private final S _status;
+    private final ItemParameters<S, R, T> _starting;
 
     private final BaseFitter<S, R, T> _base;
     private final ParamFitter<S, R, T> _fitter;
     private final CurveFitter<S, R, T> _curveFitter;
 
-    private final EnumFamily<T> _curveFamily;
 
-    public ModelFitter(final EnumFamily<T> curveFamily_, final R intercept_, final S status_,
+    public ModelFitter(final ItemParameters<S, R, T> starting_,
                        final ItemFittingGrid<S, R> grid_, ItemSettings settings_)
     {
         _settings = settings_;
-        _intercept = intercept_;
-        _status = status_;
-        _curveFamily = curveFamily_;
+        _starting = starting_;
 
         final EntropyCalculator<S, R, T> calc = new EntropyCalculator<>(grid_);
         _base = new BaseFitter<>(calc, _settings);
@@ -47,10 +43,7 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     public FitResult<S, R, T> generateInitialModel()
     {
-        final ItemParameters<S, R, T> starting = new ItemParameters<>(_status, _intercept,
-                _curveFamily);
-
-        final FitResult<S, R, T> fitResult = getCalculator().computeFitResult(starting, null);
+        final FitResult<S, R, T> fitResult = getCalculator().computeFitResult(_starting, null);
         final FitResult<S, R, T> calibrated = fitAllParameters(fitResult);
         return calibrated;
     }

@@ -271,7 +271,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         // This is oh-sooo hacky.
-        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("SingleInteraction",
+        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(_settings, "SingleInteraction",
                 starting_.getFitResult().getParams(), getSize(), _base.getCalc(), true);
 
         if (null == toStatus)

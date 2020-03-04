@@ -19,10 +19,7 @@
  */
 package edu.columbia.tjw.item.fit;
 
-import edu.columbia.tjw.item.ItemCurveType;
-import edu.columbia.tjw.item.ItemParameters;
-import edu.columbia.tjw.item.ItemRegressor;
-import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -43,6 +40,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
 {
     private static final Logger LOG = LogUtil.getLogger(FittingProgressChain.class);
 
+    private final ItemSettings _settings;
     private final String _chainName;
     private final List<ParamProgressFrame<S, R, T>> _frameList;
     private final List<ParamProgressFrame<S, R, T>> _frameListReadOnly;
@@ -56,21 +54,24 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
      * @param chainName_
      * @param baseChain_
      */
-    public FittingProgressChain(final String chainName_, final FittingProgressChain<S, R, T> baseChain_)
+    public FittingProgressChain(final ItemSettings settings_, final String chainName_,
+                                final FittingProgressChain<S, R, T> baseChain_)
     {
-        this(chainName_, baseChain_.getLatestResults(),
+        this(settings_, chainName_, baseChain_.getLatestResults(),
                 baseChain_.getRowCount(),
                 baseChain_._calc, baseChain_.isValidate());
     }
 
-    public FittingProgressChain(final String chainName_, final ItemParameters<S, R, T> params_,
+    public FittingProgressChain(final ItemSettings settings_, final String chainName_,
+                                final ItemParameters<S, R, T> params_,
                                 final int rowCount_, final EntropyCalculator<S, R, T> calc_
             , final boolean validating_)
     {
-        this(chainName_, calc_.computeFitResult(params_, null), rowCount_, calc_, validating_);
+        this(settings_, chainName_, calc_.computeFitResult(params_, null), rowCount_, calc_, validating_);
     }
 
-    private FittingProgressChain(final String chainName_, final FitResult<S, R, T> result_,
+    private FittingProgressChain(final ItemSettings settings_, final String chainName_,
+                                 final FitResult<S, R, T> result_,
                                  final int rowCount_, final EntropyCalculator<S, R, T> calc_
             , final boolean validating_)
     {
@@ -79,6 +80,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
             throw new IllegalArgumentException("Data set cannot be empty.");
         }
 
+        _settings = settings_;
         _chainName = chainName_;
         _rowCount = rowCount_;
 
@@ -183,7 +185,7 @@ public final class FittingProgressChain<S extends ItemStatus<S>, R extends ItemR
                 "Log Likelihood improvement[" + frameName_ + "][" + aicDifference + "]: " + currentBest + " -> " + fitResult_
                         .getEntropy());
 
-        if (aicDifference >= -5.0)
+        if (aicDifference >= _settings.getAicCutoff())
         {
             LOG.info("Insufficient AIC, discarding results: " + aicDifference);
             return false;

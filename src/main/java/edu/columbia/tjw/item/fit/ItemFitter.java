@@ -50,20 +50,12 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private static final Logger LOG = LogUtil.getLogger(ItemFitter.class);
 
     private final ItemSettings _settings;
-    private final R _intercept;
-    private final S _status;
     private final EntropyCalculator<S, R, T> _calc;
 
     private final ModelFitter<S, R, T> _modelFitter;
 
     private final FittingProgressChain<S, R, T> _chain;
-    private final EnumFamily<T> _curveFamily;
 
-    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
-                      final ItemStatusGrid<S, R> grid_)
-    {
-        this(factory_, intercept_, status_, grid_, new ItemSettings());
-    }
 
     public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
                       final ItemStatusGrid<S, R> grid_, ItemSettings settings_)
@@ -80,13 +72,16 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_,
                       final ItemFittingGrid<S, R> grid_, ItemSettings settings_)
     {
-        if (null == factory_)
+        this(new ItemParameters<>(grid_.getFromStatus(), intercept_,
+                factory_.getFamily()), grid_, settings_);
+    }
+
+    public ItemFitter(final ItemParameters<S, R, T> starting_,
+                      final ItemFittingGrid<S, R> grid_, ItemSettings settings_)
+    {
+        if (null == starting_)
         {
-            throw new NullPointerException("Factory cannot be null.");
-        }
-        if (null == intercept_)
-        {
-            throw new NullPointerException("Intercept cannot be null.");
+            throw new NullPointerException("Starting Params cannot be null.");
         }
         if (null == settings_)
         {
@@ -99,20 +94,10 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         }
 
         _settings = settings_;
-        _intercept = intercept_;
-        _status = grid_.getFromStatus();
         _calc = new EntropyCalculator<>(grid_, _settings);
-        _curveFamily = factory_.getFamily();
+        _modelFitter = new ModelFitter(starting_, grid_, settings_);
 
-        final ItemParameters<S, R, T> starting = new ItemParameters<>(_status, _intercept,
-                factory_.getFamily());
-
-        _modelFitter = new ModelFitter(_curveFamily, _intercept, _status, grid_, settings_);
-//        _base = new BaseFitter<>(_calc, _settings);
-//        _fitter = new ParamFitter<>(_base);
-//        _curveFitter = new CurveFitter<>(_settings, _base);
-
-        _chain = new FittingProgressChain<>("Primary", starting, _calc.size(), _calc,
+        _chain = new FittingProgressChain<>(_settings, "Primary", starting_, _calc.size(), _calc,
                 _settings.getDoValidate());
 
         // Start by calibrating the parameters.
@@ -148,7 +133,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     public S getStatus()
     {
-        return _status;
+        return _calc.getFromStatus();
     }
 
     public FittingProgressChain<S, R, T> getChain()
@@ -219,8 +204,9 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         for (int i = 0; i < _chain.getBestParameters().getEntryCount(); i++)
         {
-            final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("AnnealingSubChain[" + i + "]",
-                    _chain);
+            final FittingProgressChain<S, R, T> subChain =
+                    new FittingProgressChain<>(_settings, "AnnealingSubChain[" + i + "]",
+                            _chain);
             final ItemParameters<S, R, T> base = subChain.getBestParameters();
             final int index = i - offset;
 
@@ -260,7 +246,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         for (final R regressor : curveFields_)
         {
             final FittingProgressChain<S, R, T> subChain =
-                    new FittingProgressChain<>("AnnealingSubChain[" + regressor.name() + "]", _chain);
+                    new FittingProgressChain<>(_settings, "AnnealingSubChain[" + regressor.name() + "]", _chain);
             final ItemParameters<S, R, T> base = subChain.getBestParameters();
             final ItemParameters<S, R, T> reduced = base.dropRegressor(regressor);
 
@@ -428,7 +414,8 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
     public FitResult<S, R, T> calibrateCurves()
     {
-        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("CalibrationChain", _chain);
+        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(_settings, "CalibrationChain",
+                _chain);
 
         //First, try to calibrate any existing curves to improve the fit. 
         _modelFitter.getCurveFitter().calibrateCurves(0.0, true, subChain);

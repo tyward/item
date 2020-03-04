@@ -40,6 +40,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
     private static final Logger LOG = LogUtil.getLogger(GoldenSectionOptimizer.class);
     private static final double PHI = 0.5 * (1.0 + Math.sqrt(5.0));
     private static final double INV_PHI = 1.0 / PHI;
+    private static final double LINE_SEARCH_REL_TOL = 0.001;
 
     public GoldenSectionOptimizer(final double xTol_, final double yTol_, final int bloackSize_, int maxEvalCount_,
                                   final OptimizationTarget target_, ItemSettings settings_)
@@ -397,6 +398,9 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
 
     private OptimizationResult<V> optimize(final F f_, final Bracket<V> bracket_) throws ConvergenceException
     {
+        final double bracketSize = bracket_.getBracketSize();
+        final double targetSize = LINE_SEARCH_REL_TOL * bracketSize;
+
         //LOG.info("Starting Golden Section optimization: [" + a_ + "][" + b_ + "][" + c_ + "]");
         V scaleStep = bracket_.getDirection();
         V a = bracket_.getA().clone();
@@ -407,11 +411,10 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
         FitPoint pointB = bracket_.getbRes();
         FitPoint pointC = bracket_.getcRes();
 
-
         int evalCount = 0;
 
         //While either tolerance condition fails, continue to loop.
-        while (!(this.checkXTolerance(a, c) || this.checkYTolerance(pointA, pointB, pointC)))
+        while (!(this.checkXTolerance(a, c, targetSize) || this.checkYTolerance(pointA, pointB, pointC)))
         {
             V next;
             final double abDistance = a.distance(b);
@@ -565,6 +568,11 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
         public FitPoint getcRes()
         {
             return _cRes;
+        }
+
+        public double getBracketSize()
+        {
+            return _a.distance(_c);
         }
     }
 

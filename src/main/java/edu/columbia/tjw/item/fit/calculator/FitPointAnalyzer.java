@@ -55,11 +55,6 @@ public final class FitPointAnalyzer
 
                 return params;
             }
-            case TIC:
-            {
-                // There is no realistic way to compute this efficiently, just fall through and use the ICE
-                // derivatives instead.
-            }
             case ICE:
             case ICE2:
             {
@@ -74,6 +69,11 @@ public final class FitPointAnalyzer
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
                 final double[] extraDerivative = IceTools.fillIce3ExtraDerivative(aggregated);
                 return extraDerivative;
+            }
+            case TIC:
+            {
+                // There is no realistic way to compute this efficiently, just fall through and use the ICE
+                // derivatives instead.
             }
             case ICE4:
             case ICE5:
@@ -95,21 +95,19 @@ public final class FitPointAnalyzer
                 final BlockResult jAgg = jPoint.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
 
                 // Downgrade this to first derivative once the testing is done.
-                point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE, jAgg);
-                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+                point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE, jAgg);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
 
-                final int dimension = aggregated.getDerivativeDimension();
-                final double[] extraDerivative = IceTools.fillIce3ExtraDerivative(aggregated);
                 final double[] extraDerivative4;
 
-                if (_target == OptimizationTarget.ICE4)
-                {
-                    extraDerivative4 = aggregated.getScaledGradient();
-                }
-                else
+                if (_target == OptimizationTarget.ICE5)
                 {
                     // ICE5.
                     extraDerivative4 = aggregated.getScaledGradient2();
+                }
+                else
+                {
+                    extraDerivative4 = aggregated.getScaledGradient();
                 }
 
                 for (int i = 0; i < extraDerivative4.length; i++)
@@ -157,11 +155,6 @@ public final class FitPointAnalyzer
 
                 return entropyDerivative;
             }
-            case TIC:
-            {
-                // There is no realistic way to compute this efficiently, just fall through and use the ICE
-                // derivatives instead.
-            }
             case ICE:
             case ICE2:
             {
@@ -200,6 +193,11 @@ public final class FitPointAnalyzer
 
                 return entropyDerivative;
             }
+            case TIC:
+            {
+                // There is no realistic way to compute this efficiently, just fall through and use the ICE
+                // derivatives instead.
+            }
             case ICE4:
             case ICE5:
             {
@@ -220,8 +218,8 @@ public final class FitPointAnalyzer
                 final BlockResult jAgg = jPoint.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
 
                 // Downgrade this to first derivative once the testing is done.
-                point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE, jAgg);
-                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+                point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE, jAgg);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
 
                 final int dimension = aggregated.getDerivativeDimension();
                 final double[] entropyDerivative = aggregated.getDerivative();
