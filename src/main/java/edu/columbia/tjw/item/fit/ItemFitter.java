@@ -26,7 +26,6 @@ import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.base.ModelFitter;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
-import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.ArrayList;
@@ -74,6 +73,10 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     {
         this(new ItemParameters<>(grid_.getFromStatus(), intercept_,
                 factory_.getFamily()), grid_, settings_);
+
+        // Start by calibrating the parameters.
+        // We do this because we are starting with parameters that are basically vacuous.
+        this.fitAllParameters();
     }
 
     public ItemFitter(final ItemParameters<S, R, T> starting_,
@@ -99,9 +102,6 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
 
         _chain = new FittingProgressChain<>(_settings, "Primary", starting_, _calc.size(), _calc,
                 _settings.getDoValidate());
-
-        // Start by calibrating the parameters.
-        this.fitAllParameters();
     }
 
 

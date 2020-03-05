@@ -491,9 +491,10 @@ public final class ItemSettings implements Serializable
             return this;
         }
 
-        public void setL2Lambda(final double l2Lambda_)
+        public Builder setL2Lambda(final double l2Lambda_)
         {
             _l2Lambda = l2Lambda_;
+            return this;
         }
 
         public double getL2Lambda()
