@@ -24,6 +24,8 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
 
     private double[] _params;
 
+    private BlockResult _prevBlockResult = null;
+
     public ItemFitPoint(final FitPointGenerator<S, R, T> calculator_, final PackedParameters<S, R, T> packed_)
     {
         if (null == calculator_)
@@ -126,6 +128,12 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     @Override
     public void computeUntil(final int endBlock_, BlockCalculationType type_, final BlockResult prevDerivative_)
     {
+        if (_prevBlockResult != prevDerivative_)
+        {
+            this.clear();
+            _prevBlockResult = prevDerivative_;
+        }
+
         final int nextBlock = getNextBlock(type_);
         final int neededBlocks = endBlock_ - nextBlock;
 

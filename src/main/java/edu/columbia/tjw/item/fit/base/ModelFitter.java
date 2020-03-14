@@ -50,7 +50,7 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     public FitResult<S, R, T> fitAllParameters(final FitResult<S, R, T> prevResults_)
     {
-        final FitResult<S, R, T> refit = _base.doFit(prevResults_.getParams().generatePacked(), prevResults_);
+        final FitResult<S, R, T> refit = _base.doFit(prevResults_.getParams().generatePacked(), prevResults_, false);
         return refit;
     }
 
