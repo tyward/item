@@ -20,10 +20,8 @@ import edu.columbia.tjw.item.util.AbstractEnumMember;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.HashUtil;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.io.ObjectStreamException;
+import java.util.*;
 
 /**
  * This is a simple regressor. Ideally, it's slightly cleaner to make your own
@@ -44,7 +42,7 @@ public final class SimpleRegressor extends AbstractEnumMember<SimpleRegressor> i
     private static final int CLASS_HASH = HashUtil.startHash(SimpleRegressor.class);
     private static final long serialVersionUID = 0x5d7e6fbd7c93394fL;
 
-    private final SimpleStringEnum _base;
+    private SimpleStringEnum _base;
     private EnumFamily<SimpleRegressor> _family;
 
     private SimpleRegressor(final SimpleStringEnum base_)
@@ -116,5 +114,30 @@ public final class SimpleRegressor extends AbstractEnumMember<SimpleRegressor> i
     public String toString()
     {
         return "SimpleRegressor[" + name() + "]";
+    }
+
+    private static final Map<SimpleStringEnum, SimpleRegressor> CANONICAL = new HashMap<>();
+
+    private Object readResolve() throws ObjectStreamException
+    {
+        // First make sure our string enum is canonical.
+        _base = EnumFamily.canonicalize(_base.getFamily()).getFromOrdinal(_base.ordinal());
+
+        // Now we make sure that this object is canonical.
+        SimpleRegressor member = this;
+
+        synchronized (CANONICAL)
+        {
+            if (CANONICAL.containsKey(this._base))
+            {
+                member = CANONICAL.get(this._base);
+            }
+            else
+            {
+                CANONICAL.put(this._base, this);
+            }
+        }
+
+        return member;
     }
 }

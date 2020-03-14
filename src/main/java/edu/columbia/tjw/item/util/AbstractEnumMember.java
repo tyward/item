@@ -1,6 +1,8 @@
 package edu.columbia.tjw.item.util;
 
 import java.io.ObjectStreamException;
+import java.util.HashMap;
+import java.util.Map;
 
 public abstract class AbstractEnumMember<V extends AbstractEnumMember<V>> implements EnumMember<V>
 {
@@ -87,14 +89,6 @@ public abstract class AbstractEnumMember<V extends AbstractEnumMember<V>> implem
         return Integer.compare(this.ordinal(), that_.ordinal());
     }
 
-    private Object readResolve() throws ObjectStreamException
-    {
-        if (this.getFamily() != null)
-        {
-            return EnumFamily.canonicalize(this.getFamily()).getFromOrdinal(_ordinal);
-        }
 
-        return this;
-    }
 
 }

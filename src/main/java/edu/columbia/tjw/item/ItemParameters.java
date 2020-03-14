@@ -384,9 +384,15 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                 newTrans.add(curve);
             }
 
+            final int fieldIndex = _uniqueFields.indexOf(field);
 
-            _fieldOffsets[endIndex][i] = _uniqueFields.indexOf(field);
-            _transOffsets[endIndex][i] = transIndex; //_trans.indexOf(curve);
+            if (fieldIndex < 0)
+            {
+                throw new IllegalStateException("Impossible!");
+            }
+
+            _fieldOffsets[endIndex][i] = fieldIndex;
+            _transOffsets[endIndex][i] = transIndex;
         }
 
         if (toIndex != -1)

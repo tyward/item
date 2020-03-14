@@ -19,6 +19,7 @@ import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.util.AbstractEnumMember;
 import edu.columbia.tjw.item.util.EnumFamily;
 
+import java.io.ObjectStreamException;
 import java.util.*;
 
 /**
@@ -30,7 +31,7 @@ public class SimpleStatus extends AbstractEnumMember<SimpleStatus> implements It
 {
     private static final long serialVersionUID = 0x66aa83672f316542L;
 
-    private final SimpleStringEnum _base;
+    private SimpleStringEnum _base;
     private final List<SimpleStatus> _indistinguishable;
 
     //These two must be filled out after construction.
@@ -158,5 +159,29 @@ public class SimpleStatus extends AbstractEnumMember<SimpleStatus> implements It
     public String toString()
     {
         return "SimpleStatus[" + name() + "]";
+    }
+
+
+    private static final Map<SimpleStringEnum, SimpleStatus> CANONICAL = new HashMap<>();
+
+    private Object readResolve() throws ObjectStreamException
+    {
+        _base = EnumFamily.canonicalize(_base.getFamily()).getFromOrdinal(_base.ordinal());
+
+        SimpleStatus member = this;
+
+        synchronized (CANONICAL)
+        {
+            if (CANONICAL.containsKey(this._base))
+            {
+                member = CANONICAL.get(this._base);
+            }
+            else
+            {
+                CANONICAL.put(this._base, this);
+            }
+        }
+
+        return member;
     }
 }

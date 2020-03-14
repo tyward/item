@@ -267,23 +267,11 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
         }
     }
 
-//    // TODO: Remove this, it's no longer needed.
-//    private Object readResolve()
-//    {
-//        return canonicalize(this);
-//    }
-
-//    private Object writeReplace() throws ObjectStreamException
-//    {
-//        return new WriteStub<>(this);
-//    }
-
     private Object readResolve() throws ObjectStreamException
     {
         if (null == _familyGUID)
         {
             return EnumFamily.generateFamily(this._members, this._distinctFamily);
-            //throw new IllegalStateException("This should not be possible.");
         }
 
         final EnumFamily<V> existing = EnumFamilyRegistry.lookupFamily(_familyGUID, _componentClass);

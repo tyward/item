@@ -51,7 +51,7 @@ public enum StandardCurveType implements ItemCurveType<StandardCurveType>
     }
 
     @Override
-    public <R extends ItemRegressor<R>> ItemCurveFactory<R, StandardCurveType> getFactory()
+    public StandardCurveFactory getFactory()
     {
         return FACTORY;
     }

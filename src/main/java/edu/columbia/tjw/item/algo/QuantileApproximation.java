@@ -1,5 +1,7 @@
 package edu.columbia.tjw.item.algo;
 
+import edu.columbia.tjw.item.ItemRegressorReader;
+
 import java.util.Arrays;
 
 public final class QuantileApproximation
@@ -78,6 +80,77 @@ public final class QuantileApproximation
         _totalCount = totalCount;
         _mean = builder_._calc.getMean();
         _variance = builder_._calc.getVariance();
+    }
+
+    private QuantileApproximation(QuantileApproximation base_, int bucketCount_)
+    {
+        final int size = bucketCount_;
+
+        _totalCount = base_._totalCount;
+        _mean = base_._mean;
+        _variance = base_._variance;
+
+        _cutoffValues = new double[size];
+        _meanValues = new double[size];
+        _counts = new int[size];
+        _identicalValues = new boolean[size];
+
+        Arrays.fill(_identicalValues, true);
+
+        final int targetSize = _totalCount / size;
+        int scanPointer = 0;
+
+        for (int i = 0; i < size; i++)
+        {
+            while (scanPointer < base_._counts.length && _counts[i] < targetSize)
+            {
+                if (_counts[i] > 0)
+                {
+                    // this includes at least two buckets, values can't be identical.
+                    _identicalValues[i] = false;
+                }
+                else
+                {
+                    _cutoffValues[i] = base_._cutoffValues[scanPointer];
+                }
+
+                _counts[i] += base_._counts[scanPointer];
+
+                _identicalValues[i] &= base_._identicalValues[scanPointer];
+                _meanValues[i] += base_._meanValues[scanPointer] * base_._counts[scanPointer];
+                scanPointer++;
+            }
+
+            _meanValues[i] /= _counts[i];
+        }
+    }
+
+
+    public static QuantileApproximation buildApproximation(final ItemRegressorReader xReader_)
+    {
+        final QuantileApproximation.QuantileApproximationBuilder qab = QuantileApproximation.builder();
+
+        for (int i = 0; i < xReader_.size(); i++)
+        {
+            final double x = xReader_.asDouble(i);
+            qab.addObservation(x);
+        }
+
+        return qab.build();
+    }
+
+    public QuantileApproximation rebucket(final int bucketCount_)
+    {
+        if (bucketCount_ > _meanValues.length)
+        {
+            throw new IllegalArgumentException("Cannot re-bucket to a larger bucket count");
+        }
+        if (bucketCount_ <= 0)
+        {
+            throw new IllegalArgumentException("Bucket count must be positive.");
+        }
+
+        return new QuantileApproximation(this, bucketCount_);
     }
 
     public static QuantileApproximationBuilder builder()
