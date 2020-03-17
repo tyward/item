@@ -40,7 +40,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
     private static final Logger LOG = LogUtil.getLogger(GoldenSectionOptimizer.class);
     private static final double PHI = 0.5 * (1.0 + Math.sqrt(5.0));
     private static final double INV_PHI = 1.0 / PHI;
-    private static final double LINE_SEARCH_REL_TOL = 0.001;
+    private static final double LINE_SEARCH_REL_TOL = 0.00001;
 
     public GoldenSectionOptimizer(final double xTol_, final double yTol_, final int bloackSize_, int maxEvalCount_,
                                   final OptimizationTarget target_, ItemSettings settings_)
