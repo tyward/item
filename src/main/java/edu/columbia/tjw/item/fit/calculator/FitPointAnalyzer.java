@@ -12,24 +12,32 @@ public final class FitPointAnalyzer
 {
     private static final double EPSILON = Math.ulp(4.0); // Just a bit bigger than machine epsilon.
 
+    private static final double Z_SCORE_CUTOFF = 5.0;
+
     private final int _superBlockSize;
     private final double _minStdDev;
     private final OptimizationTarget _target;
     private final ItemSettings _settings;
 
-    public FitPointAnalyzer(final int superBlockSize_, final double minStdDev_, final OptimizationTarget target_,
+    public FitPointAnalyzer(final int superBlockSize_, final OptimizationTarget target_,
                             ItemSettings settings_)
     {
         _superBlockSize = superBlockSize_;
-        _minStdDev = minStdDev_;
+        _minStdDev = Z_SCORE_CUTOFF;
         _target = target_;
         _settings = settings_;
     }
 
     public double compare(final FitPoint a_, final FitPoint b_)
     {
-        return compare(a_, b_, _minStdDev);
+        return generateComparision(a_, b_).getZScore();
     }
+
+    public FitPointComparison generateComparision(final FitPoint a_, final FitPoint b_)
+    {
+        return compare(a_, b_, _minStdDev, false);
+    }
+
 
     public double getSigmaTarget()
     {
@@ -341,13 +349,14 @@ public final class FitPointAnalyzer
      * @param b_
      * @return
      */
-    public double compare(final FitPoint a_, final FitPoint b_, final double minStdDev_)
+    public FitPointComparison compare(final FitPoint a_, final FitPoint b_, final double minStdDev_,
+                                      final boolean reverse_)
     {
-        if (a_ == b_)
-        {
-            // These are identical objects, the answer would always be zero.
-            return 0.0;
-        }
+//        if (a_ == b_)
+//        {
+//            // These are identical objects, the answer would always be zero.
+//            return 0.0;
+//        }
         if (a_.getBlockCount() != b_.getBlockCount())
         {
             throw new IllegalArgumentException("Incomparable points.");
@@ -355,7 +364,7 @@ public final class FitPointAnalyzer
 
         if (a_.getNextBlock(BlockCalculationType.VALUE) > b_.getNextBlock(BlockCalculationType.VALUE))
         {
-            return -1.0 * compare(b_, a_, minStdDev_);
+            return compare(b_, a_, minStdDev_, !reverse_);
         }
 
         final BlockCalculationType valType = BlockCalculationType.VALUE;
@@ -408,7 +417,7 @@ public final class FitPointAnalyzer
         if (a_.getNextBlock(valType) < 1)
         {
             // No data, can't tell which is better.
-            return 0.0;
+            return new FitPointComparison(a_, b_, 0, 0.0);
         }
 
         final double meanDiff = vcalc.getMean();
@@ -426,12 +435,99 @@ public final class FitPointAnalyzer
         // This is slightly rephrased in order to make later computations much easier.
         final int nextBlock = Math.max(a_.getNextBlock(BlockCalculationType.VALUE),
                 b_.getNextBlock(BlockCalculationType.VALUE));
-        final double zScore = (computeObjective(a_, nextBlock) - computeObjective(b_, nextBlock)) / dev;
+        //final double zScore = (computeObjective(a_, nextBlock) - computeObjective(b_, nextBlock)) / dev;
 
+        final FitPointComparison comparison;
 
-        //final double zScore2 = meanDiff / dev;
-        return zScore;
+        if (reverse_)
+        {
+            comparison = new FitPointComparison(b_, a_, nextBlock, dev);
+        }
+        else
+        {
+            comparison = new FitPointComparison(a_, b_, nextBlock, dev);
+        }
+
+        return comparison;
     }
 
+    public final class FitPointComparison
+    {
+        private final FitPoint _pointA;
+        private final FitPoint _pointB;
+        private final int _blockCount;
+
+        private final double _aVal;
+        private final double _bVal;
+        private final double _dev;
+        private final double _zScore;
+        private final double _relativeError;
+
+        public FitPointComparison(final FitPoint pointA_, final FitPoint pointB_, final int nextBlock_,
+                                  final double dev_)
+        {
+            _pointA = pointA_;
+            _pointB = pointB_;
+            _blockCount = nextBlock_;
+
+            if (_blockCount < 1)
+            {
+                _aVal = 0.0;
+                _bVal = 0.0;
+                _dev = 0.0;
+                _zScore = 0.0;
+                _relativeError = 0.0;
+            }
+            else
+            {
+                _aVal = computeObjective(_pointA, _blockCount);
+                _bVal = computeObjective(_pointB, _blockCount);
+                _dev = dev_;
+
+                _zScore = (_aVal - _bVal) / _dev;
+                _relativeError = Math.abs(_aVal - _bVal) / (_aVal + _bVal);
+            }
+        }
+
+        public FitPoint getPointA()
+        {
+            return _pointA;
+        }
+
+        public FitPoint getPointB()
+        {
+            return _pointB;
+        }
+
+        public int getBlockCount()
+        {
+            return _blockCount;
+        }
+
+        public double getValA()
+        {
+            return _aVal;
+        }
+
+        public double getValB()
+        {
+            return _bVal;
+        }
+
+        public double getDev()
+        {
+            return _dev;
+        }
+
+        public double getZScore()
+        {
+            return _zScore;
+        }
+
+        public double getRelativeError()
+        {
+            return _relativeError;
+        }
+    }
 
 }

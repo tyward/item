@@ -5,16 +5,13 @@ import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.fit.PackedParameters;
+import edu.columbia.tjw.item.fit.ReducedParameterVector;
 import edu.columbia.tjw.item.fit.curve.CurveFitResult;
 import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
-import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 
-import java.util.Collection;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.logging.Logger;
 
 public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
@@ -53,6 +50,36 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         final FitResult<S, R, T> refit = _base.doFit(prevResults_.getParams().generatePacked(), prevResults_, false);
         return refit;
     }
+
+    public FitResult<S, R, T> fitEntries(final FitResult<S, R, T> prevResults_, final int[] entries_)
+    {
+        final PackedParameters<S, R, T> packed = prevResults_.getParams().generatePacked();
+        final boolean[] active = new boolean[prevResults_.getParams().getEffectiveParamCount()];
+
+        Arrays.sort(entries_);
+        int activeCount = 0;
+
+        for (int i = 0; i < active.length; i++)
+        {
+            if (Arrays.binarySearch(entries_, packed.getEntry(i)) < 0)
+            {
+                // Not one of the target entries.
+                continue;
+            }
+
+            active[i] = true;
+            activeCount++;
+        }
+
+        if (activeCount <= 0)
+        {
+            throw new IllegalArgumentException("Invalid entry list.");
+        }
+
+        final PackedParameters<S, R, T> reduced = new ReducedParameterVector<>(active, packed);
+        return _base.doFit(reduced, prevResults_);
+    }
+
 
     public FitResult<S, R, T> fitBetas(final FitResult<S, R, T> fitResult_)
     {

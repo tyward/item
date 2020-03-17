@@ -85,7 +85,7 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
 
     public GradientResult computeGradients(final PackedParameters<S, R, T> origPacked_)
     {
-        final FitPointAnalyzer analyzer = new FitPointAnalyzer(_settings.getBlockSize(), _settings.getZScoreCutoff(),
+        final FitPointAnalyzer analyzer = new FitPointAnalyzer(_settings.getBlockSize(),
                 _settings.getTarget(),
                 _settings);
         final FitPoint point = _calc.generatePoint(origPacked_);

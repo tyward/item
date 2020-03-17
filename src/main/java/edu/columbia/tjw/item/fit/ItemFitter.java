@@ -282,6 +282,17 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
         return refit;
     }
 
+    public FitResult<S, R, T> fitIntercept()
+    {
+        return fitEntries(new int[]{0});
+    }
+
+    public FitResult<S, R, T> fitEntries(final int[] entries_)
+    {
+        final FitResult<S, R, T> betaFit = _modelFitter.fitEntries(_chain.getLatestResults(), entries_);
+        _chain.pushResults("Fit Betas", betaFit);
+        return _chain.getLatestResults();
+    }
 
     /**
      * Optimize the coefficients.
@@ -289,7 +300,7 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
      * @return A model with newly optimized coefficients.
      * @throws ConvergenceException If no progress could be made
      */
-    private FitResult<S, R, T> fitCoefficients() throws ConvergenceException
+    public FitResult<S, R, T> fitCoefficients() throws ConvergenceException
     {
         final FitResult<S, R, T> betaFit = _modelFitter.fitBetas(_chain.getLatestResults());
         _chain.pushResults("Fit Betas", betaFit);

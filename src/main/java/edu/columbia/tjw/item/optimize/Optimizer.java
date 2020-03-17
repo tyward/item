@@ -58,7 +58,7 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         _maxEvalCount = maxEvalCount_;
         _stdDevThreshold = settings_.getZScoreCutoff();
 
-        _comparator = new FitPointAnalyzer(_blockSize, _stdDevThreshold, target_, settings_);
+        _comparator = new FitPointAnalyzer(_blockSize, target_, settings_);
     }
 
     public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_)
@@ -89,6 +89,13 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         return _comparator;
     }
 
+    /**
+     * returns true if the relative error is too small to continue.
+     *
+     * @param aResult_
+     * @param bResult_
+     * @return
+     */
     protected boolean checkYTolerance(final FitPoint aResult_, final FitPoint bResult_)
     {
         // Make sure everything has the same (approximate) level of computed results.
@@ -97,18 +104,22 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         final double meanA = getComparator().computeObjective(aResult_, highWater);
         final double meanB = getComparator().computeObjective(bResult_, highWater);
 
-        final double stdDevA = getComparator().computeObjectiveStdDev(aResult_, highWater);
-        final double stdDevB = getComparator().computeObjectiveStdDev(bResult_, highWater);
+        final double scaledDiff = Math.abs(meanA - meanB) / (meanA + meanB);
+        return scaledDiff < this._yTol;
 
-        final double raw = Math.abs(meanA - meanB);
-        final double adjusted = raw + this._stdDevThreshold * (stdDevA + stdDevB);
 
-        final double scale = Math.abs((meanA * meanA) + (meanB * meanB));
-
-        final double scaled = adjusted / scale;
-
-        final boolean output = scaled < this._yTol;
-        return output;
+//        final double stdDevA = getComparator().computeObjectiveStdDev(aResult_, highWater);
+//        final double stdDevB = getComparator().computeObjectiveStdDev(bResult_, highWater);
+//
+//        final double raw = Math.abs(meanA - meanB);
+//        final double adjusted = raw + this._stdDevThreshold * (stdDevA + stdDevB);
+//
+//        final double scale = Math.abs((meanA * meanA) + (meanB * meanB));
+//
+//        final double scaled = adjusted / scale;
+//
+//        final boolean output = scaled < this._yTol;
+//        return output;
     }
 
 

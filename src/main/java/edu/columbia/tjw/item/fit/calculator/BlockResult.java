@@ -89,17 +89,19 @@ public final class BlockResult
             _derivative = new double[dimension];
             _derivativeSquared = new double[dimension];
             _jDiag = new double[dimension];
-            _fisherInformation = new double[dimension][dimension];
+
             _scaledGradient = new double[dimension];
             _scaledGradient2 = new double[dimension];
 
             if (hasSecondDerivative)
             {
+                _fisherInformation = new double[dimension][dimension];
                 _secondDerivative = new double[dimension][dimension];
                 _shiftGradient = new double[dimension];
             }
             else
             {
+                _fisherInformation = null;
                 _secondDerivative = null;
                 _shiftGradient = null;
             }
@@ -140,10 +142,6 @@ public final class BlockResult
                     _derivativeSquared[i] += weight * next._derivativeSquared[i];
                     _jDiag[i] += weight * next._jDiag[i];
 
-                    for (int j = 0; j < dimension; j++)
-                    {
-                        _fisherInformation[i][j] += weight * next.getFisherInformationEntry(i, j);
-                    }
 
                     if (null != _secondDerivative)
                     {
@@ -152,6 +150,7 @@ public final class BlockResult
                         for (int j = 0; j < dimension; j++)
                         {
                             _secondDerivative[i][j] += weight * next.getSecondDerivativeEntry(i, j);
+                            _fisherInformation[i][j] += weight * next.getFisherInformationEntry(i, j);
                         }
                     }
                 }
@@ -176,11 +175,6 @@ public final class BlockResult
                 _derivativeSquared[i] = invWeight * _derivativeSquared[i];
                 _jDiag[i] = invWeight * _jDiag[i];
 
-                for (int j = 0; j < dimension; j++)
-                {
-                    _fisherInformation[i][j] *= invWeight;
-                }
-
                 if (null != _secondDerivative)
                 {
                     _shiftGradient[i] *= invWeight;
@@ -188,6 +182,7 @@ public final class BlockResult
                     for (int j = 0; j < dimension; j++)
                     {
                         _secondDerivative[i][j] = invWeight * _secondDerivative[i][j];
+                        _fisherInformation[i][j] *= invWeight;
                     }
                 }
             }

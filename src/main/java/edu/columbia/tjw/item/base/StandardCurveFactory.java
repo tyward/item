@@ -228,6 +228,7 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
 
     private static final class GaussianCurve extends StandardCurve<StandardCurveType>
     {
+        private static final double SQRT_EPSILON = Math.sqrt(Math.ulp(4.0));
         private static final long serialVersionUID = 0xd1c81f26497f177fL;
         private final double _stdDev;
         private final double _invStdDev;
@@ -247,8 +248,15 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
                 throw new IllegalArgumentException("Invalid stdDev: " + stdDev_);
             }
 
-            final double variance = (stdDev_ * stdDev_) + 1.0e-10;
-            _stdDev = Math.sqrt(variance);
+            // The abs of mean, unless mean is really small, in which case this is a small positive value.
+            final double absMean = Math.max(Math.abs(mean_), SQRT_EPSILON);
+
+            // This is about the smallest that he sigma can reasonably be before we don't have much accuracy anymore.
+            final double sigmaAdj = SQRT_EPSILON * absMean;
+
+            _stdDev = Math.max(Math.abs(stdDev_), sigmaAdj);
+
+            final double variance = (_stdDev * _stdDev);
             _invStdDev = 1.0 / _stdDev;
             _mean = mean_;
             _expNormalizer = -1.0 / (2.0 * variance);
@@ -368,8 +376,8 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
             //Slope must be squared so that we can ensure that it is positive. 
             //We cannot take an abs, because that is not an analytical transformation.
             _center = center_;
-            _slope = (slope_ * slope_);
-            _slopeParam = Math.sqrt(_slope);
+            _slopeParam = Math.abs(slope_);
+            _slope = (_slopeParam * _slopeParam);
             _origSlope = slope_;
         }
 
