@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
+import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.logging.Logger;
@@ -98,19 +99,20 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
         final int dimension = f_.dimension();
         int evaluationCount = 0;
 
+        final FitPointAnalyzer comparator = this.getComparator();
         final MultivariatePoint nextPoint = new MultivariatePoint(startingPoint_);
 
         double stepMagnitude = Double.NaN;
-        boolean xTolFailed = true;
-        boolean yTolFailed = true;
+        boolean xTolExceeded = true;
+        boolean yTolExceeded = true;
         boolean firstLoop = true;
         FitPoint fitPointPrev = null;
 
         try
         {
-            while (xTolFailed && yTolFailed && (evaluationCount < maxEvalCount))
+            while (xTolExceeded && yTolExceeded && (evaluationCount < maxEvalCount))
             {
-                final FitPoint fitPointCurrent = f_.evaluate(currentPoint);
+                //final FitPoint fitPointCurrent = f_.evaluate(currentPoint);
                 final OptimizationResult<MultivariatePoint> result;
 
                 if (!firstLoop)
@@ -175,9 +177,10 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         final FitPoint fitPointB = f_.evaluate(pointB);
 
                         //Only take it if it is clearly better.....
-                        final double comparison = this.getComparator().compare(fitPointA, fitPointB);
+                        final FitPointAnalyzer.FitPointComparison comparison = comparator
+                                .generateComparision(fitPointA, fitPointB);
 
-                        if (comparison <= -this.getComparator().getSigmaTarget())
+                        if (comparison.getZScore() <= -comparator.getSigmaTarget())
                         {
                             //The straight derivative point is better....
                             trialPoint = pointA;
@@ -185,10 +188,10 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         }
                         else
                         {
-                            final double comp2 = this.getComparator().compare(
-                                    fitPointCurrent, fitPointB);
+                            final FitPointAnalyzer.FitPointComparison comp2 = comparator.generateComparision(
+                                    currentResult, fitPointB);
 
-                            if (comp2 <= -this.getComparator().getSigmaTarget())
+                            if (comp2.getZScore() <= -comparator.getSigmaTarget())
                             {
                                 //The second derivative point is no better than the current point, use the standard
                                 // derivative.
@@ -204,7 +207,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                     }
 
                     result = _optimizer
-                            .optimize(f_, currentPoint, fitPointCurrent, trialPoint, f_.evaluate(trialPoint));
+                            .optimize(f_, currentPoint, currentResult, trialPoint, f_.evaluate(trialPoint));
                 }
                 else
                 {
@@ -216,13 +219,15 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
                 nextPoint.copy(result.getOptimum());
                 final FitPoint nextResult = result.minResult();
-                final FitPoint fitPointNext = f_.evaluate(nextPoint);
+                //final FitPoint fitPointNext = f_.evaluate(nextPoint);
 
-                final double zScore = this.getComparator().compare(
-                        fitPointCurrent, fitPointNext);
+                final FitPointAnalyzer.FitPointComparison comparison = comparator.generateComparision(
+                        currentResult, nextResult);
+
+                final double zScore = comparison.getZScore();
 
                 //LOG.info("Finished one line search: " + zScore);
-                if (zScore < _zTolerance)
+                if (zScore <= _zTolerance)
                 {
                     LOG.info("Unable to make progress.");
                     currentResult = nextResult;
@@ -230,13 +235,16 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                     break;
                 }
 
-                yTolFailed = !this.checkYTolerance(currentResult, nextResult);
-                xTolFailed = !this.checkXTolerance(currentPoint, nextPoint);
+                yTolExceeded = !(comparison.getRelativeError() < this.getYTolerance());
+
+
+                //yTolExceeded = !this.checkYTolerance(currentResult, nextResult);
+                xTolExceeded = !this.checkXTolerance(currentPoint, nextPoint);
 
                 stepMagnitude = currentPoint.distance(nextPoint);
                 currentPoint.copy(nextPoint);
+                fitPointPrev = currentResult;
                 currentResult = nextResult;
-                fitPointPrev = fitPointCurrent;
             }
         }
         catch (final ConvergenceException e)
@@ -245,7 +253,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
         }
 
         //Did we converge, or did we run out of iterations. 
-        final boolean converged = (!xTolFailed || !yTolFailed);
+        final boolean converged = (!xTolExceeded || !yTolExceeded);
         final MultivariateOptimizationResult output = new MultivariateOptimizationResult(currentPoint, currentResult,
                 converged, evaluationCount);
         return output;
