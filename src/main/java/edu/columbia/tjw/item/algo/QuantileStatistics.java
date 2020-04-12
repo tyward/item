@@ -32,7 +32,7 @@ public final class QuantileStatistics
     private static final double RELATIVE_ERROR_THRESHOLD = 100.0;
 
     private final boolean _varTestPassed;
-    private final QuantileApproximation _approx;
+    private final QuantileBreakdown _approx;
 
     private final double[] _eY;
     private final double[] _devY;
@@ -93,7 +93,7 @@ public final class QuantileStatistics
             throw new IllegalArgumentException("Size mismatch: " + size + " != " + yReader_.size());
         }
 
-        final QuantileApproximation approx = QuantileApproximation.buildApproximation(xReader_);
+        final QuantileBreakdown approx = QuantileApproximation.buildApproximation(xReader_);
         final QuantileStatisticsBuilder builder = builder(approx);
         boolean passes = false;
 
@@ -119,7 +119,7 @@ public final class QuantileStatistics
         return builder.build();
     }
 
-    public static QuantileStatisticsBuilder builder(final QuantileApproximation approx_)
+    public static QuantileStatisticsBuilder builder(final QuantileBreakdown approx_)
     {
         return new QuantileStatisticsBuilder(approx_);
     }
@@ -129,7 +129,7 @@ public final class QuantileStatistics
         return _approx.getSize();
     }
 
-    public QuantileApproximation getQuantApprox()
+    public QuantileBreakdown getQuantApprox()
     {
         return _approx;
     }
@@ -187,11 +187,11 @@ public final class QuantileStatistics
 
     public static final class QuantileStatisticsBuilder
     {
-        private final QuantileApproximation _approx;
+        private final QuantileBreakdown _approx;
         private final VarianceCalculator[] _calcs;
         private final VarianceCalculator _totalCalc;
 
-        private QuantileStatisticsBuilder(final QuantileApproximation approx_)
+        private QuantileStatisticsBuilder(final QuantileBreakdown approx_)
         {
             _approx = approx_;
 

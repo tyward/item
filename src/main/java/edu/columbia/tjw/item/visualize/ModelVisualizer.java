@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.visualize;
 
 import edu.columbia.tjw.item.*;
 import edu.columbia.tjw.item.algo.QuantileApproximation;
+import edu.columbia.tjw.item.algo.QuantileBreakdown;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.data.InterpolatedCurve;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
@@ -97,7 +98,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
             for (final R reg : _regressors)
             {
                 final ItemRegressorReader reader = grid.getRegressorReader(reg);
-                final QuantileApproximation regApprox = QuantileApproximation.buildApproximation(reader);
+                final QuantileBreakdown regApprox = QuantileApproximation.buildApproximation(reader);
 
                 final QuantileStatistics.QuantileStatisticsBuilder approxBuilder =
                         QuantileStatistics.builder(regApprox);
@@ -285,7 +286,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 }
 
                 final QuantileStatistics dist = getActualDistribution(to_, regressor_);
-                final QuantileApproximation approx = dist.getQuantApprox();
+                final QuantileBreakdown approx = dist.getQuantApprox();
                 final int firstStep = approx.firstStep(alpha_);
                 final int end = approx.lastStep(alpha_);
                 final int trimSize = end - firstStep;

@@ -4,7 +4,7 @@ import edu.columbia.tjw.item.ItemRegressorReader;
 
 import java.util.Arrays;
 
-public final class QuantileApproximation
+public final class QuantileApproximation implements QuantileBreakdown
 {
     public static final int DEFAULT_LOAD = 10;
     public static final int DEFAULT_BUCKETS = 100;
@@ -126,7 +126,7 @@ public final class QuantileApproximation
     }
 
 
-    public static QuantileApproximation buildApproximation(final ItemRegressorReader xReader_)
+    public static QuantileBreakdown buildApproximation(final ItemRegressorReader xReader_)
     {
         final QuantileApproximation.QuantileApproximationBuilder qab = QuantileApproximation.builder();
 
@@ -153,7 +153,7 @@ public final class QuantileApproximation
         return new QuantileApproximation(this, bucketCount_);
     }
 
-    public static QuantileApproximationBuilder builder()
+    private static QuantileApproximationBuilder builder()
     {
         return new QuantileApproximationBuilder(DEFAULT_LOAD, DEFAULT_BUCKETS);
     }

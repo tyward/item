@@ -20,7 +20,7 @@
 package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
-import edu.columbia.tjw.item.algo.QuantileApproximation;
+import edu.columbia.tjw.item.algo.QuantileBreakdown;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.LogLikelihood;
@@ -56,7 +56,7 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
                 _likelihood);
 
         final QuantileStatistics stats = QuantileStatistics.generate(reader_, yReader);
-        final QuantileApproximation approx = stats.getQuantApprox();
+        final QuantileBreakdown approx = stats.getQuantApprox();
 
         final int size = approx.getSize();
 
