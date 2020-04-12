@@ -6,9 +6,9 @@ package edu.columbia.tjw.item.algo;
  */
 public final class VarianceCalculator
 {
-    private double _sum = 0.0;
-    private double _sum2 = 0.0;
     private int _count = 0;
+    private double _mean = 0.0;
+    private double _m2 = 0.0;
 
     public VarianceCalculator()
     {
@@ -21,9 +21,12 @@ public final class VarianceCalculator
             return false;
         }
 
-        _sum += input_;
-        _sum2 += (input_ * input_);
         _count++;
+
+        final double delta = input_ - _mean;
+        _mean += delta / _count;
+        final double delta2 = input_ - _mean;
+        _m2 += delta * delta2;
         return true;
     }
 
@@ -34,12 +37,7 @@ public final class VarianceCalculator
 
     public double getMean()
     {
-        if (_count < 1)
-        {
-            return 0.0;
-        }
-
-        return _sum / _count;
+        return _mean;
     }
 
     public double getDev()
@@ -69,10 +67,8 @@ public final class VarianceCalculator
             return 0;
         }
 
-        final double eX = _sum / _count;
-        final double eX2 = _sum2 / _count;
-        final double var = eX2 - (eX * eX);
-        return Math.max(var, 0.0);
+        final double var2 = _m2 / (_count - 1);
+        return var2;
     }
 
 
