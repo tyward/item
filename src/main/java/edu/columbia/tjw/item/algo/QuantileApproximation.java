@@ -18,7 +18,6 @@ public final class QuantileApproximation implements QuantileBreakdown
     private final double _mean;
     private final double _variance;
 
-
     private QuantileApproximation(final QuantileApproximationBuilder builder_)
     {
         final int size = builder_._bucketCount;
@@ -136,7 +135,12 @@ public final class QuantileApproximation implements QuantileBreakdown
             qab.addObservation(x);
         }
 
-        return qab.build();
+        final QuantileBreakdown gk = new GKQuantileBreakdown(xReader_);
+
+        final QuantileBreakdown breakdown = new QuantileApproximation(qab);
+
+
+        return breakdown;
     }
 
     public QuantileApproximation rebucket(final int bucketCount_)
@@ -217,7 +221,8 @@ public final class QuantileApproximation implements QuantileBreakdown
 
     public int findBucket(final double x_)
     {
-        return calculateBucket(_cutoffValues, x_, _cutoffValues.length);
+        final int bucket = calculateBucket(_cutoffValues, x_, _cutoffValues.length);
+        return bucket;
     }
 
     /**
@@ -236,7 +241,6 @@ public final class QuantileApproximation implements QuantileBreakdown
         {
             throw new IllegalArgumentException("NaN alpha.");
         }
-
         if (alpha_ < 0 || alpha_ >= 0.5)
         {
             throw new IllegalArgumentException("Alpha (for trimming) must be in [0, 0.5): " + alpha_);
@@ -319,10 +323,10 @@ public final class QuantileApproximation implements QuantileBreakdown
             Arrays.fill(_minValues, Double.NaN);
         }
 
-        public QuantileApproximation build()
-        {
-            return new QuantileApproximation(this);
-        }
+//        public QuantileApproximation build()
+//        {
+//            return new QuantileApproximation(this);
+//        }
 
         public QuantileApproximationBuilder refresh()
         {
