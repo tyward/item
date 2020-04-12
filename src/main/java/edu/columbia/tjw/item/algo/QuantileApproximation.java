@@ -185,7 +185,7 @@ public final class QuantileApproximation
         return _cutoffValues.length;
     }
 
-    public int getBucketCount(final int index_)
+    private int getBucketCount(final int index_)
     {
         return _counts[index_];
     }
@@ -195,7 +195,7 @@ public final class QuantileApproximation
         return _meanValues[index_];
     }
 
-    public boolean isBucketUniform(final int index_)
+    private boolean isBucketUniform(final int index_)
     {
         return _identicalValues[index_];
     }
@@ -274,7 +274,7 @@ public final class QuantileApproximation
         return _meanValues.clone();
     }
 
-    public static final class QuantileApproximationBuilder
+    private static final class QuantileApproximationBuilder
     {
         private final int _loadFactor;
         private final int _maxBuckets;

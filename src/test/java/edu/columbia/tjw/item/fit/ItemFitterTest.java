@@ -62,7 +62,7 @@ public class ItemFitterTest
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19245421235755575, r3.getEntropy());
+        Assertions.assertEquals(0.19245421393617895, r3.getEntropy());
 
 //
 //        final File outputDir = new File("/Users/tyler/Documents/code/outputModels");
@@ -91,7 +91,7 @@ public class ItemFitterTest
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19258381671377586, r3.getEntropy());
+        Assertions.assertEquals(0.19260668737730002, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
@@ -110,7 +110,7 @@ public class ItemFitterTest
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19321090494004525, r3.getEntropy());
+        Assertions.assertEquals(0.19321049464311857, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
@@ -129,7 +129,7 @@ public class ItemFitterTest
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19321159300621865, r3.getEntropy());
+        Assertions.assertEquals(0.1932110969106386, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
@@ -148,7 +148,7 @@ public class ItemFitterTest
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19245549664838843, r3.getEntropy());
+        Assertions.assertEquals(0.19245509976542435, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
@@ -167,7 +167,7 @@ public class ItemFitterTest
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19384785659925, r3.getEntropy());
+        Assertions.assertEquals(0.1938478541764914, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
@@ -187,7 +187,7 @@ public class ItemFitterTest
                 curveRegs, 20, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.1872644721625839, r3.getEntropy());
+        Assertions.assertEquals(0.18687693056130922, r3.getEntropy());
 
 
         //fitter.getCalculator().computeFitResult(r3.getParams(), r3);

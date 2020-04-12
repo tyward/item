@@ -40,7 +40,7 @@ public class GKQuantiles implements Serializable
      * GK needs 1 / (2 * epsilon) elements to complete it's initial phase
      */
     private boolean initialPhase;
-    private Integer count;
+    private int count;
 
 
     public GKQuantiles()
@@ -116,10 +116,10 @@ public class GKQuantiles implements Serializable
         //---------------------------------------------------------
 
 
-        int wantedRank = (int) ((q * count.floatValue()));
+        int wantedRank = (int) (q * count);
         int currentMinRank = 0;
         int currentMaxRank = 0;
-        double tolerance = (_epsilon * count.doubleValue());
+        double tolerance = (_epsilon * count);
 
         // if the wanted range is as most epsilon * count ranks smaller than the maximum the maximum
         // will always be an appropriate estimate
@@ -433,7 +433,7 @@ public class GKQuantiles implements Serializable
         }
 
         //this is how it's done during algorithm detail in the paper
-        double range = 2.0 * _epsilon * count.doubleValue();
+        double range = 2.0 * _epsilon * count;
         range = Math.floor(range);
 
         //this is the more adequate version presented at section "empirical measurements"
@@ -699,10 +699,10 @@ public class GKQuantiles implements Serializable
      * <li><b>range</b>: the span between this elements least and most rank</li>
      * <ul>
      */
-    private class QuantileBlock implements Serializable
+    private static final class QuantileBlock implements Serializable
     {
         private static final long serialVersionUID = 0x80ca623569742e28L;
-        private double value;
+        private final double value;
         private int offset;
         private int range;
 

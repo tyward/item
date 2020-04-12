@@ -40,7 +40,8 @@ import java.util.*;
  * @param <T> The curve family for this visualizer
  * @author tyler
  */
-public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
+public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+        implements Serializable
 {
     private static final long serialVersionUID = 4198554232525136207L;
     private final ItemParameters<S, R, T> _params;
@@ -96,15 +97,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
             for (final R reg : _regressors)
             {
                 final ItemRegressorReader reader = grid.getRegressorReader(reg);
-                final QuantileApproximation.QuantileApproximationBuilder builder = QuantileApproximation.builder();
-
-                for (int i = 0; i < grid.size(); i++)
-                {
-                    final double x = reader.asDouble(i);
-                    builder.addObservation(x);
-                }
-
-                final QuantileApproximation regApprox = builder.build();
+                final QuantileApproximation regApprox = QuantileApproximation.buildApproximation(reader);
 
                 final QuantileStatistics.QuantileStatisticsBuilder approxBuilder =
                         QuantileStatistics.builder(regApprox);
@@ -193,7 +186,8 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
                     final double theoY = theoCurve.value(x);
                     final double mass = massCurve.value(x);
 
-                    stream_.println(this._params.getStatus() + ", " + to + ", " + reg + ", " + x + ", " + mass + ", " + actY + ", " + modelY + ", " + theoY);
+                    stream_.println(this._params
+                            .getStatus() + ", " + to + ", " + reg + ", " + x + ", " + mass + ", " + actY + ", " + modelY + ", " + theoY);
                 }
             }
         }
