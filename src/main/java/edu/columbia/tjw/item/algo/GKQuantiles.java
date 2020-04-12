@@ -2,9 +2,9 @@ package edu.columbia.tjw.item.algo;
 
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Code cloned from streaminer project, and updated to use more primitives for performance reasons.
@@ -22,14 +22,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * @author Markus Kokott, Carsten Przyluczky
  */
-public class GKQuantiles
+public class GKQuantiles implements Serializable
 {
+    private static final long serialVersionUID = 0x3b9df13d1769c5bdL;
+
     /**
      * This value specifies the error bound.
      */
     private final double _epsilon;
 
-    private List<Tuple> summary;
+    private List<QuantileBlock> summary;
     private double minimum;
     private double maximum;
     private int stepsUntilMerge;
@@ -61,14 +63,14 @@ public class GKQuantiles
         this._epsilon = epsilon_;
         this.minimum = Double.MAX_VALUE;
         this.maximum = Double.MIN_VALUE;
-        Double mergingSteps = Math.floor(1.0 / (2.0 * _epsilon));
-        this.stepsUntilMerge = mergingSteps.intValue();
-        this.summary = new CopyOnWriteArrayList<Tuple>();
+        double mergingSteps = Math.floor(1.0 / (2.0 * _epsilon));
+        this.stepsUntilMerge = (int) mergingSteps;
+        this.summary = new ArrayList<QuantileBlock>();
         this.count = 0;
         this.initialPhase = true;
     }
 
-    public void offer(Double value)
+    public void offer(double value)
     {
         insertItem(value);
         incrementCount();
@@ -133,24 +135,21 @@ public class GKQuantiles
             return minimum;
         }
 
-        Tuple lastTuple = summary.get(0);
-
-        Object[] copyOfSummary = summary.toArray();
+        QuantileBlock lastTuple = summary.get(0);
 
         // usually a range is estimated during this loop. it's element's value will be returned
-        for (int i = 0; i < copyOfSummary.length; i++)
+        for (QuantileBlock nextBlock : summary)
         {
-            Tuple currentTuple = (Tuple) copyOfSummary[i];
-            currentMinRank += currentTuple.getOffset();
-            currentMaxRank = currentMinRank + currentTuple.getRange();
+            currentMinRank += nextBlock.getOffset();
+            currentMaxRank = currentMinRank + nextBlock.getRange();
 
             if (currentMaxRank - wantedRank <= tolerance)
             {
-                lastTuple = currentTuple;
+                lastTuple = nextBlock;
                 if (wantedRank - currentMinRank <= tolerance)
                 {
 
-                    return currentTuple.getValue();
+                    return nextBlock.getValue();
                 }
             }
         }
@@ -165,7 +164,7 @@ public class GKQuantiles
      *
      * @param item {@link Double} value of current element
      */
-    private void insertItem(Double item)
+    private void insertItem(double item)
     {
         if (item < minimum)
         {
@@ -188,10 +187,10 @@ public class GKQuantiles
      *
      * @param item - new element with a {@link Double} value smaller than the current minimum of the summary.
      */
-    private void insertAsNewMinimum(Double item)
+    private void insertAsNewMinimum(double item)
     {
         minimum = item;
-        Tuple newTuple = new Tuple(item, 1, 0);
+        QuantileBlock newTuple = new QuantileBlock(item, 1, 0);
         summary.add(0, newTuple);
     }
 
@@ -201,17 +200,18 @@ public class GKQuantiles
      *
      * @param item - new element with a {@link Double} value greater than the current maximum of the summary.
      */
-    private void insertAsNewMaximum(Double item)
+    private void insertAsNewMaximum(double item)
     {
         if (item == maximum)
         {
-            Tuple newTuple = new Tuple(item, 1, computeRangeForNewTuple(summary.get(summary.size() - 1)));
+            QuantileBlock newTuple = new QuantileBlock(item, 1,
+                    computeRangeForNewTuple(summary.get(summary.size() - 1)));
             summary.add(summary.size() - 2, newTuple);
         }
         else
         {
             maximum = item;
-            Tuple newTuple = new Tuple(item, 1, 0);
+            QuantileBlock newTuple = new QuantileBlock(item, 1, 0);
             summary.add(newTuple);
         }
     }
@@ -223,14 +223,14 @@ public class GKQuantiles
      *
      * @param item - a new arrived element represented by a {@link Double} value.
      */
-    private void insertInBetween(Double item)
+    private void insertInBetween(double item)
     {
-        Tuple newTuple = new Tuple(item, 1, 0);
+        QuantileBlock newTuple = new QuantileBlock(item, 1, 0);
 
         for (int i = 0; i < summary.size() - 1; i++)
         {
-            Tuple current = summary.get(i);
-            Tuple next = summary.get(i + 1);
+            QuantileBlock current = summary.get(i);
+            QuantileBlock next = summary.get(i + 1);
 
             if (item >= current.getValue() && item < next.getValue())
             {
@@ -253,7 +253,7 @@ public class GKQuantiles
     private void incrementCount()
     {
         count++;
-        if (count.equals(stepsUntilMerge))
+        if (count == stepsUntilMerge)
         {
             initialPhase = false;
         }
@@ -264,10 +264,8 @@ public class GKQuantiles
      */
     private void compress()
     {
-        List<List<Tuple>> partitions = new LinkedList<List<Tuple>>();
-        partitions = getPartitionsOfSummary();
-
-        List<Tuple> mergedSummary = new CopyOnWriteArrayList<Tuple>();
+        List<List<QuantileBlock>> partitions = getPartitionsOfSummary();
+        List<QuantileBlock> mergedSummary = new ArrayList<QuantileBlock>();
 
         // just merge tuples per partition and concatenate the single resulting working sets
 
@@ -279,7 +277,6 @@ public class GKQuantiles
         }
 
         mergedSummary.addAll(partitions.get(0));
-
         mergedSummary = sortWorkingSet(mergedSummary);
         summary = mergedSummary;
     }
@@ -288,9 +285,9 @@ public class GKQuantiles
      * merges a whole partition and therefore saves space.
      *
      * @param workingSet a partition (created by {@link #getPartitionsOfSummary()}) or parts of it
-     * @return a {@link LinkedList} of {@link Tuple} containing the merged working set.
+     * @return a {@link LinkedList} of {@link QuantileBlock} containing the merged working set.
      */
-    private List<Tuple> mergeWorkingSet(List<Tuple> workingSet)
+    private List<QuantileBlock> mergeWorkingSet(List<QuantileBlock> workingSet)
     {
         // recursion stops here
         if (workingSet.size() < 2)
@@ -298,9 +295,12 @@ public class GKQuantiles
             return workingSet;
         }
 
-        LinkedList<Tuple> mergedWorkingSet = new LinkedList<Tuple>();            // resulting working set
-        LinkedList<Tuple> currentWorkingSet = new LinkedList<Tuple>();            // elements for this step of recursion
-        LinkedList<Tuple> remainingWorkingSet = new LinkedList<Tuple>();        // remaining elements after this step
+        LinkedList<QuantileBlock> mergedWorkingSet = new LinkedList<QuantileBlock>();            // resulting working
+        // set
+        LinkedList<QuantileBlock> currentWorkingSet = new LinkedList<QuantileBlock>();            // elements for
+        // this step of recursion
+        LinkedList<QuantileBlock> remainingWorkingSet = new LinkedList<QuantileBlock>();        // remaining elements
+        // after this step
         // of recursion
         remainingWorkingSet.addAll(workingSet);
 
@@ -322,7 +322,7 @@ public class GKQuantiles
             index++;
             bandOfParent = computeBandOfTuple(workingSet.get(index));
         }
-        Tuple parent = workingSet.get(index);
+        QuantileBlock parent = workingSet.get(index);
 
         // there is no real parent. all elements have the same band
         if (bandOfParent == bandOfChildren)
@@ -365,11 +365,11 @@ public class GKQuantiles
     /**
      * this method merges elements that have the same band
      *
-     * @param workingSet - a {@link LinkedList} of {@link Tuple}
-     * @return a {@link LinkedList} of {@link Tuple} with smallest possible size in respect to
+     * @param workingSet - a {@link LinkedList} of {@link QuantileBlock}
+     * @return a {@link LinkedList} of {@link QuantileBlock} with smallest possible size in respect to
      * GKs merging operation.
      */
-    private LinkedList<Tuple> mergeSiblings(LinkedList<Tuple> workingSet)
+    private LinkedList<QuantileBlock> mergeSiblings(LinkedList<QuantileBlock> workingSet)
     {
         // nothing left to merge
         if (workingSet.size() < 2)
@@ -377,11 +377,11 @@ public class GKQuantiles
             return workingSet;
         }
 
-        LinkedList<Tuple> mergedSiblings = new LinkedList<Tuple>();
+        LinkedList<QuantileBlock> mergedSiblings = new LinkedList<QuantileBlock>();
 
         // it is only possible to merge an element into a sibling, if this sibling is the element's
         // direct neighbor to the right
-        Tuple lastSibling = workingSet.getLast();
+        QuantileBlock lastSibling = workingSet.getLast();
         workingSet.removeLast();
         boolean canStillMerge = true;
 
@@ -414,7 +414,7 @@ public class GKQuantiles
      * @param left  - element the will be deleted after merging
      * @param right - element that will contain the offset of element <code>left</code> after merging
      */
-    private void merge(Tuple left, Tuple right)
+    private void merge(QuantileBlock left, QuantileBlock right)
     {
         right.setOffset(right.getOffset() + left.getOffset());
     }
@@ -425,7 +425,7 @@ public class GKQuantiles
      *
      * @return range of current element as {@link Integer} value
      */
-    private Integer computeRangeForNewTuple(Tuple successor)
+    private int computeRangeForNewTuple(QuantileBlock successor)
     {
         if (initialPhase)
         {
@@ -433,7 +433,7 @@ public class GKQuantiles
         }
 
         //this is how it's done during algorithm detail in the paper
-        Double range = 2.0 * _epsilon * count.doubleValue();
+        double range = 2.0 * _epsilon * count.doubleValue();
         range = Math.floor(range);
 
         //this is the more adequate version presented at section "empirical measurements"
@@ -444,42 +444,42 @@ public class GKQuantiles
             return (successorRange + successorOffset - 1);
         }
 
-        return range.intValue();
+        return (int) range;
     }
 
     /**
-     * Partitions a list into {@link LinkedList}s of {@link Tuple}, so that bands of elements
+     * Partitions a list into {@link LinkedList}s of {@link QuantileBlock}, so that bands of elements
      * in a single {@link LinkedList} are monotonically increasing.
      *
      * @return a {@link LinkedList} containing {@link LinkedList}s of {@link Double} which are
      * the partitions of {@link #summary}
      */
-    private List<List<Tuple>> getPartitionsOfSummary()
+    private List<List<QuantileBlock>> getPartitionsOfSummary()
     {
-        List<List<Tuple>> partitions = new LinkedList<List<Tuple>>();
-        List<Tuple> workingSet = summary;
-        LinkedList<Tuple> currentPartition = new LinkedList<Tuple>();
-        Tuple lastTuple;
-        Tuple lastButOneTuple;
+        List<List<QuantileBlock>> partitions = new LinkedList<List<QuantileBlock>>();
+        List<QuantileBlock> workingSet = summary;
+        LinkedList<QuantileBlock> currentPartition = new LinkedList<QuantileBlock>();
+        QuantileBlock lastTuple;
+        QuantileBlock lastButOneTuple;
 
         // assuring that the minimum and maximum won't appear in a partition with other elements
-        Tuple minimum = workingSet.get(0);
-        Tuple maximum = workingSet.get(workingSet.size() - 1);
+        QuantileBlock minimum = workingSet.get(0);
+        QuantileBlock maximum = workingSet.get(workingSet.size() - 1);
         workingSet.remove(0);
         workingSet.remove(workingSet.size() - 1);
 
         // adding the minimum as the first element into partitions
-        currentPartition = new LinkedList<Tuple>();
+        currentPartition = new LinkedList<QuantileBlock>();
         currentPartition.add(minimum);
         partitions.add(currentPartition);
-        currentPartition = new LinkedList<Tuple>();
+        currentPartition = new LinkedList<QuantileBlock>();
 
         // nothing left to partitioning
         if (workingSet.size() < 2)
         {
             partitions.add(workingSet);
             // adding the maximum as the very last element into partitions
-            currentPartition = new LinkedList<Tuple>();
+            currentPartition = new LinkedList<QuantileBlock>();
             currentPartition.add(maximum);
             partitions.add(currentPartition);
             return partitions;
@@ -497,7 +497,7 @@ public class GKQuantiles
             if (isPartitionBorder(lastButOneTuple, lastTuple))
             {
                 partitions.add(currentPartition);
-                currentPartition = new LinkedList<Tuple>();
+                currentPartition = new LinkedList<QuantileBlock>();
             }
             else
             {
@@ -513,7 +513,7 @@ public class GKQuantiles
         partitions.add(currentPartition);
 
         // adding the maximum as a partition of it's own at the very last position
-        currentPartition = new LinkedList<Tuple>();
+        currentPartition = new LinkedList<QuantileBlock>();
         currentPartition.add(maximum);
         partitions.add(currentPartition);
 
@@ -523,14 +523,14 @@ public class GKQuantiles
     /**
      * Call this method to get the current capacity of an element.
      *
-     * @param tuple - a {@link Tuple}
+     * @param tuple - a {@link QuantileBlock}
      * @return {@link Integer} value representing the <code>tuple</code>'s capacity
      */
-    private Integer computeCapacityOfTuple(Tuple tuple)
+    private int computeCapacityOfTuple(QuantileBlock tuple)
     {
-        Integer offset = tuple.getOffset();
-        Double currentMaxCapacity = Math.floor(2.0 * _epsilon * count);
-        return (currentMaxCapacity.intValue() - offset);
+        int offset = tuple.getOffset();
+        double currentMaxCapacity = Math.floor(2.0 * _epsilon * count);
+        return (int) (currentMaxCapacity - offset);
     }
 
     /**
@@ -544,15 +544,15 @@ public class GKQuantiles
      * </ul>
      * Please refer to the paper if you are interested in the formula for computing bands.
      *
-     * @param tuple - a {@link Tuple}
+     * @param tuple - a {@link QuantileBlock}
      * @return {@link Integer} value specifying <code>tuple</code>'s band
      */
-    private Integer computeBandOfTuple(Tuple tuple)
+    private int computeBandOfTuple(QuantileBlock tuple)
     {
-        Double p = Math.floor(2 * _epsilon * count);
+        double p = Math.floor(2 * _epsilon * count);
 
         // this will be true for new tuples
-        if (areLogarithmicallyEqual(p, tuple.getRange().doubleValue()))
+        if (areLogarithmicallyEqual(p, tuple.getRange()))
         {
             return 0;
         }
@@ -563,47 +563,42 @@ public class GKQuantiles
             return -1;
         }
 
-        double alpha = 0;
+        int alpha = 0;
         double lowerBound = 0d;
         double upperBound = 0d;
 
         while (alpha < (Math.log(p) / Math.log(2)))
         {
             alpha++;
-            lowerBound = p - Math.pow(2, alpha) - (p % Math.pow(2, alpha));
+            int twoPowAlpha = 2 << alpha;
+            lowerBound = p - twoPowAlpha - (p % twoPowAlpha);
 
             if (lowerBound <= tuple.getRange())
             {
-                upperBound = p - Math.pow(2, alpha - 1) - (p % Math.pow(2, alpha - 1));
+                int twoPowAlphaM1 = 2 << (alpha - 1);
+                upperBound = p - twoPowAlphaM1 - (p % twoPowAlphaM1);
 
                 if (upperBound >= tuple.getRange())
                 {
-                    return (int) alpha;
+                    return alpha;
                 }
             }
         }
 
-        return (int) alpha;
+        return alpha;
     }
 
     /**
      * Checks if two given values are logarithmically equal, i.e. the floored logarithm of
      * <code>valueOne</code> equals the floored logarithm of <code>valueTwo</code>.
      *
-     * @param valueOne - a {@link Double} representing a {@link Tuple}s band
-     * @param valueTwo - a {@link Double} representing a {@link Tuple}s band
+     * @param valueOne - a {@link Double} representing a {@link QuantileBlock}s band
+     * @param valueTwo - a {@link Double} representing a {@link QuantileBlock}s band
      * @return <code>true</code> if both values are logarithmically equal
      */
-    private boolean areLogarithmicallyEqual(Double valueOne, Double valueTwo)
+    private boolean areLogarithmicallyEqual(double valueOne, double valueTwo)
     {
-        if (Math.floor(Math.log(valueOne)) == Math.floor(Math.log(valueTwo)))
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return (Math.floor(Math.log(valueOne)) == Math.floor(Math.log(valueTwo)));
     }
 
     /**
@@ -614,7 +609,7 @@ public class GKQuantiles
      * @param parent The element that will absorb <code>tuple</code> during merge.
      * @return <code>true</code> if given elements are mergeable or <code>false</code> else.
      */
-    private boolean areMergeable(Tuple tuple, Tuple parent)
+    private boolean areMergeable(QuantileBlock tuple, QuantileBlock parent)
     {
         int capacityOfParent = computeCapacityOfTuple(parent);
 
@@ -637,7 +632,7 @@ public class GKQuantiles
      * @return <code>true</code> if a partition boarder exists between the given elements or <code>
      * false</code> else.
      */
-    private boolean isPartitionBorder(Tuple left, Tuple right)
+    private boolean isPartitionBorder(QuantileBlock left, QuantileBlock right)
     {
         if (computeBandOfTuple(left) > computeBandOfTuple(right))
         {
@@ -647,18 +642,18 @@ public class GKQuantiles
     }
 
     /**
-     * Sorts a {@link LinkedList} of {@link Tuple}.
+     * Sorts a {@link LinkedList} of {@link QuantileBlock}.
      *
-     * @param workingSet - partitions of summary as a {@link LinkedList} of {@link Tuple}.
+     * @param workingSet - partitions of summary as a {@link LinkedList} of {@link QuantileBlock}.
      * @return the given working set in ascending order.
      */
-    private List<Tuple> sortWorkingSet(List<Tuple> workingSet)
+    private static List<QuantileBlock> sortWorkingSet(List<QuantileBlock> workingSet)
     {
-        List<Tuple> sortedWorkingSet = new CopyOnWriteArrayList<Tuple>();
+        List<QuantileBlock> sortedWorkingSet = new ArrayList<QuantileBlock>();
 
         while (workingSet.size() > 1)
         {
-            Tuple currentMinimum = workingSet.get(0);
+            QuantileBlock currentMinimum = workingSet.get(0);
 
             for (int i = 0; i < workingSet.size(); i++)
             {
@@ -676,7 +671,7 @@ public class GKQuantiles
         return sortedWorkingSet;
     }
 
-    public Integer getCount()
+    public int getCount()
     {
         return this.count;
     }
@@ -704,41 +699,41 @@ public class GKQuantiles
      * <li><b>range</b>: the span between this elements least and most rank</li>
      * <ul>
      */
-    private class Tuple implements Serializable
+    private class QuantileBlock implements Serializable
     {
-        private static final long serialVersionUID = 1L;
-        private Double value;
-        private Integer offset;
-        private Integer range;
+        private static final long serialVersionUID = 0x80ca623569742e28L;
+        private double value;
+        private int offset;
+        private int range;
 
-        public Tuple(Double value, Integer offset, Integer range)
+        public QuantileBlock(Double value, Integer offset, Integer range)
         {
             this.value = value;
             this.offset = offset;
             this.range = range;
         }
 
-        public Double getValue()
+        public double getValue()
         {
             return value;
         }
 
-        public Integer getOffset()
+        public int getOffset()
         {
             return offset;
         }
 
-        public void setOffset(Integer offset)
+        public void setOffset(int offset)
         {
             this.offset = offset;
         }
 
-        public Integer getRange()
+        public int getRange()
         {
             return range;
         }
 
-        public void setRange(Integer range)
+        public void setRange(int range)
         {
             this.range = range;
         }

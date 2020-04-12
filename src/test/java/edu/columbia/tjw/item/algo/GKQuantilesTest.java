@@ -24,6 +24,5 @@ public class GKQuantilesTest
         assertEquals(-1.0, quantiles.getQuantile(0.001));
         assertEquals(-0.09999999999999998, quantiles.getQuantile(0.1));
         assertEquals(7.800000000000001, quantiles.getQuantile(0.9));
-
     }
 }
