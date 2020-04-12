@@ -114,7 +114,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             jDiag = new double[dimension];
             scaledGradient = new double[dimension];
             scaledGradient2 = new double[dimension];
-            fisherInformation = new double[dimension][dimension];
+            fisherInformation = null;
             secondDerivative = null;
             shiftGradient = null;
         }
@@ -201,15 +201,11 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
                     }
 
 
-                    for (int w = 0; w < dimension; w++)
-                    {
-                        fisherInformation[k][w] += tmp[k] * tmp[w];
-                    }
-
                     if (secondDerivative != null)
                     {
                         for (int w = 0; w < dimension; w++)
                         {
+                            fisherInformation[k][w] += tmp[k] * tmp[w];
                             secondDerivative[k][w] += tmp2[k][w];
                         }
                     }
@@ -229,17 +225,13 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
                     d2[i] = d2[i] * invCount;
                     jDiag[i] = jDiag[i] * invCount;
 
-                    for (int w = 0; w < dimension; w++)
-                    {
-                        fisherInformation[i][w] *= invCount;
-                    }
-
                     if (secondDerivative != null)
                     {
                         shiftGradient[i] *= invCount;
 
                         for (int w = 0; w < dimension; w++)
                         {
+                            fisherInformation[i][w] *= invCount;
                             secondDerivative[i][w] *= invCount;
                         }
                     }
