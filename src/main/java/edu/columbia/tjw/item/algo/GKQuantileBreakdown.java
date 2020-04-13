@@ -6,6 +6,8 @@ import java.util.Arrays;
 
 public final class GKQuantileBreakdown implements QuantileBreakdown
 {
+    // There is some evidence that the non-uniform buckets produced without simple bucketing perform a bit better.
+    public static final boolean USE_SIMPLE_BUCKETS = true;
     public static final int DEFAULT_BUCKETS = 100;
 
     private final int _bucketCount;
@@ -30,40 +32,7 @@ public final class GKQuantileBreakdown implements QuantileBreakdown
         _epsilon = 1.0 / _bucketCount;
         _quantiles = prev_._quantiles;
         _varCalc = prev_._varCalc;
-
-        _xVals = new double[_bucketCount];
-
-        for (int i = 0; i < _xVals.length; i++)
-        {
-            final double next = _epsilon * i;
-            _xVals[i] = _quantiles.getQuantile(next);
-        }
-//        final double[] xVals = new double[_bucketCount];
-//        xVals[0] = _quantiles.getQuantile(0.0);
-//        int pointer = 1;
-//
-//        for (int i = 1; i < xVals.length; i++)
-//        {
-//            final double next = _epsilon * i;
-//            final double nextVal = _quantiles.getQuantile(next);
-//
-//            if (nextVal == xVals[pointer - 1])
-//            {
-//                // This is the same as the previous bucket, replicate old behavior.
-//                continue;
-//            }
-//
-//            xVals[pointer++] = nextVal;
-//        }
-//
-//        if (pointer < xVals.length)
-//        {
-//            _xVals = Arrays.copyOf(xVals, pointer);
-//        }
-//        else
-//        {
-//            _xVals = xVals;
-//        }
+        _xVals = generateBuckets(_quantiles, _bucketCount, _epsilon);
     }
 
     public GKQuantileBreakdown(final ItemRegressorReader regressor_)
@@ -86,42 +55,54 @@ public final class GKQuantileBreakdown implements QuantileBreakdown
             _varCalc.update(x);
         }
 
-        _xVals = new double[_bucketCount];
-
-        for (int i = 0; i < _xVals.length; i++)
-        {
-            final double next = _epsilon * i;
-            _xVals[i] = _quantiles.getQuantile(next);
-        }
-
-//        final double[] xVals = new double[_bucketCount];
-//        xVals[0] = _quantiles.getQuantile(0.0);
-//        int pointer = 1;
-//
-//        for (int i = 1; i < xVals.length; i++)
-//        {
-//            final double next = _epsilon * i;
-//            final double nextVal = _quantiles.getQuantile(next);
-//
-//            if (nextVal == xVals[pointer - 1])
-//            {
-//                // This is the same as the previous bucket, replicate old behavior.
-//                continue;
-//            }
-//
-//            xVals[pointer++] = nextVal;
-//        }
-//
-//        if (pointer < xVals.length)
-//        {
-//            _xVals = Arrays.copyOf(xVals, pointer);
-//        }
-//        else
-//        {
-//            _xVals = xVals;
-//        }
+        _xVals = generateBuckets(_quantiles, _bucketCount, _epsilon);
     }
 
+    private static double[] generateBuckets(final GKQuantiles quantiles_,
+                                            final int bucketCount_, final double epsilon_)
+    {
+        if (USE_SIMPLE_BUCKETS)
+        {
+            final double[] xVals = new double[bucketCount_];
+
+            for (int i = 0; i < xVals.length; i++)
+            {
+                final double next = epsilon_ * i;
+                xVals[i] = quantiles_.getQuantile(next);
+            }
+
+            return xVals;
+        }
+        else
+        {
+            final double[] xVals = new double[bucketCount_];
+            xVals[0] = quantiles_.getQuantile(0.0);
+            int pointer = 1;
+
+            for (int i = 1; i < xVals.length; i++)
+            {
+                final double next = epsilon_ * i;
+                final double nextVal = quantiles_.getQuantile(next);
+
+                if (nextVal == xVals[pointer - 1])
+                {
+                    // This is the same as the previous bucket, replicate old behavior.
+                    continue;
+                }
+
+                xVals[pointer++] = nextVal;
+            }
+
+            if (pointer < xVals.length)
+            {
+                return Arrays.copyOf(xVals, pointer);
+            }
+            else
+            {
+                return xVals;
+            }
+        }
+    }
 
     @Override
     public int getSize()
