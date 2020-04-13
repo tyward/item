@@ -124,29 +124,37 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
                 slopeParam = Math.sqrt(slopeScale / Math.max(minDev, distDev));
                 //slopeParam = Math.sqrt(1.0 / (distDev + 1.0e-10));
 
-                double xCorrelation = 0.0;
-                //double xVar = 0.0;
+                //Compute the rough scale of beta needed to account for the given data.
+                // Take the average of the buckets above the mean, and the average below.
+                double aboveSum = 0.0;
+                double belowSum = 0.0;
+                double aboveMass = 0.0;
+                double belowMass = 0.0;
+
                 final double meanY = dist_.getMeanY();
-                final double meanX = dist_.getQuantApprox().getMean();
 
                 for (int i = 0; i < size; i++)
                 {
                     final double yDev = dist_.getMeanY(i) - meanY;
-                    final double xDev = dist_.getQuantApprox().getBucketMean(i) - meanX;
-                    final double corr = yDev * xDev * dist_.getCount(i);
-                    xCorrelation += corr;
+
+                    if (i <= xIndex)
+                    {
+                        belowSum += yDev;
+                        belowMass += 1;
+                    }
+                    else
+                    {
+                        aboveSum += yDev;
+                        aboveMass += 1;
+                    }
                 }
 
-                final double xDev = dist_.getQuantApprox().getMeanStdDev();
-                final double yDev = dist_.getMeanDevY();
-                final double obsCount = dist_.getQuantApprox().getTotalCount();
+                final double slope = (aboveSum - belowSum) / (aboveMass + belowMass);
+                betaGuess = slope;
 
-                //Between -1.0 and 1.0, a reasonable guess for beta...
-                betaGuess = xCorrelation / (obsCount * xDev * yDev);
-
-                if (Double.isNaN(betaGuess))
+                if (Double.isNaN(betaGuess) || Double.isInfinite(betaGuess))
                 {
-                    System.out.println("ping.");
+                    throw new IllegalStateException("Overflow error.");
                 }
 
                 break;

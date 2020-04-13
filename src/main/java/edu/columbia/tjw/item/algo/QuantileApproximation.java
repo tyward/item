@@ -135,7 +135,7 @@ public final class QuantileApproximation implements QuantileBreakdown
             qab.addObservation(x);
         }
 
-        final QuantileBreakdown gk = new GKQuantileBreakdown(xReader_);
+        //final QuantileBreakdown gk = new GKQuantileBreakdown(xReader_);
 
         final QuantileBreakdown breakdown = new QuantileApproximation(qab);
 
