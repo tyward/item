@@ -30,6 +30,7 @@ public final class GKQuantileBreakdown implements QuantileBreakdown
         _epsilon = 1.0 / _bucketCount;
         _quantiles = prev_._quantiles;
         _varCalc = prev_._varCalc;
+
         _xVals = new double[_bucketCount];
 
         for (int i = 0; i < _xVals.length; i++)
@@ -37,6 +38,32 @@ public final class GKQuantileBreakdown implements QuantileBreakdown
             final double next = _epsilon * i;
             _xVals[i] = _quantiles.getQuantile(next);
         }
+//        final double[] xVals = new double[_bucketCount];
+//        xVals[0] = _quantiles.getQuantile(0.0);
+//        int pointer = 1;
+//
+//        for (int i = 1; i < xVals.length; i++)
+//        {
+//            final double next = _epsilon * i;
+//            final double nextVal = _quantiles.getQuantile(next);
+//
+//            if (nextVal == xVals[pointer - 1])
+//            {
+//                // This is the same as the previous bucket, replicate old behavior.
+//                continue;
+//            }
+//
+//            xVals[pointer++] = nextVal;
+//        }
+//
+//        if (pointer < xVals.length)
+//        {
+//            _xVals = Arrays.copyOf(xVals, pointer);
+//        }
+//        else
+//        {
+//            _xVals = xVals;
+//        }
     }
 
     public GKQuantileBreakdown(final ItemRegressorReader regressor_)
@@ -49,6 +76,12 @@ public final class GKQuantileBreakdown implements QuantileBreakdown
         for (int i = 0; i < regressor_.size(); i++)
         {
             final double x = regressor_.asDouble(i);
+
+            if (Double.isNaN(x) || Double.isInfinite(x))
+            {
+                continue;
+            }
+
             _quantiles.offer(x);
             _varCalc.update(x);
         }
@@ -60,13 +93,40 @@ public final class GKQuantileBreakdown implements QuantileBreakdown
             final double next = _epsilon * i;
             _xVals[i] = _quantiles.getQuantile(next);
         }
+
+//        final double[] xVals = new double[_bucketCount];
+//        xVals[0] = _quantiles.getQuantile(0.0);
+//        int pointer = 1;
+//
+//        for (int i = 1; i < xVals.length; i++)
+//        {
+//            final double next = _epsilon * i;
+//            final double nextVal = _quantiles.getQuantile(next);
+//
+//            if (nextVal == xVals[pointer - 1])
+//            {
+//                // This is the same as the previous bucket, replicate old behavior.
+//                continue;
+//            }
+//
+//            xVals[pointer++] = nextVal;
+//        }
+//
+//        if (pointer < xVals.length)
+//        {
+//            _xVals = Arrays.copyOf(xVals, pointer);
+//        }
+//        else
+//        {
+//            _xVals = xVals;
+//        }
     }
 
 
     @Override
     public int getSize()
     {
-        return _bucketCount;
+        return _xVals.length;
     }
 
     @Override
