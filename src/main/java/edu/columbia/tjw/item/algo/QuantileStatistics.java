@@ -93,7 +93,7 @@ public final class QuantileStatistics
             throw new IllegalArgumentException("Size mismatch: " + size + " != " + yReader_.size());
         }
 
-        final QuantileBreakdown approx = QuantileApproximation.buildApproximation(xReader_);
+        final QuantileBreakdown approx = QuantileBreakdown.buildApproximation(xReader_);
         final QuantileStatisticsBuilder builder = builder(approx);
         boolean passes = false;
 
