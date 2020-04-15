@@ -264,6 +264,12 @@ public class GKQuantiles implements Serializable
      */
     private void compress()
     {
+        if (this.summary.size() < 2)
+        {
+            // We don't compress if there's nothing to compress.
+            return;
+        }
+
         List<List<QuantileBlock>> partitions = getPartitionsOfSummary();
         List<QuantileBlock> mergedSummary = new ArrayList<QuantileBlock>();
 
