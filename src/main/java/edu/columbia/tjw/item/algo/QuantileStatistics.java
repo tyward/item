@@ -86,6 +86,12 @@ public final class QuantileStatistics
 
     public static QuantileStatistics generate(final ItemRegressorReader xReader_, final ItemRegressorReader yReader_)
     {
+        return generate(xReader_, yReader_, QuantileBreakdown.buildApproximation(xReader_));
+    }
+
+    public static QuantileStatistics generate(final ItemRegressorReader xReader_, final ItemRegressorReader yReader_,
+                                              QuantileBreakdown breakdown_)
+    {
         final int size = xReader_.size();
 
         if (yReader_.size() != size)
@@ -93,8 +99,7 @@ public final class QuantileStatistics
             throw new IllegalArgumentException("Size mismatch: " + size + " != " + yReader_.size());
         }
 
-        final QuantileBreakdown approx = QuantileBreakdown.buildApproximation(xReader_);
-        final QuantileStatisticsBuilder builder = builder(approx);
+        final QuantileStatisticsBuilder builder = builder(breakdown_);
         boolean passes = false;
 
         for (int i = 0; i < size; i++)

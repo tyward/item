@@ -41,24 +41,23 @@ public final class ItemQuantileDistribution<S extends ItemStatus<S>, R extends I
 
     public ItemQuantileDistribution(final ParamFittingGrid<S, R, T> grid_,
                                     final ItemModel<S, R, T> model_,
-                                    final S fromStatus_, R field_, S toStatus_)
+                                    final S fromStatus_, R field_, S toStatus_, QuantileBreakdown quantiles_)
     {
-        this(grid_, model_, fromStatus_, grid_.getRegressorReader(field_), toStatus_);
+        this(grid_, model_, fromStatus_, grid_.getRegressorReader(field_), toStatus_, quantiles_);
     }
 
     public ItemQuantileDistribution(final ParamFittingGrid<S, R, T> grid_,
                                     final ItemModel<S, R, T> model_,
-                                    final S fromStatus_, final ItemRegressorReader reader_, S toStatus_)
+                                    final S fromStatus_, final ItemRegressorReader reader_, S toStatus_,
+                                    QuantileBreakdown quantiles_)
     {
         _likelihood = new LogLikelihood<>(fromStatus_);
 
         final ItemRegressorReader yReader = new InnerResponseReader<>(toStatus_, grid_, model_,
                 _likelihood);
 
-        final QuantileStatistics stats = QuantileStatistics.generate(reader_, yReader);
-        final QuantileBreakdown approx = stats.getQuantApprox();
-
-        final int size = approx.getSize();
+        final QuantileStatistics stats = QuantileStatistics.generate(reader_, yReader, quantiles_);
+        final int size = quantiles_.getSize();
 
         double[] adjY = new double[size];
         double[] devAdjY = new double[size];

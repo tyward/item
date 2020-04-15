@@ -20,12 +20,16 @@
 package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.algo.QuantileBreakdown;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.base.BaseFitter;
 import edu.columbia.tjw.item.util.LogUtil;
 
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.logging.Logger;
 
 /**
@@ -41,12 +45,23 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private final ItemSettings _settings;
     private final BaseFitter<S, R, T> _base;
 
+    final SortedMap<R, QuantileBreakdown> _quantiles;
 
     public CurveParamsFitter(final ItemSettings settings_,
                              final BaseFitter<S, R, T> base_)
     {
         _settings = settings_;
         _base = base_;
+
+        _quantiles = new TreeMap<>();
+
+        final ItemFittingGrid<S, R> grid = base_.getCalc().getGrid();
+
+        for (final R next : grid.getAvailableRegressors())
+        {
+            _quantiles.put(next,
+                    QuantileBreakdown.buildApproximation(grid.getRegressorReader(next)));
+        }
     }
 
     public CurveFitResult<S, R, T> doCalibration(final ItemCurveParams<R, T> curveParams_,
@@ -155,9 +170,13 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final ItemParameters<S, R, T> params = fitResult_.getParams();
         final ParamFittingGrid<S, R, T> paramGrid = new ParamFittingGrid<>(params, _base.getCalc().getGrid());
         final ItemModel<S, R, T> model = new ItemModel<>(params);
+
+        QuantileBreakdown quantiles = _quantiles.get(field_);
+
+
         final ItemQuantileDistribution<S, R, T> quantGenerator = new ItemQuantileDistribution<>(paramGrid,
                 model,
-                params.getStatus(), field_, toStatus_);
+                params.getStatus(), field_, toStatus_, quantiles);
         final QuantileStatistics dist = quantGenerator.getAdjusted();
         return dist;
     }
