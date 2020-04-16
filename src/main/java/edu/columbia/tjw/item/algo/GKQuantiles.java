@@ -703,7 +703,7 @@ public class GKQuantiles implements Serializable
      * <li><b>offset</b>: the difference between the least rank of this element and the rank of the preceding
      * element.</li>
      * <li><b>range</b>: the span between this elements least and most rank</li>
-     * <ul>
+     * </ul>
      */
     private static final class QuantileBlock implements Serializable
     {
