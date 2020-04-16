@@ -107,11 +107,11 @@ class ItemModelTest
         final FitPointAnalyzer entropyAnalyzer = new FitPointAnalyzer(settings.getBlockSize(),
                 OptimizationTarget.ENTROPY, settings);
         final FitPointAnalyzer ticAnalyzer = new FitPointAnalyzer(settings.getBlockSize(),
-                OptimizationTarget.TIC, settings);
+                OptimizationTarget.ICE_RAW, settings);
         final FitPointAnalyzer iceAnalyzer = new FitPointAnalyzer(settings.getBlockSize(),
-                OptimizationTarget.ICE, settings);
+                OptimizationTarget.ICE_SIMPLE, settings);
         final FitPointAnalyzer ice2Analyzer = new FitPointAnalyzer(settings.getBlockSize(),
-                OptimizationTarget.ICE2, settings);
+                OptimizationTarget.ICE_STABLE_A, settings);
 
         final FitPoint point = calculator.generatePoint(params);
 

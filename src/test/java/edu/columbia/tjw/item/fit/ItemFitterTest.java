@@ -80,7 +80,7 @@ public class ItemFitterTest
     void basicTicTest() throws Exception
     {
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-                makeFitter(false, OptimizationTarget.TIC);
+                makeFitter(false, OptimizationTarget.ICE_RAW);
         final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
@@ -99,7 +99,7 @@ public class ItemFitterTest
     void basicIceTest() throws Exception
     {
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-                makeFitter(false, OptimizationTarget.ICE);
+                makeFitter(false, OptimizationTarget.ICE_SIMPLE);
         final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
@@ -118,7 +118,7 @@ public class ItemFitterTest
     void basicIce2Test() throws Exception
     {
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-                makeFitter(false, OptimizationTarget.ICE2);
+                makeFitter(false, OptimizationTarget.ICE_STABLE_A);
         final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
@@ -137,7 +137,7 @@ public class ItemFitterTest
     void basicIce4Test() throws Exception
     {
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-                makeFitter(false, OptimizationTarget.ICE4);
+                makeFitter(false, OptimizationTarget.ICE);
         final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
@@ -156,7 +156,7 @@ public class ItemFitterTest
     void basicIce5Test() throws Exception
     {
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-                makeFitter(false, OptimizationTarget.ICE5);
+                makeFitter(false, OptimizationTarget.ICE_B);
         final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter

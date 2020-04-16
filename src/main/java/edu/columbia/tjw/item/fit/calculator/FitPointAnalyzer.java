@@ -63,28 +63,28 @@ public final class FitPointAnalyzer
 
                 return params;
             }
-            case ICE:
-            case ICE2:
+            case ICE_SIMPLE:
+            case ICE_STABLE_A:
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
                 final double[] extraDerivative = IceTools.fillIceExtraDerivative(aggregated);
                 return extraDerivative;
             }
-            case ICE3:
+            case ICE_STABLE_B:
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
                 final double[] extraDerivative = IceTools.fillIce3ExtraDerivative(aggregated);
                 return extraDerivative;
             }
-            case TIC:
+            case ICE_RAW:
             {
                 // There is no realistic way to compute this efficiently, just fall through and use the ICE
                 // derivatives instead.
             }
-            case ICE4:
-            case ICE5:
+            case ICE:
+            case ICE_B:
             {
                 // Unfortunately, we have to clear here.
                 point_.clear();
@@ -108,7 +108,7 @@ public final class FitPointAnalyzer
 
                 final double[] extraDerivative4;
 
-                if (_target == OptimizationTarget.ICE5)
+                if (_target == OptimizationTarget.ICE_B)
                 {
                     // ICE5.
                     extraDerivative4 = aggregated.getScaledGradient2();
@@ -163,8 +163,8 @@ public final class FitPointAnalyzer
 
                 return entropyDerivative;
             }
-            case ICE:
-            case ICE2:
+            case ICE_SIMPLE:
+            case ICE_STABLE_A:
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
@@ -180,7 +180,7 @@ public final class FitPointAnalyzer
 
                 return entropyDerivative;
             }
-            case ICE3:
+            case ICE_STABLE_B:
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
@@ -201,13 +201,13 @@ public final class FitPointAnalyzer
 
                 return entropyDerivative;
             }
-            case TIC:
+            case ICE_RAW:
             {
                 // There is no realistic way to compute this efficiently, just fall through and use the ICE
                 // derivatives instead.
             }
-            case ICE4:
-            case ICE5:
+            case ICE:
+            case ICE_B:
             {
                 // Unfortunately, we have to clear here.
                 point_.clear();
@@ -266,7 +266,7 @@ public final class FitPointAnalyzer
                 final double dot = MathTools.dot(params, params);
                 return entropy + lambda * dot;
             }
-            case TIC:
+            case ICE_RAW:
             {
                 // TODO: This is extremely inefficient.....
                 point_.computeUntil(endBlock_, BlockCalculationType.SECOND_DERIVATIVE);
@@ -295,24 +295,24 @@ public final class FitPointAnalyzer
                 final double tic = ticSum / point_.getSize();
                 return entropy + tic;
             }
+            case ICE_SIMPLE:
+            case ICE_STABLE_A:
+            case ICE_STABLE_B:
             case ICE:
-            case ICE2:
-            case ICE3:
-            case ICE4:
-            case ICE5:
+            case ICE_B:
             {
                 point_.computeUntil(endBlock_, BlockCalculationType.FIRST_DERIVATIVE);
                 final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
 
                 final double entropy = secondDerivative.getEntropyMean();
 
-                if (_target == OptimizationTarget.ICE)
+                if (_target == OptimizationTarget.ICE_SIMPLE)
                 {
                     final double iceSum = IceTools.computeIceSum(secondDerivative);
                     final double iceAdjustment = iceSum / point_.getSize();
                     return entropy + iceAdjustment;
                 }
-                else if (_target == OptimizationTarget.ICE2)
+                else if (_target == OptimizationTarget.ICE_STABLE_A)
                 {
                     final double iceSum2 = IceTools.computeIce2Sum(secondDerivative);
                     final double iceAdjustment = iceSum2 / point_.getSize();
