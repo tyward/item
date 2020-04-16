@@ -64,7 +64,7 @@ public final class FitPointAnalyzer
                 return params;
             }
             case ICE_SIMPLE:
-            case ICE_STABLE_A:
+            case ICE2:
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
@@ -164,7 +164,7 @@ public final class FitPointAnalyzer
                 return entropyDerivative;
             }
             case ICE_SIMPLE:
-            case ICE_STABLE_A:
+            case ICE2:
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
@@ -296,7 +296,7 @@ public final class FitPointAnalyzer
                 return entropy + tic;
             }
             case ICE_SIMPLE:
-            case ICE_STABLE_A:
+            case ICE2:
             case ICE_STABLE_B:
             case ICE:
             case ICE_B:
@@ -312,7 +312,7 @@ public final class FitPointAnalyzer
                     final double iceAdjustment = iceSum / point_.getSize();
                     return entropy + iceAdjustment;
                 }
-                else if (_target == OptimizationTarget.ICE_STABLE_A)
+                else if (_target == OptimizationTarget.ICE2)
                 {
                     final double iceSum2 = IceTools.computeIce2Sum(secondDerivative);
                     final double iceAdjustment = iceSum2 / point_.getSize();

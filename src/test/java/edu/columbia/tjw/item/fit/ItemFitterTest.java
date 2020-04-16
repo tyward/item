@@ -118,7 +118,7 @@ public class ItemFitterTest
     void basicIce2Test() throws Exception
     {
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-                makeFitter(false, OptimizationTarget.ICE_STABLE_A);
+                makeFitter(false, OptimizationTarget.ICE2);
         final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter

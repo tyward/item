@@ -9,7 +9,7 @@ public enum OptimizationTarget
     // Direct usage of diagonalized ICE correction, but with ICE2 derivatives.
     ICE_SIMPLE,
     // Numerically stabilized ICE correction.
-    ICE_STABLE_A,
+    ICE2,
     // Alternate stabilization formula for ICE.
     ICE_STABLE_B,
     // Objective is same as ICE3, but with optimized derivative computation.

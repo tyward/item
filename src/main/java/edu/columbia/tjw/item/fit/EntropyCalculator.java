@@ -73,7 +73,7 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
                                                             FitResult<S, R, T> prevResult_)
     {
         final ItemFitPoint<S, R, T> point = _calc.generatePoint(params_);
-        final FitResult<S, R, T> output = new FitResult<>(point, prevResult_);
+        final FitResult<S, R, T> output = new FitResult<>(point, prevResult_, _settings.getComplexFitResults());
         return output;
     }
 
@@ -132,7 +132,8 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
         return _calc.generatePoint(params_);
     }
 
-    public BlockResult computeRawGradient(final ItemParameters<S, R, T> params_) {
+    public BlockResult computeRawGradient(final ItemParameters<S, R, T> params_)
+    {
         final ItemFitPoint<S, R, T> point = _calc.generatePoint(params_);
         point.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
         return point.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);

@@ -111,7 +111,7 @@ class ItemModelTest
         final FitPointAnalyzer iceAnalyzer = new FitPointAnalyzer(settings.getBlockSize(),
                 OptimizationTarget.ICE_SIMPLE, settings);
         final FitPointAnalyzer ice2Analyzer = new FitPointAnalyzer(settings.getBlockSize(),
-                OptimizationTarget.ICE_STABLE_A, settings);
+                OptimizationTarget.ICE2, settings);
 
         final FitPoint point = calculator.generatePoint(params);
 

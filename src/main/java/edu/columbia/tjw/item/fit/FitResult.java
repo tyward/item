@@ -20,8 +20,6 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         implements Serializable
 {
     private static final double EPSILON = Math.ulp(4.0); // Just a bit bigger than machine epsilon.
-    private static final double SQRT_EPSILON = Math.sqrt(EPSILON);
-    private static final boolean USE_COMPLEX_RESULTS = false;
     private static final long serialVersionUID = 0x606e4b6c2343db26L;
 
     private final FitResult<S, R, T> _prev;
@@ -82,7 +80,8 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         _invConditionNumberJ = current_._invConditionNumberJ;
     }
 
-    public FitResult(final ItemFitPoint<S, R, T> fitPoint_, final FitResult<S, R, T> prev_)
+    public FitResult(final ItemFitPoint<S, R, T> fitPoint_, final FitResult<S, R, T> prev_,
+                     final boolean complexFitResults_)
     {
         _params = fitPoint_.getParams();
         _packed = _params.generatePacked();
@@ -90,7 +89,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final int rowCount = fitPoint_.getSize();
 
-        if (USE_COMPLEX_RESULTS)
+        if (complexFitResults_)
         {
             fitPoint_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
             final BlockResult secondDerivative = fitPoint_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
