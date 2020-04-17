@@ -65,7 +65,10 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
                 throw new IllegalArgumentException("Values must have positive length.");
             }
 
-            final SortedSet<V> memberSet = Collections.unmodifiableSortedSet(new TreeSet<>(Arrays.asList(values_)));
+            // We need to compare these just on ordinal, and not compare based on family (which is not yet set).
+            final SortedSet<V> rawSet = new TreeSet<>(new OrdinalComparator());
+            rawSet.addAll(Arrays.asList(values_));
+            final SortedSet<V> memberSet = Collections.unmodifiableSortedSet(rawSet);
 
             if (values_.length != memberSet.size())
             {
@@ -92,12 +95,6 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
             }
             else
             {
-//                if (!AbstractEnumMember.class.isAssignableFrom(componentClass))
-//                {
-//                    throw new ClassCastException(
-//                            "Non distinct families must descen from " + AbstractEnumMember.class.getName());
-//                }
-
                 for (final V member : memberSet)
                 {
                     tool.updateString(member.name());
@@ -121,6 +118,29 @@ public final class EnumFamily<V extends EnumMember<V>> implements Serializable
         }
     }
 
+    private static final class OrdinalComparator<V extends EnumMember<V>> implements Comparator<V>, Serializable
+    {
+
+        public int compare(final V a_, final V b_)
+        {
+            if (a_ == b_)
+            {
+                return 0;
+            }
+            if (null == b_)
+            {
+                return 1;
+            }
+            if (null == a_)
+            {
+                return -1;
+            }
+
+            return Integer.compare(a_.ordinal(), b_.ordinal());
+        }
+
+
+    }
 
     private EnumFamily(final V[] values_, final SortedSet<V> memberSet_,
                        final Class<? extends V> componentClass_, String familyGuid_, final boolean distinctFamily_)
