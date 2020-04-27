@@ -137,6 +137,11 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
                 {
                     final double yDev = dist_.getMeanY(i) - meanY;
 
+                    if (Double.isNaN(yDev) || Double.isInfinite(yDev))
+                    {
+                        throw new IllegalStateException("Overflow error.");
+                    }
+
                     if (i <= xIndex)
                     {
                         belowSum += yDev;
