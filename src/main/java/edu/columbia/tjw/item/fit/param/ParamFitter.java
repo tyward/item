@@ -67,6 +67,7 @@ public final class ParamFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         return fitResult;
     }
 
+
     public FitResult<S, R, T> fitBetas(final ItemParameters<S, R, T> params_, final FitResult<S, R, T> prev_)
     {
         final PackedParameters<S, R, T> packed = packParameters(params_);

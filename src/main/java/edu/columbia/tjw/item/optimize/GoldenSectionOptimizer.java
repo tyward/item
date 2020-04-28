@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
@@ -39,11 +40,12 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
     private static final Logger LOG = LogUtil.getLogger(GoldenSectionOptimizer.class);
     private static final double PHI = 0.5 * (1.0 + Math.sqrt(5.0));
     private static final double INV_PHI = 1.0 / PHI;
+    private static final double LINE_SEARCH_REL_TOL = 0.00001;
 
     public GoldenSectionOptimizer(final double xTol_, final double yTol_, final int bloackSize_, int maxEvalCount_,
-                                  final OptimizationTarget target_)
+                                  final OptimizationTarget target_, ItemSettings settings_)
     {
-        super(xTol_, yTol_, bloackSize_, maxEvalCount_, target_);
+        super(xTol_, yTol_, bloackSize_, maxEvalCount_, target_, settings_);
     }
 
     @Override
@@ -187,9 +189,9 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
             highWater = Math.max(highWater, pointC.getNextBlock(valType));
 
 
-            final double aVal = getComparator().computeObjective(pointA, highWater);
-            final double bVal = getComparator().computeObjective(pointB, highWater);
-            final double cVal = getComparator().computeObjective(pointC, highWater);
+            final double aVal = comparator.computeObjective(pointA, highWater);
+            final double bVal = comparator.computeObjective(pointB, highWater);
+            final double cVal = comparator.computeObjective(pointC, highWater);
 
             //Assume f(x) is quadratic, (alpha)a^2 + (beta)a + (gamma) = value(a). 
             //Now we have three equations and three unknowns, solve....
@@ -396,6 +398,9 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
 
     private OptimizationResult<V> optimize(final F f_, final Bracket<V> bracket_) throws ConvergenceException
     {
+        final double bracketSize = bracket_.getBracketSize();
+        final double targetSize = LINE_SEARCH_REL_TOL * bracketSize;
+
         //LOG.info("Starting Golden Section optimization: [" + a_ + "][" + b_ + "][" + c_ + "]");
         V scaleStep = bracket_.getDirection();
         V a = bracket_.getA().clone();
@@ -406,11 +411,12 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
         FitPoint pointB = bracket_.getbRes();
         FitPoint pointC = bracket_.getcRes();
 
-
         int evalCount = 0;
+        boolean xTolCheck = this.checkXTolerance(a, c, targetSize);
+        boolean yTolCheck = this.checkYTolerance(pointA, pointB, pointC);
 
         //While either tolerance condition fails, continue to loop.
-        while (!(this.checkXTolerance(a, c) || this.checkYTolerance(pointA, pointB, pointC)))
+        while (!(xTolCheck || yTolCheck))
         {
             V next;
             final double abDistance = a.distance(b);
@@ -442,10 +448,10 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
 
             final FitPointAnalyzer comparator = this.getComparator();
             final FitPoint nextPoint = f_.evaluate(next);
-            final double comparison = comparator.compare(pointB, nextPoint);
+            final FitPointAnalyzer.FitPointComparison comparison = comparator.generateComparision(pointB, nextPoint);
             evalCount++;
 
-            final boolean nextLower = (comparison > 0);
+            final boolean nextLower = (comparison.getZScore() > 0);
 
             //First, assume not aSide (so b < next), will fix later.
             if (nextLower)
@@ -462,6 +468,9 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
                 c = next;
                 pointC = nextPoint;
             }
+
+            xTolCheck = this.checkXTolerance(a, c, targetSize);
+            yTolCheck = this.checkYTolerance(pointA, pointB, pointC);
 
             //System.out.println("Best point: " + b);
             //Make sure our new middle point is meaningfully better than one of the end points
@@ -564,6 +573,11 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
         public FitPoint getcRes()
         {
             return _cRes;
+        }
+
+        public double getBracketSize()
+        {
+            return _a.distance(_c);
         }
     }
 

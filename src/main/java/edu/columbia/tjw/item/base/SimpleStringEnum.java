@@ -15,8 +15,8 @@
  */
 package edu.columbia.tjw.item.base;
 
+import edu.columbia.tjw.item.util.AbstractEnumMember;
 import edu.columbia.tjw.item.util.EnumFamily;
-import edu.columbia.tjw.item.util.EnumMember;
 import edu.columbia.tjw.item.util.HashUtil;
 
 import java.util.Collection;
@@ -33,24 +33,16 @@ import java.util.Set;
  *
  * @author tyler
  */
-public final class SimpleStringEnum implements EnumMember<SimpleStringEnum>
+public final class SimpleStringEnum extends AbstractEnumMember<SimpleStringEnum>
 {
     private static final int CLASS_HASH = HashUtil.startHash(SimpleStringEnum.class);
-    private static final long serialVersionUID = 0x2e3ad6fa3cd2b465L;
+    private static final long serialVersionUID = 0x2a04f2981ed75926L;
 
-    private final int _ordinal;
-    private final String _name;
-    private final int _hashCode;
     private EnumFamily<SimpleStringEnum> _family;
 
     private SimpleStringEnum(final int ordinal_, final String name_, final int hashBase_)
     {
-        _ordinal = ordinal_;
-        _name = name_;
-
-        int hash = HashUtil.mix(CLASS_HASH, hashBase_);
-        hash = HashUtil.mix(hash, name_.hashCode());
-        _hashCode = HashUtil.mix(hash, ordinal_);
+        super(ordinal_, name_, CLASS_HASH);
     }
 
     public static EnumFamily<SimpleStringEnum> generateFamily(final Collection<String> regressorNames_)
@@ -78,7 +70,7 @@ public final class SimpleStringEnum implements EnumMember<SimpleStringEnum>
             regs[pointer++] = nextReg;
         }
 
-        final EnumFamily<SimpleStringEnum> family = new EnumFamily<>(regs, false);
+        final EnumFamily<SimpleStringEnum> family = EnumFamily.generateFamily(regs, false);
 
         for (final SimpleStringEnum reg : regs)
         {
@@ -88,17 +80,6 @@ public final class SimpleStringEnum implements EnumMember<SimpleStringEnum>
         return family;
     }
 
-    @Override
-    public String name()
-    {
-        return _name;
-    }
-
-    @Override
-    public int ordinal()
-    {
-        return _ordinal;
-    }
 
     @Override
     public EnumFamily<SimpleStringEnum> getFamily()
@@ -109,59 +90,6 @@ public final class SimpleStringEnum implements EnumMember<SimpleStringEnum>
     private void setFamily(final EnumFamily<SimpleStringEnum> family_)
     {
         _family = family_;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return _hashCode;
-    }
-
-    @Override
-    public boolean equals(final Object other_)
-    {
-        if (this == other_)
-        {
-            return true;
-        }
-        if (null == other_)
-        {
-            return false;
-        }
-        if (this.getClass() != other_.getClass())
-        {
-            return false;
-        }
-
-        final SimpleStringEnum that = (SimpleStringEnum) other_;
-
-        if (this.getFamily() != that.getFamily())
-        {
-            return false;
-        }
-
-        return (0 == this.compareTo(that));
-    }
-
-    @Override
-    public int compareTo(final SimpleStringEnum that_)
-    {
-        if (this == that_)
-        {
-            return 0;
-        }
-        if (null == that_)
-        {
-            return 1;
-        }
-
-        if (this.getFamily() != that_.getFamily())
-        {
-            throw new IllegalArgumentException("Incomparable families: " + this.getFamily() + " != " + that_.getFamily());
-        }
-
-        //Within a family, compare based on ordinal.
-        return Integer.compare(this.ordinal(), that_.ordinal());
     }
 
     @Override

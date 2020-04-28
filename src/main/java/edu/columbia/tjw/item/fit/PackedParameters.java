@@ -23,12 +23,20 @@ public interface PackedParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     public double getEntryBeta(int index_);
 
+    public int findBetaIndex(final int toStatus_, final int entryIndex_);
+
     public boolean isBeta(final int index_);
 
     public boolean betaIsFrozen(final int index_);
 
     public boolean isCurve(final int index_);
 
+    /**
+     * Gets the toStatus of this index.
+     *
+     * @param index_
+     * @return
+     */
     public int getTransition(final int index_);
 
     public int getEntry(final int index_);

@@ -1,5 +1,6 @@
 package edu.columbia.tjw.item.fit.calculator;
 
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.algo.VarianceCalculator;
 import edu.columbia.tjw.item.optimize.OptimizationTarget;
 import edu.columbia.tjw.item.util.IceTools;
@@ -11,28 +12,131 @@ public final class FitPointAnalyzer
 {
     private static final double EPSILON = Math.ulp(4.0); // Just a bit bigger than machine epsilon.
 
+    private static final double Z_SCORE_CUTOFF = 5.0;
+
     private final int _superBlockSize;
     private final double _minStdDev;
     private final OptimizationTarget _target;
+    private final ItemSettings _settings;
 
-    public FitPointAnalyzer(final int superBlockSize_, final double minStdDev_, final OptimizationTarget target_)
+    public FitPointAnalyzer(final int superBlockSize_, final OptimizationTarget target_,
+                            ItemSettings settings_)
     {
         _superBlockSize = superBlockSize_;
-        _minStdDev = minStdDev_;
+        _minStdDev = Z_SCORE_CUTOFF;
         _target = target_;
+        _settings = settings_;
     }
 
     public double compare(final FitPoint a_, final FitPoint b_)
     {
-        return compare(a_, b_, _minStdDev);
+        return generateComparision(a_, b_).getZScore();
     }
+
+    public FitPointComparison generateComparision(final FitPoint a_, final FitPoint b_)
+    {
+        return compare(a_, b_, _minStdDev, false);
+    }
+
 
     public double getSigmaTarget()
     {
         return _minStdDev;
     }
 
+    public double[] getDerivativeAdjustment(final FitPoint point_, final FitPoint prev_)
+    {
+        switch (_target)
+        {
+            case ENTROPY:
+            {
+                // No adjustment needed.
+                final double[] output = new double[point_.getDimension()];
+                return output;
+            }
+            case L2:
+            {
+                final double lambda = _settings.getL2Lambda();
+                final double[] params = point_.getParameters();
+
+                MathTools.scalarMultiply(2.0 * lambda, params);
+
+                return params;
+            }
+            case ICE_SIMPLE:
+            case ICE2:
+            {
+                point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+                final double[] extraDerivative = IceTools.fillIceExtraDerivative(aggregated);
+                return extraDerivative;
+            }
+            case ICE_STABLE_B:
+            {
+                point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+                final double[] extraDerivative = IceTools.fillIce3ExtraDerivative(aggregated);
+                return extraDerivative;
+            }
+            case ICE_RAW:
+            {
+                // There is no realistic way to compute this efficiently, just fall through and use the ICE
+                // derivatives instead.
+            }
+            case ICE:
+            case ICE_B:
+            {
+                // Unfortunately, we have to clear here.
+                point_.clear();
+                final FitPoint jPoint;
+
+                if (prev_ != null)
+                {
+                    jPoint = prev_;
+                }
+                else
+                {
+                    jPoint = point_;
+                }
+
+                jPoint.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
+                final BlockResult jAgg = jPoint.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+
+                // Downgrade this to first derivative once the testing is done.
+                point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE, jAgg);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+
+                final double[] extraDerivative4;
+
+                if (_target == OptimizationTarget.ICE_B)
+                {
+                    // ICE5.
+                    extraDerivative4 = aggregated.getScaledGradient2();
+                }
+                else
+                {
+                    extraDerivative4 = aggregated.getScaledGradient();
+                }
+
+                for (int i = 0; i < extraDerivative4.length; i++)
+                {
+                    extraDerivative4[i] /= point_.getSize();
+                }
+
+                return extraDerivative4;
+            }
+            default:
+                throw new UnsupportedOperationException("Unknown target type.");
+        }
+    }
+
+
     public double[] getDerivative(final FitPoint point_)
+    {
+        return getDerivative(point_, null);
+    }
+
+    public double[] getDerivative(final FitPoint point_, final FitPoint prev_)
     {
         switch (_target)
         {
@@ -42,12 +146,24 @@ public final class FitPointAnalyzer
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
                 return aggregated.getDerivative();
             }
-            case TIC:
+            case L2:
             {
-                // There is no realistic way to compute this efficiently, just fall through and use the ICE
-                // derivatives instead.
+                point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+                final double[] entropyDerivative = aggregated.getDerivative();
+                final double lambda = _settings.getL2Lambda();
+                final double[] params = point_.getParameters();
+
+                MathTools.scalarMultiply(2.0 * lambda, params);
+
+                for (int i = 0; i < params.length; i++)
+                {
+                    entropyDerivative[i] += params[i];
+                }
+
+                return entropyDerivative;
             }
-            case ICE:
+            case ICE_SIMPLE:
             case ICE2:
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
@@ -55,18 +171,72 @@ public final class FitPointAnalyzer
 
                 final int dimension = aggregated.getDerivativeDimension();
                 final double[] entropyDerivative = aggregated.getDerivative();
-                final double[] extraDerivative = IceTools.fillIceExtraDerivative(aggregated);
-
-                final double cosCheck = MathTools.cos(extraDerivative, entropyDerivative);
-                final double magDiff = MathTools.magnitude(extraDerivative) / MathTools.magnitude(entropyDerivative);
-
-                //System.out.println("Gradient comparison[" + magDiff + "]: " + cosCheck);
+                final double[] extraDerivative = this.getDerivativeAdjustment(point_, prev_);
 
                 for (int i = 0; i < dimension; i++)
                 {
                     entropyDerivative[i] += extraDerivative[i];
                 }
 
+                return entropyDerivative;
+            }
+            case ICE_STABLE_B:
+            {
+                point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+
+                final int dimension = aggregated.getDerivativeDimension();
+                final double[] entropyDerivative = aggregated.getDerivative();
+                final double[] extraDerivative = this.getDerivativeAdjustment(point_, prev_);
+                final double[] edClone = entropyDerivative.clone();
+
+                for (int i = 0; i < dimension; i++)
+                {
+                    entropyDerivative[i] += extraDerivative[i];
+                }
+
+//                System.out.println(
+//                        "Combined cos similarity[" + MathTools.magnitude(entropyDerivative) + "]: " + MathTools
+//                                .cos(edClone, entropyDerivative));
+
+                return entropyDerivative;
+            }
+            case ICE_RAW:
+            {
+                // There is no realistic way to compute this efficiently, just fall through and use the ICE
+                // derivatives instead.
+            }
+            case ICE:
+            case ICE_B:
+            {
+                // Unfortunately, we have to clear here.
+                point_.clear();
+                final FitPoint jPoint;
+
+                if (prev_ != null)
+                {
+                    jPoint = prev_;
+                }
+                else
+                {
+                    jPoint = point_;
+                }
+
+                jPoint.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
+                final BlockResult jAgg = jPoint.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+
+                // Downgrade this to first derivative once the testing is done.
+                point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE, jAgg);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
+
+                final int dimension = aggregated.getDerivativeDimension();
+                final double[] entropyDerivative = aggregated.getDerivative();
+                final double[] extraDerivative = this.getDerivativeAdjustment(point_, prev_);
+
+                for (int i = 0; i < dimension; i++)
+                {
+                    entropyDerivative[i] += extraDerivative[i];
+                }
                 return entropyDerivative;
             }
             default:
@@ -84,7 +254,19 @@ public final class FitPointAnalyzer
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.VALUE);
                 return aggregated.getEntropyMean();
             }
-            case TIC:
+            case L2:
+            {
+                point_.computeUntil(endBlock_, BlockCalculationType.VALUE);
+                final BlockResult aggregated = point_.getAggregated(BlockCalculationType.VALUE);
+                final double entropy = aggregated.getEntropyMean();
+
+                final double lambda = _settings.getL2Lambda();
+
+                final double[] params = point_.getParameters();
+                final double dot = MathTools.dot(params, params);
+                return entropy + lambda * dot;
+            }
+            case ICE_RAW:
             {
                 // TODO: This is extremely inefficient.....
                 point_.computeUntil(endBlock_, BlockCalculationType.SECOND_DERIVATIVE);
@@ -113,15 +295,24 @@ public final class FitPointAnalyzer
                 final double tic = ticSum / point_.getSize();
                 return entropy + tic;
             }
-            case ICE:
+            case ICE_SIMPLE:
             case ICE2:
+            case ICE_STABLE_B:
+            case ICE:
+            case ICE_B:
             {
                 point_.computeUntil(endBlock_, BlockCalculationType.FIRST_DERIVATIVE);
                 final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
 
                 final double entropy = secondDerivative.getEntropyMean();
 
-                if (_target == OptimizationTarget.ICE2)
+                if (_target == OptimizationTarget.ICE_SIMPLE)
+                {
+                    final double iceSum = IceTools.computeIceSum(secondDerivative);
+                    final double iceAdjustment = iceSum / point_.getSize();
+                    return entropy + iceAdjustment;
+                }
+                else if (_target == OptimizationTarget.ICE2)
                 {
                     final double iceSum2 = IceTools.computeIce2Sum(secondDerivative);
                     final double iceAdjustment = iceSum2 / point_.getSize();
@@ -129,8 +320,8 @@ public final class FitPointAnalyzer
                 }
                 else
                 {
-                    final double iceSum = IceTools.computeIceSum(secondDerivative);
-                    final double iceAdjustment = iceSum / point_.getSize();
+                    final double iceSum3 = IceTools.computeIce3Sum(secondDerivative);
+                    final double iceAdjustment = iceSum3 / point_.getSize();
                     return entropy + iceAdjustment;
                 }
             }
@@ -158,13 +349,14 @@ public final class FitPointAnalyzer
      * @param b_
      * @return
      */
-    public double compare(final FitPoint a_, final FitPoint b_, final double minStdDev_)
+    public FitPointComparison compare(final FitPoint a_, final FitPoint b_, final double minStdDev_,
+                                      final boolean reverse_)
     {
-        if (a_ == b_)
-        {
-            // These are identical objects, the answer would always be zero.
-            return 0.0;
-        }
+//        if (a_ == b_)
+//        {
+//            // These are identical objects, the answer would always be zero.
+//            return 0.0;
+//        }
         if (a_.getBlockCount() != b_.getBlockCount())
         {
             throw new IllegalArgumentException("Incomparable points.");
@@ -172,7 +364,7 @@ public final class FitPointAnalyzer
 
         if (a_.getNextBlock(BlockCalculationType.VALUE) > b_.getNextBlock(BlockCalculationType.VALUE))
         {
-            return -1.0 * compare(b_, a_, minStdDev_);
+            return compare(b_, a_, minStdDev_, !reverse_);
         }
 
         final BlockCalculationType valType = BlockCalculationType.VALUE;
@@ -225,7 +417,7 @@ public final class FitPointAnalyzer
         if (a_.getNextBlock(valType) < 1)
         {
             // No data, can't tell which is better.
-            return 0.0;
+            return new FitPointComparison(a_, b_, 0, 0.0);
         }
 
         final double meanDiff = vcalc.getMean();
@@ -243,12 +435,99 @@ public final class FitPointAnalyzer
         // This is slightly rephrased in order to make later computations much easier.
         final int nextBlock = Math.max(a_.getNextBlock(BlockCalculationType.VALUE),
                 b_.getNextBlock(BlockCalculationType.VALUE));
-        final double zScore = (computeObjective(a_, nextBlock) - computeObjective(b_, nextBlock)) / dev;
+        //final double zScore = (computeObjective(a_, nextBlock) - computeObjective(b_, nextBlock)) / dev;
 
+        final FitPointComparison comparison;
 
-        //final double zScore2 = meanDiff / dev;
-        return zScore;
+        if (reverse_)
+        {
+            comparison = new FitPointComparison(b_, a_, nextBlock, dev);
+        }
+        else
+        {
+            comparison = new FitPointComparison(a_, b_, nextBlock, dev);
+        }
+
+        return comparison;
     }
 
+    public final class FitPointComparison
+    {
+        private final FitPoint _pointA;
+        private final FitPoint _pointB;
+        private final int _blockCount;
+
+        private final double _aVal;
+        private final double _bVal;
+        private final double _dev;
+        private final double _zScore;
+        private final double _relativeError;
+
+        public FitPointComparison(final FitPoint pointA_, final FitPoint pointB_, final int nextBlock_,
+                                  final double dev_)
+        {
+            _pointA = pointA_;
+            _pointB = pointB_;
+            _blockCount = nextBlock_;
+
+            if (_blockCount < 1)
+            {
+                _aVal = 0.0;
+                _bVal = 0.0;
+                _dev = 0.0;
+                _zScore = 0.0;
+                _relativeError = 0.0;
+            }
+            else
+            {
+                _aVal = computeObjective(_pointA, _blockCount);
+                _bVal = computeObjective(_pointB, _blockCount);
+                _dev = dev_;
+
+                _zScore = (_aVal - _bVal) / _dev;
+                _relativeError = Math.abs(_aVal - _bVal) / (_aVal + _bVal);
+            }
+        }
+
+        public FitPoint getPointA()
+        {
+            return _pointA;
+        }
+
+        public FitPoint getPointB()
+        {
+            return _pointB;
+        }
+
+        public int getBlockCount()
+        {
+            return _blockCount;
+        }
+
+        public double getValA()
+        {
+            return _aVal;
+        }
+
+        public double getValB()
+        {
+            return _bVal;
+        }
+
+        public double getDev()
+        {
+            return _dev;
+        }
+
+        public double getZScore()
+        {
+            return _zScore;
+        }
+
+        public double getRelativeError()
+        {
+            return _relativeError;
+        }
+    }
 
 }

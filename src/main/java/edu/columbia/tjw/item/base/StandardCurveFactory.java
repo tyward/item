@@ -124,29 +124,42 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
                 slopeParam = Math.sqrt(slopeScale / Math.max(minDev, distDev));
                 //slopeParam = Math.sqrt(1.0 / (distDev + 1.0e-10));
 
-                double xCorrelation = 0.0;
-                //double xVar = 0.0;
+                //Compute the rough scale of beta needed to account for the given data.
+                // Take the average of the buckets above the mean, and the average below.
+                double aboveSum = 0.0;
+                double belowSum = 0.0;
+                double aboveMass = 0.0;
+                double belowMass = 0.0;
+
                 final double meanY = dist_.getMeanY();
-                final double meanX = dist_.getQuantApprox().getMean();
 
                 for (int i = 0; i < size; i++)
                 {
                     final double yDev = dist_.getMeanY(i) - meanY;
-                    final double xDev = dist_.getQuantApprox().getBucketMean(i) - meanX;
-                    final double corr = yDev * xDev * dist_.getCount(i);
-                    xCorrelation += corr;
+
+                    if (Double.isNaN(yDev) || Double.isInfinite(yDev))
+                    {
+                        throw new IllegalStateException("Overflow error.");
+                    }
+
+                    if (i <= xIndex)
+                    {
+                        belowSum += yDev;
+                        belowMass += 1;
+                    }
+                    else
+                    {
+                        aboveSum += yDev;
+                        aboveMass += 1;
+                    }
                 }
 
-                final double xDev = dist_.getQuantApprox().getMeanStdDev();
-                final double yDev = dist_.getMeanDevY();
-                final double obsCount = dist_.getQuantApprox().getTotalCount();
+                final double slope = (aboveSum - belowSum) / (aboveMass + belowMass);
+                betaGuess = slope;
 
-                //Between -1.0 and 1.0, a reasonable guess for beta...
-                betaGuess = xCorrelation / (obsCount * xDev * yDev);
-
-                if (Double.isNaN(betaGuess))
+                if (Double.isNaN(betaGuess) || Double.isInfinite(betaGuess))
                 {
-                    System.out.println("ping.");
+                    throw new IllegalStateException("Overflow error.");
                 }
 
                 break;
@@ -228,6 +241,7 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
 
     private static final class GaussianCurve extends StandardCurve<StandardCurveType>
     {
+        private static final double SQRT_EPSILON = Math.sqrt(Math.ulp(4.0));
         private static final long serialVersionUID = 0xd1c81f26497f177fL;
         private final double _stdDev;
         private final double _invStdDev;
@@ -247,8 +261,15 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
                 throw new IllegalArgumentException("Invalid stdDev: " + stdDev_);
             }
 
-            final double variance = (stdDev_ * stdDev_) + 1.0e-10;
-            _stdDev = Math.sqrt(variance);
+            // The abs of mean, unless mean is really small, in which case this is a small positive value.
+            final double absMean = Math.max(Math.abs(mean_), SQRT_EPSILON);
+
+            // This is about the smallest that he sigma can reasonably be before we don't have much accuracy anymore.
+            final double sigmaAdj = SQRT_EPSILON * absMean;
+
+            _stdDev = Math.max(Math.abs(stdDev_), sigmaAdj);
+
+            final double variance = (_stdDev * _stdDev);
             _invStdDev = 1.0 / _stdDev;
             _mean = mean_;
             _expNormalizer = -1.0 / (2.0 * variance);
@@ -368,8 +389,8 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
             //Slope must be squared so that we can ensure that it is positive. 
             //We cannot take an abs, because that is not an analytical transformation.
             _center = center_;
-            _slope = (slope_ * slope_);
-            _slopeParam = Math.sqrt(_slope);
+            _slopeParam = Math.abs(slope_);
+            _slope = (_slopeParam * _slopeParam);
             _origSlope = slope_;
         }
 

@@ -2,15 +2,30 @@ package edu.columbia.tjw.item.fit.calculator;
 
 public interface FitPoint
 {
+    /**
+     * Returns the complete vector of parameters for this point.
+     *
+     * @return
+     */
+    double[] getParameters();
+
     int getBlockSize();
 
     int getBlockCount();
 
     int getNextBlock(BlockCalculationType type_);
 
+    void clear();
+
+    int getDimension();
+
+    void computeAll(BlockCalculationType type_, BlockResult prevDerivative_);
+
     void computeAll(BlockCalculationType type_);
 
     BlockResult getAggregated(BlockCalculationType type_);
+
+    void computeUntil(int endBlock_, BlockCalculationType type_, BlockResult prevDerivative_);
 
     void computeUntil(int endBlock_, BlockCalculationType type_);
 

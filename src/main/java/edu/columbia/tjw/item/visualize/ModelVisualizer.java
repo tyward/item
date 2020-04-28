@@ -20,7 +20,7 @@
 package edu.columbia.tjw.item.visualize;
 
 import edu.columbia.tjw.item.*;
-import edu.columbia.tjw.item.algo.QuantileApproximation;
+import edu.columbia.tjw.item.algo.QuantileBreakdown;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.data.InterpolatedCurve;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
@@ -40,7 +40,8 @@ import java.util.*;
  * @param <T> The curve family for this visualizer
  * @author tyler
  */
-public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>> implements Serializable
+public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
+        implements Serializable
 {
     private static final long serialVersionUID = 4198554232525136207L;
     private final ItemParameters<S, R, T> _params;
@@ -52,18 +53,6 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
     public ModelVisualizer(final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_,
                            final SortedSet<R> extraRegressors_)
     {
-        this(params_, grid_, extraRegressors_, QuantileApproximation.DEFAULT_BUCKETS,
-                QuantileApproximation.DEFAULT_LOAD);
-    }
-
-    public ModelVisualizer(final ItemParameters<S, R, T> params_, final ItemFittingGrid<S, R> grid_,
-                           final SortedSet<R> extraRegressors_, final int approxBuckets_, final int approxLoad_)
-    {
-        if (approxBuckets_ < 10)
-        {
-            throw new IllegalArgumentException("Bucket count must be at least 10: " + approxBuckets_);
-        }
-
         _params = params_;
         final ItemModel<S, R, T> model = new ItemModel<>(params_);
         final ParamFittingGrid<S, R, T> grid = new ParamFittingGrid<>(params_, grid_);
@@ -96,15 +85,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
             for (final R reg : _regressors)
             {
                 final ItemRegressorReader reader = grid.getRegressorReader(reg);
-                final QuantileApproximation.QuantileApproximationBuilder builder = QuantileApproximation.builder();
-
-                for (int i = 0; i < grid.size(); i++)
-                {
-                    final double x = reader.asDouble(i);
-                    builder.addObservation(x);
-                }
-
-                final QuantileApproximation regApprox = builder.build();
+                final QuantileBreakdown regApprox = QuantileBreakdown.buildApproximation(reader);
 
                 final QuantileStatistics.QuantileStatisticsBuilder approxBuilder =
                         QuantileStatistics.builder(regApprox);
@@ -193,7 +174,8 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
                     final double theoY = theoCurve.value(x);
                     final double mass = massCurve.value(x);
 
-                    stream_.println(this._params.getStatus() + ", " + to + ", " + reg + ", " + x + ", " + mass + ", " + actY + ", " + modelY + ", " + theoY);
+                    stream_.println(this._params
+                            .getStatus() + ", " + to + ", " + reg + ", " + x + ", " + mass + ", " + actY + ", " + modelY + ", " + theoY);
                 }
             }
         }
@@ -291,7 +273,7 @@ public class ModelVisualizer<S extends ItemStatus<S>, R extends ItemRegressor<R>
                 }
 
                 final QuantileStatistics dist = getActualDistribution(to_, regressor_);
-                final QuantileApproximation approx = dist.getQuantApprox();
+                final QuantileBreakdown approx = dist.getQuantApprox();
                 final int firstStep = approx.firstStep(alpha_);
                 final int end = approx.lastStep(alpha_);
                 final int trimSize = end - firstStep;

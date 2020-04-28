@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
@@ -30,10 +31,11 @@ import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
  */
 public abstract class Optimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>>
 {
-    private static final double DEFAULT_XTOL = 1.0e-6;
+    private static final double SQRT_EPSILON = Math.sqrt(Math.ulp(1.0));
+    private static final double DEFAULT_XTOL = 0.0;
     private static final double DEFAULT_YTOL = 1.0e-6;
 
-    private final double _stdDevThreshold = 5.0;
+    private final double _stdDevThreshold;
     private final double _xTol;
     private final double _yTol;
     private final int _blockSize;
@@ -41,20 +43,22 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
 
     private final FitPointAnalyzer _comparator;
 
-    public Optimizer(final int blockSize_, final int maxEvalCount_, final OptimizationTarget target_)
+    public Optimizer(final int blockSize_, final int maxEvalCount_, final OptimizationTarget target_,
+                     ItemSettings settings_)
     {
-        this(DEFAULT_XTOL, DEFAULT_YTOL, blockSize_, maxEvalCount_, target_);
+        this(DEFAULT_XTOL, DEFAULT_YTOL, blockSize_, maxEvalCount_, target_, settings_);
     }
 
     public Optimizer(final double xTol_, final double yTol_, final int blockSize_, final int maxEvalCount_,
-                     final OptimizationTarget target_)
+                     final OptimizationTarget target_, ItemSettings settings_)
     {
         _blockSize = blockSize_;
         _xTol = xTol_;
         _yTol = yTol_;
         _maxEvalCount = maxEvalCount_;
+        _stdDevThreshold = settings_.getZScoreCutoff();
 
-        _comparator = new FitPointAnalyzer(_blockSize, _stdDevThreshold, target_);
+        _comparator = new FitPointAnalyzer(_blockSize, target_, settings_);
     }
 
     public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_)
@@ -85,6 +89,13 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         return _comparator;
     }
 
+    /**
+     * returns true if the relative error is too small to continue.
+     *
+     * @param aResult_
+     * @param bResult_
+     * @return
+     */
     protected boolean checkYTolerance(final FitPoint aResult_, final FitPoint bResult_)
     {
         // Make sure everything has the same (approximate) level of computed results.
@@ -93,18 +104,22 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         final double meanA = getComparator().computeObjective(aResult_, highWater);
         final double meanB = getComparator().computeObjective(bResult_, highWater);
 
-        final double stdDevA = getComparator().computeObjectiveStdDev(aResult_, highWater);
-        final double stdDevB = getComparator().computeObjectiveStdDev(bResult_, highWater);
+        final double scaledDiff = Math.abs(meanA - meanB) / (meanA + meanB);
+        return scaledDiff < this._yTol;
 
-        final double raw = Math.abs(meanA - meanB);
-        final double adjusted = raw + this._stdDevThreshold * (stdDevA + stdDevB);
 
-        final double scale = Math.abs((meanA * meanA) + (meanB * meanB));
-
-        final double scaled = adjusted / scale;
-
-        final boolean output = scaled < this._yTol;
-        return output;
+//        final double stdDevA = getComparator().computeObjectiveStdDev(aResult_, highWater);
+//        final double stdDevB = getComparator().computeObjectiveStdDev(bResult_, highWater);
+//
+//        final double raw = Math.abs(meanA - meanB);
+//        final double adjusted = raw + this._stdDevThreshold * (stdDevA + stdDevB);
+//
+//        final double scale = Math.abs((meanA * meanA) + (meanB * meanB));
+//
+//        final double scaled = adjusted / scale;
+//
+//        final boolean output = scaled < this._yTol;
+//        return output;
     }
 
 
@@ -130,17 +145,27 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
 
     protected boolean checkXTolerance(final V a_, final V b_)
     {
+        final double scale = SQRT_EPSILON * 0.5 * (a_.getMagnitude() + b_.getMagnitude());
+        return checkXTolerance(a_, b_, scale);
+
+    }
+
+    protected boolean checkXTolerance(final V a_, final V b_, final double target_)
+    {
         final double distance = a_.distance(b_);
-
-        final double aMag = a_.getMagnitude();
-        final double bMag = b_.getMagnitude();
-
-        final double scale = Math.sqrt((aMag * aMag) + (bMag * bMag));
-
-        final double result = distance / scale;
-
-        final boolean output = result < this._xTol;
-        return output;
+        return distance < target_;
+//
+//
+//
+//        final double aMag = a_.getMagnitude();
+//        final double bMag = b_.getMagnitude();
+//
+//        final double scale = Math.sqrt((aMag * aMag) + (bMag * bMag));
+//
+//        final double result = distance / scale;
+//
+//        final boolean output = result < this._xTol;
+//        return output;
     }
 
 }

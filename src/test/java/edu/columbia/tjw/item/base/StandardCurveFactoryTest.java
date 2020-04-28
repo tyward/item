@@ -164,7 +164,7 @@ class StandardCurveFactoryTest
                 0, new double[]{0.5, 3.0});
 
         assertEquals(1.0, gaussian.transform(0.5));
-        assertEquals(0.8516705072309603, gaussian.transform(2.2));
+        assertEquals(0.8516705072294409, gaussian.transform(2.2));
 
         ItemCurve<StandardCurveType> g2 = factory.generateCurve(StandardCurveType.GAUSSIAN,
                 0, new double[]{0.5001, 3.0});

@@ -31,7 +31,6 @@ import edu.columbia.tjw.item.util.MathFunctions;
 import org.apache.commons.math3.util.Pair;
 
 import java.util.*;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -271,7 +270,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         // This is oh-sooo hacky.
-        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>("SingleInteraction",
+        final FittingProgressChain<S, R, T> subChain = new FittingProgressChain<>(_settings, "SingleInteraction",
                 starting_.getFitResult().getParams(), getSize(), _base.getCalc(), true);
 
         if (null == toStatus)
@@ -460,41 +459,8 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
             fieldLoop:
             for (final R field : fields_)
             {
-                for (final T curveType : params.getCurveFamily().getMembers())
-                {
-                    try
-                    {
-                        //First, check for admissibiilty.
-                        //Requires making a quick vacuous set of params...
-                        final ItemCurveParams<R, T> vacuousParams = new ItemCurveParams<>(0.0, 0.0, field,
-                                curveType.getFactory()
-                                        .generateCurve(curveType, 0, new double[curveType.getParamCount()]));
-
-                        if (params.curveIsForbidden(toStatus, vacuousParams))
-                        {
-                            continue;
-                        }
-
-                        final CurveFitResult<S, R, T> res = _fitter.calibrateCurveAddition(curveType, field, toStatus
-                                , fitResult_);
-
-                        if (params.curveIsForbidden(toStatus, res.getCurveParams()))
-                        {
-                            LOG.info("Generated curve, but it is forbidden by filters, dropping: " + res
-                                    .getCurveParams());
-                            continue;
-                        }
-
-                        if (res.getFitResult().getInformationCriterionDiff() < _settings.getAicCutoff())
-                        {
-                            fitResults.add(res);
-                        }
-                    }
-                    catch (final IllegalArgumentException e)
-                    {
-                        LOG.log(Level.INFO, "Argument trouble (" + field + "), moving on to next curve.", e);
-                    }
-                }
+                List<CurveFitResult<S, R, T>> subResults = _fitter.calibrateCurveAdditions(field, toStatus, fitResult_);
+                fitResults.addAll(subResults);
             }
         }
 

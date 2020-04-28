@@ -38,7 +38,7 @@ public enum BinaryStatus implements ItemStatus<BinaryStatus>
     STATUS_A,
     STATUS_B;
 
-    public static final EnumFamily<BinaryStatus> FAMILY = new EnumFamily<>(values());
+    public static final EnumFamily<BinaryStatus> FAMILY = EnumFamily.generateFamily(values());
     private final List<BinaryStatus> _indistinguishable;
     private List<BinaryStatus> _reachable = null;
 

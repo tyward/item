@@ -11,15 +11,15 @@ import edu.columbia.tjw.item.util.IceTools;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
 
-import java.io.Serializable;
+import java.io.*;
 import java.util.Arrays;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         implements Serializable
 {
     private static final double EPSILON = Math.ulp(4.0); // Just a bit bigger than machine epsilon.
-    private static final double SQRT_EPSILON = Math.sqrt(EPSILON);
-    private static final boolean USE_COMPLEX_RESULTS = true;
     private static final long serialVersionUID = 0x606e4b6c2343db26L;
 
     private final FitResult<S, R, T> _prev;
@@ -39,8 +39,12 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double _ice2;
     private final double _iceSum;
     private final double _iceSum2;
+    private final double _iceSum3;
     private final double _ticSum;
     private final double _invConditionNumber;
+
+    private final double _invConditionNumberJ;
+    private final double _invConditionNumberI;
 
 
     /**
@@ -69,10 +73,15 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         _ice2 = current_._ice2;
         _iceSum2 = current_._iceSum2;
+        _iceSum3 = current_._iceSum3;
         _invConditionNumber = current_._invConditionNumber;
+
+        _invConditionNumberI = current_._invConditionNumberI;
+        _invConditionNumberJ = current_._invConditionNumberJ;
     }
 
-    public FitResult(final ItemFitPoint<S, R, T> fitPoint_, final FitResult<S, R, T> prev_)
+    public FitResult(final ItemFitPoint<S, R, T> fitPoint_, final FitResult<S, R, T> prev_,
+                     final boolean complexFitResults_)
     {
         _params = fitPoint_.getParams();
         _packed = _params.generatePacked();
@@ -80,7 +89,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         final int rowCount = fitPoint_.getSize();
 
-        if (USE_COMPLEX_RESULTS)
+        if (complexFitResults_)
         {
             fitPoint_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
             final BlockResult secondDerivative = fitPoint_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
@@ -95,8 +104,11 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             final RealMatrix iMatrix = secondDerivative.getFisherInformation();
             final SingularValueDecomposition iSvd = new SingularValueDecomposition(iMatrix);
 
+            _invConditionNumberJ = jSvd.getInverseConditionNumber();
+            _invConditionNumberI = iSvd.getInverseConditionNumber();
+
             final double minInverseCondition = Math
-                    .min(jSvd.getInverseConditionNumber(), iSvd.getInverseConditionNumber());
+                    .min(_invConditionNumberJ, _invConditionNumberI);
 
             _invConditionNumber = minInverseCondition;
 
@@ -133,6 +145,8 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _iceSum2 = iceSum2;
             _ice2 = 2.0 * ((_entropy * rowCount) + iceSum2);
 
+            _iceSum3 = IceTools.computeIce3Sum(secondDerivative);
+
         }
         else
         {
@@ -148,9 +162,12 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _iceSum = Double.NaN;
 
             _iceSum2 = Double.NaN;
+            _iceSum3 = Double.NaN;
             _ice2 = Double.NaN;
 
             _invConditionNumber = Double.NaN;
+            _invConditionNumberJ = Double.NaN;
+            _invConditionNumberI = Double.NaN;
         }
 
         _aic = computeAic(_entropy, rowCount, _params.getEffectiveParamCount());
@@ -206,6 +223,42 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         return _gradient.clone();
     }
 
+    public double getTicSum()
+    {
+        return _ticSum;
+    }
+
+    public double getIceSum()
+    {
+        return _iceSum;
+    }
+
+    public double getIce2Sum()
+    {
+        return _iceSum2;
+    }
+
+    public double getIce3Sum()
+    {
+        return _iceSum3;
+    }
+
+    public double getInvConditionNumber()
+    {
+        return _invConditionNumber;
+    }
+
+    public double getInvConditionNumberJ()
+    {
+        return _invConditionNumberJ;
+    }
+
+
+    public double getInvConditionNumberI()
+    {
+        return _invConditionNumberI;
+    }
+
     public double getInformationCriterion()
     {
         // For now, this is AIC, but it could be TIC later on.
@@ -239,6 +292,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
         builder.append("\nTIC Adjustment: " + _ticSum);
         builder.append("\nICE Adjustment: " + _iceSum);
         builder.append("\nICE2 Adjustment: " + _iceSum2);
+        builder.append("\nICE3 Adjustment: " + _iceSum3);
 
         builder.append("\nInv Condition Number: " + _invConditionNumber);
 
@@ -248,4 +302,49 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         return builder.toString();
     }
+
+    public void writeToStream(final OutputStream stream_) throws IOException
+    {
+        try (final GZIPOutputStream zipout = new GZIPOutputStream(stream_);
+             final ObjectOutputStream oOut = new ObjectOutputStream(zipout))
+        {
+            oOut.writeObject(this);
+            oOut.flush();
+        }
+    }
+
+
+    public static <S2 extends ItemStatus<S2>, R2 extends ItemRegressor<R2>, T2 extends ItemCurveType<T2>>
+    FitResult<S2, R2, T2> readFromStream(final InputStream stream_,
+                                         final Class<S2> statusClass_, final Class<R2> regClass_,
+                                         final Class<T2> typeClass_)
+            throws IOException
+    {
+        try (final GZIPInputStream zipin = new GZIPInputStream(stream_);
+             final ObjectInputStream oIn = new ObjectInputStream(zipin))
+        {
+            final FitResult<?, ?, ?> raw = (FitResult<?, ?, ?>) oIn.readObject();
+
+            if (raw.getParams().getStatus().getClass() != statusClass_)
+            {
+                throw new IOException("Status class mismatch.");
+            }
+            if (raw.getParams().getRegressorFamily().getComponentType() != regClass_)
+            {
+                throw new IOException("Regressor class mismatch.");
+            }
+            if (raw.getParams().getCurveFamily().getComponentType() != typeClass_)
+            {
+                throw new IOException("Curve Type class mismatch.");
+            }
+
+            final FitResult<S2, R2, T2> typed = (FitResult<S2, R2, T2>) raw;
+            return typed;
+        }
+        catch (ClassNotFoundException e)
+        {
+            throw new IOException(e);
+        }
+    }
+
 }

@@ -26,6 +26,10 @@ import java.util.Random;
  */
 public final class MathTools
 {
+    public static final double EPSILON = Math.ulp(1.0);
+    public static final double SQRT_EPSILON = Math.sqrt(EPSILON);
+
+
     private MathTools()
     {
     }
@@ -131,6 +135,14 @@ public final class MathTools
         return dot;
     }
 
+    public static void scalarMultiply(final double scalar_, final double[] vector_)
+    {
+        for (int i = 0; i < vector_.length; i++)
+        {
+            vector_[i] *= scalar_;
+        }
+    }
+
     public static double maxAbsElement(final double[] x_)
     {
         double maxAbs = 0.0;
@@ -157,6 +169,32 @@ public final class MathTools
         final double magB = magnitude(b_);
         final double cos = dot / (magA * magB);
         return cos;
+    }
+
+    /**
+     * returns (a-b).
+     *
+     * @param a_
+     * @param b_
+     * @return
+     */
+    public static final double[] subtract(final double[] a_, final double[] b_)
+    {
+        final int dimension = a_.length;
+
+        if (b_.length != dimension)
+        {
+            throw new IllegalArgumentException("Dimension mismatch.");
+        }
+
+        final double[] c = new double[dimension];
+
+        for (int i = 0; i < dimension; i++)
+        {
+            c[i] = a_[i] - b_[i];
+        }
+
+        return c;
     }
 
 }

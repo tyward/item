@@ -20,12 +20,19 @@
 package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.algo.QuantileBreakdown;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
+import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.base.BaseFitter;
 import edu.columbia.tjw.item.util.LogUtil;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -41,12 +48,23 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
     private final ItemSettings _settings;
     private final BaseFitter<S, R, T> _base;
 
+    final SortedMap<R, QuantileBreakdown> _quantiles;
 
     public CurveParamsFitter(final ItemSettings settings_,
                              final BaseFitter<S, R, T> base_)
     {
         _settings = settings_;
         _base = base_;
+
+        _quantiles = new TreeMap<>();
+
+        final ItemFittingGrid<S, R> grid = base_.getCalc().getGrid();
+
+        for (final R next : grid.getAvailableRegressors())
+        {
+            _quantiles.put(next,
+                    QuantileBreakdown.buildApproximation(grid.getRegressorReader(next)));
+        }
     }
 
     public CurveFitResult<S, R, T> doCalibration(final ItemCurveParams<R, T> curveParams_,
@@ -88,16 +106,63 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         return result;
     }
 
-    public CurveFitResult<S, R, T> calibrateCurveAddition(T curveType_, R field_, S toStatus_,
-                                                          final FitResult<S, R, T> prevResult_)
+    public List<CurveFitResult<S, R, T>> calibrateCurveAdditions(R field_, S toStatus_,
+                                                                 final FitResult<S, R, T> prevResult_)
+    {
+        final ItemParameters<S, R, T> params = prevResult_.getParams();
+        final List<CurveFitResult<S, R, T>> fitResults = new ArrayList<>();
+
+        final QuantileStatistics dist = generateDistribution(field_, toStatus_, prevResult_);
+
+        for (final T curveType : params.getCurveFamily().getMembers())
+        {
+            try
+            {
+                //First, check for admissibiilty.
+                //Requires making a quick vacuous set of params...
+                final ItemCurveParams<R, T> vacuousParams = new ItemCurveParams<>(0.0, 0.0, field_,
+                        curveType.getFactory()
+                                .generateCurve(curveType, 0, new double[curveType.getParamCount()]));
+
+                if (params.curveIsForbidden(toStatus_, vacuousParams))
+                {
+                    continue;
+                }
+
+                final CurveFitResult<S, R, T> res = calibrateCurveAddition(curveType, field_, toStatus_
+                        , prevResult_, dist);
+
+                if (params.curveIsForbidden(toStatus_, res.getCurveParams()))
+                {
+                    LOG.info("Generated curve, but it is forbidden by filters, dropping: " + res
+                            .getCurveParams());
+                    continue;
+                }
+
+                if (res.getFitResult().getInformationCriterionDiff() < _settings.getAicCutoff())
+                {
+                    LOG.info("Generated Admissable Curve: " + res.getFitResult());
+                    fitResults.add(res);
+                }
+            }
+            catch (final IllegalArgumentException e)
+            {
+                LOG.log(Level.INFO, "Argument trouble (" + field_ + "), moving on to next curve.", e);
+            }
+        }
+
+        return fitResults;
+    }
+
+    private CurveFitResult<S, R, T> calibrateCurveAddition(T curveType_, R field_, S toStatus_,
+                                                           final FitResult<S, R, T> prevResult_,
+                                                           final QuantileStatistics dist_)
     {
         LOG.info("\nCalculating Curve[" + curveType_ + ", " + field_ + ", " + toStatus_ + "]");
 
         final ItemParameters<S, R, T> params = prevResult_.getParams();
         final ItemCurveFactory<R, T> factory = params.getCurveFamily().getFromOrdinal(0).getFactory();
-
-        final QuantileStatistics dist = generateDistribution(field_, toStatus_, prevResult_);
-        final ItemCurveParams<R, T> starting = factory.generateStartingParameters(curveType_, field_, dist,
+        final ItemCurveParams<R, T> starting = factory.generateStartingParameters(curveType_, field_, dist_,
                 _settings.getRandom());
 
         final CurveFitResult<S, R, T> result = doCalibration(starting, params, prevResult_, toStatus_);
@@ -107,7 +172,7 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
             try
             {
                 final ItemCurveParams<R, T> polished = RawCurveCalibrator.polishCurveParameters(factory, _settings,
-                        dist, starting);
+                        dist_, starting);
 
                 if (polished != starting)
                 {
@@ -155,9 +220,13 @@ public final class CurveParamsFitter<S extends ItemStatus<S>, R extends ItemRegr
         final ItemParameters<S, R, T> params = fitResult_.getParams();
         final ParamFittingGrid<S, R, T> paramGrid = new ParamFittingGrid<>(params, _base.getCalc().getGrid());
         final ItemModel<S, R, T> model = new ItemModel<>(params);
+
+        QuantileBreakdown quantiles = _quantiles.get(field_);
+
+
         final ItemQuantileDistribution<S, R, T> quantGenerator = new ItemQuantileDistribution<>(paramGrid,
                 model,
-                params.getStatus(), field_, toStatus_);
+                params.getStatus(), field_, toStatus_, quantiles);
         final QuantileStatistics dist = quantGenerator.getAdjusted();
         return dist;
     }

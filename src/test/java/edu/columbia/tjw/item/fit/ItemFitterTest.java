@@ -62,9 +62,9 @@ public class ItemFitterTest
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.1903583318861118, r3.getEntropy());
+        Assertions.assertEquals(0.19014171948157474, r3.getEntropy());
 
-
+//
 //        final File outputDir = new File("/Users/tyler/Documents/code/outputModels");
 //        final File dataFile = new File(outputDir, "test_model_small.dat");
 //        result.getParams().writeToStream(new FileOutputStream(dataFile));
@@ -80,18 +80,18 @@ public class ItemFitterTest
     void basicTicTest() throws Exception
     {
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-                makeFitter(false, OptimizationTarget.TIC);
+                makeFitter(false, OptimizationTarget.ICE_RAW);
         final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
                 .getChain().getLatestResults();
-        Assertions.assertEquals(0.20231126681155956, result.getEntropy());
+        Assertions.assertEquals(0.2023114931079327, result.getEntropy());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19035792370439872, r3.getEntropy());
+        Assertions.assertEquals(0.19062883343420864, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
@@ -99,7 +99,7 @@ public class ItemFitterTest
     void basicIceTest() throws Exception
     {
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
-                makeFitter(false, OptimizationTarget.ICE);
+                makeFitter(false, OptimizationTarget.ICE_SIMPLE);
         final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
@@ -110,7 +110,7 @@ public class ItemFitterTest
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19024934970891585, r3.getEntropy());
+        Assertions.assertEquals(0.19220376408982545, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
@@ -129,7 +129,45 @@ public class ItemFitterTest
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19024934970870488, r3.getEntropy());
+        Assertions.assertEquals(0.19002367721597166, r3.getEntropy());
+        System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
+    }
+
+    @Test
+    void basicIce4Test() throws Exception
+    {
+        final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
+                makeFitter(false, OptimizationTarget.ICE);
+        final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
+
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
+                .getChain().getLatestResults();
+        Assertions.assertEquals(0.2023114943008527, result.getEntropy());
+
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
+                curveRegs, 2, false);
+
+        System.out.println("Revised: " + r3.getParams());
+        Assertions.assertEquals(0.1905667452818922, r3.getEntropy());
+        System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
+    }
+
+    @Test
+    void basicIce5Test() throws Exception
+    {
+        final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
+                makeFitter(false, OptimizationTarget.ICE_B);
+        final Set<SimpleRegressor> curveRegs = getCurveRegs(fitter.getGrid());
+
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
+                .getChain().getLatestResults();
+        Assertions.assertEquals(0.2023112678843428, result.getEntropy());
+
+        FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
+                curveRegs, 2, false);
+
+        System.out.println("Revised: " + r3.getParams());
+        Assertions.assertEquals(0.19222943893864808, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
@@ -149,7 +187,7 @@ public class ItemFitterTest
                 curveRegs, 20, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.18902629265633522, r3.getEntropy());
+        Assertions.assertEquals(0.18788927798652055, r3.getEntropy());
 
 
         //fitter.getCalculator().computeFitResult(r3.getParams(), r3);
@@ -282,8 +320,7 @@ public class ItemFitterTest
 
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
                 new ItemFitter<>(new StandardCurveFactory<>(),
-                        intercept,
-                        rawData.getFromStatus(), rawData, settings);
+                        intercept, rawData, settings);
 
         return fitter;
     }

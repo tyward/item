@@ -85,6 +85,10 @@ public final class ItemSettings implements Serializable
 
     private final OptimizationTarget _target;
 
+    private final double _l2Lambda;
+
+    private final boolean _complexFitResults;
+
     public ItemSettings()
     {
         _rand = RandomTool.getRandom();
@@ -104,6 +108,9 @@ public final class ItemSettings implements Serializable
         _threadBlockSize = THREAD_BLOCK_SIZE;
         _validate = DEFAULT_VALIDATE;
         _target = OptimizationTarget.ENTROPY;
+        _l2Lambda = 0.0;
+
+        _complexFitResults = false;
     }
 
     public ItemSettings(final Builder builder_)
@@ -125,6 +132,8 @@ public final class ItemSettings implements Serializable
         _threadBlockSize = builder_.getThreadBlockSize();
         _validate = builder_.isValidate();
         _target = builder_.getTarget();
+        _l2Lambda = builder_.getL2Lambda();
+        _complexFitResults = builder_.getComplexFitResults();
     }
 
     public double getExhaustiveImprovementLimit()
@@ -212,6 +221,16 @@ public final class ItemSettings implements Serializable
         return _target;
     }
 
+    public double getL2Lambda()
+    {
+        return _l2Lambda;
+    }
+
+    public boolean getComplexFitResults()
+    {
+        return _complexFitResults;
+    }
+
     public Builder toBuilder()
     {
         return new Builder(this);
@@ -241,6 +260,9 @@ public final class ItemSettings implements Serializable
         private int _threadBlockSize;
         private boolean _validate;
         private OptimizationTarget _target;
+        private double _l2Lambda;
+
+        private boolean _complexFitResults;
 
         public Builder()
         {
@@ -266,6 +288,8 @@ public final class ItemSettings implements Serializable
             _threadBlockSize = base_.getThreadBlockSize();
             _validate = base_.getDoValidate();
             _target = base_.getTarget();
+            _l2Lambda = base_.getL2Lambda();
+            _complexFitResults = base_.getComplexFitResults();
         }
 
         public ItemSettings build()
@@ -480,6 +504,27 @@ public final class ItemSettings implements Serializable
             return this;
         }
 
+        public Builder setL2Lambda(final double l2Lambda_)
+        {
+            _l2Lambda = l2Lambda_;
+            return this;
+        }
+
+        public double getL2Lambda()
+        {
+            return _l2Lambda;
+        }
+
+        public boolean getComplexFitResults()
+        {
+            return _complexFitResults;
+        }
+
+        public Builder setComplexFitResults(final boolean complexFitResults_)
+        {
+            _complexFitResults = complexFitResults_;
+            return this;
+        }
     }
 
 }

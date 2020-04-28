@@ -105,6 +105,12 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     }
 
     @Override
+    public int findBetaIndex(int toStatus_, int entryIndex_)
+    {
+        return _underlying.findBetaIndex(toStatus_, entryIndex_);
+    }
+
+    @Override
     public boolean isBeta(int index_)
     {
         return _underlying.isBeta(translate(index_));

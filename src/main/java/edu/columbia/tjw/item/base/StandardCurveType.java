@@ -34,7 +34,7 @@ public enum StandardCurveType implements ItemCurveType<StandardCurveType>
     LOGISTIC(2),
     GAUSSIAN(2);
 
-    public static final EnumFamily<StandardCurveType> FAMILY = new EnumFamily<>(values());
+    public static final EnumFamily<StandardCurveType> FAMILY = EnumFamily.generateFamily(values());
     private static final StandardCurveFactory FACTORY = new StandardCurveFactory();
 
     private final int _paramCount;
@@ -51,7 +51,7 @@ public enum StandardCurveType implements ItemCurveType<StandardCurveType>
     }
 
     @Override
-    public <R extends ItemRegressor<R>> ItemCurveFactory<R, StandardCurveType> getFactory()
+    public StandardCurveFactory getFactory()
     {
         return FACTORY;
     }

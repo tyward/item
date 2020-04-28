@@ -23,7 +23,8 @@ public final class BaseFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     public BaseFitter(final EntropyCalculator<S, R, T> calc_, final ItemSettings settings_)
     {
         _calc = calc_;
-        _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 300, 20, 0.1, settings_.getTarget());
+        _optimizer = new MultivariateOptimizer(settings_.getBlockSize(), 1000, 50, 0.1, settings_.getTarget(),
+                settings_);
         _settings = settings_;
     }
 

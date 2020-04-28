@@ -384,9 +384,15 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
                 newTrans.add(curve);
             }
 
+            final int fieldIndex = _uniqueFields.indexOf(field);
 
-            _fieldOffsets[endIndex][i] = _uniqueFields.indexOf(field);
-            _transOffsets[endIndex][i] = transIndex; //_trans.indexOf(curve);
+            if (fieldIndex < 0)
+            {
+                throw new IllegalStateException("Impossible!");
+            }
+
+            _fieldOffsets[endIndex][i] = fieldIndex;
+            _transOffsets[endIndex][i] = transIndex;
         }
 
         if (toIndex != -1)
@@ -1324,6 +1330,26 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         public int getTransition(int index_)
         {
             return _toStatus[index_];
+        }
+
+        public int findBetaIndex(final int toStatus_, final int entryIndex_)
+        {
+            for (int i = 0; i < _entryIndex.length; i++)
+            {
+                if (_entryIndex[i] != entryIndex_)
+                {
+                    continue;
+                }
+
+                if (_toStatus[i] != toStatus_)
+                {
+                    continue;
+                }
+
+                return _betaIndex[i];
+            }
+
+            return -1;
         }
 
         @Override

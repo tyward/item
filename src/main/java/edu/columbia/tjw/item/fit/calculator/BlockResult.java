@@ -15,13 +15,17 @@ public final class BlockResult
     private final double[] _derivativeSquared;
     private final double[] _jDiag;
     private final double[] _shiftGradient;
+    private final double[] _scaledGradient;
+    private final double[] _scaledGradient2;
+    private final double _gradientMass;
     private final double[][] _secondDerivative;
     private final double[][] _fisherInformation;
     private final int _size;
 
     public BlockResult(final int rowStart_, final int rowEnd_, final double sumEntropy_, final double sumEntropy2_,
                        final double[] derivative_, final double[] derivativeSquared_, final double[] jDiag_,
-                       final double[] shiftGradient_,
+                       final double[] shiftGradient_, final double[] scaledGradient_,
+                       final double[] scaledGradient2_, final double gradientMass_,
                        final double[][] fisherInformation_, final double[][] secondDerivative_)
     {
         if (rowStart_ < 0)
@@ -56,6 +60,10 @@ public final class BlockResult
         _derivativeSquared = derivativeSquared_;
         _secondDerivative = secondDerivative_;
         _fisherInformation = fisherInformation_;
+
+        _gradientMass = gradientMass_;
+        _scaledGradient = scaledGradient_;
+        _scaledGradient2 = scaledGradient2_;
     }
 
     public BlockResult(final List<BlockResult> analysisList_)
@@ -69,14 +77,8 @@ public final class BlockResult
         int maxEnd = Integer.MIN_VALUE;
         double h = 0.0;
         double h2 = 0.0;
+        double gradientMass = 0.0;
         int count = 0;
-
-        final double[] derivative;
-        final double[] d2;
-        final double[] jDiag;
-        final double[] shiftGradient;
-        final double[][] fisherInformation;
-        final double[][] secondDerivative;
 
         final boolean hasSecondDerivative = analysisList_.get(0).hasSecondDerivative();
         final boolean hasDerivative = hasSecondDerivative || analysisList_.get(0).hasDerivative();
@@ -84,31 +86,37 @@ public final class BlockResult
         if (hasDerivative)
         {
             final int dimension = analysisList_.get(0).getDerivativeDimension();
-            derivative = new double[dimension];
-            d2 = new double[dimension];
-            jDiag = new double[dimension];
-            fisherInformation = new double[dimension][dimension];
+            _derivative = new double[dimension];
+            _derivativeSquared = new double[dimension];
+            _jDiag = new double[dimension];
+
+            _scaledGradient = new double[dimension];
+            _scaledGradient2 = new double[dimension];
 
             if (hasSecondDerivative)
             {
-                secondDerivative = new double[dimension][dimension];
-                shiftGradient = new double[dimension];
+                _fisherInformation = new double[dimension][dimension];
+                _secondDerivative = new double[dimension][dimension];
+                _shiftGradient = new double[dimension];
             }
             else
             {
-                secondDerivative = null;
-                shiftGradient = null;
+                _fisherInformation = null;
+                _secondDerivative = null;
+                _shiftGradient = null;
             }
         }
         else
         {
-            derivative = null;
-            d2 = null;
-            jDiag = null;
+            _derivative = null;
+            _scaledGradient = null;
+            _scaledGradient2 = null;
+            _derivativeSquared = null;
+            _jDiag = null;
 
-            fisherInformation = null;
-            secondDerivative = null;
-            shiftGradient = null;
+            _fisherInformation = null;
+            _secondDerivative = null;
+            _shiftGradient = null;
         }
 
         for (final BlockResult next : analysisList_)
@@ -119,30 +127,30 @@ public final class BlockResult
             h2 += next._sumEntropy2;
             count += next._size;
 
-            if (null != derivative)
+            if (null != _derivative)
             {
                 final double weight = next._size;
-                final int dimension = derivative.length;
+                final int dimension = _derivative.length;
+                gradientMass += next._gradientMass;
 
                 for (int i = 0; i < dimension; i++)
                 {
                     final double entry = next.getDerivativeEntry(i);
-                    derivative[i] += weight * entry;
-                    d2[i] += weight * next._derivativeSquared[i];
-                    jDiag[i] += weight * next._jDiag[i];
+                    _derivative[i] += weight * entry;
+                    _scaledGradient[i] += weight * next._scaledGradient[i];
+                    _scaledGradient2[i] += weight * next._scaledGradient2[i];
+                    _derivativeSquared[i] += weight * next._derivativeSquared[i];
+                    _jDiag[i] += weight * next._jDiag[i];
 
-                    for (int j = 0; j < dimension; j++)
-                    {
-                        fisherInformation[i][j] += weight * next.getFisherInformationEntry(i, j);
-                    }
 
-                    if (null != secondDerivative)
+                    if (null != _secondDerivative)
                     {
-                        shiftGradient[i] = weight * next.getShiftGradientEntry(i);
+                        _shiftGradient[i] = weight * next.getShiftGradientEntry(i);
 
                         for (int j = 0; j < dimension; j++)
                         {
-                            secondDerivative[i][j] += weight * next.getSecondDerivativeEntry(i, j);
+                            _secondDerivative[i][j] += weight * next.getSecondDerivativeEntry(i, j);
+                            _fisherInformation[i][j] += weight * next.getFisherInformationEntry(i, j);
                         }
                     }
                 }
@@ -154,29 +162,27 @@ public final class BlockResult
             throw new IllegalArgumentException("Discontiguous blocks.");
         }
 
-        if (null != derivative)
+        if (null != _derivative)
         {
             final double invWeight = 1.0 / count;
-            final int dimension = derivative.length;
+            final int dimension = _derivative.length;
 
             for (int i = 0; i < dimension; i++)
             {
-                derivative[i] = invWeight * derivative[i];
-                d2[i] = invWeight * d2[i];
-                jDiag[i] = invWeight * jDiag[i];
+                _derivative[i] = invWeight * _derivative[i];
+                _scaledGradient[i] = invWeight * _scaledGradient[i];
+                _scaledGradient2[i] = invWeight * _scaledGradient2[i];
+                _derivativeSquared[i] = invWeight * _derivativeSquared[i];
+                _jDiag[i] = invWeight * _jDiag[i];
 
-                for (int j = 0; j < dimension; j++)
+                if (null != _secondDerivative)
                 {
-                    fisherInformation[i][j] *= invWeight;
-                }
-
-                if (null != secondDerivative)
-                {
-                    shiftGradient[i] *= invWeight;
+                    _shiftGradient[i] *= invWeight;
 
                     for (int j = 0; j < dimension; j++)
                     {
-                        secondDerivative[i][j] = invWeight * secondDerivative[i][j];
+                        _secondDerivative[i][j] = invWeight * _secondDerivative[i][j];
+                        _fisherInformation[i][j] *= invWeight;
                     }
                 }
             }
@@ -187,12 +193,7 @@ public final class BlockResult
         _sumEntropy = h;
         _sumEntropy2 = h2;
         _size = count;
-        _derivative = derivative;
-        _derivativeSquared = d2;
-        _jDiag = jDiag;
-        _shiftGradient = shiftGradient;
-        _fisherInformation = fisherInformation;
-        _secondDerivative = secondDerivative;
+        _gradientMass = gradientMass;
     }
 
     public int getRowStart()
@@ -273,6 +274,16 @@ public final class BlockResult
         return _secondDerivative[row_][column_];
     }
 
+    public double[] getScaledGradient()
+    {
+        return _scaledGradient;
+    }
+
+    public double[] getScaledGradient2()
+    {
+        return _scaledGradient2;
+    }
+
     public double getFisherInformationEntry(final int row_, final int column_)
     {
         if (!hasDerivative())
@@ -303,6 +314,12 @@ public final class BlockResult
         return _jDiag[index_];
     }
 
+    public double[] getJDiag()
+    {
+        return _jDiag.clone();
+    }
+
+
     public double[] getDerivative()
     {
         return _derivative.clone();
@@ -321,6 +338,11 @@ public final class BlockResult
     public double getShiftGradientEntry(final int index_)
     {
         return _shiftGradient[index_];
+    }
+
+    public double getGradientMass()
+    {
+        return _gradientMass;
     }
 
 //    @Override

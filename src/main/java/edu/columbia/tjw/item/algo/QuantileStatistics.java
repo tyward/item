@@ -32,7 +32,7 @@ public final class QuantileStatistics
     private static final double RELATIVE_ERROR_THRESHOLD = 100.0;
 
     private final boolean _varTestPassed;
-    private final QuantileApproximation _approx;
+    private final QuantileBreakdown _approx;
 
     private final double[] _eY;
     private final double[] _devY;
@@ -86,6 +86,12 @@ public final class QuantileStatistics
 
     public static QuantileStatistics generate(final ItemRegressorReader xReader_, final ItemRegressorReader yReader_)
     {
+        return generate(xReader_, yReader_, QuantileBreakdown.buildApproximation(xReader_));
+    }
+
+    public static QuantileStatistics generate(final ItemRegressorReader xReader_, final ItemRegressorReader yReader_,
+                                              QuantileBreakdown breakdown_)
+    {
         final int size = xReader_.size();
 
         if (yReader_.size() != size)
@@ -93,16 +99,7 @@ public final class QuantileStatistics
             throw new IllegalArgumentException("Size mismatch: " + size + " != " + yReader_.size());
         }
 
-        final QuantileApproximation.QuantileApproximationBuilder qab = QuantileApproximation.builder();
-
-        for (int i = 0; i < size; i++)
-        {
-            final double x = xReader_.asDouble(i);
-            qab.addObservation(x);
-        }
-
-        final QuantileApproximation approx = qab.build();
-        final QuantileStatisticsBuilder builder = builder(approx);
+        final QuantileStatisticsBuilder builder = builder(breakdown_);
         boolean passes = false;
 
         for (int i = 0; i < size; i++)
@@ -127,7 +124,7 @@ public final class QuantileStatistics
         return builder.build();
     }
 
-    public static QuantileStatisticsBuilder builder(final QuantileApproximation approx_)
+    public static QuantileStatisticsBuilder builder(final QuantileBreakdown approx_)
     {
         return new QuantileStatisticsBuilder(approx_);
     }
@@ -137,7 +134,7 @@ public final class QuantileStatistics
         return _approx.getSize();
     }
 
-    public QuantileApproximation getQuantApprox()
+    public QuantileBreakdown getQuantApprox()
     {
         return _approx;
     }
@@ -195,11 +192,11 @@ public final class QuantileStatistics
 
     public static final class QuantileStatisticsBuilder
     {
-        private final QuantileApproximation _approx;
+        private final QuantileBreakdown _approx;
         private final VarianceCalculator[] _calcs;
         private final VarianceCalculator _totalCalc;
 
-        private QuantileStatisticsBuilder(final QuantileApproximation approx_)
+        private QuantileStatisticsBuilder(final QuantileBreakdown approx_)
         {
             _approx = approx_;
 

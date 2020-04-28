@@ -6,6 +6,8 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
+import edu.columbia.tjw.item.util.IceTools;
+import edu.columbia.tjw.item.util.MathTools;
 
 public final class BlockResultCalculator<S extends ItemStatus<S>, R extends ItemRegressor<R>,
         T extends ItemCurveType<T>>
@@ -39,7 +41,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
     }
 
     public synchronized BlockResult compute(final ItemModel<S, R, T> model_,
-                                            final BlockCalculationType type_)
+                                            final BlockCalculationType type_, final BlockResult derivativeBlock_)
     {
         if (!model_.getParams().getStatus().equals(_grid.getFromStatus()))
         {
@@ -71,6 +73,26 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         final double[] shiftGradient;
         final double[][] secondDerivative;
         final double[][] fisherInformation;
+        final double[] scaledGradient;
+        final double[] scaledGradient2;
+        final double[] prevJDiag;
+        final double[] prevJWeight;
+        final double prevDiagCutoff;
+        double gradientMass = 0.0;
+
+        if (null != derivativeBlock_)
+        {
+            prevJDiag = derivativeBlock_.getJDiag();
+            prevJWeight = IceTools.computeJWeight(prevJDiag);
+
+            prevDiagCutoff = MathTools.SQRT_EPSILON * MathTools.maxAbsElement(prevJDiag);
+        }
+        else
+        {
+            prevJDiag = null;
+            prevJWeight = null;
+            prevDiagCutoff = Double.NaN;
+        }
 
         if (type_ == BlockCalculationType.SECOND_DERIVATIVE)
         {
@@ -78,6 +100,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             derivative = new double[dimension];
             d2 = new double[dimension];
             jDiag = new double[dimension];
+            scaledGradient = new double[dimension];
+            scaledGradient2 = new double[dimension];
             shiftGradient = new double[dimension];
             fisherInformation = new double[dimension][dimension];
             secondDerivative = new double[dimension][dimension];
@@ -88,7 +112,9 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             derivative = new double[dimension];
             d2 = new double[dimension];
             jDiag = new double[dimension];
-            fisherInformation = new double[dimension][dimension];
+            scaledGradient = new double[dimension];
+            scaledGradient2 = new double[dimension];
+            fisherInformation = null;
             secondDerivative = null;
             shiftGradient = null;
         }
@@ -100,12 +126,16 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             fisherInformation = null;
             secondDerivative = null;
             shiftGradient = null;
+            scaledGradient = null;
+            scaledGradient2 = null;
         }
 
         if (derivative != null)
         {
             final int dimension = derivative.length;
             final double[] tmp = new double[dimension];
+            final double[] t2 = new double[dimension];
+
             final double[] diagTmp = new double[dimension];
             final double[][] tmp2;
 
@@ -137,6 +167,23 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
                     }
                 }
 
+                double gradientScale;
+
+                if (null != prevJDiag)
+                {
+                    for (int w = 0; w < dimension; w++)
+                    {
+                        t2[w] = tmp[w] * tmp[w];
+                    }
+
+                    gradientScale = IceTools.computeIce3Sum(t2, prevJDiag, prevJWeight);
+                }
+                else
+                {
+                    gradientScale = Double.NaN;
+                }
+
+                gradientMass += gradientScale;
 
                 for (int k = 0; k < dimension; k++)
                 {
@@ -144,15 +191,21 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
                     d2[k] += tmp[k] * tmp[k];
                     jDiag[k] += diagTmp[k];
 
-                    for (int w = 0; w < dimension; w++)
+                    if (!Double.isNaN(gradientScale))
                     {
-                        fisherInformation[k][w] += tmp[k] * tmp[w];
+                        scaledGradient[k] += 2.0 * tmp[k] * gradientScale;
+
+                        final double elemScale = diagTmp[k] / Math.max(prevDiagCutoff, prevJDiag[k]);
+
+                        scaledGradient2[k] += 2.0 * tmp[k] * elemScale;
                     }
+
 
                     if (secondDerivative != null)
                     {
                         for (int w = 0; w < dimension; w++)
                         {
+                            fisherInformation[k][w] += tmp[k] * tmp[w];
                             secondDerivative[k][w] += tmp2[k][w];
                         }
                     }
@@ -167,13 +220,10 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
                 for (int i = 0; i < dimension; i++)
                 {
                     derivative[i] = derivative[i] * invCount;
+                    scaledGradient[i] *= invCount;
+                    scaledGradient2[i] *= invCount;
                     d2[i] = d2[i] * invCount;
                     jDiag[i] = jDiag[i] * invCount;
-
-                    for (int w = 0; w < dimension; w++)
-                    {
-                        fisherInformation[i][w] *= invCount;
-                    }
 
                     if (secondDerivative != null)
                     {
@@ -181,6 +231,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
                         for (int w = 0; w < dimension; w++)
                         {
+                            fisherInformation[i][w] *= invCount;
                             secondDerivative[i][w] *= invCount;
                         }
                     }
@@ -189,6 +240,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         }
 
         return new BlockResult(_rowOffset, _rowOffset + count, entropySum, x2,
-                derivative, d2, jDiag, shiftGradient, fisherInformation, secondDerivative);
+                derivative, d2, jDiag, shiftGradient, scaledGradient, scaledGradient2, gradientMass, fisherInformation,
+                secondDerivative);
     }
 }
+
