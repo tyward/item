@@ -90,22 +90,7 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                                                   final Collection<R> coefficients_)
     {
         ItemParameters<S, R, T> params = fitResult_.getParams();
-        final SortedSet<R> flagSet = new TreeSet<>();
-
-        for (int i = 0; i < params.getEntryCount(); i++)
-        {
-            if (params.getEntryDepth(i) != 1)
-            {
-                continue;
-            }
-            if (params.getEntryCurve(i, 0) != null)
-            {
-                continue;
-            }
-
-            flagSet.add(params.getEntryRegressor(i, 0));
-        }
-
+        final SortedSet<R> flagSet = params.getFlagSet();
         final int startingSize = params.getEntryCount();
 
         for (final R field : coefficients_)

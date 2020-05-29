@@ -85,8 +85,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _status = status_;
 
         _betas = new double[status_.getReachableCount()][1];
+        _uniqueFields = Collections.unmodifiableList(Collections.emptyList());
 
-        _uniqueFields = Collections.unmodifiableList(Collections.singletonList(intercept_));
         _trans = Collections.unmodifiableList(Collections.singletonList(null));
         _filters = Collections.unmodifiableList(Collections.emptyList());
 
@@ -94,7 +94,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _uniqueBeta[INTERCEPT_INDEX] = -1;
 
         _fieldOffsets = new int[1][1];
-        _fieldOffsets[INTERCEPT_INDEX][0] = 0;
+        _fieldOffsets[INTERCEPT_INDEX][0] = -1;
 
         _transOffsets = new int[1][1];
         _transOffsets[INTERCEPT_INDEX][0] = 0;
@@ -333,8 +333,14 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         final List<ItemCurve<T>> newTrans = new ArrayList<>();
         newTrans.add(null);
 
+        _fieldOffsets[INTERCEPT_INDEX] = new int[1];
+        _transOffsets[INTERCEPT_INDEX] = new int[1];
+        _fieldOffsets[INTERCEPT_INDEX][0] = -1;
+        _transOffsets[INTERCEPT_INDEX][0] = 0;
+        _uniqueBeta[INTERCEPT_INDEX] = -1;
+
         //First, pull in all the old entries.
-        for (int i = 0; i < baseEntryCount; i++)
+        for (int i = INTERCEPT_INDEX + 1; i < baseEntryCount; i++)
         {
             final int depth = base_.getEntryDepth(i);
             _fieldOffsets[i] = new int[depth];
@@ -456,9 +462,16 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         final SortedSet<R> newFields = new TreeSet<>();
         final Set<ItemCurve<T>> newTrans = new HashSet<>();
 
-        int pointer = 0;
+        _fieldOffsets[INTERCEPT_INDEX] = new int[1];
+        _transOffsets[INTERCEPT_INDEX] = new int[1];
+        _fieldOffsets[INTERCEPT_INDEX][0] = -1;
+        _transOffsets[INTERCEPT_INDEX][0] = 0;
+        _uniqueBeta[INTERCEPT_INDEX] = -1;
+        newTrans.add(null);
 
-        for (int i = 0; i < startSize; i++)
+        int pointer = INTERCEPT_INDEX + 1;
+
+        for (int i = INTERCEPT_INDEX + 1; i < startSize; i++)
         {
             if (drop[i])
             {
@@ -491,9 +504,14 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         this._trans = Collections.unmodifiableList(new ArrayList<>(newTrans));
         this._uniqueFields = Collections.unmodifiableList(new ArrayList<>(newFields));
 
-        pointer = 0;
+        for (int i = 0; i < _betas.length; i++)
+        {
+            _betas[i][INTERCEPT_INDEX] = base_._betas[i][INTERCEPT_INDEX];
+        }
 
-        for (int i = 0; i < startSize; i++)
+        pointer = INTERCEPT_INDEX + 1;
+
+        for (int i = INTERCEPT_INDEX + 1; i < startSize; i++)
         {
             if (drop[i])
             {
@@ -618,7 +636,18 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return this._status.getReachable().get(uniqueBeta);
     }
 
-    public int getEntryRegressorOffset(final int entryIndex_, final int entryDepth_)
+    public double getEntryRegressorValue(final int entryIndex_, final int entryDepth_, final double[] x_)
+    {
+        if (entryIndex_ == INTERCEPT_INDEX)
+        {
+            return 1.0;
+        }
+
+        final int offset = getEntryRegressorOffset(entryIndex_, entryDepth_);
+        return x_[offset];
+    }
+
+    private int getEntryRegressorOffset(final int entryIndex_, final int entryDepth_)
     {
         return _fieldOffsets[entryIndex_][entryDepth_];
     }
@@ -628,6 +657,33 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         final int offset = getEntryRegressorOffset(entryIndex_, entryDepth_);
         return _uniqueFields.get(offset);
     }
+
+    /**
+     * returns the set of regressors that do not have curves.
+     *
+     * @return
+     */
+    public SortedSet<R> getFlagSet()
+    {
+        final SortedSet<R> output = new TreeSet<>();
+
+        for (int i = INTERCEPT_INDEX + 1; i < this.getEntryCount(); i++)
+        {
+            if (this.getEntryDepth(i) != 1)
+            {
+                continue;
+            }
+            if (this.getEntryCurve(i, 0) != null)
+            {
+                continue;
+            }
+
+            output.add(this.getEntryRegressor(i, 0));
+        }
+
+        return Collections.unmodifiableSortedSet(output);
+    }
+
 
     public int getEntryCurveOffset(final int entryIndex_, final int entryDepth_)
     {
@@ -995,10 +1051,18 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
             for (int w = 0; w < this.getEntryDepth(i); w++)
             {
-                final R reg = this.getEntryRegressor(i, w);
+
                 final ItemCurve<T> curve = this.getEntryCurve(i, w);
 
-                builder.append("\t\t\t[" + i + ", " + w + "]:" + reg + ":" + curve + "\n");
+                if (i == INTERCEPT_INDEX)
+                {
+                    builder.append("\t\t\t[" + i + ", " + w + "]:INTERCEPT:" + curve + "\n");
+                }
+                else
+                {
+                    final R reg = this.getEntryRegressor(i, w);
+                    builder.append("\t\t\t[" + i + ", " + w + "]:" + reg + ":" + curve + "\n");
+                }
             }
 
             builder.append("\t\t\t Entry Beta Restricted: " + _uniqueBeta[i] + "\n");

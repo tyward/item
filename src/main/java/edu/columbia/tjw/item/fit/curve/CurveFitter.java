@@ -230,29 +230,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
     private SortedSet<R> getFlagRegs(final ItemParameters<S, R, T> params_)
     {
-        final int entryCount = params_.getEntryCount();
-        final SortedSet<R> flagRegs = new TreeSet<>();
-
-        for (int i = 0; i < entryCount; i++)
-        {
-            if (params_.getEntryStatusRestrict(i) != null)
-            {
-                continue;
-            }
-            if (params_.getInterceptIndex() == i)
-            {
-                continue;
-            }
-
-            final int depth = params_.getEntryDepth(i);
-
-            for (int k = 0; k < depth; k++)
-            {
-                final R reg = params_.getEntryRegressor(i, k);
-                flagRegs.add(reg);
-            }
-        }
-
+        final SortedSet<R> flagRegs = params_.getFlagSet();//new TreeSet<>();
         return flagRegs;
     }
 

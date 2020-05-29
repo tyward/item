@@ -162,8 +162,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         for (int w = 0; w < depth; w++)
         {
-            final int regIndex = _params.getEntryRegressorOffset(entry_, w);
-            final double rawReg = rawRegressors_[regIndex];
+            final double rawReg = _params.getEntryRegressorValue(entry_, w, rawRegressors_);
             final ItemCurve<T> curve = _params.getEntryCurve(entry_, w);
 
             if (null == curve)
@@ -327,8 +326,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final int curveDepth = _packed.getDepth(k);
         final ItemCurve<T> curve = _params.getEntryCurve(entry_, curveDepth);
 
-        final int regOffset = _params.getEntryRegressorOffset(entry_, curveDepth);
-        final double reg = x_[regOffset];
+        final double reg = _params.getEntryRegressorValue(entry_, curveDepth, x_);//x_[regOffset];
 
         final int curveParamIndex = _packed.getCurveIndex(k);
 
@@ -501,8 +499,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         final int curveParamZ = _packed.getCurveIndex(z);
 
         final ItemCurve<T> curveW = _params.getEntryCurve(entry_, curveDepthW);
-        final int regOffsetW = _params.getEntryRegressorOffset(entry_, curveDepthW);
-        final double regW = x_[regOffsetW];
+        final double regW = _params.getEntryRegressorValue(entry_, curveDepthW, x_);//x_[regOffsetW];
         final double curveValueW = curveW.transform(regW);
 
         if (curveDepthW == curveDepthZ)
@@ -523,8 +520,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         {
             // These are different curves, need to swap out both of them.
             final ItemCurve<T> curveZ = _params.getEntryCurve(entry_, curveDepthZ);
-            final int regOffsetZ = _params.getEntryRegressorOffset(entry_, curveDepthZ);
-            final double regZ = x_[regOffsetZ];
+            final double regZ = _params.getEntryRegressorValue(entry_, curveDepthZ, x_);
             final double curveValueZ = curveZ.transform(regZ);
 
             final double derivW = curveW.derivative(curveParamW, regW);
