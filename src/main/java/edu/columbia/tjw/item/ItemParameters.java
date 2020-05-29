@@ -67,13 +67,13 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     private final EnumFamily<T> _typeFamily;
     private final EnumFamily<R> _regFamily;
 
-    public ItemParameters(final S status_, final R intercept_, final EnumFamily<T> typeFamily_)
+    public ItemParameters(final S status_, final EnumFamily<R> regFamily_, final EnumFamily<T> typeFamily_)
     {
         if (null == status_)
         {
             throw new NullPointerException("Status cannot be null.");
         }
-        if (null == intercept_)
+        if (null == regFamily_)
         {
             throw new NullPointerException("Intercept cannot be null.");
         }
@@ -102,7 +102,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _selfIndex = _status.getReachable().indexOf(_status);
         _effectiveParamCount = calculateEffectiveParamCount();
 
-        _regFamily = intercept_.getFamily();
+        _regFamily = regFamily_;
         _typeFamily = typeFamily_;
     }
 

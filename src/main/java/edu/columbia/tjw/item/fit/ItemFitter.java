@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.data.ItemStatusGrid;
 import edu.columbia.tjw.item.fit.base.ModelFitter;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
+import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.LogUtil;
 
 import java.util.ArrayList;
@@ -56,22 +57,22 @@ public final class ItemFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
     private final FittingProgressChain<S, R, T> _chain;
 
 
-    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_, final S status_,
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final EnumFamily<R> regFamily_, final S status_,
                       final ItemStatusGrid<S, R> grid_, ItemSettings settings_)
     {
-        this(factory_, intercept_, randomizeGrid(grid_, settings_, status_), settings_);
+        this(factory_, regFamily_, randomizeGrid(grid_, settings_, status_), settings_);
     }
 
-    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_,
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final EnumFamily<R> regFamily_,
                       final ItemFittingGrid<S, R> grid_)
     {
-        this(factory_, intercept_, grid_, new ItemSettings());
+        this(factory_, regFamily_, grid_, new ItemSettings());
     }
 
-    public ItemFitter(final ItemCurveFactory<R, T> factory_, final R intercept_,
+    public ItemFitter(final ItemCurveFactory<R, T> factory_, final EnumFamily<R> regFamily_,
                       final ItemFittingGrid<S, R> grid_, ItemSettings settings_)
     {
-        this(new ItemParameters<>(grid_.getFromStatus(), intercept_,
+        this(new ItemParameters<>(grid_.getFromStatus(), regFamily_,
                 factory_.getFamily()), grid_, settings_);
 
         // Start by calibrating the parameters.

@@ -320,7 +320,7 @@ public class ItemFitterTest
 
         final ItemFitter<SimpleStatus, SimpleRegressor, StandardCurveType> fitter =
                 new ItemFitter<>(new StandardCurveFactory<>(),
-                        intercept, rawData, settings);
+                        intercept.getFamily(), rawData, settings);
 
         return fitter;
     }
