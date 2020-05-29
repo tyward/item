@@ -151,6 +151,12 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             throw new IllegalArgumentException("Length mismatch.");
         }
 
+        if (entry_ == _params.getInterceptIndex())
+        {
+            // The intercept doesn't even need a regressor.
+            return 1.0;
+        }
+
         final int depth = _params.getEntryDepth(entry_);
         double weight = 1.0;
 
@@ -578,7 +584,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
         }
     }
 
-    private void rawPowerScores(final double[] regressors_, final double[] workspace_)
+    private void rawPowerScores(final double[] entryWeights_, final double[] workspace_)
     {
         final int inputSize = _regWorkspace.length;
         final int outputSize = _betas.length;
@@ -590,7 +596,7 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             for (int k = 0; k < inputSize; k++)
             {
-                sum += regressors_[k] * betaArray[k];
+                sum += entryWeights_[k] * betaArray[k];
             }
 
             workspace_[i] = sum;
