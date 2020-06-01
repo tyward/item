@@ -655,6 +655,13 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     public R getEntryRegressor(final int entryIndex_, final int entryDepth_)
     {
         final int offset = getEntryRegressorOffset(entryIndex_, entryDepth_);
+
+        if (offset < 0)
+        {
+            // This is the case for the intercept, it has no corresponding regressor.
+            return null;
+        }
+
         return _uniqueFields.get(offset);
     }
 
