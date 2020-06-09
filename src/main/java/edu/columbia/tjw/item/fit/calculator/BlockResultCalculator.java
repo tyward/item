@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.util.IceTools;
@@ -67,7 +68,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             x2 += e2;
         }
 
-        final double[] derivative;
+        final DoubleVector.Builder derivative;
+        //final double[] derivative;
         final double[] d2;
         final double[] jDiag;
         final double[] shiftGradient;
@@ -97,7 +99,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         if (type_ == BlockCalculationType.SECOND_DERIVATIVE)
         {
             final int dimension = model_.getDerivativeSize();
-            derivative = new double[dimension];
+            //derivative = new double[dimension];
+            derivative = DoubleVector.newBuilder(dimension);
             d2 = new double[dimension];
             jDiag = new double[dimension];
             scaledGradient = new double[dimension];
@@ -109,7 +112,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         else if (type_ == BlockCalculationType.FIRST_DERIVATIVE)
         {
             final int dimension = model_.getDerivativeSize();
-            derivative = new double[dimension];
+            derivative = DoubleVector.newBuilder(dimension);
             d2 = new double[dimension];
             jDiag = new double[dimension];
             scaledGradient = new double[dimension];
@@ -132,7 +135,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
         if (derivative != null)
         {
-            final int dimension = derivative.length;
+            final int dimension = derivative.getSize();
             final double[] tmp = new double[dimension];
 
 
@@ -189,7 +192,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
                 for (int k = 0; k < dimension; k++)
                 {
-                    derivative[k] += tmp[k];
+                    derivative.addToEntry(k, tmp[k]);
                     d2[k] += tmp[k] * tmp[k];
                     jDiag[k] += diagTmp[k];
 
@@ -218,10 +221,11 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             {
                 //N.B: we are computing the negative log likelihood.
                 final double invCount = 1.0 / count;
+                derivative.scalarMultiply(invCount);
 
                 for (int i = 0; i < dimension; i++)
                 {
-                    derivative[i] = derivative[i] * invCount;
+                    //derivative[i] = derivative[i] * invCount;
                     scaledGradient[i] *= invCount;
                     scaledGradient2[i] *= invCount;
                     d2[i] = d2[i] * invCount;
@@ -241,8 +245,11 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
             }
         }
 
+
         return new BlockResult(_rowOffset, _rowOffset + count, entropySum, x2,
-                derivative, d2, jDiag, shiftGradient, scaledGradient, scaledGradient2, gradientMass, fisherInformation,
+                DoubleVector.of(derivative), d2, jDiag, shiftGradient, scaledGradient, scaledGradient2,
+                gradientMass,
+                fisherInformation,
                 secondDerivative);
     }
 }

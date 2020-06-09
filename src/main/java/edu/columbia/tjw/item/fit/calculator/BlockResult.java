@@ -1,5 +1,6 @@
 package edu.columbia.tjw.item.fit.calculator;
 
+import edu.columbia.tjw.item.algo.DoubleVector;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 
@@ -11,7 +12,7 @@ public final class BlockResult
     private final int _rowEnd;
     private final double _sumEntropy;
     private final double _sumEntropy2;
-    private final double[] _derivative;
+    private DoubleVector _derivative;
     private final double[] _derivativeSquared;
     private final double[] _jDiag;
     private final double[] _shiftGradient;
@@ -23,7 +24,7 @@ public final class BlockResult
     private final int _size;
 
     public BlockResult(final int rowStart_, final int rowEnd_, final double sumEntropy_, final double sumEntropy2_,
-                       final double[] derivative_, final double[] derivativeSquared_, final double[] jDiag_,
+                       final DoubleVector derivative_, final double[] derivativeSquared_, final double[] jDiag_,
                        final double[] shiftGradient_, final double[] scaledGradient_,
                        final double[] scaledGradient2_, final double gradientMass_,
                        final double[][] fisherInformation_, final double[][] secondDerivative_)
@@ -83,10 +84,13 @@ public final class BlockResult
         final boolean hasSecondDerivative = analysisList_.get(0).hasSecondDerivative();
         final boolean hasDerivative = hasSecondDerivative || analysisList_.get(0).hasDerivative();
 
+        final DoubleVector.Builder derivative;
+
+
         if (hasDerivative)
         {
             final int dimension = analysisList_.get(0).getDerivativeDimension();
-            _derivative = new double[dimension];
+            derivative = DoubleVector.newBuilder(dimension);
             _derivativeSquared = new double[dimension];
             _jDiag = new double[dimension];
 
@@ -108,7 +112,7 @@ public final class BlockResult
         }
         else
         {
-            _derivative = null;
+            derivative = null;
             _scaledGradient = null;
             _scaledGradient2 = null;
             _derivativeSquared = null;
@@ -127,16 +131,16 @@ public final class BlockResult
             h2 += next._sumEntropy2;
             count += next._size;
 
-            if (null != _derivative)
+            if (null != derivative)
             {
                 final double weight = next._size;
-                final int dimension = _derivative.length;
+                final int dimension = derivative.getSize();
                 gradientMass += next._gradientMass;
 
                 for (int i = 0; i < dimension; i++)
                 {
                     final double entry = next.getDerivativeEntry(i);
-                    _derivative[i] += weight * entry;
+                    derivative.addToEntry(i, weight * entry);
                     _scaledGradient[i] += weight * next._scaledGradient[i];
                     _scaledGradient2[i] += weight * next._scaledGradient2[i];
                     _derivativeSquared[i] += weight * next._derivativeSquared[i];
@@ -162,14 +166,14 @@ public final class BlockResult
             throw new IllegalArgumentException("Discontiguous blocks.");
         }
 
-        if (null != _derivative)
+        if (null != derivative)
         {
             final double invWeight = 1.0 / count;
-            final int dimension = _derivative.length;
+            final int dimension = derivative.getSize();
+            derivative.scalarMultiply(invWeight);
 
             for (int i = 0; i < dimension; i++)
             {
-                _derivative[i] = invWeight * _derivative[i];
                 _scaledGradient[i] = invWeight * _scaledGradient[i];
                 _scaledGradient2[i] = invWeight * _scaledGradient2[i];
                 _derivativeSquared[i] = invWeight * _derivativeSquared[i];
@@ -186,6 +190,8 @@ public final class BlockResult
                     }
                 }
             }
+
+            _derivative = derivative.build();
         }
 
         _rowStart = minStart;
@@ -261,7 +267,7 @@ public final class BlockResult
             throw new IllegalArgumentException("Derivative was not calculated.");
         }
 
-        return _derivative.length;
+        return _derivative.getSize();
     }
 
     public double getSecondDerivativeEntry(final int row_, final int column_)
@@ -301,7 +307,7 @@ public final class BlockResult
             throw new IllegalArgumentException("Derivative was not calculated.");
         }
 
-        return _derivative[index_];
+        return _derivative.getEntry(index_);
     }
 
     public double getD2Entry(final int index_)
@@ -322,7 +328,7 @@ public final class BlockResult
 
     public double[] getDerivative()
     {
-        return _derivative.clone();
+        return _derivative.copyOfUnderlying();
     }
 
     public RealMatrix getSecondDerivative()
