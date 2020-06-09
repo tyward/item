@@ -142,18 +142,27 @@ public final class IceTools
         return jWeight;
     }
 
-
     /**
-     * Compute the ice3 sum using the diagonals of I and J.
-     *
-     * @param iVec
-     * @param jVec
-     * @return
+     * @param iVec     The underlying derivative (already squared if iSquared)
+     * @param jVec     The diagonal of the matrix J.
+     * @param jWeight  The weight computed for each diagonal. (see computeJWeight)
+     * @param iSquared If true, then iVec is already squared, otherwise this function will square it.
+     * @return The ice adjustment approximating IJ^{-1}.
      */
-    public static double computeIce3Sum(final double[] iVec, final double[] jVec, final double[] jWeight)
+    public static double computeIce3Sum(final double[] iVec, final double[] jVec, final double[] jWeight,
+                                        final boolean iSquared)
     {
         final int dimension = iVec.length;
-        final double iTermCutoff = MathTools.maxAbsElement(iVec) * EPSILON;
+        final double iTermCutoff;
+
+        if (iSquared)
+        {
+            iTermCutoff = MathTools.maxAbsElement(iVec) * EPSILON;
+        }
+        else
+        {
+            iTermCutoff = MathTools.maxAbsElement(iVec) * SQRT_EPSILON;
+        }
 
         if (iTermCutoff == 0.0)
         {
@@ -164,7 +173,17 @@ public final class IceTools
 
         for (int i = 0; i < dimension; i++)
         {
-            final double iTerm = iVec[i]; // Already squared, this one is.
+            // Now square this thing.
+            final double iTerm;
+
+            if (iSquared)
+            {
+                iTerm = iVec[i];
+            }
+            else
+            {
+                iTerm = iVec[i] * iVec[i];
+            }
 
             if (iTerm < iTermCutoff)
             {

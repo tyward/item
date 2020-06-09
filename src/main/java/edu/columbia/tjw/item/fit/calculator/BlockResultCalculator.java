@@ -134,7 +134,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
         {
             final int dimension = derivative.length;
             final double[] tmp = new double[dimension];
-            final double[] t2 = new double[dimension];
+
 
             final double[] diagTmp = new double[dimension];
             final double[][] tmp2;
@@ -171,12 +171,14 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
                 if (null != prevJDiag)
                 {
+                    final double[] t2 = new double[dimension];
+
                     for (int w = 0; w < dimension; w++)
                     {
                         t2[w] = tmp[w] * tmp[w];
                     }
 
-                    gradientScale = IceTools.computeIce3Sum(t2, prevJDiag, prevJWeight);
+                    gradientScale = IceTools.computeIce3Sum(t2, prevJDiag, prevJWeight, true);
                 }
                 else
                 {
