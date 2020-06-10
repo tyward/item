@@ -1,6 +1,7 @@
 package edu.columbia.tjw.item.fit.calculator;
 
 import edu.columbia.tjw.item.algo.DoubleVector;
+import edu.columbia.tjw.item.algo.VectorTools;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 
@@ -84,13 +85,14 @@ public final class BlockResult
         final boolean hasSecondDerivative = analysisList_.get(0).hasSecondDerivative();
         final boolean hasDerivative = hasSecondDerivative || analysisList_.get(0).hasDerivative();
 
-        final DoubleVector.Builder derivative;
+        //final DoubleVector.Builder derivative;
+        DoubleVector derivative = null;
 
 
         if (hasDerivative)
         {
             final int dimension = analysisList_.get(0).getDerivativeDimension();
-            derivative = DoubleVector.newBuilder(dimension);
+            derivative = DoubleVector.constantVector(0, dimension);
             _derivativeSquared = new double[dimension];
             _jDiag = new double[dimension];
 
@@ -137,10 +139,12 @@ public final class BlockResult
                 final int dimension = derivative.getSize();
                 gradientMass += next._gradientMass;
 
+                derivative = VectorTools.multiplyAccumulate(derivative, next.getDerivativeVector(), weight);
+
                 for (int i = 0; i < dimension; i++)
                 {
-                    final double entry = next.getDerivativeEntry(i);
-                    derivative.addToEntry(i, weight * entry);
+                    //final double entry = next.getDerivativeEntry(i);
+                    //derivative.addToEntry(i, weight * entry);
                     _scaledGradient[i] += weight * next._scaledGradient[i];
                     _scaledGradient2[i] += weight * next._scaledGradient2[i];
                     _derivativeSquared[i] += weight * next._derivativeSquared[i];
@@ -170,7 +174,7 @@ public final class BlockResult
         {
             final double invWeight = 1.0 / count;
             final int dimension = derivative.getSize();
-            derivative.scalarMultiply(invWeight);
+            derivative = VectorTools.scalarMultiply(derivative, invWeight); //derivative.scalarMultiply(invWeight);
 
             for (int i = 0; i < dimension; i++)
             {
@@ -191,7 +195,7 @@ public final class BlockResult
                 }
             }
 
-            _derivative = derivative.build();
+            _derivative = derivative.collapse();//derivative.build();
         }
 
         _rowStart = minStart;
@@ -308,6 +312,11 @@ public final class BlockResult
         }
 
         return _derivative.getEntry(index_);
+    }
+
+    public DoubleVector getDerivativeVector()
+    {
+        return _derivative;
     }
 
     public double getD2Entry(final int index_)

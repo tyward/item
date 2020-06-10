@@ -1,5 +1,6 @@
 package edu.columbia.tjw.item.algo;
 
+import org.apache.commons.math3.analysis.BivariateFunction;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 
 import java.io.ObjectStreamException;
@@ -95,6 +96,16 @@ public abstract class DoubleVector implements Serializable
         }
 
         return new FloatArrayVector(data_, true);
+    }
+
+    public static DoubleVector constantVector(final double value_, final int size_)
+    {
+        return new ConstantDoubleVector(value_, size_);
+    }
+
+    public static DoubleVector apply(final BivariateFunction function_, final DoubleVector a_, final DoubleVector b_)
+    {
+        return new BivariateFunctionDoubleVector(function_, a_, b_);
     }
 
     public static DoubleVector apply(final UnivariateFunction function_, final DoubleVector vector_)
@@ -261,6 +272,15 @@ public abstract class DoubleVector implements Serializable
 
         public FunctionDoubleVector(final UnivariateFunction function_, final DoubleVector underlying_)
         {
+            if (null == underlying_)
+            {
+                throw new NullPointerException("Underlying cannot be null.");
+            }
+            if (null == function_)
+            {
+                throw new NullPointerException("Function cannot be null.");
+            }
+
             _function = function_;
             _underlying = underlying_;
             _collapsed = null;
@@ -310,5 +330,121 @@ public abstract class DoubleVector implements Serializable
             }
         }
 
+    }
+
+
+    private static final class BivariateFunctionDoubleVector extends DoubleVector
+    {
+        private static final long serialVersionUID = 0x77bb1fa9bd592e23L;
+        private final BivariateFunction _function;
+        private final DoubleVector _a;
+        private final DoubleVector _b;
+        private transient DoubleVector _collapsed;
+
+        public BivariateFunctionDoubleVector(final BivariateFunction function_, final DoubleVector a_,
+                                             final DoubleVector b_)
+        {
+            if (null == a_)
+            {
+                throw new NullPointerException("Underlying (A) cannot be null.");
+            }
+            if (null == b_)
+            {
+                throw new NullPointerException("Underlying (B) cannot be null.");
+            }
+            if (null == function_)
+            {
+                throw new NullPointerException("Function cannot be null.");
+            }
+            if (a_.getSize() != b_.getSize())
+            {
+                throw new IllegalArgumentException("Incompatible size: " + a_.getSize() + " != " + b_.getSize());
+            }
+
+            _function = function_;
+            _a = a_;
+            _b = b_;
+            _collapsed = null;
+        }
+
+        @Override
+        public double getEntry(int index_)
+        {
+            final double a = _a.getEntry(index_);
+            final double b = _b.getEntry(index_);
+            return _function.value(a, b);
+        }
+
+        @Override
+        public int getSize()
+        {
+            return _a.getSize();
+        }
+
+        @Override
+        public DoubleVector collapse()
+        {
+            if (null == _collapsed)
+            {
+                final double[] raw = new double[getSize()];
+
+                for (int i = 0; i < raw.length; i++)
+                {
+                    raw[i] = this.getEntry(i);
+                }
+
+                _collapsed = new DoubleArrayVector(raw, false);
+            }
+
+            return _collapsed;
+        }
+
+        private Object writeReplace() throws ObjectStreamException
+        {
+            // Since this requres two underlying vectors, it's safer to collapse it down to 1 before serialization.
+            return this.collapse();
+        }
+
+    }
+
+    private static final class ConstantDoubleVector extends DoubleVector
+    {
+        private static final long serialVersionUID = 0x33d0ef04077b6898L;
+        private final double _constant;
+        private final int _size;
+
+        private ConstantDoubleVector(final double constant_, final int size_)
+        {
+            if (size_ < 0)
+            {
+                throw new IllegalArgumentException("Size must be nonnegative.");
+            }
+
+            _constant = constant_;
+            _size = size_;
+        }
+
+        @Override
+        public double getEntry(int index_)
+        {
+            if (index_ < 0 || index_ >= _size)
+            {
+                throw new ArrayIndexOutOfBoundsException("Index out of bounds [0, " + _size + "): " + index_);
+            }
+
+            return _constant;
+        }
+
+        @Override
+        public int getSize()
+        {
+            return _size;
+        }
+
+        @Override
+        public DoubleVector collapse()
+        {
+            return this;
+        }
     }
 }
