@@ -162,6 +162,19 @@ public abstract class DoubleVector implements Serializable
             _data[index_] += value_;
         }
 
+        public void add(final double[] data_)
+        {
+            if (data_.length != _data.length)
+            {
+                throw new IllegalArgumentException("Length mismatch.");
+            }
+
+            for (int i = 0; i < _data.length; i++)
+            {
+                _data[i] += data_[i];
+            }
+        }
+
         public void scalarMultiply(final double value_)
         {
             for (int i = 0; i < _data.length; i++)

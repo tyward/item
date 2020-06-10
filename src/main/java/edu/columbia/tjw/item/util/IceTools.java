@@ -161,7 +161,8 @@ public final class IceTools
         }
         else
         {
-            iTermCutoff = MathTools.maxAbsElement(iVec) * SQRT_EPSILON;
+            final double maxVal = MathTools.maxAbsElement(iVec);
+            iTermCutoff = maxVal * maxVal * EPSILON;
         }
 
         if (iTermCutoff == 0.0)
