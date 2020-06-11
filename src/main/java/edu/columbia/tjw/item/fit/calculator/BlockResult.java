@@ -13,21 +13,21 @@ public final class BlockResult
     private final int _rowEnd;
     private final double _sumEntropy;
     private final double _sumEntropy2;
-    private DoubleVector _derivative;
-    private final double[] _derivativeSquared;
-    private final double[] _jDiag;
-    private final double[] _shiftGradient;
-    private final double[] _scaledGradient;
-    private final double[] _scaledGradient2;
+    private final DoubleVector _derivative;
+    private final DoubleVector _derivativeSquared;
+    private final DoubleVector _jDiag;
+    private final DoubleVector _shiftGradient;
+    private final DoubleVector _scaledGradient;
+    private final DoubleVector _scaledGradient2;
     private final double _gradientMass;
     private final double[][] _secondDerivative;
     private final double[][] _fisherInformation;
     private final int _size;
 
     public BlockResult(final int rowStart_, final int rowEnd_, final double sumEntropy_, final double sumEntropy2_,
-                       final DoubleVector derivative_, final double[] derivativeSquared_, final double[] jDiag_,
-                       final double[] shiftGradient_, final double[] scaledGradient_,
-                       final double[] scaledGradient2_, final double gradientMass_,
+                       final DoubleVector derivative_, final DoubleVector derivativeSquared_, final DoubleVector jDiag_,
+                       final DoubleVector shiftGradient_, final DoubleVector scaledGradient_,
+                       final DoubleVector scaledGradient2_, final double gradientMass_,
                        final double[][] fisherInformation_, final double[][] secondDerivative_)
     {
         if (rowStart_ < 0)
@@ -87,42 +87,48 @@ public final class BlockResult
 
         //final DoubleVector.Builder derivative;
         DoubleVector derivative = null;
+        DoubleVector derivativeSquared = null;
+        DoubleVector jDiag = null;
+        DoubleVector scaledGradient = null;
+        DoubleVector scaledGradient2 = null;
+        DoubleVector shiftGradient = null;
 
 
         if (hasDerivative)
         {
             final int dimension = analysisList_.get(0).getDerivativeDimension();
-            derivative = DoubleVector.constantVector(0, dimension);
-            _derivativeSquared = new double[dimension];
-            _jDiag = new double[dimension];
+            final DoubleVector zero = DoubleVector.constantVector(0, dimension);
 
-            _scaledGradient = new double[dimension];
-            _scaledGradient2 = new double[dimension];
+            derivative = zero;
+            derivativeSquared = zero;
+            jDiag = zero;
+            scaledGradient = zero;
+            scaledGradient2 = zero;
 
             if (hasSecondDerivative)
             {
                 _fisherInformation = new double[dimension][dimension];
                 _secondDerivative = new double[dimension][dimension];
-                _shiftGradient = new double[dimension];
+                shiftGradient = zero;
             }
             else
             {
                 _fisherInformation = null;
                 _secondDerivative = null;
-                _shiftGradient = null;
+                shiftGradient = null;
             }
         }
         else
         {
             derivative = null;
-            _scaledGradient = null;
-            _scaledGradient2 = null;
-            _derivativeSquared = null;
-            _jDiag = null;
+            scaledGradient = null;
+            scaledGradient2 = null;
+            derivativeSquared = null;
+            jDiag = null;
 
             _fisherInformation = null;
             _secondDerivative = null;
-            _shiftGradient = null;
+            shiftGradient = null;
         }
 
         for (final BlockResult next : analysisList_)
@@ -139,21 +145,30 @@ public final class BlockResult
                 final int dimension = derivative.getSize();
                 gradientMass += next._gradientMass;
 
-                derivative = VectorTools.multiplyAccumulate(derivative, next.getDerivativeVector(), weight);
+                derivative = VectorTools.multiplyAccumulate(derivative, next._derivative, weight);
+                derivativeSquared = VectorTools.multiplyAccumulate(derivativeSquared, next._derivativeSquared, weight);
+                scaledGradient = VectorTools.multiplyAccumulate(scaledGradient, next._scaledGradient, weight);
+                scaledGradient2 = VectorTools.multiplyAccumulate(scaledGradient2, next._scaledGradient2, weight);
+                jDiag = VectorTools.multiplyAccumulate(jDiag, next._jDiag, weight);
+
+                if (null != shiftGradient)
+                {
+                    shiftGradient = VectorTools.multiplyAccumulate(shiftGradient, next._shiftGradient, weight);
+                }
 
                 for (int i = 0; i < dimension; i++)
                 {
                     //final double entry = next.getDerivativeEntry(i);
                     //derivative.addToEntry(i, weight * entry);
-                    _scaledGradient[i] += weight * next._scaledGradient[i];
-                    _scaledGradient2[i] += weight * next._scaledGradient2[i];
-                    _derivativeSquared[i] += weight * next._derivativeSquared[i];
-                    _jDiag[i] += weight * next._jDiag[i];
+//                    _scaledGradient[i] += weight * next._scaledGradient[i];
+//                    _scaledGradient2[i] += weight * next._scaledGradient2[i];
+//                    //_derivativeSquared[i] += weight * next._derivativeSquared[i];
+//                    _jDiag[i] += weight * next._jDiag[i];
 
 
                     if (null != _secondDerivative)
                     {
-                        _shiftGradient[i] = weight * next.getShiftGradientEntry(i);
+                        //_shiftGradient[i] = weight * next.getShiftGradientEntry(i);
 
                         for (int j = 0; j < dimension; j++)
                         {
@@ -174,29 +189,39 @@ public final class BlockResult
         {
             final double invWeight = 1.0 / count;
             final int dimension = derivative.getSize();
-            derivative = VectorTools.scalarMultiply(derivative, invWeight); //derivative.scalarMultiply(invWeight);
+            derivative = VectorTools.scalarMultiply(derivative, invWeight).collapse();
+            derivativeSquared = VectorTools.scalarMultiply(derivativeSquared, invWeight).collapse();
 
-            for (int i = 0; i < dimension; i++)
+            scaledGradient = VectorTools.scalarMultiply(scaledGradient, invWeight).collapse();
+            scaledGradient2 = VectorTools.scalarMultiply(scaledGradient2, invWeight).collapse();
+            jDiag = VectorTools.scalarMultiply(jDiag, invWeight).collapse();
+
+            if (null != shiftGradient)
             {
-                _scaledGradient[i] = invWeight * _scaledGradient[i];
-                _scaledGradient2[i] = invWeight * _scaledGradient2[i];
-                _derivativeSquared[i] = invWeight * _derivativeSquared[i];
-                _jDiag[i] = invWeight * _jDiag[i];
+                shiftGradient = VectorTools.scalarMultiply(shiftGradient, invWeight).collapse();
 
-                if (null != _secondDerivative)
+                for (int i = 0; i < dimension; i++)
                 {
-                    _shiftGradient[i] *= invWeight;
-
                     for (int j = 0; j < dimension; j++)
                     {
                         _secondDerivative[i][j] = invWeight * _secondDerivative[i][j];
                         _fisherInformation[i][j] *= invWeight;
                     }
+
                 }
             }
 
-            _derivative = derivative.collapse();//derivative.build();
+
         }
+
+        _derivative = derivative;
+        _derivativeSquared = derivativeSquared;
+        _scaledGradient = scaledGradient;
+        _scaledGradient2 = scaledGradient2;
+        _jDiag = jDiag;
+
+        _shiftGradient = shiftGradient;
+
 
         _rowStart = minStart;
         _rowEnd = maxEnd;
@@ -286,12 +311,12 @@ public final class BlockResult
 
     public double[] getScaledGradient()
     {
-        return _scaledGradient;
+        return _scaledGradient.copyOfUnderlying();
     }
 
     public double[] getScaledGradient2()
     {
-        return _scaledGradient2;
+        return _scaledGradient2.copyOfUnderlying();
     }
 
     public double getFisherInformationEntry(final int row_, final int column_)
@@ -314,24 +339,19 @@ public final class BlockResult
         return _derivative.getEntry(index_);
     }
 
-    public DoubleVector getDerivativeVector()
-    {
-        return _derivative;
-    }
-
     public double getD2Entry(final int index_)
     {
-        return _derivativeSquared[index_];
+        return _derivativeSquared.getEntry(index_);
     }
 
     public double getJDiagEntry(final int index_)
     {
-        return _jDiag[index_];
+        return _jDiag.getEntry(index_);
     }
 
-    public double[] getJDiag()
+    public DoubleVector getJDiag()
     {
-        return _jDiag.clone();
+        return _jDiag;
     }
 
 
@@ -352,18 +372,11 @@ public final class BlockResult
 
     public double getShiftGradientEntry(final int index_)
     {
-        return _shiftGradient[index_];
+        return _shiftGradient.getEntry(index_);
     }
 
     public double getGradientMass()
     {
         return _gradientMass;
     }
-
-//    @Override
-//    public int compareTo(final BlockResult that_)
-//    {
-//        final int compare = this._rowStart - that_._rowStart;
-//        return compare;
-//    }
 }

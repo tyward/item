@@ -1,5 +1,7 @@
 package edu.columbia.tjw.item.util;
 
+import edu.columbia.tjw.item.algo.DoubleVector;
+import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
 
 public final class IceTools
@@ -129,17 +131,25 @@ public final class IceTools
         return iceSum2;
     }
 
-    public static double[] computeJWeight(final double[] jVec)
-    {
-        final double jTermCutoff = MathTools.maxAbsElement(jVec) * SQRT_EPSILON;
-        final double[] jWeight = jVec.clone();
 
-        for (int i = 0; i < jVec.length; i++)
+    public static DoubleVector computeJWeight(final DoubleVector jVec)
+    {
+        final double jTermCutoff = VectorTools.maxAbsElement(jVec) * SQRT_EPSILON;
+        final DoubleVector.Builder jWeight = DoubleVector.newBuilder(jVec.getSize());
+
+        for (int i = 0; i < jVec.getSize(); i++)
         {
-            jWeight[i] = computeWeight(jVec[i], jTermCutoff);
+            jWeight.setEntry(i, computeWeight(jVec.getEntry(i), jTermCutoff));
         }
 
-        return jWeight;
+        return jWeight.build();
+    }
+
+
+    public static double computeIce3Sum(final double[] iVec, final DoubleVector jVec, final DoubleVector jWeight,
+                                        final boolean iSquared)
+    {
+        return computeIce3Sum(DoubleVector.of(iVec, false), jVec, jWeight, iSquared);
     }
 
     /**
@@ -149,19 +159,19 @@ public final class IceTools
      * @param iSquared If true, then iVec is already squared, otherwise this function will square it.
      * @return The ice adjustment approximating IJ^{-1}.
      */
-    public static double computeIce3Sum(final double[] iVec, final double[] jVec, final double[] jWeight,
+    public static double computeIce3Sum(final DoubleVector iVec, final DoubleVector jVec, final DoubleVector jWeight,
                                         final boolean iSquared)
     {
-        final int dimension = iVec.length;
+        final int dimension = iVec.getSize();
         final double iTermCutoff;
 
         if (iSquared)
         {
-            iTermCutoff = MathTools.maxAbsElement(iVec) * EPSILON;
+            iTermCutoff = VectorTools.maxAbsElement(iVec) * EPSILON;
         }
         else
         {
-            final double maxVal = MathTools.maxAbsElement(iVec);
+            final double maxVal = VectorTools.maxAbsElement(iVec);
             iTermCutoff = maxVal * maxVal * EPSILON;
         }
 
@@ -179,11 +189,12 @@ public final class IceTools
 
             if (iSquared)
             {
-                iTerm = iVec[i];
+                iTerm = iVec.getEntry(i);
             }
             else
             {
-                iTerm = iVec[i] * iVec[i];
+                final double raw = iVec.getEntry(i);
+                iTerm = raw * raw;
             }
 
             if (iTerm < iTermCutoff)
@@ -192,11 +203,11 @@ public final class IceTools
                 continue;
             }
 
-            final double jTerm = jVec[i];
+            final double jTerm = jVec.getEntry(i);
 
             // As we shift this towards the case where J is not positive definite, we start relying more and more
             // heavily on the I term portion, which makes this ratio close to 1.0.
-            final double weight = jWeight[i];
+            final double weight = jWeight.getEntry(i);
             final double scaledJ = jTerm * weight;
             final double scaledI = iTerm * (1.0 - weight);
             final double iceTerm3 = iTerm / (scaledJ + scaledI);

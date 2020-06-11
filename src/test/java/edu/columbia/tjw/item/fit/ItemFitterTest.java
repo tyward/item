@@ -30,23 +30,6 @@ public class ItemFitterTest
     {
     }
 
-//    @Test
-//    void confirmationTest() throws Exception
-//    {
-//        final ItemFittingGrid<SimpleStatus, SimpleRegressor> grid = loadData("/tmp/rawGrid.dat");
-//        final ItemParameters<SimpleStatus, SimpleRegressor, StandardCurveType> params = loadParams("/tmp/rawModel
-//        .dat");
-//        final EntropyCalculator<SimpleStatus, SimpleRegressor, StandardCurveType> calc = new EntropyCalculator<>
-//        (grid);
-//
-//        final FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = calc.computeFitResult(params,
-//        null);
-//
-//        final GradientResult gradientResult = calc.computeGradients(params);
-//
-//        System.out.println("Result: " + result);
-//    }
-
     @Test
     void basicTest() throws Exception
     {
@@ -129,7 +112,7 @@ public class ItemFitterTest
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19002367721597166, r3.getEntropy());
+        Assertions.assertEquals(0.19223056436426622, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
