@@ -104,13 +104,13 @@ public class ItemFitterTest
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
                 .getChain().getLatestResults();
-        Assertions.assertEquals(0.20231126811689382, result.getEntropy());
+        Assertions.assertEquals(0.2023112680861516, result.getEntropy());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
                 curveRegs, 2, false);
 
         System.out.println("Revised: " + r3.getParams());
-        Assertions.assertEquals(0.19220376408982545, r3.getEntropy());
+        Assertions.assertEquals(0.19063014956453408, r3.getEntropy());
         System.out.println("Done: " + result.getEntropy() + " -> " + r3.getEntropy());
     }
 
@@ -123,7 +123,7 @@ public class ItemFitterTest
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> result = fitter
                 .getChain().getLatestResults();
-        Assertions.assertEquals(0.20231126811689862, result.getEntropy());
+        Assertions.assertEquals(0.2023112680861571, result.getEntropy());
 
         FitResult<SimpleStatus, SimpleRegressor, StandardCurveType> r3 = fitter.fitModel(Collections.emptySet(),
                 curveRegs, 2, false);

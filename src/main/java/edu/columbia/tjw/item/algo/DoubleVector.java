@@ -70,12 +70,7 @@ public abstract class DoubleVector implements Serializable
 
     public static DoubleVector of(final double[] data_)
     {
-        if (null == data_)
-        {
-            return null;
-        }
-
-        return new DoubleArrayVector(data_, true);
+        return of(data_, true);
     }
 
     public static DoubleVector of(final double[] data_, final boolean doCopy_)
@@ -85,7 +80,7 @@ public abstract class DoubleVector implements Serializable
             return null;
         }
 
-        return new DoubleArrayVector(data_, true);
+        return new DoubleArrayVector(data_, doCopy_);
     }
 
     public static DoubleVector of(final float[] data_)
@@ -185,7 +180,7 @@ public abstract class DoubleVector implements Serializable
 
         public DoubleVector build()
         {
-            DoubleVector output = new DoubleArrayVector(_data, false);
+            DoubleVector output = DoubleVector.of(_data, false);
             _data = null; // This will prevent any further modifications to the data array.
             return output;
         }
@@ -324,7 +319,7 @@ public abstract class DoubleVector implements Serializable
                     raw[i] = this.getEntry(i);
                 }
 
-                _collapsed = new DoubleArrayVector(raw, false);
+                _collapsed = DoubleVector.of(raw, false);
             }
 
             return _collapsed;
@@ -406,7 +401,7 @@ public abstract class DoubleVector implements Serializable
                     raw[i] = this.getEntry(i);
                 }
 
-                _collapsed = new DoubleArrayVector(raw, false);
+                _collapsed = DoubleVector.of(raw, false);
             }
 
             return _collapsed;

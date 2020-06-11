@@ -38,6 +38,17 @@ public final class VectorTools
         return add(a_, scalarMultiply(b_, scalar_));
     }
 
+    public static double maxAbsElement(final DoubleVector x_)
+    {
+        double maxAbs = 0.0;
+
+        for (int i = 0; i < x_.getSize(); i++)
+        {
+            maxAbs = Math.max(maxAbs, Math.abs(x_.getEntry(i)));
+        }
+
+        return maxAbs;
+    }
 
     public static double dot(final DoubleVector a_, final DoubleVector b_)
     {
