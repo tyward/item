@@ -3,6 +3,7 @@ package edu.columbia.tjw.item.util;
 import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
+import org.apache.commons.math3.analysis.UnivariateFunction;
 
 public final class IceTools
 {
@@ -27,42 +28,35 @@ public final class IceTools
         return weight;
     }
 
-
-    public static double computeJDiagCutoff(final BlockResult resultBlock_)
+    public static double computeJDiagCutoff(final DoubleVector jDiag)
     {
-        final int dimension = resultBlock_.getDerivativeDimension();
-        double jMax = 0.0;
-
-        for (int i = 0; i < dimension; i++)
-        {
-            jMax = Math.max(jMax, Math.abs(resultBlock_.getJDiagEntry(i)));
-        }
+        final double jMax = VectorTools.maxAbsElement(jDiag);
 
         // This one is not a square, so use SQRT_EPSILON for the cutoff..
         final double jTermCutoff = jMax * SQRT_EPSILON;
         return jTermCutoff;
     }
 
-
-    public static double computeITermCutoff(final BlockResult resultBlock_)
+    public static double computeJDiagCutoff(final BlockResult resultBlock_)
     {
-        final int dimension = resultBlock_.getDerivativeDimension();
-        double iTermMax = 0.0;
+        return computeJDiagCutoff(resultBlock_.getJDiag());
+    }
 
-        for (int i = 0; i < dimension; i++)
-        {
-            iTermMax = Math.max(iTermMax, Math.abs(resultBlock_.getD2Entry(i)));
-        }
-
+    public static double computeITermCutoff(final DoubleVector derivativeSquared_)
+    {
+        final double iTermMax = VectorTools.maxAbsElement(derivativeSquared_);
         final double iTermCutoff = iTermMax * EPSILON;
         return iTermCutoff;
     }
 
-
-    public static double computeIceSum(final BlockResult resultBlock_)
+    public static double computeITermCutoff(final BlockResult resultBlock_)
     {
-        final int dimension = resultBlock_.getDerivativeDimension();
-        final double iTermCutoff = computeITermCutoff(resultBlock_);
+        return computeITermCutoff(resultBlock_.getDerivativeSquared());
+    }
+
+    public static double computeIceSum(final DoubleVector derivativeSquared_, final DoubleVector jDiag_)
+    {
+        final double iTermCutoff = computeITermCutoff(derivativeSquared_);
 
         if (iTermCutoff == 0.0)
         {
@@ -71,9 +65,9 @@ public final class IceTools
 
         double iceSum = 0.0;
 
-        for (int i = 0; i < dimension; i++)
+        for (int i = 0; i < derivativeSquared_.getSize(); i++)
         {
-            final double iTerm = resultBlock_.getD2Entry(i); // Already squared, this one is.
+            final double iTerm = derivativeSquared_.getEntry(i);
 
             if (iTerm < iTermCutoff)
             {
@@ -81,7 +75,7 @@ public final class IceTools
                 continue;
             }
 
-            final double jTerm = resultBlock_.getJDiagEntry(i);
+            final double jTerm = jDiag_.getEntry(i);
             final double iceTerm = iTerm / jTerm;
             iceSum += iceTerm;
         }
@@ -89,11 +83,15 @@ public final class IceTools
         return iceSum;
     }
 
-
-    public static double computeIce2Sum(final BlockResult resultBlock_)
+    public static double computeIceSum(final BlockResult resultBlock_)
     {
-        final int dimension = resultBlock_.getDerivativeDimension();
-        final double iTermCutoff = computeITermCutoff(resultBlock_);
+        return computeIceSum(resultBlock_.getDerivativeSquared(), resultBlock_.getJDiag());
+    }
+
+    public static double computeIce2Sum(final DoubleVector derivativeSquared_, final DoubleVector jDiag_,
+                                        final int resultCount_)
+    {
+        final double iTermCutoff = computeITermCutoff(derivativeSquared_);
 
         if (iTermCutoff == 0.0)
         {
@@ -105,16 +103,17 @@ public final class IceTools
         // "an entropy bad enough that any realistic model should avoid it like the plague, but not so bad that
         // it causes any sort of numerical issues", telling the model that J must be pos. def.
 
+        final int dimension = derivativeSquared_.getSize();
 
         // TODO: Fix this, we have no way to get this number here, so hard coding it.
-        final double logM = Math.log(3) * resultBlock_.getSize();
+        final double logM = Math.log(3) * resultCount_;
         final double iceBalance = 1.0 / logM;
 
         double iceSum2 = 0.0;
 
         for (int i = 0; i < dimension; i++)
         {
-            final double iTerm = resultBlock_.getD2Entry(i); // Already squared, this one is.
+            final double iTerm = derivativeSquared_.getEntry(i); // Already squared, this one is.
 
             if (iTerm < iTermCutoff)
             {
@@ -122,7 +121,7 @@ public final class IceTools
                 continue;
             }
 
-            final double jTerm = resultBlock_.getJDiagEntry(i);
+            final double jTerm = jDiag_.getEntry(i);
             final double iceTerm2 = iTerm / (Math.abs(jTerm) * (1.0 - iceBalance) + iTerm * iceBalance);
 
             iceSum2 += iceTerm2;
@@ -131,18 +130,16 @@ public final class IceTools
         return iceSum2;
     }
 
+    public static double computeIce2Sum(final BlockResult resultBlock_)
+    {
+        return computeIce2Sum(resultBlock_.getDerivativeSquared(), resultBlock_.getJDiag(), resultBlock_.getSize());
+    }
 
     public static DoubleVector computeJWeight(final DoubleVector jVec)
     {
         final double jTermCutoff = VectorTools.maxAbsElement(jVec) * SQRT_EPSILON;
-        final DoubleVector.Builder jWeight = DoubleVector.newBuilder(jVec.getSize());
-
-        for (int i = 0; i < jVec.getSize(); i++)
-        {
-            jWeight.setEntry(i, computeWeight(jVec.getEntry(i), jTermCutoff));
-        }
-
-        return jWeight.build();
+        final UnivariateFunction func = (x) -> computeWeight(x, jTermCutoff);
+        return DoubleVector.apply(func, jVec);
     }
 
 
@@ -220,40 +217,42 @@ public final class IceTools
 
     public static double computeIce3Sum(final BlockResult resultBlock_)
     {
-        final int dimension = resultBlock_.getDerivativeDimension();
-        final double iTermCutoff = computeITermCutoff(resultBlock_);
-
-        if (iTermCutoff == 0.0)
-        {
-            return 0.0;
-        }
-
-        final double jDiagCutoff = computeJDiagCutoff(resultBlock_);
-        double iceSum3 = 0.0;
-
-        for (int i = 0; i < dimension; i++)
-        {
-            final double iTerm = resultBlock_.getD2Entry(i); // Already squared, this one is.
-
-            if (iTerm < iTermCutoff)
-            {
-                // This particular term is irrelevant, its gradient is basically zero so just skip it.
-                continue;
-            }
-
-            final double jTerm = resultBlock_.getJDiagEntry(i);
-
-            // As we shift this towards the case where J is not positive definite, we start relying more and more
-            // heavily on the I term portion, which makes this ratio close to 1.0.
-            final double weight = computeWeight(jTerm, jDiagCutoff);
-            final double scaledJ = jTerm * weight;
-            final double scaledI = iTerm * (1.0 - weight);
-            final double iceTerm3 = iTerm / (scaledJ + scaledI);
-
-            iceSum3 += iceTerm3;
-        }
-
-        return iceSum3;
+        return computeIce3Sum(resultBlock_.getDerivativeSquared(), resultBlock_.getJDiag(),
+                computeJWeight(resultBlock_.getJDiag()), true);
+//        final int dimension = resultBlock_.getDerivativeDimension();
+//        final double iTermCutoff = computeITermCutoff(resultBlock_);
+//
+//        if (iTermCutoff == 0.0)
+//        {
+//            return 0.0;
+//        }
+//
+//        final double jDiagCutoff = computeJDiagCutoff(resultBlock_);
+//        double iceSum3 = 0.0;
+//
+//        for (int i = 0; i < dimension; i++)
+//        {
+//            final double iTerm = resultBlock_.getD2Entry(i); // Already squared, this one is.
+//
+//            if (iTerm < iTermCutoff)
+//            {
+//                // This particular term is irrelevant, its gradient is basically zero so just skip it.
+//                continue;
+//            }
+//
+//            final double jTerm = resultBlock_.getJDiagEntry(i);
+//
+//            // As we shift this towards the case where J is not positive definite, we start relying more and more
+//            // heavily on the I term portion, which makes this ratio close to 1.0.
+//            final double weight = computeWeight(jTerm, jDiagCutoff);
+//            final double scaledJ = jTerm * weight;
+//            final double scaledI = iTerm * (1.0 - weight);
+//            final double iceTerm3 = iTerm / (scaledJ + scaledI);
+//
+//            iceSum3 += iceTerm3;
+//        }
+//
+//        return iceSum3;
     }
 
 

@@ -339,6 +339,11 @@ public final class BlockResult
         return _derivative.getEntry(index_);
     }
 
+    public DoubleVector getDerivativeSquared()
+    {
+        return _derivativeSquared;
+    }
+
     public double getD2Entry(final int index_)
     {
         return _derivativeSquared.getEntry(index_);
