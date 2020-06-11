@@ -75,7 +75,7 @@ public final class FitPointAnalyzer
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
-                final double[] extraDerivative = IceTools.fillIce3ExtraDerivative(aggregated);
+                final double[] extraDerivative = IceTools.fillIceStableBExtraDerivative(aggregated);
                 return extraDerivative;
             }
             case ICE_RAW:

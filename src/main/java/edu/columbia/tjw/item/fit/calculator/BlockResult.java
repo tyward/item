@@ -375,6 +375,11 @@ public final class BlockResult
         return new Array2DRowRealMatrix(_fisherInformation);
     }
 
+    public DoubleVector getShiftGradient()
+    {
+        return _shiftGradient;
+    }
+
     public double getShiftGradientEntry(final int index_)
     {
         return _shiftGradient.getEntry(index_);

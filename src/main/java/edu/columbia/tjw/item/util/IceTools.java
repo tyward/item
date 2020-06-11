@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import org.apache.commons.math3.analysis.UnivariateFunction;
+import org.apache.commons.math3.analysis.function.Multiply;
 
 public final class IceTools
 {
@@ -150,27 +151,30 @@ public final class IceTools
     }
 
     /**
-     * @param iVec     The underlying derivative (already squared if iSquared)
-     * @param jVec     The diagonal of the matrix J.
-     * @param jWeight  The weight computed for each diagonal. (see computeJWeight)
-     * @param iSquared If true, then iVec is already squared, otherwise this function will square it.
+     * @param gradInput The underlying derivative (already squared if iSquared)
+     * @param jVec      The diagonal of the matrix J.
+     * @param jWeight   The weight computed for each diagonal. (see computeJWeight)
+     * @param isSquared If true, then iVec is already squared, otherwise this function will square it.
      * @return The ice adjustment approximating IJ^{-1}.
      */
-    public static double computeIce3Sum(final DoubleVector iVec, final DoubleVector jVec, final DoubleVector jWeight,
-                                        final boolean iSquared)
+    public static double computeIce3Sum(final DoubleVector gradInput, final DoubleVector jVec,
+                                        final DoubleVector jWeight,
+                                        final boolean isSquared)
     {
-        final int dimension = iVec.getSize();
-        final double iTermCutoff;
+        final DoubleVector iVec;
 
-        if (iSquared)
+        if (isSquared)
         {
-            iTermCutoff = VectorTools.maxAbsElement(iVec) * EPSILON;
+            iVec = gradInput;
         }
         else
         {
-            final double maxVal = VectorTools.maxAbsElement(iVec);
-            iTermCutoff = maxVal * maxVal * EPSILON;
+            iVec = DoubleVector.apply(new Multiply(), gradInput, gradInput);
         }
+
+
+        final int dimension = iVec.getSize();
+        final double iTermCutoff = computeITermCutoff(iVec);
 
         if (iTermCutoff == 0.0)
         {
@@ -181,22 +185,10 @@ public final class IceTools
 
         for (int i = 0; i < dimension; i++)
         {
-            // Now square this thing.
-            final double iTerm;
-
-            if (iSquared)
-            {
-                iTerm = iVec.getEntry(i);
-            }
-            else
-            {
-                final double raw = iVec.getEntry(i);
-                iTerm = raw * raw;
-            }
+            final double iTerm = iVec.getEntry(i);
 
             if (iTerm < iTermCutoff)
             {
-                // This particular term is irrelevant, its gradient is basically zero so just skip it.
                 continue;
             }
 
@@ -205,9 +197,7 @@ public final class IceTools
             // As we shift this towards the case where J is not positive definite, we start relying more and more
             // heavily on the I term portion, which makes this ratio close to 1.0.
             final double weight = jWeight.getEntry(i);
-            final double scaledJ = jTerm * weight;
-            final double scaledI = iTerm * (1.0 - weight);
-            final double iceTerm3 = iTerm / (scaledJ + scaledI);
+            final double iceTerm3 = computeTermRatio(iTerm, jTerm, weight);
 
             iceSum3 += iceTerm3;
         }
@@ -215,71 +205,58 @@ public final class IceTools
         return iceSum3;
     }
 
+    /**
+     * This is the core of the algorithm, computing a single element of vD^{-1}v
+     * <p>
+     * This can be unstable if iTerm is very small, so make sure to check that first.
+     *
+     * @param iTerm
+     * @param jTerm
+     * @param jWeight
+     * @return
+     */
+    public static double computeTermRatio(final double iTerm, final double jTerm,
+                                          final double jWeight)
+    {
+        final double scaledJ = jTerm * jWeight;
+        final double scaledI = iTerm * (1.0 - jWeight);
+        final double iceTerm3 = iTerm / (scaledJ + scaledI);
+        return iceTerm3;
+    }
+
+
     public static double computeIce3Sum(final BlockResult resultBlock_)
     {
         return computeIce3Sum(resultBlock_.getDerivativeSquared(), resultBlock_.getJDiag(),
                 computeJWeight(resultBlock_.getJDiag()), true);
-//        final int dimension = resultBlock_.getDerivativeDimension();
-//        final double iTermCutoff = computeITermCutoff(resultBlock_);
-//
-//        if (iTermCutoff == 0.0)
-//        {
-//            return 0.0;
-//        }
-//
-//        final double jDiagCutoff = computeJDiagCutoff(resultBlock_);
-//        double iceSum3 = 0.0;
-//
-//        for (int i = 0; i < dimension; i++)
-//        {
-//            final double iTerm = resultBlock_.getD2Entry(i); // Already squared, this one is.
-//
-//            if (iTerm < iTermCutoff)
-//            {
-//                // This particular term is irrelevant, its gradient is basically zero so just skip it.
-//                continue;
-//            }
-//
-//            final double jTerm = resultBlock_.getJDiagEntry(i);
-//
-//            // As we shift this towards the case where J is not positive definite, we start relying more and more
-//            // heavily on the I term portion, which makes this ratio close to 1.0.
-//            final double weight = computeWeight(jTerm, jDiagCutoff);
-//            final double scaledJ = jTerm * weight;
-//            final double scaledI = iTerm * (1.0 - weight);
-//            final double iceTerm3 = iTerm / (scaledJ + scaledI);
-//
-//            iceSum3 += iceTerm3;
-//        }
-//
-//        return iceSum3;
     }
 
 
-    public static double[] fillIceExtraDerivative(final BlockResult resultBlock_)
+    public static double[] fillIceExtraDerivative(final DoubleVector derivativeSquared_,
+                                                  final DoubleVector shiftedGradient_,
+                                                  final DoubleVector jDiag_, final int blockSize_)
     {
-        final int dimension = resultBlock_.getDerivativeDimension();
-        final int size = resultBlock_.getSize();
+        final int dimension = derivativeSquared_.getSize();
         final double[] extraDerivative = new double[dimension];
-        final double iTermCutoff = computeITermCutoff(resultBlock_);
+        final double iTermCutoff = computeITermCutoff(derivativeSquared_);
 
         if (iTermCutoff == 0.0)
         {
             return extraDerivative;
         }
-        if (size == 0)
+        if (blockSize_ == 0)
         {
             return extraDerivative;
         }
 
         // TODO: Fix this, we have no way to get this number here, so hard coding it.
-        final double logM = Math.log(3) * size;
+        final double logM = Math.log(3) * blockSize_;
         //final double iceBalance = 1.0 / (logM + _params.getEffectiveParamCount());
         final double iceBalance = 1.0 / logM;
 
         for (int i = 0; i < dimension; i++)
         {
-            final double numerator = resultBlock_.getShiftGradientEntry(i);
+            final double numerator = shiftedGradient_.getEntry(i);
 
             if (numerator < iTermCutoff)
             {
@@ -287,7 +264,7 @@ public final class IceTools
                 continue;
             }
 
-            final double iTerm = resultBlock_.getD2Entry(i); // Already squared, this one is.
+            final double iTerm = derivativeSquared_.getEntry(i); // Already squared, this one is.
 
             if (iTerm < iTermCutoff)
             {
@@ -295,18 +272,25 @@ public final class IceTools
                 continue;
             }
 
-            final double jTerm = resultBlock_.getJDiagEntry(i);
+            final double jTerm = jDiag_.getEntry(i);
             final double denominator = (Math.max(jTerm, 0) * (1.0 - iceBalance) + iTerm * iceBalance);
 
             // Assume that the third (and neglected) term roughly cancels one of these two terms, eliminating
             // the 2.0.
-            extraDerivative[i] = numerator / (denominator * size);
+            extraDerivative[i] = numerator / (denominator * blockSize_);
         }
 
         return extraDerivative;
     }
 
-    public static double[] fillIce3ExtraDerivative(final BlockResult resultBlock_)
+    public static double[] fillIceExtraDerivative(final BlockResult resultBlock_)
+    {
+        return fillIceExtraDerivative(resultBlock_.getDerivativeSquared(), resultBlock_.getShiftGradient(),
+                resultBlock_.getJDiag(), resultBlock_.getSize());
+    }
+
+
+    public static double[] fillIceStableBExtraDerivative(final BlockResult resultBlock_)
     {
         final int dimension = resultBlock_.getDerivativeDimension();
         final int size = resultBlock_.getSize();
