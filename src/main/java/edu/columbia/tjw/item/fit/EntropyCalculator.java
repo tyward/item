@@ -20,9 +20,10 @@
 package edu.columbia.tjw.item.fit;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.algo.DoubleVector;
+import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.calculator.*;
-import edu.columbia.tjw.item.util.MathTools;
 
 /**
  * @param <S>
@@ -90,16 +91,16 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
                 _settings);
         final FitPoint point = _calc.generatePoint(origPacked_);
         final double objective = analyzer.computeObjective(point, point.getBlockCount());
-        final double[] grad = analyzer.getDerivative(point);
+        final DoubleVector grad = analyzer.getDerivative(point);
 
-        final int dimension = grad.length;
-        final double gradEpsilon = EPSILON * MathTools.maxAbsElement(grad);
+        final int dimension = grad.getSize();
+        final double gradEpsilon = EPSILON * VectorTools.maxAbsElement(grad);
         final double[] fdGrad = new double[dimension];
 
         for (int i = 0; i < dimension; i++)
         {
             final double h = 1.0e-8;
-            final double absGrad = Math.abs(grad[i]);
+            final double absGrad = Math.abs(grad.getEntry(i));
             final double shiftSize;
 
             if (absGrad > gradEpsilon)
@@ -121,10 +122,10 @@ public final class EntropyCalculator<S extends ItemStatus<S>, R extends ItemRegr
             fdGrad[i] = (shiftObjective - objective) / shiftSize;
         }
 
-        final double[] adj = analyzer.getDerivativeAdjustment(point, null);
+        final DoubleVector adj = analyzer.getDerivativeAdjustment(point, null);
 
 
-        return new GradientResult(_settings.getTarget(), objective, grad, fdGrad, adj);
+        return new GradientResult(_settings.getTarget(), objective, grad, DoubleVector.of(fdGrad, false), adj);
     }
 
     public FitPoint generateFitPoint(final ItemParameters<S, R, T> params_)

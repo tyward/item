@@ -1,7 +1,9 @@
 package edu.columbia.tjw.item.fit.calculator;
 
 import edu.columbia.tjw.item.ItemSettings;
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.algo.VarianceCalculator;
+import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.optimize.OptimizationTarget;
 import edu.columbia.tjw.item.util.IceTools;
 import edu.columbia.tjw.item.util.MathTools;
@@ -44,15 +46,16 @@ public final class FitPointAnalyzer
         return _minStdDev;
     }
 
-    public double[] getDerivativeAdjustment(final FitPoint point_, final FitPoint prev_)
+    public DoubleVector getDerivativeAdjustment(final FitPoint point_, final FitPoint prev_)
     {
         switch (_target)
         {
             case ENTROPY:
             {
                 // No adjustment needed.
-                final double[] output = new double[point_.getDimension()];
-                return output;
+//                final double[] output = new double[point_.getDimension()];
+//                return output;
+                return DoubleVector.constantVector(0.0, point_.getDimension());
             }
             case L2:
             {
@@ -61,21 +64,21 @@ public final class FitPointAnalyzer
 
                 MathTools.scalarMultiply(2.0 * lambda, params);
 
-                return params;
+                return DoubleVector.of(params);
             }
             case ICE_SIMPLE:
             case ICE2:
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
-                final double[] extraDerivative = IceTools.fillIceExtraDerivative(aggregated);
+                final DoubleVector extraDerivative = IceTools.fillIceExtraDerivative(aggregated);
                 return extraDerivative;
             }
             case ICE_STABLE_B:
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
-                final double[] extraDerivative = IceTools.fillIceStableBExtraDerivative(aggregated);
+                final DoubleVector extraDerivative = IceTools.fillIceStableBExtraDerivative(aggregated);
                 return extraDerivative;
             }
             case ICE_RAW:
@@ -123,7 +126,7 @@ public final class FitPointAnalyzer
                     extraDerivative4[i] /= point_.getSize();
                 }
 
-                return extraDerivative4;
+                return DoubleVector.of(extraDerivative4, false);
             }
             default:
                 throw new UnsupportedOperationException("Unknown target type.");
@@ -131,12 +134,12 @@ public final class FitPointAnalyzer
     }
 
 
-    public double[] getDerivative(final FitPoint point_)
+    public DoubleVector getDerivative(final FitPoint point_)
     {
         return getDerivative(point_, null);
     }
 
-    public double[] getDerivative(final FitPoint point_, final FitPoint prev_)
+    public DoubleVector getDerivative(final FitPoint point_, final FitPoint prev_)
     {
         switch (_target)
         {
@@ -150,35 +153,23 @@ public final class FitPointAnalyzer
             {
                 point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
-                final double[] entropyDerivative = aggregated.getDerivative();
+                final DoubleVector entropyDerivative = aggregated.getDerivative();
                 final double lambda = _settings.getL2Lambda();
                 final double[] params = point_.getParameters();
 
                 MathTools.scalarMultiply(2.0 * lambda, params);
 
-                for (int i = 0; i < params.length; i++)
-                {
-                    entropyDerivative[i] += params[i];
-                }
-
-                return entropyDerivative;
+                return VectorTools.add(entropyDerivative, DoubleVector.of(params, false));
             }
             case ICE_SIMPLE:
             case ICE2:
             {
                 point_.computeAll(BlockCalculationType.SECOND_DERIVATIVE);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
+                final DoubleVector entropyDerivative = aggregated.getDerivative();
+                final DoubleVector extraDerivative = this.getDerivativeAdjustment(point_, prev_);
 
-                final int dimension = aggregated.getDerivativeDimension();
-                final double[] entropyDerivative = aggregated.getDerivative();
-                final double[] extraDerivative = this.getDerivativeAdjustment(point_, prev_);
-
-                for (int i = 0; i < dimension; i++)
-                {
-                    entropyDerivative[i] += extraDerivative[i];
-                }
-
-                return entropyDerivative;
+                return VectorTools.add(entropyDerivative, extraDerivative);
             }
             case ICE_STABLE_B:
             {
@@ -186,20 +177,9 @@ public final class FitPointAnalyzer
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
 
                 final int dimension = aggregated.getDerivativeDimension();
-                final double[] entropyDerivative = aggregated.getDerivative();
-                final double[] extraDerivative = this.getDerivativeAdjustment(point_, prev_);
-                final double[] edClone = entropyDerivative.clone();
-
-                for (int i = 0; i < dimension; i++)
-                {
-                    entropyDerivative[i] += extraDerivative[i];
-                }
-
-//                System.out.println(
-//                        "Combined cos similarity[" + MathTools.magnitude(entropyDerivative) + "]: " + MathTools
-//                                .cos(edClone, entropyDerivative));
-
-                return entropyDerivative;
+                final DoubleVector entropyDerivative = aggregated.getDerivative();
+                final DoubleVector extraDerivative = this.getDerivativeAdjustment(point_, prev_);
+                return VectorTools.add(entropyDerivative, extraDerivative);
             }
             case ICE_RAW:
             {
@@ -230,14 +210,9 @@ public final class FitPointAnalyzer
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
 
                 final int dimension = aggregated.getDerivativeDimension();
-                final double[] entropyDerivative = aggregated.getDerivative();
-                final double[] extraDerivative = this.getDerivativeAdjustment(point_, prev_);
-
-                for (int i = 0; i < dimension; i++)
-                {
-                    entropyDerivative[i] += extraDerivative[i];
-                }
-                return entropyDerivative;
+                final DoubleVector entropyDerivative = aggregated.getDerivative();
+                final DoubleVector extraDerivative = this.getDerivativeAdjustment(point_, prev_);
+                return VectorTools.add(entropyDerivative, extraDerivative);
             }
             default:
                 throw new UnsupportedOperationException("Unknown target type.");
@@ -273,9 +248,6 @@ public final class FitPointAnalyzer
                 final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
 
                 final double entropy = secondDerivative.getEntropyMean();
-                final double entropyStdDev = secondDerivative.getEntropyMeanDev();
-                final double[] _gradient = secondDerivative.getDerivative();
-
                 final RealMatrix jMatrix = secondDerivative.getSecondDerivative();
                 final RealMatrix iMatrix = secondDerivative.getFisherInformation();
 

@@ -360,9 +360,9 @@ public final class BlockResult
     }
 
 
-    public double[] getDerivative()
+    public DoubleVector getDerivative()
     {
-        return _derivative.copyOfUnderlying();
+        return _derivative;
     }
 
     public RealMatrix getSecondDerivative()

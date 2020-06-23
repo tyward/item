@@ -232,22 +232,24 @@ public final class IceTools
     }
 
 
-    public static double[] fillIceExtraDerivative(final DoubleVector derivativeSquared_,
-                                                  final DoubleVector shiftedGradient_,
-                                                  final DoubleVector jDiag_, final int blockSize_)
+    public static DoubleVector fillIceExtraDerivative(final DoubleVector derivativeSquared_,
+                                                      final DoubleVector shiftedGradient_,
+                                                      final DoubleVector jDiag_, final int blockSize_)
     {
         final int dimension = derivativeSquared_.getSize();
-        final double[] extraDerivative = new double[dimension];
+
         final double iTermCutoff = computeITermCutoff(derivativeSquared_);
 
         if (iTermCutoff == 0.0)
         {
-            return extraDerivative;
+            return DoubleVector.constantVector(0, dimension);
         }
         if (blockSize_ == 0)
         {
-            return extraDerivative;
+            return DoubleVector.constantVector(0, dimension);
         }
+
+        final double[] extraDerivative = new double[dimension];
 
         // TODO: Fix this, we have no way to get this number here, so hard coding it.
         final double logM = Math.log(3) * blockSize_;
@@ -280,32 +282,34 @@ public final class IceTools
             extraDerivative[i] = numerator / (denominator * blockSize_);
         }
 
-        return extraDerivative;
+        return DoubleVector.of(extraDerivative, false);
     }
 
-    public static double[] fillIceExtraDerivative(final BlockResult resultBlock_)
+    public static DoubleVector fillIceExtraDerivative(final BlockResult resultBlock_)
     {
         return fillIceExtraDerivative(resultBlock_.getDerivativeSquared(), resultBlock_.getShiftGradient(),
                 resultBlock_.getJDiag(), resultBlock_.getSize());
     }
 
 
-    public static double[] fillIceStableBExtraDerivative(final BlockResult resultBlock_)
+    public static DoubleVector fillIceStableBExtraDerivative(final BlockResult resultBlock_)
     {
         final int dimension = resultBlock_.getDerivativeDimension();
         final int size = resultBlock_.getSize();
-        final double[] extraDerivative = new double[dimension];
+
         final double iTermCutoff = computeITermCutoff(resultBlock_);
         final double jDiagCutoff = computeJDiagCutoff(resultBlock_);
 
         if (iTermCutoff == 0.0 || jDiagCutoff == 0.0)
         {
-            return extraDerivative;
+            return DoubleVector.constantVector(0, dimension);
         }
         if (size == 0)
         {
-            return extraDerivative;
+            return DoubleVector.constantVector(0, dimension);
         }
+
+        final double[] extraDerivative = new double[dimension];
 
         for (int i = 0; i < dimension; i++)
         {
@@ -340,7 +344,7 @@ public final class IceTools
             extraDerivative[i] = numerator / (denominator * size);
         }
 
-        return extraDerivative;
+        return DoubleVector.of(extraDerivative, false);
     }
 
 }

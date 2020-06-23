@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.algo.DoubleVector;
+
 /**
  * @author tyler
  */
@@ -27,10 +29,10 @@ public class MultivariateGradient
     private final MultivariatePoint _gradient;
     private final MultivariatePoint _secondDerivative;
 
-    public MultivariateGradient(final double[] gradient_,
-                                final double[] secondDerivative_)
+    public MultivariateGradient(final DoubleVector gradient_,
+                                final DoubleVector secondDerivative_)
     {
-        _gradient = new MultivariatePoint(gradient_);
+        _gradient = new MultivariatePoint(gradient_.copyOfUnderlying());
 
         if (null == secondDerivative_)
         {
@@ -38,7 +40,7 @@ public class MultivariateGradient
         }
         else
         {
-            _secondDerivative = new MultivariatePoint(secondDerivative_);
+            _secondDerivative = new MultivariatePoint(secondDerivative_.copyOfUnderlying());
         }
     }
 

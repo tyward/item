@@ -1,5 +1,7 @@
 package edu.columbia.tjw.item;
 
+import edu.columbia.tjw.item.algo.DoubleVector;
+import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.base.SimpleRegressor;
 import edu.columbia.tjw.item.base.SimpleStatus;
 import edu.columbia.tjw.item.base.StandardCurveType;
@@ -120,12 +122,12 @@ class ItemModelTest
         final double ice = iceAnalyzer.computeObjective(point, point.getBlockCount());
         final double ice2 = ice2Analyzer.computeObjective(point, point.getBlockCount());
 
-        final double[] grad = entropyAnalyzer.getDerivative(point);
-        final double[] ticGrad = ticAnalyzer.getDerivative(point);
-        final double[] iceGrad = iceAnalyzer.getDerivative(point);
-        final double[] ice2Grad = ice2Analyzer.getDerivative(point);
+        final DoubleVector grad = entropyAnalyzer.getDerivative(point);
+        final DoubleVector ticGrad = ticAnalyzer.getDerivative(point);
+        final DoubleVector iceGrad = iceAnalyzer.getDerivative(point);
+        final DoubleVector ice2Grad = ice2Analyzer.getDerivative(point);
 
-        final int dimension = grad.length;
+        final int dimension = grad.getSize();
 
         final double[] fdGrad = new double[dimension];
         final double[] fdTicGrad = new double[dimension];
@@ -134,12 +136,12 @@ class ItemModelTest
 
         //final FitPoint[] shiftPoints = new FitPoint[dimension];
         //final double[] shiftSizes = new double[dimension];
-        final double gradEpsilon = EPSILON * MathTools.maxAbsElement(grad);
+        final double gradEpsilon = EPSILON * VectorTools.maxAbsElement(grad);
 
         for (int i = 0; i < dimension; i++)
         {
             final double h = 1.0e-8;
-            final double absGrad = Math.abs(grad[i]);
+            final double absGrad = Math.abs(grad.getEntry(i));
             final double shiftSize;
 
             if (absGrad > gradEpsilon)
@@ -168,12 +170,12 @@ class ItemModelTest
             fdIce2Grad[i] = (shiftIce2 - ice2) / shiftSize;
         }
 
-        System.out.println("ICE Cos: " + MathTools.cos(iceGrad, grad));
-        System.out.println("ICE2 Cos: " + MathTools.cos(ice2Grad, grad));
+        System.out.println("ICE Cos: " + VectorTools.cos(iceGrad, grad));
+        System.out.println("ICE2 Cos: " + VectorTools.cos(ice2Grad, grad));
 
-        System.out.println("Entropy FD Cos: " + MathTools.cos(grad, fdGrad));
-        System.out.println("ICE FD Cos: " + MathTools.cos(iceGrad, fdIceGrad));
-        System.out.println("ICE2 FD Cos: " + MathTools.cos(ice2Grad, fdIce2Grad));
+        System.out.println("Entropy FD Cos: " + VectorTools.cos(grad, DoubleVector.of(fdGrad)));
+        System.out.println("ICE FD Cos: " + VectorTools.cos(iceGrad, DoubleVector.of(fdIceGrad)));
+        System.out.println("ICE2 FD Cos: " + VectorTools.cos(ice2Grad, DoubleVector.of(fdIce2Grad)));
 
         final double[] fdTicAdj = new double[dimension];
         final double[] fdIceAdj = new double[dimension];
@@ -189,9 +191,9 @@ class ItemModelTest
             fdIceAdj[i] = fdIceGrad[i] - fdGrad[i];
             fdIce2Adj[i] = fdIce2Grad[i] - fdGrad[i];
 
-            ticAdj[i] = ticGrad[i] - grad[i];
-            iceAdj[i] = iceGrad[i] - grad[i];
-            ice2Adj[i] = ice2Grad[i] - grad[i];
+            ticAdj[i] = ticGrad.getEntry(i) - grad.getEntry(i);
+            iceAdj[i] = iceGrad.getEntry(i) - grad.getEntry(i);
+            ice2Adj[i] = ice2Grad.getEntry(i) - grad.getEntry(i);
         }
 
         System.out.println("TIC FD Adj Cos: " + MathTools.cos(fdTicAdj, ticAdj));

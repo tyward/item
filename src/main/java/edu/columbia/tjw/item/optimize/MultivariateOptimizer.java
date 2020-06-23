@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.ItemSettings;
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -76,7 +77,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
         // Testing code.
         final FitPoint point = f_.evaluateGradient(startingPoint_);
-        final double[] derivative = this.getComparator().getDerivative(point);
+        final DoubleVector derivative = this.getComparator().getDerivative(point);
 
         final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
 
@@ -118,7 +119,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 if (!firstLoop)
                 {
                     final FitPoint point = f_.evaluateGradient(currentPoint);
-                    final double[] derivative = this.getComparator().getDerivative(point, fitPointPrev);
+                    final DoubleVector derivative = this.getComparator().getDerivative(point, fitPointPrev);
 
                     final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
 

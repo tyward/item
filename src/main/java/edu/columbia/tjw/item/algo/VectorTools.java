@@ -3,12 +3,14 @@ package edu.columbia.tjw.item.algo;
 import org.apache.commons.math3.analysis.BivariateFunction;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.function.Add;
+import org.apache.commons.math3.analysis.function.Subtract;
 
 import java.io.Serializable;
 
 public final class VectorTools
 {
     private static final BivariateFunction ADD = new Add();
+    private static final BivariateFunction SUBTRACT = new Subtract();
 
     private VectorTools()
     {
@@ -18,6 +20,11 @@ public final class VectorTools
     {
         final SerializableUnivariateFunction multiplier = (double x) -> x * scalar_;
         return DoubleVector.apply(multiplier, input_);
+    }
+
+    public static DoubleVector subtract(final DoubleVector a_, final DoubleVector b_)
+    {
+        return DoubleVector.apply(SUBTRACT, a_, b_);
     }
 
     public static DoubleVector add(final DoubleVector a_, final DoubleVector b_)
@@ -95,3 +102,4 @@ public final class VectorTools
 
     }
 }
+

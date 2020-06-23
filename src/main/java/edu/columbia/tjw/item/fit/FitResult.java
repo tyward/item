@@ -95,7 +95,7 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             final BlockResult secondDerivative = fitPoint_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
             _entropy = secondDerivative.getEntropyMean();
             _entropyStdDev = secondDerivative.getEntropyMeanDev();
-            _gradient = secondDerivative.getDerivative();
+            _gradient = secondDerivative.getDerivative().copyOfUnderlying();
             final int dimension = _gradient.length;
 
             final RealMatrix jMatrix = secondDerivative.getSecondDerivative();
