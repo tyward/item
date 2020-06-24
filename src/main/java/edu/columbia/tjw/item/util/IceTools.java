@@ -210,6 +210,9 @@ public final class IceTools
 
             if (isGrad_)
             {
+                // For the gradients, when weight is close to 0, the gradient itself goes to zero. This isn't exactly
+                // the right functional form, but it has the right saturation behavior and the zone where weights are
+                // not close to either 0 or 1 is pretty thin and unimportant.
                 iceTerm3 *= weight;
             }
 
