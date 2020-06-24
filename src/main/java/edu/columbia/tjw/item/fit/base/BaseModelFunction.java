@@ -1,6 +1,7 @@
 package edu.columbia.tjw.item.fit.base;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
@@ -42,7 +43,7 @@ public class BaseModelFunction<S extends ItemStatus<S>, R extends ItemRegressor<
         return _generator.generateGradient(_packed);
     }
 
-    public double[] getBeta()
+    public DoubleVector getBeta()
     {
         return _packed.getPacked();
     }

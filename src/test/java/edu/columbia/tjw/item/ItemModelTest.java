@@ -99,7 +99,7 @@ class ItemModelTest
         ParamFittingGrid<SimpleStatus, SimpleRegressor, StandardCurveType> paramGrid = new ParamFittingGrid<>(params,
                 _rawData);
 
-        final double[] beta = origPacked.getPacked();
+        final DoubleVector beta = origPacked.getPacked();
         final ItemModel<SimpleStatus, SimpleRegressor, StandardCurveType> orig = new ItemModel<>(params);
 
         ItemSettings settings = new ItemSettings();
@@ -156,7 +156,7 @@ class ItemModelTest
             }
 
             final PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> repacked = origPacked.clone();
-            repacked.setParameter(i, beta[i] + shiftSize);
+            repacked.setParameter(i, beta.getEntry(i) + shiftSize);
             final FitPoint shiftPoint = calculator.generatePoint(repacked.generateParams());
 
             final double shiftEntropy = entropyAnalyzer.computeObjective(shiftPoint, shiftPoint.getBlockCount());
@@ -210,11 +210,11 @@ class ItemModelTest
         final ParamFittingGrid<SimpleStatus, SimpleRegressor, StandardCurveType> paramGrid =
                 new ParamFittingGrid<>(params,
                         _rawData);
-        final double[] beta = origPacked.getPacked();
+        final DoubleVector beta = origPacked.getPacked();
         final ItemModel<SimpleStatus, SimpleRegressor, StandardCurveType> orig = new ItemModel<>(params);
 
         final PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> repacked = origPacked.clone();
-        final int paramCount = beta.length;
+        final int paramCount = beta.getSize();
         final double[] gradient = new double[paramCount];
         final double[] fdGradient = new double[paramCount];
         final double[] jDiag = new double[paramCount];
@@ -236,7 +236,7 @@ class ItemModelTest
 
             for (int i = 0; i < paramCount; i++)
             {
-                final double[] testBeta = beta.clone();
+                final double[] testBeta = beta.copyOfUnderlying();
                 //final double h = Math.abs(testBeta[i] * 0.00001) + 1.0e-8;
                 final double h = 1.0e-8;
                 final double absGrad = Math.abs(gradient[i]);
@@ -349,7 +349,7 @@ class ItemModelTest
 
         PackedParameters<SimpleStatus, SimpleRegressor, StandardCurveType> packed = params.generatePacked();
 
-        final double[] raw = packed.getPacked();
+        final double[] raw = packed.getPacked().copyOfUnderlying();
         raw[1] = 0.0;
         packed.updatePacked(raw);
 

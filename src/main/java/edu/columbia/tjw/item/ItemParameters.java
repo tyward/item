@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item;
 
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.util.EnumFamily;
 
@@ -1338,9 +1339,9 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         @Override
-        public double[] getPacked()
+        public DoubleVector getPacked()
         {
-            return _paramValues.clone();
+            return DoubleVector.of(_paramValues);
         }
 
         @Override

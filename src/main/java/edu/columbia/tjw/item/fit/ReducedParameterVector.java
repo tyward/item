@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.DoubleVector;
 
 public final class ReducedParameterVector<S extends ItemStatus<S>, R extends ItemRegressor<R>,
         T extends ItemCurveType<T>> implements PackedParameters<S, R, T>
@@ -60,7 +61,7 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     }
 
     @Override
-    public double[] getPacked()
+    public DoubleVector getPacked()
     {
         final double[] output = new double[this.size()];
 
@@ -69,7 +70,7 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
             output[i] = getParameter(i);
         }
 
-        return output;
+        return DoubleVector.of(output, false);
     }
 
     @Override

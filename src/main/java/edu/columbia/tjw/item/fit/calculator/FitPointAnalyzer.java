@@ -6,7 +6,6 @@ import edu.columbia.tjw.item.algo.VarianceCalculator;
 import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.optimize.OptimizationTarget;
 import edu.columbia.tjw.item.util.IceTools;
-import edu.columbia.tjw.item.util.MathTools;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
 
@@ -60,11 +59,8 @@ public final class FitPointAnalyzer
             case L2:
             {
                 final double lambda = _settings.getL2Lambda();
-                final double[] params = point_.getParameters();
-
-                MathTools.scalarMultiply(2.0 * lambda, params);
-
-                return DoubleVector.of(params);
+                final DoubleVector params = point_.getParameters();
+                return VectorTools.scalarMultiply(params, 2.0 * lambda);
             }
             case ICE_SIMPLE:
             case ICE2:
@@ -155,11 +151,9 @@ public final class FitPointAnalyzer
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
                 final DoubleVector entropyDerivative = aggregated.getDerivative();
                 final double lambda = _settings.getL2Lambda();
-                final double[] params = point_.getParameters();
-
-                MathTools.scalarMultiply(2.0 * lambda, params);
-
-                return VectorTools.add(entropyDerivative, DoubleVector.of(params, false));
+                final DoubleVector params = point_.getParameters();
+                final DoubleVector scaled = VectorTools.scalarMultiply(params, 2.0 * lambda);
+                return VectorTools.add(entropyDerivative, scaled);
             }
             case ICE_SIMPLE:
             case ICE2:
@@ -237,8 +231,8 @@ public final class FitPointAnalyzer
 
                 final double lambda = _settings.getL2Lambda();
 
-                final double[] params = point_.getParameters();
-                final double dot = MathTools.dot(params, params);
+                final DoubleVector params = point_.getParameters();
+                final double dot = VectorTools.dot(params, params);
                 return entropy + lambda * dot;
             }
             case ICE_RAW:

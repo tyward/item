@@ -1,6 +1,7 @@
 package edu.columbia.tjw.item.fit.base;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.fit.PackedParameters;
@@ -41,8 +42,8 @@ public final class BaseFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             // The entropy of the starting point.
             //final double entropy = prev_.getEntropy();
             final BaseModelFunction<S, R, T> function = generateFunction(packed_);
-            final double[] beta = function.getBeta();
-            final MultivariatePoint point = new MultivariatePoint(beta);
+            final DoubleVector beta = function.getBeta();
+            final MultivariatePoint point = new MultivariatePoint(beta.copyOfUnderlying());
             final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(function, point);
 
             if (!result.converged())

@@ -1,5 +1,7 @@
 package edu.columbia.tjw.item.fit.calculator;
 
+import edu.columbia.tjw.item.algo.DoubleVector;
+
 public interface FitPoint
 {
     /**
@@ -7,7 +9,7 @@ public interface FitPoint
      *
      * @return
      */
-    double[] getParameters();
+    DoubleVector getParameters();
 
     int getBlockSize();
 
