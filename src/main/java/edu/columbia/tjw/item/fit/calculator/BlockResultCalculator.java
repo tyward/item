@@ -173,7 +173,7 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
 
                 if (null != prevJDiag)
                 {
-                    gradientScale = IceTools.computeIce3Sum(tmp, prevJDiag, prevJWeight, false);
+                    gradientScale = IceTools.computeIce3Sum(tmp, prevJDiag, prevJWeight, false, true);
                 }
                 else
                 {

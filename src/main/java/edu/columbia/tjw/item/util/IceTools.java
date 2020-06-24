@@ -145,9 +145,9 @@ public final class IceTools
 
 
     public static double computeIce3Sum(final double[] iVec, final DoubleVector jVec, final DoubleVector jWeight,
-                                        final boolean iSquared)
+                                        final boolean iSquared, final boolean isGrad_)
     {
-        return computeIce3Sum(DoubleVector.of(iVec, false), jVec, jWeight, iSquared);
+        return computeIce3Sum(DoubleVector.of(iVec, false), jVec, jWeight, iSquared, isGrad_);
     }
 
     /**
@@ -155,11 +155,20 @@ public final class IceTools
      * @param jVec      The diagonal of the matrix J.
      * @param jWeight   The weight computed for each diagonal. (see computeJWeight)
      * @param isSquared If true, then iVec is already squared, otherwise this function will square it.
+     * @param isGrad_ If true, then compute the gradient version (multiply each term by the weight).
      * @return The ice adjustment approximating IJ^{-1}.
+     */
+    /**
+     * @param gradInput
+     * @param jVec
+     * @param jWeight
+     * @param isSquared
+     * @param isGrad_
+     * @return
      */
     public static double computeIce3Sum(final DoubleVector gradInput, final DoubleVector jVec,
                                         final DoubleVector jWeight,
-                                        final boolean isSquared)
+                                        final boolean isSquared, final boolean isGrad_)
     {
         final DoubleVector iVec;
 
@@ -197,7 +206,12 @@ public final class IceTools
             // As we shift this towards the case where J is not positive definite, we start relying more and more
             // heavily on the I term portion, which makes this ratio close to 1.0.
             final double weight = jWeight.getEntry(i);
-            final double iceTerm3 = computeTermRatio(iTerm, jTerm, weight);
+            double iceTerm3 = computeTermRatio(iTerm, jTerm, weight);
+
+            if (isGrad_)
+            {
+                iceTerm3 *= weight;
+            }
 
             iceSum3 += iceTerm3;
         }
@@ -228,7 +242,7 @@ public final class IceTools
     public static double computeIce3Sum(final BlockResult resultBlock_)
     {
         return computeIce3Sum(resultBlock_.getDerivativeSquared(), resultBlock_.getJDiag(),
-                computeJWeight(resultBlock_.getJDiag()), true);
+                computeJWeight(resultBlock_.getJDiag()), true, false);
     }
 
 
