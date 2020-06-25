@@ -11,8 +11,6 @@ import org.apache.commons.math3.linear.SingularValueDecomposition;
 
 public final class FitPointAnalyzer
 {
-    private static final double EPSILON = Math.ulp(4.0); // Just a bit bigger than machine epsilon.
-
     private static final double Z_SCORE_CUTOFF = 5.0;
 
     private final int _superBlockSize;
@@ -105,7 +103,7 @@ public final class FitPointAnalyzer
                 point_.computeAll(BlockCalculationType.FIRST_DERIVATIVE, jAgg);
                 final BlockResult aggregated = point_.getAggregated(BlockCalculationType.FIRST_DERIVATIVE);
 
-                final double[] extraDerivative4;
+                final DoubleVector extraDerivative4;
 
                 if (_target == OptimizationTarget.ICE_B)
                 {
@@ -117,12 +115,8 @@ public final class FitPointAnalyzer
                     extraDerivative4 = aggregated.getScaledGradient();
                 }
 
-                for (int i = 0; i < extraDerivative4.length; i++)
-                {
-                    extraDerivative4[i] /= point_.getSize();
-                }
-
-                return DoubleVector.of(extraDerivative4, false);
+                final DoubleVector edRescaled = VectorTools.scalarMultiply(extraDerivative4, 1.0 / point_.getSize());
+                return edRescaled;
             }
             default:
                 throw new UnsupportedOperationException("Unknown target type.");

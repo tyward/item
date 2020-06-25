@@ -74,16 +74,16 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     }
 
     @Override
-    public void updatePacked(double[] newParams_)
+    public void updatePacked(final DoubleVector newParams_)
     {
-        if (newParams_.length != this.size())
+        if (newParams_.getSize() != this.size())
         {
             throw new IllegalArgumentException("Size mismatch.");
         }
 
-        for (int i = 0; i < newParams_.length; i++)
+        for (int i = 0; i < newParams_.getSize(); i++)
         {
-            this.setParameter(i, newParams_[i]);
+            this.setParameter(i, newParams_.getEntry(i));
         }
     }
 

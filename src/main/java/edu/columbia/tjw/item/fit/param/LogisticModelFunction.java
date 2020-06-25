@@ -74,13 +74,6 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
         return _packed.getPacked();
     }
 
-    public ItemParameters<S, R, T> generateParams(final double[] beta_)
-    {
-        _packed.updatePacked(beta_);
-        final ItemParameters<S, R, T> p2 = _packed.generateParams();
-        return p2;
-    }
-
     @Override
     public int dimension()
     {

@@ -1345,14 +1345,18 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         }
 
         @Override
-        public synchronized void updatePacked(double[] newParams_)
+        public synchronized void updatePacked(final DoubleVector newParams_)
         {
-            if (newParams_.length != _paramValues.length)
+            if (newParams_.getSize() != _paramValues.length)
             {
                 throw new IllegalArgumentException("Params wrong length.");
             }
 
-            System.arraycopy(newParams_, 0, _paramValues, 0, _paramValues.length);
+            for (int i = 0; i < newParams_.getSize(); i++)
+            {
+                _paramValues[i] = newParams_.getEntry(i);
+            }
+
             _generated = null;
         }
 

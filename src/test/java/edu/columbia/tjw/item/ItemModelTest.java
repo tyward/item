@@ -255,7 +255,7 @@ class ItemModelTest
 
                 testBeta[i] = testBeta[i] + shiftSize;
 
-                repacked.updatePacked(testBeta);
+                repacked.updatePacked(DoubleVector.of(testBeta, false));
 
                 ItemModel<SimpleStatus, SimpleRegressor, StandardCurveType> adjusted = new ItemModel<>(
                         repacked);
@@ -351,7 +351,7 @@ class ItemModelTest
 
         final double[] raw = packed.getPacked().copyOfUnderlying();
         raw[1] = 0.0;
-        packed.updatePacked(raw);
+        packed.updatePacked(DoubleVector.of(raw, false));
 
         testGradients(packed.generateParams());
     }

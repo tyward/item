@@ -1,5 +1,6 @@
 package edu.columbia.tjw.item.algo;
 
+import edu.columbia.tjw.item.util.HashUtil;
 import org.apache.commons.math3.analysis.BivariateFunction;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.function.Add;
@@ -14,6 +15,21 @@ public final class VectorTools
 
     private VectorTools()
     {
+    }
+
+    public static boolean isWellDefined(final DoubleVector input_)
+    {
+        for (int i = 0; i < input_.getSize(); i++)
+        {
+            final double val = input_.getEntry(i);
+
+            if (Double.isNaN(val) || Double.isInfinite(val))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static DoubleVector scalarMultiply(final DoubleVector input_, final double scalar_)
@@ -74,6 +90,25 @@ public final class VectorTools
         return dot;
     }
 
+    public static double distance(final DoubleVector x_, final DoubleVector y_)
+    {
+        if (x_.getSize() != y_.getSize())
+        {
+            throw new IllegalArgumentException("Mismatched length: " + x_.getSize() + " != " + y_.getSize());
+        }
+
+        double sum = 0.0;
+
+        for (int i = 0; i < x_.getSize(); i++)
+        {
+            final double term = (x_.getEntry(i) - y_.getEntry(i));
+
+            sum += term * term;
+        }
+
+        return Math.sqrt(sum);
+    }
+
     public static double magnitude(final DoubleVector x_)
     {
         final double dot = dot(x_, x_);
@@ -95,6 +130,73 @@ public final class VectorTools
 
         final double cos = dot / (magA * magB);
         return cos;
+    }
+
+    public static int hashCode(final int startHash_, final DoubleVector vector_)
+    {
+        int hash = HashUtil.mix(startHash_, vector_.getSize());
+
+        for (int i = 0; i < vector_.getSize(); i++)
+        {
+            hash = HashUtil.mix(startHash_, Double.doubleToLongBits(vector_.getSize()));
+        }
+
+        return hash;
+    }
+
+    public static boolean equals(final DoubleVector a_, final DoubleVector b_)
+    {
+        if (a_ == b_)
+        {
+            return true;
+        }
+        if (null == a_ || null == b_)
+        {
+            return false;
+        }
+
+        final int size = a_.getSize();
+
+        if (size != b_.getSize())
+        {
+            return false;
+        }
+
+        for (int i = 0; i < size; i++)
+        {
+            if (a_.getEntry(i) != b_.getEntry(i))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static String toString(final DoubleVector vector_)
+    {
+        final StringBuilder builder = new StringBuilder();
+
+        if (null == vector_)
+        {
+            builder.append("<null>");
+            return builder.toString();
+        }
+
+        builder.append(vector_.getClass().getName() + ": [");
+
+        for (int i = 0; i < vector_.getSize(); i++)
+        {
+            if (i != 0)
+            {
+                builder.append(", ");
+            }
+
+            builder.append(vector_.getEntry(i));
+        }
+
+        builder.append("]");
+        return builder.toString();
     }
 
     private interface SerializableUnivariateFunction extends UnivariateFunction, Serializable

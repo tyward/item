@@ -32,7 +32,7 @@ public class MultivariateGradient
     public MultivariateGradient(final DoubleVector gradient_,
                                 final DoubleVector secondDerivative_)
     {
-        _gradient = new MultivariatePoint(gradient_.copyOfUnderlying());
+        _gradient = new MultivariatePoint(gradient_);
 
         if (null == secondDerivative_)
         {
@@ -40,7 +40,7 @@ public class MultivariateGradient
         }
         else
         {
-            _secondDerivative = new MultivariatePoint(secondDerivative_.copyOfUnderlying());
+            _secondDerivative = new MultivariatePoint(secondDerivative_);
         }
     }
 

@@ -48,7 +48,7 @@ public class BaseModelFunction<S extends ItemStatus<S>, R extends ItemRegressor<
         return _packed.getPacked();
     }
 
-    public ItemParameters<S, R, T> generateParams(final double[] beta_)
+    public ItemParameters<S, R, T> generateParams(final DoubleVector beta_)
     {
         _packed.updatePacked(beta_);
         final ItemParameters<S, R, T> p2 = _packed.generateParams();

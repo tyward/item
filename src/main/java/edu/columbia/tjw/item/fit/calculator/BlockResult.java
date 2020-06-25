@@ -309,14 +309,14 @@ public final class BlockResult
         return _secondDerivative[row_][column_];
     }
 
-    public double[] getScaledGradient()
+    public DoubleVector getScaledGradient()
     {
-        return _scaledGradient.copyOfUnderlying();
+        return _scaledGradient;
     }
 
-    public double[] getScaledGradient2()
+    public DoubleVector getScaledGradient2()
     {
-        return _scaledGradient2.copyOfUnderlying();
+        return _scaledGradient2;
     }
 
     public double getFisherInformationEntry(final int row_, final int column_)

@@ -16,7 +16,7 @@ public interface PackedParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     public DoubleVector getPacked();
 
-    public void updatePacked(final double[] newParams_);
+    public void updatePacked(final DoubleVector newParams_);
 
     public double getParameter(final int index_);
 
