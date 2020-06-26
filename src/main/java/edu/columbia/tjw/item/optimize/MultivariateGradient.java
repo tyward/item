@@ -43,22 +43,7 @@ public class MultivariateGradient
             _secondDerivative = new MultivariatePoint(secondDerivative_);
         }
     }
-
-    public MultivariateGradient(final MultivariatePoint gradient_,
-                                final MultivariatePoint secondDerivative_)
-    {
-        _gradient = new MultivariatePoint(gradient_);
-
-        if (null == secondDerivative_)
-        {
-            _secondDerivative = null;
-        }
-        else
-        {
-            _secondDerivative = new MultivariatePoint(secondDerivative_);
-        }
-    }
-
+    
     public MultivariatePoint getSecondDerivative()
     {
         return _secondDerivative;

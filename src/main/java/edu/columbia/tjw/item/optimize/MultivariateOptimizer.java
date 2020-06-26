@@ -63,20 +63,20 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
 
     @Override
     public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
-                                                          MultivariatePoint startingPoint_,
-                                                          MultivariatePoint direction_) throws ConvergenceException
+                                       MultivariatePoint startingPoint_,
+                                       MultivariatePoint direction_) throws ConvergenceException
     {
-        final FitPoint result = f_.evaluate(startingPoint_);
+        final FitPoint result = f_.evaluate(startingPoint_.getElements());
         return optimize(f_, startingPoint_, result, direction_);
     }
 
     public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
-                                                          MultivariatePoint startingPoint_) throws ConvergenceException
+                                       MultivariatePoint startingPoint_) throws ConvergenceException
     {
-        final FitPoint result = f_.evaluate(startingPoint_);
+        final FitPoint result = f_.evaluate(startingPoint_.getElements());
 
         // Testing code.
-        final FitPoint point = f_.evaluateGradient(startingPoint_);
+        final FitPoint point = f_.evaluateGradient(startingPoint_.getElements());
         final DoubleVector derivative = this.getComparator().getDerivative(point);
 
         final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
@@ -88,13 +88,13 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
     }
 
     public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
-                                                          MultivariatePoint startingPoint_,
-                                                          final FitPoint result_,
-                                                          MultivariatePoint direction_) throws ConvergenceException
+                                       MultivariatePoint startingPoint_,
+                                       final FitPoint result_,
+                                       MultivariatePoint direction_) throws ConvergenceException
     {
         final MultivariatePoint direction = new MultivariatePoint(direction_);
         final MultivariatePoint currentPoint = new MultivariatePoint(startingPoint_);
-        FitPoint currentResult = f_.evaluate(currentPoint);
+        FitPoint currentResult = f_.evaluate(currentPoint.getElements());
 
         final int maxEvalCount = this.getMaxEvalCount();
         final int dimension = f_.dimension();
@@ -118,7 +118,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
 
                 if (!firstLoop)
                 {
-                    final FitPoint point = f_.evaluateGradient(currentPoint);
+                    final FitPoint point = f_.evaluateGradient(currentPoint.getElements());
                     final DoubleVector derivative = this.getComparator().getDerivative(point, fitPointPrev);
 
                     final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
@@ -134,7 +134,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
                     if (null == gradient.getSecondDerivative())
                     {
                         trialPoint = pointA;
-                        trialRes = f_.evaluate(trialPoint);
+                        trialRes = f_.evaluate(trialPoint.getElements());
 
                         //We need to control the magnitude of the root bracketing....
                         //We want this small enough that we are searching in a small interval, but not so small that
@@ -174,8 +174,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
                         pointA.add(currentPoint);
                         pointB.add(currentPoint);
 
-                        final FitPoint fitPointA = f_.evaluate(pointA);
-                        final FitPoint fitPointB = f_.evaluate(pointB);
+                        final FitPoint fitPointA = f_.evaluate(pointA.getElements());
+                        final FitPoint fitPointB = f_.evaluate(pointB.getElements());
 
                         //Only take it if it is clearly better.....
                         final FitPointAnalyzer.FitPointComparison comparison = comparator
@@ -208,7 +208,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
                     }
 
                     result = _optimizer
-                            .optimize(f_, currentPoint, currentResult, trialPoint, f_.evaluate(trialPoint));
+                            .optimize(f_, currentPoint, currentResult, trialPoint,
+                                    f_.evaluate(trialPoint.getElements()));
                 }
                 else
                 {

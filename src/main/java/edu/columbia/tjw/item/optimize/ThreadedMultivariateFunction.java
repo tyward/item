@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.util.thread.GeneralTask;
 import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
 
@@ -28,7 +29,7 @@ import java.util.List;
 /**
  * @author tyler
  */
-public abstract class ThreadedMultivariateFunction implements MultivariateFunction
+public abstract class ThreadedMultivariateFunction implements MultivariateOptimizationFunction
 {
     private static final GeneralThreadPool POOL = GeneralThreadPool.singleton();
     private final int _blockSize;
@@ -76,7 +77,7 @@ public abstract class ThreadedMultivariateFunction implements MultivariateFuncti
     @Override
     public abstract int numRows();
 
-    protected abstract void prepare(final MultivariatePoint input_);
+    protected abstract void prepare(final DoubleVector input_);
 
 
 }

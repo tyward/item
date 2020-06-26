@@ -31,7 +31,7 @@ import java.util.logging.Logger;
  * @param <F> The type of function this can optimize
  * @author tyler
  */
-public final class GoldenSectionOptimizer<F extends MultivariateFunction>
+public final class GoldenSectionOptimizer<F extends MultivariateOptimizationFunction>
         extends Optimizer<F>
 {
     private static final double MAX_BRACKET_SCALE = 2000.0;
@@ -62,9 +62,9 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
         scaleStep.scale(-1.0);
         c.add(scaleStep);
 
-        final FitPoint pointA = f_.evaluate(a);
-        final FitPoint pointB = f_.evaluate(b);
-        final FitPoint pointC = f_.evaluate(c);
+        final FitPoint pointA = f_.evaluate(a.getElements());
+        final FitPoint pointB = f_.evaluate(b.getElements());
+        final FitPoint pointC = f_.evaluate(c.getElements());
 
         final Bracket b1 = new Bracket(a, b, c, pointA, pointB, pointC);
 
@@ -75,12 +75,12 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
     }
 
     public OptimizationResult optimize(final F f_, final MultivariatePoint a_, final FitPoint aRes_,
-                                                          final MultivariatePoint b_, final FitPoint bRes_)
+                                       final MultivariatePoint b_, final FitPoint bRes_)
             throws ConvergenceException
     {
         //Just need to fill this in.....
-        final FitPoint pointA = f_.evaluate(a_);
-        final FitPoint pointB = f_.evaluate(b_);
+        final FitPoint pointA = f_.evaluate(a_.getElements());
+        final FitPoint pointB = f_.evaluate(b_.getElements());
         final double comparison = this.getComparator().compare(pointA, pointB);
 
         if (comparison < 0)
@@ -101,7 +101,7 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
         //A is greater than B.
         final MultivariatePoint c = b_.clone();
         c.add(direction);
-        final FitPoint pointC = f_.evaluate(c);
+        final FitPoint pointC = f_.evaluate(c.getElements());
 
         final Bracket b1 = new Bracket(a_, b_, c, pointA, pointB, pointC);
         final Bracket bracket = this.bracket(f_, b1);
@@ -165,7 +165,7 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
             {
                 c.add(ab);
                 ab.scale(2.0);
-                pointC = f_.evaluate(c);
+                pointC = f_.evaluate(c.getElements());
                 scale *= 2.0;
 
                 if (scale > 2000.0)
@@ -266,7 +266,7 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
             {
                 c.copy(aClone);
                 c.add(ab);
-                pointC = f_.evaluate(c);
+                pointC = f_.evaluate(c.getElements());
                 comparisonCB = comparator.compare(pointC, pointB);
 
                 //Assumed minimum higher than previous value of b. We are done.
@@ -287,7 +287,7 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
                     c.add(ab);
                     pointA = pointB;
                     pointB = pointC;
-                    pointC = f_.evaluate(c);
+                    pointC = f_.evaluate(c.getElements());
                 }
                 else
                 {
@@ -295,14 +295,14 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
                     b.copy(c);
                     c.add(ab);
                     pointB = pointC;
-                    pointC = f_.evaluate(c);
+                    pointC = f_.evaluate(c.getElements());
                 }
             }
             else
             {
                 //Compute new value of c, the old value got assigned to b. 
                 c.add(ab);
-                pointC = f_.evaluate(c);
+                pointC = f_.evaluate(c.getElements());
             }
 
             //Now we know that a > b, and we think that c is probably higher than b, but haven't checked. 
@@ -357,7 +357,7 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
                     //Success
                     b.copy(c);
                     b.add(ac);
-                    pointB = f_.evaluate(b);
+                    pointB = f_.evaluate(b.getElements());
                     final Bracket expanded = new Bracket(a, c, b, pointA, pointC, pointB);
                     return bracket(f_, expanded);
                 }
@@ -369,8 +369,8 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
             a.add(ca);
             c.add(ac);
             scale *= 2.0;
-            pointA = f_.evaluate(a);
-            pointC = f_.evaluate(c);
+            pointA = f_.evaluate(a.getElements());
+            pointC = f_.evaluate(c.getElements());
 
             if (scale > MAX_BRACKET_SCALE)
             {
@@ -394,7 +394,7 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
             c.copy(a);
             c.add(ca);
             //B is higher than A, move to the other side.
-            final Bracket expanded = new Bracket(b, a, c, pointB, pointA, f_.evaluate(c));
+            final Bracket expanded = new Bracket(b, a, c, pointB, pointA, f_.evaluate(c.getElements()));
             return completeBracket(f_, expanded);
         }
     }
@@ -440,7 +440,7 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
                 //Swap next and b, let's always have b < next.
                 final MultivariatePoint temp = b;
                 b = next;
-                pointB = f_.evaluate(b);
+                pointB = f_.evaluate(b.getElements());
                 next = temp;
             }
             else
@@ -451,7 +451,7 @@ public final class GoldenSectionOptimizer<F extends MultivariateFunction>
             }
 
             final FitPointAnalyzer comparator = this.getComparator();
-            final FitPoint nextPoint = f_.evaluate(next);
+            final FitPoint nextPoint = f_.evaluate(next.getElements());
             final FitPointAnalyzer.FitPointComparison comparison = comparator.generateComparision(pointB, nextPoint);
             evalCount++;
 

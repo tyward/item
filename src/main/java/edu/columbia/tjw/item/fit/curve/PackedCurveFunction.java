@@ -1,14 +1,15 @@
 package edu.columbia.tjw.item.fit.curve;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.ReducedParameterVector;
-import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointGenerator;
 import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
-import edu.columbia.tjw.item.optimize.*;
+import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
+import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
 
 public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
         extends ThreadedMultivariateFunction implements MultivariateDifferentiableFunction
@@ -85,13 +86,13 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
         }
     }
 
-    public ItemFitPoint<S, R, T> evaluate(final MultivariatePoint input_)
+    public ItemFitPoint<S, R, T> evaluate(final DoubleVector input_)
     {
         prepare(input_);
         return _generator.generatePoint(_packed);
     }
 
-    public ItemFitPoint<S, R, T> evaluateGradient(final MultivariatePoint input_)
+    public ItemFitPoint<S, R, T> evaluateGradient(final DoubleVector input_)
     {
         prepare(input_);
         return _generator.generateGradient(_packed);
@@ -117,14 +118,14 @@ public final class PackedCurveFunction<S extends ItemStatus<S>, R extends ItemRe
     }
 
     @Override
-    protected void prepare(MultivariatePoint input_)
+    protected void prepare(DoubleVector input_)
     {
         final int dimension = this.dimension();
         boolean changed = false;
 
         for (int i = 0; i < dimension; i++)
         {
-            double value = input_.getElement(i);
+            double value = input_.getEntry(i);
 
             if (i == 0)
             {

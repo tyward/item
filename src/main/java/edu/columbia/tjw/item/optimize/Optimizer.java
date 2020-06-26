@@ -28,7 +28,7 @@ import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
  * @param <F> The type of function this can optimize
  * @author tyler
  */
-public abstract class Optimizer<F extends MultivariateFunction>
+public abstract class Optimizer<F extends MultivariateOptimizationFunction>
 {
     private static final double SQRT_EPSILON = Math.sqrt(Math.ulp(1.0));
     private static final double DEFAULT_XTOL = 0.0;

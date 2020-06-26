@@ -19,16 +19,19 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 
 /**
  * @author tyler
  */
-public interface OptimizationFunction
+public interface MultivariateOptimizationFunction
 {
+    public int dimension();
+
     public int numRows();
 
-    public FitPoint evaluate(final MultivariatePoint input_);
+    public FitPoint evaluate(final DoubleVector input_);
 
-    public FitPoint evaluateGradient(final MultivariatePoint input_);
+    public FitPoint evaluateGradient(final DoubleVector input_);
 }
