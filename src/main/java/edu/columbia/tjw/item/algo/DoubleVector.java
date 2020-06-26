@@ -8,6 +8,10 @@ import java.io.Serializable;
 
 /**
  * A read-only version of a double vector. This is useful where items might need to be passed around quite a lot.
+ * <p>
+ * This is also helpful where a large number of vectors are simply manipulations on existing vectors. There is a lot
+ * of computation of a*b and a+b like objects, and no need to create the whole array for each of them just to tear it
+ * down right after.
  */
 public abstract class DoubleVector implements Serializable
 {
@@ -68,6 +72,12 @@ public abstract class DoubleVector implements Serializable
         return builder_.build();
     }
 
+    /**
+     * Generate a DoubleVector with a defensive copy of the given data.
+     *
+     * @param data_
+     * @return
+     */
     public static DoubleVector of(final double[] data_)
     {
         return of(data_, true);
