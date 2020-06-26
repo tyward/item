@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemModel;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.DoubleMatrix;
 import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
@@ -243,8 +244,8 @@ public final class BlockResultCalculator<S extends ItemStatus<S>, R extends Item
                 DoubleVector.of(shiftGradient), DoubleVector.of(scaledGradient),
                 DoubleVector.of(scaledGradient2),
                 gradientMass,
-                fisherInformation,
-                secondDerivative);
+                DoubleMatrix.of(fisherInformation, false),
+                DoubleMatrix.of(secondDerivative, false));
     }
 }
 

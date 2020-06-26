@@ -58,7 +58,13 @@ public final class VectorTools
      */
     public static DoubleVector multiplyAccumulate(final DoubleVector a_, final DoubleVector b_, final double scalar_)
     {
-        return add(a_, scalarMultiply(b_, scalar_));
+        // This is more efficient, as it avoids one more object creation and indirection.
+        final SerializableBivariateFunction mac = (double x, double y) ->
+        {
+            return x + (y * scalar_);
+        };
+        return DoubleVector.apply(mac, a_, b_);
+        //return add(a_, scalarMultiply(b_, scalar_));
     }
 
     public static double maxAbsElement(final DoubleVector x_)
@@ -200,6 +206,11 @@ public final class VectorTools
     }
 
     private interface SerializableUnivariateFunction extends UnivariateFunction, Serializable
+    {
+
+    }
+
+    private interface SerializableBivariateFunction extends BivariateFunction, Serializable
     {
 
     }

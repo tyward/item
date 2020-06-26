@@ -1,6 +1,10 @@
 package edu.columbia.tjw.item.algo;
 
+import org.apache.commons.math3.analysis.BivariateFunction;
+import org.apache.commons.math3.analysis.UnivariateFunction;
+
 import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  * A rectangular matrix of numbers.
@@ -143,16 +147,73 @@ public final class DoubleMatrix implements Serializable
         return output;
     }
 
-
-    public DoubleMatrix of(final double[][] data_)
+    public static DoubleMatrix constantMatrix(final double value_, final int rowCount_, final int columnCount_)
     {
-        DoubleVector[] output = new DoubleVector[data_.length];
-
-
-        return new DoubleMatrix(output);
-
-
+        final DoubleVector constRow = DoubleVector.constantVector(value_, columnCount_);
+        final DoubleVector[] rows = new DoubleVector[rowCount_];
+        Arrays.fill(rows, constRow);
+        return new DoubleMatrix(rows);
     }
 
+    public static DoubleMatrix apply(final BivariateFunction function_, final DoubleMatrix a_, final DoubleMatrix b_)
+    {
+        if (a_.getRowSize() != b_.getRowSize())
+        {
+            throw new IllegalArgumentException("Row counts do not match.");
+        }
+
+        final DoubleVector[] rows = new DoubleVector[a_.getRowSize()];
+
+        for (int i = 0; i < rows.length; i++)
+        {
+            rows[i] = DoubleVector.apply(function_, a_.getRow(i), b_.getRow(i));
+        }
+
+        return new DoubleMatrix(rows);
+    }
+
+    public static DoubleMatrix apply(final UnivariateFunction function_, final DoubleMatrix a_)
+    {
+        final DoubleVector[] rows = new DoubleVector[a_.getRowSize()];
+
+        for (int i = 0; i < rows.length; i++)
+        {
+            rows[i] = DoubleVector.apply(function_, a_.getRow(i));
+        }
+
+        return new DoubleMatrix(rows);
+    }
+
+    public static DoubleMatrix of(final DoubleVector[] rows_)
+    {
+        return of(rows_, true);
+    }
+
+    public static DoubleMatrix of(final DoubleVector[] rows_, final boolean doCopy_)
+    {
+        return new DoubleMatrix(rows_);
+    }
+
+    public static DoubleMatrix of(final double[][] data_)
+    {
+        return of(data_, true);
+    }
+
+    public static DoubleMatrix of(final double[][] data_, final boolean doCopy_)
+    {
+        if (null == data_)
+        {
+            return null;
+        }
+
+        final DoubleVector[] output = new DoubleVector[data_.length];
+
+        for (int i = 0; i < output.length; i++)
+        {
+            output[i] = DoubleVector.of(data_[i], doCopy_);
+        }
+
+        return new DoubleMatrix(output);
+    }
 
 }

@@ -2,6 +2,7 @@ package edu.columbia.tjw.item.fit.calculator;
 
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.algo.DoubleVector;
+import edu.columbia.tjw.item.algo.MatrixTools;
 import edu.columbia.tjw.item.algo.VarianceCalculator;
 import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.optimize.OptimizationTarget;
@@ -236,8 +237,8 @@ public final class FitPointAnalyzer
                 final BlockResult secondDerivative = point_.getAggregated(BlockCalculationType.SECOND_DERIVATIVE);
 
                 final double entropy = secondDerivative.getEntropyMean();
-                final RealMatrix jMatrix = secondDerivative.getSecondDerivative();
-                final RealMatrix iMatrix = secondDerivative.getFisherInformation();
+                final RealMatrix jMatrix = MatrixTools.toApacheMatrix(secondDerivative.getSecondDerivative());
+                final RealMatrix iMatrix = MatrixTools.toApacheMatrix(secondDerivative.getFisherInformation());
 
                 final SingularValueDecomposition jSvd = new SingularValueDecomposition(jMatrix);
                 final RealMatrix jInverse = jSvd.getSolver().getInverse();

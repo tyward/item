@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.MatrixTools;
 import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.BlockResult;
 import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
@@ -98,10 +99,10 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _gradient = secondDerivative.getDerivative().copyOfUnderlying();
             final int dimension = _gradient.length;
 
-            final RealMatrix jMatrix = secondDerivative.getSecondDerivative();
+            final RealMatrix jMatrix = MatrixTools.toApacheMatrix(secondDerivative.getSecondDerivative());
             final SingularValueDecomposition jSvd = new SingularValueDecomposition(jMatrix);
 
-            final RealMatrix iMatrix = secondDerivative.getFisherInformation();
+            final RealMatrix iMatrix = MatrixTools.toApacheMatrix(secondDerivative.getFisherInformation());
             final SingularValueDecomposition iSvd = new SingularValueDecomposition(iMatrix);
 
             _invConditionNumberJ = jSvd.getInverseConditionNumber();

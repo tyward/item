@@ -1,9 +1,9 @@
 package edu.columbia.tjw.item.fit.calculator;
 
+import edu.columbia.tjw.item.algo.DoubleMatrix;
 import edu.columbia.tjw.item.algo.DoubleVector;
+import edu.columbia.tjw.item.algo.MatrixTools;
 import edu.columbia.tjw.item.algo.VectorTools;
-import org.apache.commons.math3.linear.Array2DRowRealMatrix;
-import org.apache.commons.math3.linear.RealMatrix;
 
 import java.util.List;
 
@@ -20,15 +20,15 @@ public final class BlockResult
     private final DoubleVector _scaledGradient;
     private final DoubleVector _scaledGradient2;
     private final double _gradientMass;
-    private final double[][] _secondDerivative;
-    private final double[][] _fisherInformation;
+    private final DoubleMatrix _secondDerivative;
+    private final DoubleMatrix _fisherInformation;
     private final int _size;
 
     public BlockResult(final int rowStart_, final int rowEnd_, final double sumEntropy_, final double sumEntropy2_,
                        final DoubleVector derivative_, final DoubleVector derivativeSquared_, final DoubleVector jDiag_,
                        final DoubleVector shiftGradient_, final DoubleVector scaledGradient_,
                        final DoubleVector scaledGradient2_, final double gradientMass_,
-                       final double[][] fisherInformation_, final double[][] secondDerivative_)
+                       final DoubleMatrix fisherInformation_, final DoubleMatrix secondDerivative_)
     {
         if (rowStart_ < 0)
         {
@@ -92,6 +92,8 @@ public final class BlockResult
         DoubleVector scaledGradient = null;
         DoubleVector scaledGradient2 = null;
         DoubleVector shiftGradient = null;
+        DoubleMatrix fisherInformation = null;
+        DoubleMatrix secondDerivative = null;
 
 
         if (hasDerivative)
@@ -107,14 +109,16 @@ public final class BlockResult
 
             if (hasSecondDerivative)
             {
-                _fisherInformation = new double[dimension][dimension];
-                _secondDerivative = new double[dimension][dimension];
+                final DoubleMatrix zeroMatrix = DoubleMatrix.constantMatrix(0.0, dimension, dimension);
+
+                fisherInformation = zeroMatrix;
+                secondDerivative = zeroMatrix;
                 shiftGradient = zero;
             }
             else
             {
-                _fisherInformation = null;
-                _secondDerivative = null;
+                fisherInformation = null;
+                secondDerivative = null;
                 shiftGradient = null;
             }
         }
@@ -126,8 +130,8 @@ public final class BlockResult
             derivativeSquared = null;
             jDiag = null;
 
-            _fisherInformation = null;
-            _secondDerivative = null;
+            fisherInformation = null;
+            secondDerivative = null;
             shiftGradient = null;
         }
 
@@ -156,26 +160,12 @@ public final class BlockResult
                     shiftGradient = VectorTools.multiplyAccumulate(shiftGradient, next._shiftGradient, weight);
                 }
 
-                for (int i = 0; i < dimension; i++)
+                if (null != secondDerivative)
                 {
-                    //final double entry = next.getDerivativeEntry(i);
-                    //derivative.addToEntry(i, weight * entry);
-//                    _scaledGradient[i] += weight * next._scaledGradient[i];
-//                    _scaledGradient2[i] += weight * next._scaledGradient2[i];
-//                    //_derivativeSquared[i] += weight * next._derivativeSquared[i];
-//                    _jDiag[i] += weight * next._jDiag[i];
-
-
-                    if (null != _secondDerivative)
-                    {
-                        //_shiftGradient[i] = weight * next.getShiftGradientEntry(i);
-
-                        for (int j = 0; j < dimension; j++)
-                        {
-                            _secondDerivative[i][j] += weight * next.getSecondDerivativeEntry(i, j);
-                            _fisherInformation[i][j] += weight * next.getFisherInformationEntry(i, j);
-                        }
-                    }
+                    secondDerivative = MatrixTools.multiplyAccumulate(secondDerivative, next.getSecondDerivative(),
+                            weight);
+                    fisherInformation = MatrixTools
+                            .multiplyAccumulate(fisherInformation, next.getFisherInformation(), weight);
                 }
             }
         }
@@ -200,18 +190,12 @@ public final class BlockResult
             {
                 shiftGradient = VectorTools.scalarMultiply(shiftGradient, invWeight).collapse();
 
-                for (int i = 0; i < dimension; i++)
+                if (null != secondDerivative)
                 {
-                    for (int j = 0; j < dimension; j++)
-                    {
-                        _secondDerivative[i][j] = invWeight * _secondDerivative[i][j];
-                        _fisherInformation[i][j] *= invWeight;
-                    }
-
+                    secondDerivative = MatrixTools.scalarMultiply(secondDerivative, invWeight).collapse();
+                    fisherInformation = MatrixTools.scalarMultiply(fisherInformation, invWeight).collapse();
                 }
             }
-
-
         }
 
         _derivative = derivative;
@@ -222,6 +206,8 @@ public final class BlockResult
 
         _shiftGradient = shiftGradient;
 
+        _secondDerivative = secondDerivative;
+        _fisherInformation = fisherInformation;
 
         _rowStart = minStart;
         _rowEnd = maxEnd;
@@ -299,16 +285,6 @@ public final class BlockResult
         return _derivative.getSize();
     }
 
-    public double getSecondDerivativeEntry(final int row_, final int column_)
-    {
-        if (!hasSecondDerivative())
-        {
-            throw new IllegalArgumentException("Derivative was not calculated.");
-        }
-
-        return _secondDerivative[row_][column_];
-    }
-
     public DoubleVector getScaledGradient()
     {
         return _scaledGradient;
@@ -317,16 +293,6 @@ public final class BlockResult
     public DoubleVector getScaledGradient2()
     {
         return _scaledGradient2;
-    }
-
-    public double getFisherInformationEntry(final int row_, final int column_)
-    {
-        if (!hasDerivative())
-        {
-            throw new IllegalArgumentException("Derivative was not calculated.");
-        }
-
-        return _fisherInformation[row_][column_];
     }
 
     public double getDerivativeEntry(final int index_)
@@ -365,14 +331,14 @@ public final class BlockResult
         return _derivative;
     }
 
-    public RealMatrix getSecondDerivative()
+    public DoubleMatrix getSecondDerivative()
     {
-        return new Array2DRowRealMatrix(_secondDerivative);
+        return _secondDerivative;
     }
 
-    public RealMatrix getFisherInformation()
+    public DoubleMatrix getFisherInformation()
     {
-        return new Array2DRowRealMatrix(_fisherInformation);
+        return _fisherInformation;
     }
 
     public DoubleVector getShiftGradient()
