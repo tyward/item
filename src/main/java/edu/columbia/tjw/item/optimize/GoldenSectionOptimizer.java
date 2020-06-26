@@ -28,12 +28,11 @@ import edu.columbia.tjw.item.util.LogUtil;
 import java.util.logging.Logger;
 
 /**
- * @param <V> The type of points over which this can optimize
  * @param <F> The type of function this can optimize
  * @author tyler
  */
-public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>>
-        extends Optimizer<V, F>
+public final class GoldenSectionOptimizer<F extends MultivariateFunction>
+        extends Optimizer<F>
 {
     private static final double MAX_BRACKET_SCALE = 2000.0;
     private static final double STD_DEV_CUTOFF = 1.0;
@@ -49,14 +48,15 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
     }
 
     @Override
-    public OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V scaleStep_)
+    public OptimizationResult optimize(final F f_, final MultivariatePoint startingPoint_,
+                                       final MultivariatePoint scaleStep_)
             throws ConvergenceException
     {
         //final AdaptiveComparator<V, F> comparator = this.getComparator();
-        V scaleStep = scaleStep_;
-        V a = startingPoint_.clone();
-        V b = a.clone();
-        V c = a.clone();
+        MultivariatePoint scaleStep = scaleStep_;
+        MultivariatePoint a = startingPoint_.clone();
+        MultivariatePoint b = a.clone();
+        MultivariatePoint c = a.clone();
 
         a.add(scaleStep);
         scaleStep.scale(-1.0);
@@ -66,16 +66,17 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
         final FitPoint pointB = f_.evaluate(b);
         final FitPoint pointC = f_.evaluate(c);
 
-        final Bracket<V> b1 = new Bracket<>(a, b, c, pointA, pointB, pointC);
+        final Bracket b1 = new Bracket(a, b, c, pointA, pointB, pointC);
 
-        final Bracket<V> bracket = this.bracket(f_, b1);
+        final Bracket bracket = this.bracket(f_, b1);
 
-        final OptimizationResult<V> result = this.optimize(f_, bracket);
+        final OptimizationResult result = this.optimize(f_, bracket);
         return result;
     }
 
-    public OptimizationResult<V> optimize(final F f_, final V a_, final FitPoint aRes_,
-                                          final V b_, final FitPoint bRes_) throws ConvergenceException
+    public OptimizationResult optimize(final F f_, final MultivariatePoint a_, final FitPoint aRes_,
+                                                          final MultivariatePoint b_, final FitPoint bRes_)
+            throws ConvergenceException
     {
         //Just need to fill this in.....
         final FitPoint pointA = f_.evaluate(a_);
@@ -87,7 +88,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
             return optimize(f_, b_, bRes_, a_, aRes_);
         }
 
-        final V direction = a_.clone();
+        final MultivariatePoint direction = a_.clone();
         direction.scale(-1.0);
         direction.add(b_);
 
@@ -98,12 +99,12 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
         }
 
         //A is greater than B.
-        final V c = b_.clone();
+        final MultivariatePoint c = b_.clone();
         c.add(direction);
         final FitPoint pointC = f_.evaluate(c);
 
-        final Bracket<V> b1 = new Bracket<>(a_, b_, c, pointA, pointB, pointC);
-        final Bracket<V> bracket = this.bracket(f_, b1);
+        final Bracket b1 = new Bracket(a_, b_, c, pointA, pointB, pointC);
+        final Bracket bracket = this.bracket(f_, b1);
         return this.optimize(f_, bracket);
     }
 
@@ -119,21 +120,22 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
      * @return A new bracket [a, b, c] with f(a) > f(b) and f(c) > f(b)
      * @throws ConvergenceException If no such bracket can be constructed
      */
-    private Bracket<V> completeBracket(final F f_, final Bracket<V> bracket_) throws ConvergenceException
+    private Bracket completeBracket(final F f_, final Bracket bracket_)
+            throws ConvergenceException
     {
         BlockCalculationType valType = BlockCalculationType.VALUE;
         final FitPointAnalyzer comparator = this.getComparator();
 
         //We know that the three points are in order, but don't know how they compare. 
-        final V a = bracket_.getA().clone();
-        final V b = bracket_.getB().clone();
-        final V c = bracket_.getC().clone();
-        final V ac = bracket_.getDirection().clone();
+        final MultivariatePoint a = bracket_.getA().clone();
+        final MultivariatePoint b = bracket_.getB().clone();
+        final MultivariatePoint c = bracket_.getC().clone();
+        final MultivariatePoint ac = bracket_.getDirection().clone();
 
         final double initMag = ac.getMagnitude();
 
         //Compute the vector from a -> b. 
-        final V ab = a.clone();
+        final MultivariatePoint ab = a.clone();
         ab.scale(-1.0);
         ab.add(b);
 
@@ -177,7 +179,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
             if (comparisonCB >= sigmaScale)
             {
                 //We are done, return the bracket. 
-                return new Bracket<>(a, b, c, pointA, pointB, pointC);
+                return new Bracket(a, b, c, pointA, pointB, pointC);
             }
 
             //We are sure the C differs from B, but it is less than B instead of greater. 
@@ -249,7 +251,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
             //Therefore, b -> a (since we know b > c), c -> b
             //Now, if min != c, then min is past c, so we can put in the minimum and check if min > b. 
             //Now, if min < b, it becomes the new b, and c becomes b + (b - a). 
-            final V aClone = a.clone();
+            final MultivariatePoint aClone = a.clone();
             final double pointerScale = (presumedMinimum - aScalar) / ab.getMagnitude();
             ab.scale(pointerScale);
 
@@ -270,7 +272,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
                 //Assumed minimum higher than previous value of b. We are done.
                 if (comparisonCB > sigmaScale)
                 {
-                    return new Bracket<>(a, b, c, pointA, pointB, pointC);
+                    return new Bracket(a, b, c, pointA, pointB, pointC);
                 }
                 if (comparisonCB < -sigmaScale)
                 {
@@ -307,20 +309,21 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
             comparisonCB = comparator.compare(pointC, pointB);
         }
 
-        final Bracket<V> output = new Bracket<>(a, b, c, pointA, pointB, pointC);
+        final Bracket output = new Bracket(a, b, c, pointA, pointB, pointC);
         return output;
     }
 
-    private Bracket<V> bracket(final F f_, final Bracket<V> bracket_) throws ConvergenceException
+    private Bracket bracket(final F f_, final Bracket bracket_)
+            throws ConvergenceException
     {
         final FitPointAnalyzer comparator = this.getComparator();
 
         //We know that the three points are in order, but don't know how they compare. 
-        final V a = bracket_.getA().clone();
-        final V b = bracket_.getB().clone();
-        final V c = bracket_.getC().clone();
-        final V ac = bracket_.getDirection().clone();
-        final V ca = bracket_.getNegDirection().clone();
+        final MultivariatePoint a = bracket_.getA().clone();
+        final MultivariatePoint b = bracket_.getB().clone();
+        final MultivariatePoint c = bracket_.getC().clone();
+        final MultivariatePoint ac = bracket_.getDirection().clone();
+        final MultivariatePoint ca = bracket_.getNegDirection().clone();
 
         FitPoint pointA = bracket_.getaRes();
         FitPoint pointB = bracket_.getbRes();
@@ -340,7 +343,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
             if (Math.abs(comparisonBC) > sigmaScale)
             {
                 //Swap the bracket order, and restart now that we know c and b are different.
-                final Bracket<V> swapped = new Bracket<>(c, b, a, pointC, pointB, pointA);
+                final Bracket swapped = new Bracket(c, b, a, pointC, pointB, pointA);
                 return bracket(f_, swapped);
             }
 
@@ -355,7 +358,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
                     b.copy(c);
                     b.add(ac);
                     pointB = f_.evaluate(b);
-                    final Bracket<V> expanded = new Bracket<>(a, c, b, pointA, pointC, pointB);
+                    final Bracket expanded = new Bracket(a, c, b, pointA, pointC, pointB);
                     return bracket(f_, expanded);
                 }
             }
@@ -382,7 +385,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
         if (comparisonAB > 0)
         {
             //A is higher than B. 
-            final Bracket<V> expanded = new Bracket<>(a, b, c, pointA, pointB, pointC);
+            final Bracket expanded = new Bracket(a, b, c, pointA, pointB, pointC);
             return completeBracket(f_, expanded);
         }
         else
@@ -391,21 +394,22 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
             c.copy(a);
             c.add(ca);
             //B is higher than A, move to the other side.
-            final Bracket<V> expanded = new Bracket<>(b, a, c, pointB, pointA, f_.evaluate(c));
+            final Bracket expanded = new Bracket(b, a, c, pointB, pointA, f_.evaluate(c));
             return completeBracket(f_, expanded);
         }
     }
 
-    private OptimizationResult<V> optimize(final F f_, final Bracket<V> bracket_) throws ConvergenceException
+    private OptimizationResult optimize(final F f_, final Bracket bracket_)
+            throws ConvergenceException
     {
         final double bracketSize = bracket_.getBracketSize();
         final double targetSize = LINE_SEARCH_REL_TOL * bracketSize;
 
         //LOG.info("Starting Golden Section optimization: [" + a_ + "][" + b_ + "][" + c_ + "]");
-        V scaleStep = bracket_.getDirection();
-        V a = bracket_.getA().clone();
-        V b = bracket_.getB().clone();
-        V c = bracket_.getC().clone();
+        MultivariatePoint scaleStep = bracket_.getDirection();
+        MultivariatePoint a = bracket_.getA().clone();
+        MultivariatePoint b = bracket_.getB().clone();
+        MultivariatePoint c = bracket_.getC().clone();
 
         FitPoint pointA = bracket_.getaRes();
         FitPoint pointB = bracket_.getbRes();
@@ -418,7 +422,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
         //While either tolerance condition fails, continue to loop.
         while (!(xTolCheck || yTolCheck))
         {
-            V next;
+            MultivariatePoint next;
             final double abDistance = a.distance(b);
             final double bcDistance = b.distance(c);
 
@@ -434,7 +438,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
                 next.add(scaleStep);
 
                 //Swap next and b, let's always have b < next.
-                final V temp = b;
+                final MultivariatePoint temp = b;
                 b = next;
                 pointB = f_.evaluate(b);
                 next = temp;
@@ -488,22 +492,24 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
 
         //System.out.println("Returning from golden section.");
         //We passed some tolerance tests, let's return the answer.
-        final GeneralOptimizationResult<V> output = new GeneralOptimizationResult<>(b, pointB, true, evalCount);
+        final GeneralOptimizationResult output = new GeneralOptimizationResult(b, pointB, true,
+                evalCount);
         return output;
     }
 
-    private static final class Bracket<V extends EvaluationPoint<V>>
+    private static final class Bracket
     {
-        private final V _a;
-        private final V _b;
-        private final V _c;
-        private final V _direction;
-        private final V _negDirection;
+        private final MultivariatePoint _a;
+        private final MultivariatePoint _b;
+        private final MultivariatePoint _c;
+        private final MultivariatePoint _direction;
+        private final MultivariatePoint _negDirection;
         private final FitPoint _aRes;
         private final FitPoint _bRes;
         private final FitPoint _cRes;
 
-        public Bracket(final V a_, final V b_, final V c_, final FitPoint aRes_, final FitPoint bRes_
+        public Bracket(final MultivariatePoint a_, final MultivariatePoint b_, final MultivariatePoint c_,
+                       final FitPoint aRes_, final FitPoint bRes_
                 , final FitPoint cRes_)
         {
             _a = a_;
@@ -518,7 +524,7 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
             _direction.scale(-1.0);
             _direction.add(c_);
 
-            final V ab = _a.clone();
+            final MultivariatePoint ab = _a.clone();
             ab.scale(-1.0);
             ab.add(_b);
 
@@ -535,27 +541,27 @@ public final class GoldenSectionOptimizer<V extends EvaluationPoint<V>, F extend
             _negDirection.scale(-1.0);
         }
 
-        public V getA()
+        public MultivariatePoint getA()
         {
             return _a;
         }
 
-        public V getB()
+        public MultivariatePoint getB()
         {
             return _b;
         }
 
-        public V getC()
+        public MultivariatePoint getC()
         {
             return _c;
         }
 
-        public V getDirection()
+        public MultivariatePoint getDirection()
         {
             return _direction;
         }
 
-        public V getNegDirection()
+        public MultivariatePoint getNegDirection()
         {
             return _negDirection;
         }

@@ -24,9 +24,9 @@ import edu.columbia.tjw.item.fit.calculator.FitPoint;
 /**
  * @author tyler
  */
-public interface OptimizationResult<V extends EvaluationPoint<V>>
+public interface OptimizationResult
 {
-    public V getOptimum();
+    public MultivariatePoint getOptimum();
 
     public boolean converged();
 

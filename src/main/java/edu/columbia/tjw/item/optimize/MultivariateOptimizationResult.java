@@ -24,7 +24,7 @@ import edu.columbia.tjw.item.fit.calculator.FitPoint;
 /**
  * @author tyler
  */
-public class MultivariateOptimizationResult extends GeneralOptimizationResult<MultivariatePoint>
+public class MultivariateOptimizationResult extends GeneralOptimizationResult
 {
     public MultivariateOptimizationResult(final MultivariatePoint minX_, final FitPoint minValue_,
                                           final boolean converged_, final int evalCount_)

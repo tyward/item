@@ -44,7 +44,7 @@ public final class BaseFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             final BaseModelFunction<S, R, T> function = generateFunction(packed_);
             final DoubleVector beta = function.getBeta();
             final MultivariatePoint point = new MultivariatePoint(beta);
-            final OptimizationResult<MultivariatePoint> result = _optimizer.optimize(function, point);
+            final OptimizationResult result = _optimizer.optimize(function, point);
 
             if (!result.converged())
             {

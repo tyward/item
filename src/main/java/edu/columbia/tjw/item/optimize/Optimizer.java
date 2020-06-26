@@ -25,11 +25,10 @@ import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
 
 /**
- * @param <V> The type of points over which this can optimize
  * @param <F> The type of function this can optimize
  * @author tyler
  */
-public abstract class Optimizer<V extends EvaluationPoint<V>, F extends OptimizationFunction<V>>
+public abstract class Optimizer<F extends MultivariateFunction>
 {
     private static final double SQRT_EPSILON = Math.sqrt(Math.ulp(1.0));
     private static final double DEFAULT_XTOL = 0.0;
@@ -61,7 +60,8 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         _comparator = new FitPointAnalyzer(_blockSize, target_, settings_);
     }
 
-    public abstract OptimizationResult<V> optimize(final F f_, final V startingPoint_, final V direction_)
+    public abstract OptimizationResult optimize(final F f_, final MultivariatePoint startingPoint_,
+                                                final MultivariatePoint direction_)
             throws ConvergenceException;
 
     public double getXTolerance()
@@ -143,14 +143,14 @@ public abstract class Optimizer<V extends EvaluationPoint<V>, F extends Optimiza
         return output;
     }
 
-    protected boolean checkXTolerance(final V a_, final V b_)
+    protected boolean checkXTolerance(final MultivariatePoint a_, final MultivariatePoint b_)
     {
         final double scale = SQRT_EPSILON * 0.5 * (a_.getMagnitude() + b_.getMagnitude());
         return checkXTolerance(a_, b_, scale);
 
     }
 
-    protected boolean checkXTolerance(final V a_, final V b_, final double target_)
+    protected boolean checkXTolerance(final MultivariatePoint a_, final MultivariatePoint b_, final double target_)
     {
         final double distance = a_.distance(b_);
         return distance < target_;

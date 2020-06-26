@@ -30,7 +30,7 @@ import java.util.logging.Logger;
 /**
  * @author tyler
  */
-public class MultivariateOptimizer extends Optimizer<MultivariatePoint, MultivariateDifferentiableFunction>
+public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableFunction>
 {
     private static final double STD_DEV_CUTOFF = 1.0;
     private static final double LINE_SEARCH_XTOL = Math.sqrt(Math.ulp(1.0));
@@ -39,7 +39,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
     private static final Logger LOG = LogUtil.getLogger(MultivariateOptimizer.class);
 
     private final double _zTolerance;
-    private final GoldenSectionOptimizer<MultivariatePoint, MultivariateDifferentiableFunction> _optimizer;
+    private final GoldenSectionOptimizer<MultivariateDifferentiableFunction> _optimizer;
 
     public MultivariateOptimizer(final int blockSize_, int maxEvalCount_, final int loopEvalCount_,
                                  final double thetaPrecision_, final OptimizationTarget target_, ItemSettings settings_)
@@ -62,7 +62,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
     }
 
     @Override
-    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_,
+    public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
                                                           MultivariatePoint startingPoint_,
                                                           MultivariatePoint direction_) throws ConvergenceException
     {
@@ -70,7 +70,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
         return optimize(f_, startingPoint_, result, direction_);
     }
 
-    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_,
+    public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
                                                           MultivariatePoint startingPoint_) throws ConvergenceException
     {
         final FitPoint result = f_.evaluate(startingPoint_);
@@ -87,7 +87,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
         return optimize(f_, startingPoint_, result, direction);
     }
 
-    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_,
+    public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
                                                           MultivariatePoint startingPoint_,
                                                           final FitPoint result_,
                                                           MultivariatePoint direction_) throws ConvergenceException
@@ -114,7 +114,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
             while (xTolExceeded && yTolExceeded && (evaluationCount < maxEvalCount))
             {
                 //final FitPoint fitPointCurrent = f_.evaluate(currentPoint);
-                final OptimizationResult<MultivariatePoint> result;
+                final OptimizationResult result;
 
                 if (!firstLoop)
                 {

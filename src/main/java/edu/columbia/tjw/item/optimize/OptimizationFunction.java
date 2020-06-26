@@ -22,15 +22,13 @@ package edu.columbia.tjw.item.optimize;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 
 /**
- * @param <V>
  * @author tyler
  */
-public interface OptimizationFunction<V extends EvaluationPoint<V>>
+public interface OptimizationFunction
 {
     public int numRows();
 
-    public FitPoint evaluate(final V input_);
+    public FitPoint evaluate(final MultivariatePoint input_);
 
-    public FitPoint evaluateGradient(final V input_);
-
+    public FitPoint evaluateGradient(final MultivariatePoint input_);
 }

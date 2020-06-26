@@ -19,11 +19,18 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.fit.calculator.FitPoint;
+
 /**
  * @author tyler
  */
-public interface MultivariateFunction extends OptimizationFunction<MultivariatePoint>
+public interface MultivariateFunction
 {
     public int dimension();
 
+    public int numRows();
+
+    public FitPoint evaluate(final MultivariatePoint input_);
+
+    public FitPoint evaluateGradient(final MultivariatePoint input_);
 }
