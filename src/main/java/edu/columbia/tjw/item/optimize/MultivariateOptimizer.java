@@ -93,7 +93,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
     {
         final MultivariatePoint direction = new MultivariatePoint(direction_);
         final MultivariatePoint currentPoint = new MultivariatePoint(startingPoint_);
-        FitPoint currentResult = f_.evaluate(currentPoint.getElements());
+        FitPoint currentResult = result_;
 
         final int maxEvalCount = this.getMaxEvalCount();
         final int dimension = f_.dimension();
