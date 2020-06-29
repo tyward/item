@@ -34,15 +34,21 @@ public final class UnivariateOptimizationFunction
         return _scale;
     }
 
-    public FitPoint evaluate(final double val_)
+    public DoubleVector generatePoint(final double val_)
     {
         final DoubleVector next = VectorTools.multiplyAccumulate(_a, _direction, val_);
+        return next;
+    }
+
+    public FitPoint evaluate(final double val_)
+    {
+        final DoubleVector next = generatePoint(val_);
         return _base.evaluate(next);
     }
 
     public FitPoint evaluateGradient(final double val_)
     {
-        final DoubleVector next = VectorTools.multiplyAccumulate(_a, _direction, val_);
+        final DoubleVector next = generatePoint(val_);
         return _base.evaluateGradient(next);
     }
 

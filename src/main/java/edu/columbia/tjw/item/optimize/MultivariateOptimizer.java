@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.algo.DoubleVector;
+import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -39,7 +40,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
     private static final Logger LOG = LogUtil.getLogger(MultivariateOptimizer.class);
 
     private final double _zTolerance;
-    private final GoldenSectionOptimizer<MultivariateDifferentiableFunction> _optimizer;
+    private final GoldenSectionOptimizer _optimizer;
 
     public MultivariateOptimizer(final int blockSize_, int maxEvalCount_, final int loopEvalCount_,
                                  final double thetaPrecision_, final OptimizationTarget target_, ItemSettings settings_)
@@ -57,7 +58,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
         }
 
         _zTolerance = settings_.getZScoreCutoff();
-        _optimizer = new GoldenSectionOptimizer<>(LINE_SEARCH_XTOL, LINE_SEARCH_YTOL, blockSize_, loopEvalCount_,
+        _optimizer = new GoldenSectionOptimizer(LINE_SEARCH_XTOL, LINE_SEARCH_YTOL, blockSize_, loopEvalCount_,
                 target_, settings_);
     }
 
@@ -207,14 +208,21 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
                         }
                     }
 
+                    final DoubleVector curr = currentPoint.getElements();
+                    final DoubleVector dir = VectorTools.subtract(trialPoint.getElements(),
+                            curr);
+                    final UnivariateOptimizationFunction func = new UnivariateOptimizationFunction(f_, curr, dir);
+
                     result = _optimizer
-                            .optimize(f_, currentPoint, currentResult, trialPoint,
+                            .optimize(func, 0.0, currentResult,
+                                    1.0,
                                     f_.evaluate(trialPoint.getElements()));
                 }
                 else
                 {
                     firstLoop = false;
-                    result = _optimizer.optimize(f_, currentPoint, direction);
+                    result = _optimizer.optimize(new UnivariateOptimizationFunction(f_, currentPoint.getElements(),
+                            direction.getElements()));
                 }
 
                 evaluationCount += result.evaluationCount();

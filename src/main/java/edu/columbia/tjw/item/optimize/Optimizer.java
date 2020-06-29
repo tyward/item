@@ -106,20 +106,6 @@ public abstract class Optimizer<F extends MultivariateOptimizationFunction>
 
         final double scaledDiff = Math.abs(meanA - meanB) / (meanA + meanB);
         return scaledDiff < this._yTol;
-
-
-//        final double stdDevA = getComparator().computeObjectiveStdDev(aResult_, highWater);
-//        final double stdDevB = getComparator().computeObjectiveStdDev(bResult_, highWater);
-//
-//        final double raw = Math.abs(meanA - meanB);
-//        final double adjusted = raw + this._stdDevThreshold * (stdDevA + stdDevB);
-//
-//        final double scale = Math.abs((meanA * meanA) + (meanB * meanB));
-//
-//        final double scaled = adjusted / scale;
-//
-//        final boolean output = scaled < this._yTol;
-//        return output;
     }
 
 
@@ -154,18 +140,6 @@ public abstract class Optimizer<F extends MultivariateOptimizationFunction>
     {
         final double distance = a_.distance(b_);
         return distance < target_;
-//
-//
-//
-//        final double aMag = a_.getMagnitude();
-//        final double bMag = b_.getMagnitude();
-//
-//        final double scale = Math.sqrt((aMag * aMag) + (bMag * bMag));
-//
-//        final double result = distance / scale;
-//
-//        final boolean output = result < this._xTol;
-//        return output;
     }
 
 }
