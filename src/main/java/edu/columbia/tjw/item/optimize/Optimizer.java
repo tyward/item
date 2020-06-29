@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.ItemSettings;
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
@@ -60,8 +61,8 @@ public abstract class Optimizer<F extends MultivariateOptimizationFunction>
         _comparator = new FitPointAnalyzer(_blockSize, target_, settings_);
     }
 
-    public abstract OptimizationResult optimize(final F f_, final MultivariatePoint startingPoint_,
-                                                final MultivariatePoint direction_)
+    public abstract OptimizationResult optimize(final F f_, final DoubleVector startingPoint_,
+                                                final DoubleVector direction_)
             throws ConvergenceException;
 
     public double getXTolerance()

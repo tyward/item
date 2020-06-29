@@ -52,6 +52,11 @@ public final class MultivariatePoint implements EvaluationPoint<MultivariatePoin
         return _data.getVector();
     }
 
+    public void setElements(final DoubleVector value_)
+    {
+        _data.setEntries(value_.collapse());
+    }
+
     public void setElement(final int index_, final double value_)
     {
         if (Double.isNaN(value_) || Double.isInfinite(value_))
@@ -118,7 +123,7 @@ public final class MultivariatePoint implements EvaluationPoint<MultivariatePoin
     public void copy(MultivariatePoint point_)
     {
         checkLength(point_);
-        _data.setEntries(point_.getElements());
+        _data.setEntries(point_.getElements().collapse());
     }
 
     @Override

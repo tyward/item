@@ -520,9 +520,7 @@ public final class GoldenSectionOptimizer
         //System.out.println("Returning from golden section.");
         //We passed some tolerance tests, let's return the answer.
         final GeneralOptimizationResult output =
-                new GeneralOptimizationResult(new MultivariatePoint(f_.generatePoint(b)), pointB,
-                        true,
-                        evalCount);
+                new GeneralOptimizationResult(pointB, true, evalCount);
         return output;
     }
 

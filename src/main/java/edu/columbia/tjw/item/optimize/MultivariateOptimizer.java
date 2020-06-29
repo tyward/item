@@ -64,34 +64,32 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
 
     @Override
     public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
-                                       MultivariatePoint startingPoint_,
-                                       MultivariatePoint direction_) throws ConvergenceException
+                                       DoubleVector startingPoint_,
+                                       DoubleVector direction_) throws ConvergenceException
     {
-        final FitPoint result = f_.evaluate(startingPoint_.getElements());
+        final FitPoint result = f_.evaluate(startingPoint_);
         return optimize(f_, startingPoint_, result, direction_);
     }
 
     public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
-                                       MultivariatePoint startingPoint_) throws ConvergenceException
+                                       DoubleVector startingPoint_) throws ConvergenceException
     {
-        final FitPoint result = f_.evaluate(startingPoint_.getElements());
+        final FitPoint result = f_.evaluate(startingPoint_);
 
         // Testing code.
-        final FitPoint point = f_.evaluateGradient(startingPoint_.getElements());
+        final FitPoint point = f_.evaluateGradient(startingPoint_);
         final DoubleVector derivative = this.getComparator().getDerivative(point);
 
         final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
-
-        final MultivariatePoint direction = new MultivariatePoint(gradient.getGradient());
-        direction.scale(-1.0);
+        final DoubleVector direction = VectorTools.scalarMultiply(gradient.getGradient(), -1.0);
 
         return optimize(f_, startingPoint_, result, direction);
     }
 
     public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
-                                       MultivariatePoint startingPoint_,
+                                       DoubleVector startingPoint_,
                                        final FitPoint result_,
-                                       MultivariatePoint direction_) throws ConvergenceException
+                                       DoubleVector direction_) throws ConvergenceException
     {
         final MultivariatePoint direction = new MultivariatePoint(direction_);
         final MultivariatePoint currentPoint = new MultivariatePoint(startingPoint_);
@@ -227,7 +225,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
 
                 evaluationCount += result.evaluationCount();
 
-                nextPoint.copy(result.getOptimum());
+                nextPoint.setElements(result.getOptimum());
                 final FitPoint nextResult = result.minResult();
                 //final FitPoint fitPointNext = f_.evaluate(nextPoint);
 
@@ -264,8 +262,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableF
 
         //Did we converge, or did we run out of iterations. 
         final boolean converged = (!xTolExceeded || !yTolExceeded);
-        final MultivariateOptimizationResult output = new MultivariateOptimizationResult(currentPoint, currentResult,
-                converged, evaluationCount);
+        final MultivariateOptimizationResult output = new MultivariateOptimizationResult(currentResult, converged,
+                evaluationCount);
         return output;
     }
 

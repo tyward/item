@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 
 /**
@@ -26,7 +27,7 @@ import edu.columbia.tjw.item.fit.calculator.FitPoint;
  */
 public interface OptimizationResult
 {
-    public MultivariatePoint getOptimum();
+    public DoubleVector getOptimum();
 
     public boolean converged();
 

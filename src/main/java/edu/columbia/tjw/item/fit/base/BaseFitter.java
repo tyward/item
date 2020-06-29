@@ -7,7 +7,6 @@ import edu.columbia.tjw.item.fit.FitResult;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.optimize.MultivariateOptimizer;
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.OptimizationResult;
 import edu.columbia.tjw.item.util.LogUtil;
 
@@ -43,8 +42,7 @@ public final class BaseFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
             //final double entropy = prev_.getEntropy();
             final BaseModelFunction<S, R, T> function = generateFunction(packed_);
             final DoubleVector beta = function.getBeta();
-            final MultivariatePoint point = new MultivariatePoint(beta);
-            final OptimizationResult result = _optimizer.optimize(function, point);
+            final OptimizationResult result = _optimizer.optimize(function, beta);
 
             if (!result.converged())
             {
@@ -68,7 +66,7 @@ public final class BaseFitter<S extends ItemStatus<S>, R extends ItemRegressor<R
                 return new FitResult<>(prev_, prev_);
             }
 
-            final ItemParameters<S, R, T> params = function.generateParams(result.getOptimum().getElements());
+            final ItemParameters<S, R, T> params = function.generateParams(result.getOptimum());
             return _calc.computeFitResult(params, prev_);
         }
         catch (final ConvergenceException e)

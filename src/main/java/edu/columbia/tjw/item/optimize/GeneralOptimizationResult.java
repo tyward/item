@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.optimize;
 
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 
@@ -27,18 +28,13 @@ import edu.columbia.tjw.item.fit.calculator.FitPoint;
  */
 public class GeneralOptimizationResult implements OptimizationResult
 {
-    private final MultivariatePoint _optimum;
     private final FitPoint _minResult;
     private final boolean _converged;
     private final int _evalCount;
 
-    public GeneralOptimizationResult(final MultivariatePoint optimum_, final FitPoint minResult_, final boolean converged_,
+    public GeneralOptimizationResult(final FitPoint minResult_, final boolean converged_,
                                      final int evalCount_)
     {
-        if (null == optimum_)
-        {
-            throw new NullPointerException("Optimum cannot be null.");
-        }
         if (null == minResult_)
         {
             throw new NullPointerException("Evaluation result cannot be null.");
@@ -51,13 +47,12 @@ public class GeneralOptimizationResult implements OptimizationResult
         _minResult = minResult_;
         _converged = converged_;
         _evalCount = evalCount_;
-        _optimum = optimum_;
     }
 
     @Override
-    public final MultivariatePoint getOptimum()
+    public final DoubleVector getOptimum()
     {
-        return _optimum;
+        return _minResult.getParameters();
     }
 
     @Override

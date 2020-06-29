@@ -26,30 +26,22 @@ import edu.columbia.tjw.item.algo.DoubleVector;
  */
 public class MultivariateGradient
 {
-    private final MultivariatePoint _gradient;
-    private final MultivariatePoint _secondDerivative;
+    private final DoubleVector _gradient;
+    private final DoubleVector _secondDerivative;
 
     public MultivariateGradient(final DoubleVector gradient_,
                                 final DoubleVector secondDerivative_)
     {
-        _gradient = new MultivariatePoint(gradient_);
-
-        if (null == secondDerivative_)
-        {
-            _secondDerivative = null;
-        }
-        else
-        {
-            _secondDerivative = new MultivariatePoint(secondDerivative_);
-        }
+        _gradient = gradient_;
+        _secondDerivative = secondDerivative_;
     }
-    
-    public MultivariatePoint getSecondDerivative()
+
+    public DoubleVector getSecondDerivative()
     {
         return _secondDerivative;
     }
 
-    public MultivariatePoint getGradient()
+    public DoubleVector getGradient()
     {
         return _gradient;
     }
