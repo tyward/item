@@ -62,16 +62,6 @@ public final class GoldenSectionOptimizer
     public OptimizationResult optimize(final UnivariateOptimizationFunction f_)
             throws ConvergenceException
     {
-        //final AdaptiveComparator<V, F> comparator = this.getComparator();
-//        MultivariatePoint scaleStep = scaleStep_;
-//        MultivariatePoint a = startingPoint_.clone();
-//        MultivariatePoint b = a.clone();
-//        MultivariatePoint c = a.clone();
-//
-//        a.add(scaleStep);
-//        scaleStep.scale(-1.0);
-//        c.add(scaleStep);
-
         final FitPoint pointA = f_.evaluate(-1.0);
         final FitPoint pointB = f_.evaluate(0.0);
         final FitPoint pointC = f_.evaluate(1.0);
@@ -93,16 +83,9 @@ public final class GoldenSectionOptimizer
         {
             throw new IllegalArgumentException("A cannot equal B.");
         }
-//        if (a_ > b_)
-//        {
-//            return optimize(f_, b_, bRes_, a_, aRes_);
-//        }
 
         //Just need to fill this in.....
-        // TODO: This should not be needed....
-        final FitPoint pointA = f_.evaluate(a_);
-        final FitPoint pointB = f_.evaluate(b_);
-        final double comparison = _comparator.compare(pointA, pointB);
+        final double comparison = _comparator.compare(aRes_, bRes_);
 
         if (comparison < 0)
         {
@@ -113,29 +96,21 @@ public final class GoldenSectionOptimizer
             return optimize(f_);
         }
 
+        //vector from a -> b.
         final double direction = (b_ - a_);
-//        final MultivariatePoint direction = a_.clone();
-//        direction.scale(-1.0);
-//        direction.add(b_);
-
-        //vector from a -> b. 
-
 
         //A is greater than B.
         final double c = b_ + direction;
         final FitPoint pointC = f_.evaluate(c);
-//        final MultivariatePoint c = b_.clone();
-//        c.add(direction);
-//        final FitPoint pointC = f_.evaluate(c.getElements());
         final Bracket b1;
 
         if (c > a_)
         {
-            b1 = new Bracket(a_, b_, c, pointA, pointB, pointC);
+            b1 = new Bracket(a_, b_, c, aRes_, bRes_, pointC);
         }
         else
         {
-            b1 = new Bracket(c, b_, a_, pointC, pointB, pointA);
+            b1 = new Bracket(c, b_, a_, pointC, bRes_, aRes_);
         }
 
         final Bracket bracket = this.bracket(f_, b1);
@@ -596,8 +571,6 @@ public final class GoldenSectionOptimizer
         private final double _a;
         private final double _b;
         private final double _c;
-        //        private final MultivariatePoint _direction;
-//        private final MultivariatePoint _negDirection;
         private final FitPoint _aRes;
         private final FitPoint _bRes;
         private final FitPoint _cRes;
@@ -609,42 +582,18 @@ public final class GoldenSectionOptimizer
             checkWellDefined(a_);
             checkWellDefined(b_);
             checkWellDefined(c_);
-//            checkOrdered(a_, b_);
-//            checkOrdered(b_, c_);
 
             if ((a_ < b_) != (b_ < c_))
             {
                 throw new IllegalArgumentException("Not in order!");
             }
 
-            // We now put these in order such that a_ < b_ < c_;
-
-//            if (a_ < c_)
-//            {
             _a = a_;
             _b = b_;
             _c = c_;
             _aRes = aRes_;
             _bRes = bRes_;
             _cRes = cRes_;
-//            }
-//            else
-//            {
-//                _c = a_;
-//                _b = b_;
-//                _a = c_;
-//                _cRes = aRes_;
-//                _bRes = bRes_;
-//                _aRes = cRes_;
-//            }
-        }
-
-        private static void checkOrdered(final double a_, final double b_)
-        {
-            if (a_ >= b_)
-            {
-                throw new IllegalArgumentException("Incorrect order: " + a_ + " >= " + b_);
-            }
         }
 
         private static void checkWellDefined(final double val_)
@@ -673,16 +622,6 @@ public final class GoldenSectionOptimizer
         {
             return _c;
         }
-
-//        public MultivariatePoint getDirection()
-//        {
-//            return _direction;
-//        }
-//
-//        public MultivariatePoint getNegDirection()
-//        {
-//            return _negDirection;
-//        }
 
         public FitPoint getaRes()
         {

@@ -20,6 +20,7 @@
 package edu.columbia.tjw.item;
 
 import edu.columbia.tjw.item.algo.DoubleVector;
+import edu.columbia.tjw.item.algo.WritableDoubleVector;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.util.EnumFamily;
 
@@ -1209,7 +1210,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     {
         private static final long serialVersionUID = 0x72174035ac14e56L;
 
-        private final double[] _paramValues;
+        //private final double[] _paramValues;
         private final int[] _toStatus;
         private final int[] _entryIndex;
         private final int[] _curveDepth;
@@ -1217,11 +1218,12 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         private final int[] _betaIndex;
         private final boolean[] _betaIsFrozen;
 
+        private final WritableDoubleVector _paramValues;
         private ItemParameters<S, R, T> _generated = null;
 
         public ItemParametersVector(final ItemParametersVector vec_)
         {
-            _paramValues = vec_._paramValues.clone();
+            _paramValues = new WritableDoubleVector(vec_.getPacked());
             _toStatus = vec_._toStatus;
             _entryIndex = vec_._entryIndex;
             _curveDepth = vec_._curveDepth;
@@ -1234,7 +1236,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         {
             final int paramCount = ItemParameters.this.getEffectiveParamCount();
 
-            _paramValues = new double[paramCount];
+            _paramValues = new WritableDoubleVector(paramCount);
             _toStatus = new int[paramCount];
             _entryIndex = new int[paramCount];
             _curveDepth = new int[paramCount];
@@ -1324,7 +1326,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         private int fillOne(final double val_, final int toStatus_, final int entryIndex_, final int curveDepth_,
                             final int curveIndex_, final int pointer_)
         {
-            _paramValues[pointer_] = val_;
+            _paramValues.setEntry(pointer_, val_);
             _toStatus[pointer_] = toStatus_;
             _entryIndex[pointer_] = entryIndex_;
             _curveDepth[pointer_] = curveDepth_;
@@ -1335,53 +1337,45 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         @Override
         public int size()
         {
-            return _paramValues.length;
+            return _paramValues.getSize();
         }
 
         @Override
         public DoubleVector getPacked()
         {
-            return DoubleVector.of(_paramValues);
+            return _paramValues.getVector();
         }
 
         @Override
         public synchronized void updatePacked(final DoubleVector newParams_)
         {
-            if (newParams_.getSize() != _paramValues.length)
-            {
-                throw new IllegalArgumentException("Params wrong length.");
-            }
-
-            for (int i = 0; i < newParams_.getSize(); i++)
-            {
-                _paramValues[i] = newParams_.getEntry(i);
-            }
-
+            _paramValues.setEntries(newParams_);
             _generated = null;
         }
 
         @Override
         public double getParameter(int index_)
         {
-            return _paramValues[index_];
+            return _paramValues.getEntry(index_);
         }
 
         @Override
         public double getEntryBeta(int index_)
         {
-            return _paramValues[_betaIndex[index_]];
+            return _paramValues.getEntry(_betaIndex[index_]);
         }
 
         @Override
         public synchronized void setParameter(int index_, double value_)
         {
-            if (_paramValues[index_] != value_)
+            if (_paramValues.getEntry(index_) == value_)
             {
-                // We only reset the generated params if a parameter actually changed.
-                _generated = null;
+                return;
             }
 
-            _paramValues[index_] = value_;
+            // We only reset the generated params if a parameter actually changed.
+            _generated = null;
+            _paramValues.setEntry(index_, value_);
         }
 
         @Override

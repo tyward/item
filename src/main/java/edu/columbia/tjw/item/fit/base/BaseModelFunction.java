@@ -69,13 +69,7 @@ public class BaseModelFunction<S extends ItemStatus<S>, R extends ItemRegressor<
     @Override
     protected void prepare(DoubleVector input_)
     {
-        final int dimension = this.dimension();
-
-        for (int i = 0; i < dimension; i++)
-        {
-            final double value = input_.getEntry(i);
-            _packed.setParameter(i, value);
-        }
+        _packed.updatePacked(input_);
     }
 
     @Override

@@ -12,10 +12,13 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     private final int[] _keepIndices;
     private final PackedParameters<S, R, T> _underlying;
 
+    private DoubleVector _packed;
+
     private ReducedParameterVector(final ReducedParameterVector<S, R, T> cloneFrom_)
     {
         _keepIndices = cloneFrom_._keepIndices;
         _underlying = cloneFrom_._underlying.clone();
+        _packed = cloneFrom_._packed;
     }
 
     public ReducedParameterVector(final boolean[] keep_, final PackedParameters<S, R, T> underlying_)
@@ -52,6 +55,8 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
                 _keepIndices[pointer++] = i;
             }
         }
+
+        _packed = null;
     }
 
     @Override
@@ -63,14 +68,20 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     @Override
     public DoubleVector getPacked()
     {
-        final double[] output = new double[this.size()];
-
-        for (int i = 0; i < this.size(); i++)
+        if (_packed == null)
         {
-            output[i] = getParameter(i);
+
+            final double[] output = new double[this.size()];
+
+            for (int i = 0; i < this.size(); i++)
+            {
+                output[i] = getParameter(i);
+            }
+
+            _packed = DoubleVector.of(output, false);
         }
 
-        return DoubleVector.of(output, false);
+        return _packed;
     }
 
     @Override
@@ -80,6 +91,8 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
         {
             throw new IllegalArgumentException("Size mismatch.");
         }
+
+        _packed = newParams_;
 
         for (int i = 0; i < newParams_.getSize(); i++)
         {
@@ -97,6 +110,7 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     public void setParameter(int index_, double value_)
     {
         _underlying.setParameter(translate(index_), value_);
+        _packed = null;
     }
 
     @Override

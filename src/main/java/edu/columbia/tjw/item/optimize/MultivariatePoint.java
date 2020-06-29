@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.algo.VectorTools;
+import edu.columbia.tjw.item.algo.WritableDoubleVector;
 import edu.columbia.tjw.item.util.HashUtil;
 
 /**
@@ -28,16 +29,14 @@ import edu.columbia.tjw.item.util.HashUtil;
  */
 public final class MultivariatePoint implements EvaluationPoint<MultivariatePoint>
 {
-    private DoubleVector _point;
-    private double[] _rawData;
+    private final WritableDoubleVector _data;
 
 
     public MultivariatePoint(final DoubleVector raw_)
     {
-        _point = raw_.collapse();
-        _rawData = null;
+        _data = new WritableDoubleVector(raw_.collapse());
 
-        if (!VectorTools.isWellDefined(_point))
+        if (!VectorTools.isWellDefined(_data.getVector()))
         {
             throw new IllegalArgumentException("Points must be well defined: " + this.toString());
         }
@@ -45,19 +44,12 @@ public final class MultivariatePoint implements EvaluationPoint<MultivariatePoin
 
     public MultivariatePoint(final MultivariatePoint copyFrom_)
     {
-        this._point = copyFrom_.getElements().collapse();
-        _rawData = null;
+        this._data = new WritableDoubleVector(copyFrom_.getElements().collapse());
     }
 
     public DoubleVector getElements()
     {
-        if (null == _point)
-        {
-            _point = DoubleVector.of(_rawData, false);
-            _rawData = null;
-        }
-
-        return _point;
+        return _data.getVector();
     }
 
     public void setElement(final int index_, final double value_)
@@ -67,18 +59,12 @@ public final class MultivariatePoint implements EvaluationPoint<MultivariatePoin
             throw new IllegalArgumentException("Points must be well defined.");
         }
 
-        if (_rawData == null)
-        {
-            _rawData = _point.copyOfUnderlying();
-        }
-
-        _point = null;
-        _rawData[index_] = value_;
+        _data.setEntry(index_, value_);
     }
 
     public double getElement(final int index_)
     {
-        return getElements().getEntry(index_);
+        return _data.getEntry(index_);
     }
 
     @Override
@@ -125,20 +111,20 @@ public final class MultivariatePoint implements EvaluationPoint<MultivariatePoin
             throw new IllegalArgumentException("Points must be well defined: " + input_);
         }
 
-        _point = VectorTools.scalarMultiply(this.getElements(), input_);
+        _data.setEntries(VectorTools.scalarMultiply(this.getElements(), input_));
     }
 
     @Override
     public void copy(MultivariatePoint point_)
     {
         checkLength(point_);
-        this._point = point_.getElements();
+        _data.setEntries(point_.getElements());
     }
 
     @Override
     public void add(MultivariatePoint point_)
     {
-        this._point = VectorTools.add(this.getElements(), point_.getElements());
+        _data.setEntries(VectorTools.add(this.getElements(), point_.getElements()).collapse());
     }
 
     @Override
@@ -158,7 +144,7 @@ public final class MultivariatePoint implements EvaluationPoint<MultivariatePoin
 
         final double invMag = 1.0 / mag;
 
-        _point = VectorTools.scalarMultiply(this.getElements(), invMag);
+        _data.setEntries(VectorTools.scalarMultiply(this.getElements(), invMag).collapse());
     }
 
     @Override
@@ -179,7 +165,7 @@ public final class MultivariatePoint implements EvaluationPoint<MultivariatePoin
 
     private void checkLength(final MultivariatePoint point_)
     {
-        if (this.getSize() != _point.getSize())
+        if (this.getSize() != point_.getSize())
         {
             throw new IllegalArgumentException("Length mismatch.");
         }
