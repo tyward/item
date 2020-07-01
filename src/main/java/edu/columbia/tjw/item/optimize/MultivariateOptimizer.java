@@ -20,6 +20,8 @@
 package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.ItemSettings;
+import edu.columbia.tjw.item.algo.DoubleVector;
+import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
 import edu.columbia.tjw.item.util.LogUtil;
@@ -29,7 +31,7 @@ import java.util.logging.Logger;
 /**
  * @author tyler
  */
-public class MultivariateOptimizer extends Optimizer<MultivariatePoint, MultivariateDifferentiableFunction>
+public class MultivariateOptimizer extends Optimizer<MultivariateDifferentiableFunction>
 {
     private static final double STD_DEV_CUTOFF = 1.0;
     private static final double LINE_SEARCH_XTOL = Math.sqrt(Math.ulp(1.0));
@@ -38,7 +40,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
     private static final Logger LOG = LogUtil.getLogger(MultivariateOptimizer.class);
 
     private final double _zTolerance;
-    private final GoldenSectionOptimizer<MultivariatePoint, MultivariateDifferentiableFunction> _optimizer;
+    private final GoldenSectionOptimizer _optimizer;
 
     public MultivariateOptimizer(final int blockSize_, int maxEvalCount_, final int loopEvalCount_,
                                  final double thetaPrecision_, final OptimizationTarget target_, ItemSettings settings_)
@@ -56,51 +58,49 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
         }
 
         _zTolerance = settings_.getZScoreCutoff();
-        _optimizer = new GoldenSectionOptimizer<>(LINE_SEARCH_XTOL, LINE_SEARCH_YTOL, blockSize_, loopEvalCount_,
+        _optimizer = new GoldenSectionOptimizer(LINE_SEARCH_XTOL, LINE_SEARCH_YTOL, blockSize_, loopEvalCount_,
                 target_, settings_);
     }
 
     @Override
-    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_,
-                                                          MultivariatePoint startingPoint_,
-                                                          MultivariatePoint direction_) throws ConvergenceException
+    public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
+                                       DoubleVector startingPoint_,
+                                       DoubleVector direction_) throws ConvergenceException
     {
         final FitPoint result = f_.evaluate(startingPoint_);
         return optimize(f_, startingPoint_, result, direction_);
     }
 
-    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_,
-                                                          MultivariatePoint startingPoint_) throws ConvergenceException
+    public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
+                                       DoubleVector startingPoint_) throws ConvergenceException
     {
         final FitPoint result = f_.evaluate(startingPoint_);
 
         // Testing code.
         final FitPoint point = f_.evaluateGradient(startingPoint_);
-        final double[] derivative = this.getComparator().getDerivative(point);
+        final DoubleVector derivative = this.getComparator().getDerivative(point);
 
         final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
-
-        final MultivariatePoint direction = new MultivariatePoint(gradient.getGradient());
-        direction.scale(-1.0);
+        final DoubleVector direction = VectorTools.scalarMultiply(gradient.getGradient(), -1.0);
 
         return optimize(f_, startingPoint_, result, direction);
     }
 
-    public OptimizationResult<MultivariatePoint> optimize(MultivariateDifferentiableFunction f_,
-                                                          MultivariatePoint startingPoint_,
-                                                          final FitPoint result_,
-                                                          MultivariatePoint direction_) throws ConvergenceException
+    public OptimizationResult optimize(MultivariateDifferentiableFunction f_,
+                                       DoubleVector startingPoint_,
+                                       final FitPoint result_,
+                                       DoubleVector direction_) throws ConvergenceException
     {
-        final MultivariatePoint direction = new MultivariatePoint(direction_);
-        final MultivariatePoint currentPoint = new MultivariatePoint(startingPoint_);
-        FitPoint currentResult = f_.evaluate(currentPoint);
+        DoubleVector direction = direction_;
+        DoubleVector currentPoint = startingPoint_;
+        FitPoint currentResult = result_;
 
         final int maxEvalCount = this.getMaxEvalCount();
         final int dimension = f_.dimension();
         int evaluationCount = 0;
 
         final FitPointAnalyzer comparator = this.getComparator();
-        final MultivariatePoint nextPoint = new MultivariatePoint(startingPoint_);
+        DoubleVector nextPoint = currentPoint;
 
         double stepMagnitude = Double.NaN;
         boolean xTolExceeded = true;
@@ -113,34 +113,34 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
             while (xTolExceeded && yTolExceeded && (evaluationCount < maxEvalCount))
             {
                 //final FitPoint fitPointCurrent = f_.evaluate(currentPoint);
-                final OptimizationResult<MultivariatePoint> result;
+                final OptimizationResult result;
 
                 if (!firstLoop)
                 {
                     final FitPoint point = f_.evaluateGradient(currentPoint);
-                    final double[] derivative = this.getComparator().getDerivative(point, fitPointPrev);
+                    final DoubleVector derivative = this.getComparator().getDerivative(point, fitPointPrev);
 
                     final MultivariateGradient gradient = new MultivariateGradient(derivative, null);
 
                     evaluationCount += (2 * dimension);
 
-                    final MultivariatePoint trialPoint;
+                    final DoubleVector trialPoint;
                     final FitPoint trialRes;
 
-                    final MultivariatePoint pointA = new MultivariatePoint(gradient.getGradient());
-                    pointA.scale(-1.0);
+                    final DoubleVector pointA = VectorTools.scalarMultiply(gradient.getGradient(), -1.0);
+                    //pointA.scale(-1.0);
 
                     if (null == gradient.getSecondDerivative())
                     {
-                        trialPoint = pointA;
-                        trialRes = f_.evaluate(trialPoint);
+                        //trialPoint = pointA;
+                        //trialRes = f_.evaluate(trialPoint);
 
                         //We need to control the magnitude of the root bracketing....
                         //We want this small enough that we are searching in a small interval, but not so small that
                         //we need to spend a lot of time to expand the interval. Err on the side of smallness, since
                         // expanding
                         //and contracting the interval are about the same cost and typically we won't need much.
-                        final double directionMagnitude = trialPoint.getMagnitude();
+                        final double directionMagnitude = VectorTools.magnitude(pointA);
                         final double desiredMagnitude = stepMagnitude * SCALE_MULTIPLE;
                         final double scale = desiredMagnitude / directionMagnitude;
 
@@ -151,75 +151,83 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                         }
 
                         //LOG.info("Rescaled direction: " + scale);
-                        trialPoint.scale(scale);
-                        trialPoint.add(currentPoint);
+                        trialPoint = VectorTools.multiplyAccumulate(currentPoint, pointA, scale);
+                        //trialPoint.add(currentPoint);
                     }
                     else
                     {
-                        final MultivariatePoint pointB = new MultivariatePoint(gradient.getSecondDerivative());
-
-                        for (int i = 0; i < dimension; i++)
-                        {
-                            final double aVal = pointA.getElement(i);
-                            final double bVal = pointB.getElement(i);
-
-                            final double presumedZero = -1.0 * (aVal / bVal);
-
-                            pointB.setElement(i, presumedZero);
-                        }
-
-                        pointA.scale(-1.0);
-
-                        pointA.add(currentPoint);
-                        pointB.add(currentPoint);
-
-                        final FitPoint fitPointA = f_.evaluate(pointA);
-                        final FitPoint fitPointB = f_.evaluate(pointB);
-
-                        //Only take it if it is clearly better.....
-                        final FitPointAnalyzer.FitPointComparison comparison = comparator
-                                .generateComparision(fitPointA, fitPointB);
-
-                        if (comparison.getZScore() <= -comparator.getSigmaTarget())
-                        {
-                            //The straight derivative point is better....
-                            trialPoint = pointA;
-                            trialRes = fitPointA;
-                        }
-                        else
-                        {
-                            final FitPointAnalyzer.FitPointComparison comp2 = comparator.generateComparision(
-                                    currentResult, fitPointB);
-
-                            if (comp2.getZScore() <= -comparator.getSigmaTarget())
-                            {
-                                //The second derivative point is no better than the current point, use the standard
-                                // derivative.
-                                trialPoint = pointA;
-                                trialRes = fitPointA;
-                            }
-                            else
-                            {
-                                trialPoint = pointB;
-                                trialRes = fitPointB;
-                            }
-                        }
+                        throw new UnsupportedOperationException("Not  yet implemented.");
+//                        final DoubleVector pointB = gradient.getSecondDerivative();
+//                        //final DoubleVector
+//
+//
+//                        for (int i = 0; i < dimension; i++)
+//                        {
+//                            final double aVal = pointA.getEntry(i);
+//                            final double bVal = pointB.getEntry(i);
+//
+//                            final double presumedZero = -1.0 * (aVal / bVal);
+//
+//                            pointB.setElement(i, presumedZero);
+//                        }
+//
+//                        pointA.scale(-1.0);
+//
+//                        pointA.add(currentPoint);
+//                        pointB.add(currentPoint);
+//
+//                        final FitPoint fitPointA = f_.evaluate(pointA.getElements());
+//                        final FitPoint fitPointB = f_.evaluate(pointB.getElements());
+//
+//                        //Only take it if it is clearly better.....
+//                        final FitPointAnalyzer.FitPointComparison comparison = comparator
+//                                .generateComparision(fitPointA, fitPointB);
+//
+//                        if (comparison.getZScore() <= -comparator.getSigmaTarget())
+//                        {
+//                            //The straight derivative point is better....
+//                            trialPoint = pointA;
+//                            trialRes = fitPointA;
+//                        }
+//                        else
+//                        {
+//                            final FitPointAnalyzer.FitPointComparison comp2 = comparator.generateComparision(
+//                                    currentResult, fitPointB);
+//
+//                            if (comp2.getZScore() <= -comparator.getSigmaTarget())
+//                            {
+//                                //The second derivative point is no better than the current point, use the standard
+//                                // derivative.
+//                                trialPoint = pointA;
+//                                trialRes = fitPointA;
+//                            }
+//                            else
+//                            {
+//                                trialPoint = pointB;
+//                                trialRes = fitPointB;
+//                            }
+//                        }
                     }
 
+                    final DoubleVector dir = VectorTools.subtract(trialPoint, currentPoint);
+                    final UnivariateOptimizationFunction func = new UnivariateOptimizationFunction(f_, currentPoint,
+                            dir);
+
                     result = _optimizer
-                            .optimize(f_, currentPoint, currentResult, trialPoint, f_.evaluate(trialPoint));
+                            .optimize(func, 0.0, currentResult,
+                                    1.0,
+                                    f_.evaluate(trialPoint));
                 }
                 else
                 {
                     firstLoop = false;
-                    result = _optimizer.optimize(f_, currentPoint, direction);
+                    result = _optimizer.optimize(new UnivariateOptimizationFunction(f_, currentPoint, direction));
                 }
 
                 evaluationCount += result.evaluationCount();
 
-                nextPoint.copy(result.getOptimum());
+                nextPoint = result.getOptimum().collapse();
                 final FitPoint nextResult = result.minResult();
-                //final FitPoint fitPointNext = f_.evaluate(nextPoint);
 
                 final FitPointAnalyzer.FitPointComparison comparison = comparator.generateComparision(
                         currentResult, nextResult);
@@ -231,7 +239,7 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 {
                     LOG.info("Unable to make progress.");
                     currentResult = nextResult;
-                    currentPoint.copy(nextPoint);
+                    currentPoint = nextPoint;
                     break;
                 }
 
@@ -241,8 +249,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
                 //yTolExceeded = !this.checkYTolerance(currentResult, nextResult);
                 xTolExceeded = !this.checkXTolerance(currentPoint, nextPoint);
 
-                stepMagnitude = currentPoint.distance(nextPoint);
-                currentPoint.copy(nextPoint);
+                stepMagnitude = VectorTools.distance(currentPoint, nextPoint);
+                currentPoint = nextPoint;
                 fitPointPrev = currentResult;
                 currentResult = nextResult;
             }
@@ -254,8 +262,8 @@ public class MultivariateOptimizer extends Optimizer<MultivariatePoint, Multivar
 
         //Did we converge, or did we run out of iterations. 
         final boolean converged = (!xTolExceeded || !yTolExceeded);
-        final MultivariateOptimizationResult output = new MultivariateOptimizationResult(currentPoint, currentResult,
-                converged, evaluationCount);
+        final MultivariateOptimizationResult output = new MultivariateOptimizationResult(currentResult, converged,
+                evaluationCount);
         return output;
     }
 

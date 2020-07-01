@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.DoubleVector;
 
 import java.io.Serializable;
 
@@ -13,9 +14,9 @@ public interface PackedParameters<S extends ItemStatus<S>, R extends ItemRegress
 
     public int size();
 
-    public double[] getPacked();
+    public DoubleVector getPacked();
 
-    public void updatePacked(final double[] newParams_);
+    public void updatePacked(final DoubleVector newParams_);
 
     public double getParameter(final int index_);
 

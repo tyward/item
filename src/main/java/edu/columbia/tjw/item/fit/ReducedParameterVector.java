@@ -4,6 +4,7 @@ import edu.columbia.tjw.item.ItemCurveType;
 import edu.columbia.tjw.item.ItemParameters;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.ItemStatus;
+import edu.columbia.tjw.item.algo.DoubleVector;
 
 public final class ReducedParameterVector<S extends ItemStatus<S>, R extends ItemRegressor<R>,
         T extends ItemCurveType<T>> implements PackedParameters<S, R, T>
@@ -11,10 +12,13 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     private final int[] _keepIndices;
     private final PackedParameters<S, R, T> _underlying;
 
+    private DoubleVector _packed;
+
     private ReducedParameterVector(final ReducedParameterVector<S, R, T> cloneFrom_)
     {
         _keepIndices = cloneFrom_._keepIndices;
         _underlying = cloneFrom_._underlying.clone();
+        _packed = cloneFrom_._packed;
     }
 
     public ReducedParameterVector(final boolean[] keep_, final PackedParameters<S, R, T> underlying_)
@@ -51,6 +55,8 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
                 _keepIndices[pointer++] = i;
             }
         }
+
+        _packed = null;
     }
 
     @Override
@@ -60,29 +66,37 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     }
 
     @Override
-    public double[] getPacked()
+    public DoubleVector getPacked()
     {
-        final double[] output = new double[this.size()];
-
-        for (int i = 0; i < this.size(); i++)
+        if (_packed == null)
         {
-            output[i] = getParameter(i);
+
+            final double[] output = new double[this.size()];
+
+            for (int i = 0; i < this.size(); i++)
+            {
+                output[i] = getParameter(i);
+            }
+
+            _packed = DoubleVector.of(output, false);
         }
 
-        return output;
+        return _packed;
     }
 
     @Override
-    public void updatePacked(double[] newParams_)
+    public void updatePacked(final DoubleVector newParams_)
     {
-        if (newParams_.length != this.size())
+        if (newParams_.getSize() != this.size())
         {
             throw new IllegalArgumentException("Size mismatch.");
         }
 
-        for (int i = 0; i < newParams_.length; i++)
+        _packed = newParams_;
+
+        for (int i = 0; i < newParams_.getSize(); i++)
         {
-            this.setParameter(i, newParams_[i]);
+            this.setParameter(i, newParams_.getEntry(i));
         }
     }
 
@@ -96,6 +110,7 @@ public final class ReducedParameterVector<S extends ItemStatus<S>, R extends Ite
     public void setParameter(int index_, double value_)
     {
         _underlying.setParameter(translate(index_), value_);
+        _packed = null;
     }
 
     @Override

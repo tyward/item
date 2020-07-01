@@ -20,13 +20,13 @@
 package edu.columbia.tjw.item.fit.param;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.fit.ParamFittingGrid;
 import edu.columbia.tjw.item.fit.calculator.FitPointGenerator;
 import edu.columbia.tjw.item.fit.calculator.ItemFitPoint;
 import edu.columbia.tjw.item.optimize.MultivariateDifferentiableFunction;
-import edu.columbia.tjw.item.optimize.MultivariatePoint;
 import edu.columbia.tjw.item.optimize.ThreadedMultivariateFunction;
 
 /**
@@ -56,28 +56,21 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
         _packed = packed_;
     }
 
-    public ItemFitPoint<S, R, T> evaluate(final MultivariatePoint input_)
+    public ItemFitPoint<S, R, T> evaluate(final DoubleVector input_)
     {
         prepare(input_);
         return _generator.generatePoint(_packed);
     }
 
-    public ItemFitPoint<S, R, T> evaluateGradient(final MultivariatePoint input_)
+    public ItemFitPoint<S, R, T> evaluateGradient(final DoubleVector input_)
     {
         prepare(input_);
         return _generator.generateGradient(_packed);
     }
 
-    public double[] getBeta()
+    public DoubleVector getBeta()
     {
         return _packed.getPacked();
-    }
-
-    public ItemParameters<S, R, T> generateParams(final double[] beta_)
-    {
-        _packed.updatePacked(beta_);
-        final ItemParameters<S, R, T> p2 = _packed.generateParams();
-        return p2;
     }
 
     @Override
@@ -93,19 +86,18 @@ public class LogisticModelFunction<S extends ItemStatus<S>, R extends ItemRegres
     }
 
     @Override
-    protected void prepare(MultivariatePoint input_)
+    protected void prepare(DoubleVector input_)
     {
         final int dimension = this.dimension();
-        boolean changed = false;
 
         for (int i = 0; i < dimension; i++)
         {
-            final double value = input_.getElement(i);
+            final double value = input_.getEntry(i);
 
             if (value != _packed.getParameter(i))
             {
-                _packed.setParameter(i, value);
-                changed = true;
+                _packed.updatePacked(input_);
+                break;
             }
         }
     }

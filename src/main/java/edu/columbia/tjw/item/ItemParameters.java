@@ -19,6 +19,8 @@
  */
 package edu.columbia.tjw.item;
 
+import edu.columbia.tjw.item.algo.DoubleVector;
+import edu.columbia.tjw.item.algo.WritableDoubleVector;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.util.EnumFamily;
 
@@ -67,13 +69,13 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     private final EnumFamily<T> _typeFamily;
     private final EnumFamily<R> _regFamily;
 
-    public ItemParameters(final S status_, final R intercept_, final EnumFamily<T> typeFamily_)
+    public ItemParameters(final S status_, final EnumFamily<R> regFamily_, final EnumFamily<T> typeFamily_)
     {
         if (null == status_)
         {
             throw new NullPointerException("Status cannot be null.");
         }
-        if (null == intercept_)
+        if (null == regFamily_)
         {
             throw new NullPointerException("Intercept cannot be null.");
         }
@@ -85,8 +87,8 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _status = status_;
 
         _betas = new double[status_.getReachableCount()][1];
+        _uniqueFields = Collections.unmodifiableList(Collections.emptyList());
 
-        _uniqueFields = Collections.unmodifiableList(Collections.singletonList(intercept_));
         _trans = Collections.unmodifiableList(Collections.singletonList(null));
         _filters = Collections.unmodifiableList(Collections.emptyList());
 
@@ -94,7 +96,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _uniqueBeta[INTERCEPT_INDEX] = -1;
 
         _fieldOffsets = new int[1][1];
-        _fieldOffsets[INTERCEPT_INDEX][0] = 0;
+        _fieldOffsets[INTERCEPT_INDEX][0] = -1;
 
         _transOffsets = new int[1][1];
         _transOffsets[INTERCEPT_INDEX][0] = 0;
@@ -102,7 +104,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         _selfIndex = _status.getReachable().indexOf(_status);
         _effectiveParamCount = calculateEffectiveParamCount();
 
-        _regFamily = intercept_.getFamily();
+        _regFamily = regFamily_;
         _typeFamily = typeFamily_;
     }
 
@@ -333,8 +335,14 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         final List<ItemCurve<T>> newTrans = new ArrayList<>();
         newTrans.add(null);
 
+        _fieldOffsets[INTERCEPT_INDEX] = new int[1];
+        _transOffsets[INTERCEPT_INDEX] = new int[1];
+        _fieldOffsets[INTERCEPT_INDEX][0] = -1;
+        _transOffsets[INTERCEPT_INDEX][0] = 0;
+        _uniqueBeta[INTERCEPT_INDEX] = -1;
+
         //First, pull in all the old entries.
-        for (int i = 0; i < baseEntryCount; i++)
+        for (int i = INTERCEPT_INDEX + 1; i < baseEntryCount; i++)
         {
             final int depth = base_.getEntryDepth(i);
             _fieldOffsets[i] = new int[depth];
@@ -456,9 +464,16 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         final SortedSet<R> newFields = new TreeSet<>();
         final Set<ItemCurve<T>> newTrans = new HashSet<>();
 
-        int pointer = 0;
+        _fieldOffsets[INTERCEPT_INDEX] = new int[1];
+        _transOffsets[INTERCEPT_INDEX] = new int[1];
+        _fieldOffsets[INTERCEPT_INDEX][0] = -1;
+        _transOffsets[INTERCEPT_INDEX][0] = 0;
+        _uniqueBeta[INTERCEPT_INDEX] = -1;
+        newTrans.add(null);
 
-        for (int i = 0; i < startSize; i++)
+        int pointer = INTERCEPT_INDEX + 1;
+
+        for (int i = INTERCEPT_INDEX + 1; i < startSize; i++)
         {
             if (drop[i])
             {
@@ -491,9 +506,14 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         this._trans = Collections.unmodifiableList(new ArrayList<>(newTrans));
         this._uniqueFields = Collections.unmodifiableList(new ArrayList<>(newFields));
 
-        pointer = 0;
+        for (int i = 0; i < _betas.length; i++)
+        {
+            _betas[i][INTERCEPT_INDEX] = base_._betas[i][INTERCEPT_INDEX];
+        }
 
-        for (int i = 0; i < startSize; i++)
+        pointer = INTERCEPT_INDEX + 1;
+
+        for (int i = INTERCEPT_INDEX + 1; i < startSize; i++)
         {
             if (drop[i])
             {
@@ -618,7 +638,18 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         return this._status.getReachable().get(uniqueBeta);
     }
 
-    public int getEntryRegressorOffset(final int entryIndex_, final int entryDepth_)
+    public double getEntryRegressorValue(final int entryIndex_, final int entryDepth_, final double[] x_)
+    {
+        if (entryIndex_ == INTERCEPT_INDEX)
+        {
+            return 1.0;
+        }
+
+        final int offset = getEntryRegressorOffset(entryIndex_, entryDepth_);
+        return x_[offset];
+    }
+
+    private int getEntryRegressorOffset(final int entryIndex_, final int entryDepth_)
     {
         return _fieldOffsets[entryIndex_][entryDepth_];
     }
@@ -626,8 +657,42 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     public R getEntryRegressor(final int entryIndex_, final int entryDepth_)
     {
         final int offset = getEntryRegressorOffset(entryIndex_, entryDepth_);
+
+        if (offset < 0)
+        {
+            // This is the case for the intercept, it has no corresponding regressor.
+            return null;
+        }
+
         return _uniqueFields.get(offset);
     }
+
+    /**
+     * returns the set of regressors that do not have curves.
+     *
+     * @return
+     */
+    public SortedSet<R> getFlagSet()
+    {
+        final SortedSet<R> output = new TreeSet<>();
+
+        for (int i = INTERCEPT_INDEX + 1; i < this.getEntryCount(); i++)
+        {
+            if (this.getEntryDepth(i) != 1)
+            {
+                continue;
+            }
+            if (this.getEntryCurve(i, 0) != null)
+            {
+                continue;
+            }
+
+            output.add(this.getEntryRegressor(i, 0));
+        }
+
+        return Collections.unmodifiableSortedSet(output);
+    }
+
 
     public int getEntryCurveOffset(final int entryIndex_, final int entryDepth_)
     {
@@ -995,10 +1060,18 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
 
             for (int w = 0; w < this.getEntryDepth(i); w++)
             {
-                final R reg = this.getEntryRegressor(i, w);
+
                 final ItemCurve<T> curve = this.getEntryCurve(i, w);
 
-                builder.append("\t\t\t[" + i + ", " + w + "]:" + reg + ":" + curve + "\n");
+                if (i == INTERCEPT_INDEX)
+                {
+                    builder.append("\t\t\t[" + i + ", " + w + "]:INTERCEPT:" + curve + "\n");
+                }
+                else
+                {
+                    final R reg = this.getEntryRegressor(i, w);
+                    builder.append("\t\t\t[" + i + ", " + w + "]:" + reg + ":" + curve + "\n");
+                }
             }
 
             builder.append("\t\t\t Entry Beta Restricted: " + _uniqueBeta[i] + "\n");
@@ -1137,7 +1210,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
     {
         private static final long serialVersionUID = 0x72174035ac14e56L;
 
-        private final double[] _paramValues;
+        //private final double[] _paramValues;
         private final int[] _toStatus;
         private final int[] _entryIndex;
         private final int[] _curveDepth;
@@ -1145,11 +1218,12 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         private final int[] _betaIndex;
         private final boolean[] _betaIsFrozen;
 
+        private final WritableDoubleVector _paramValues;
         private ItemParameters<S, R, T> _generated = null;
 
         public ItemParametersVector(final ItemParametersVector vec_)
         {
-            _paramValues = vec_._paramValues.clone();
+            _paramValues = new WritableDoubleVector(vec_.getPacked());
             _toStatus = vec_._toStatus;
             _entryIndex = vec_._entryIndex;
             _curveDepth = vec_._curveDepth;
@@ -1162,7 +1236,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         {
             final int paramCount = ItemParameters.this.getEffectiveParamCount();
 
-            _paramValues = new double[paramCount];
+            _paramValues = new WritableDoubleVector(paramCount);
             _toStatus = new int[paramCount];
             _entryIndex = new int[paramCount];
             _curveDepth = new int[paramCount];
@@ -1252,7 +1326,7 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         private int fillOne(final double val_, final int toStatus_, final int entryIndex_, final int curveDepth_,
                             final int curveIndex_, final int pointer_)
         {
-            _paramValues[pointer_] = val_;
+            _paramValues.setEntry(pointer_, val_);
             _toStatus[pointer_] = toStatus_;
             _entryIndex[pointer_] = entryIndex_;
             _curveDepth[pointer_] = curveDepth_;
@@ -1263,49 +1337,45 @@ public final class ItemParameters<S extends ItemStatus<S>, R extends ItemRegress
         @Override
         public int size()
         {
-            return _paramValues.length;
+            return _paramValues.getSize();
         }
 
         @Override
-        public double[] getPacked()
+        public DoubleVector getPacked()
         {
-            return _paramValues.clone();
+            return _paramValues.getVector();
         }
 
         @Override
-        public synchronized void updatePacked(double[] newParams_)
+        public synchronized void updatePacked(final DoubleVector newParams_)
         {
-            if (newParams_.length != _paramValues.length)
-            {
-                throw new IllegalArgumentException("Params wrong length.");
-            }
-
-            System.arraycopy(newParams_, 0, _paramValues, 0, _paramValues.length);
+            _paramValues.setEntries(newParams_);
             _generated = null;
         }
 
         @Override
         public double getParameter(int index_)
         {
-            return _paramValues[index_];
+            return _paramValues.getEntry(index_);
         }
 
         @Override
         public double getEntryBeta(int index_)
         {
-            return _paramValues[_betaIndex[index_]];
+            return _paramValues.getEntry(_betaIndex[index_]);
         }
 
         @Override
         public synchronized void setParameter(int index_, double value_)
         {
-            if (_paramValues[index_] != value_)
+            if (_paramValues.getEntry(index_) == value_)
             {
-                // We only reset the generated params if a parameter actually changed.
-                _generated = null;
+                return;
             }
 
-            _paramValues[index_] = value_;
+            // We only reset the generated params if a parameter actually changed.
+            _generated = null;
+            _paramValues.setEntry(index_, value_);
         }
 
         @Override

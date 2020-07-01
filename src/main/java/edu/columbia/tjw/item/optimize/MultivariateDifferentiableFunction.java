@@ -19,12 +19,10 @@
  */
 package edu.columbia.tjw.item.optimize;
 
-import edu.columbia.tjw.item.fit.calculator.FitPoint;
-
 /**
  * @author tyler
  */
-public interface MultivariateDifferentiableFunction extends MultivariateFunction
+public interface MultivariateDifferentiableFunction extends MultivariateOptimizationFunction
 {
 
 }

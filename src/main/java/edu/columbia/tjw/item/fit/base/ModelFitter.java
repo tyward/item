@@ -1,6 +1,7 @@
 package edu.columbia.tjw.item.fit.base;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.data.ItemFittingGrid;
 import edu.columbia.tjw.item.fit.EntropyCalculator;
 import edu.columbia.tjw.item.fit.FitResult;
@@ -11,7 +12,10 @@ import edu.columbia.tjw.item.fit.curve.CurveFitter;
 import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.util.LogUtil;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Set;
+import java.util.SortedSet;
 import java.util.logging.Logger;
 
 public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<R>, T extends ItemCurveType<T>>
@@ -90,22 +94,7 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
                                                   final Collection<R> coefficients_)
     {
         ItemParameters<S, R, T> params = fitResult_.getParams();
-        final SortedSet<R> flagSet = new TreeSet<>();
-
-        for (int i = 0; i < params.getEntryCount(); i++)
-        {
-            if (params.getEntryDepth(i) != 1)
-            {
-                continue;
-            }
-            if (params.getEntryCurve(i, 0) != null)
-            {
-                continue;
-            }
-
-            flagSet.add(params.getEntryRegressor(i, 0));
-        }
-
+        final SortedSet<R> flagSet = params.getFlagSet();
         final int startingSize = params.getEntryCount();
 
         for (final R field : coefficients_)
@@ -132,7 +121,7 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     {
         FitResult<S, R, T> current = fitResult_;
 
-        double[] gradient = null;
+        DoubleVector gradient = null;
 
         for (int i = 0; i < current.getParams().getEntryCount(); i++)
         {
@@ -162,8 +151,8 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
 
                     final int betaIndex = basePacked.findBetaIndex(statusIndex, i);
                     final int interceptIndex = basePacked.findBetaIndex(statusIndex, base.getInterceptIndex());
-                    final double gradBeta = gradient[betaIndex];
-                    final double gradIntercept = gradient[interceptIndex];
+                    final double gradBeta = gradient.getEntry(betaIndex);
+                    final double gradIntercept = gradient.getEntry(interceptIndex);
 
                     // We think that beta * gradBeta / gradIntercept  is an adjustment to bring the intercept into
                     // alignment with the zero beta case.

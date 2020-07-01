@@ -3,11 +3,11 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>edu.columbia.tjw</groupId>
     <artifactId>item</artifactId>
-    <version>1.4.0</version>
+    <version>1.4.1</version>
     <packaging>jar</packaging>
     <name>ITEM Model</name>
     <description>A statistical model for automatic fitting against large data sets.</description>
-    <url>http://arxiv.org/submit/1105771</url>
+    <url>https://arxiv.org/abs/1409.6075</url>
     <scm>
         <connection>scm:git:git@github.com:tyward/item.git</connection>
         <developerConnection>scm:git:git@github.com:tyward/item.git</developerConnection>
@@ -37,7 +37,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -50,7 +50,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.1.1</version>
+                <version>3.2.0</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -71,7 +71,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>RELEASE</version>
+            <version>5.6.2</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

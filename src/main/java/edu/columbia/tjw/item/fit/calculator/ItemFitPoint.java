@@ -1,6 +1,7 @@
 package edu.columbia.tjw.item.fit.calculator;
 
 import edu.columbia.tjw.item.*;
+import edu.columbia.tjw.item.algo.DoubleVector;
 import edu.columbia.tjw.item.fit.PackedParameters;
 import edu.columbia.tjw.item.util.thread.GeneralTask;
 import edu.columbia.tjw.item.util.thread.GeneralThreadPool;
@@ -22,7 +23,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     private final BlockResultCompound[] _compound;
     private int[] _nextBlock;
 
-    private double[] _params;
+    private DoubleVector _params;
 
     private BlockResult _prevBlockResult = null;
 
@@ -66,7 +67,7 @@ public final class ItemFitPoint<S extends ItemStatus<S>, R extends ItemRegressor
     }
 
     @Override
-    public double[] getParameters()
+    public DoubleVector getParameters()
     {
         return _params;
     }
