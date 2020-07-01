@@ -1,10 +1,13 @@
 package edu.columbia.tjw.item.algo;
 
+import java.io.Serializable;
+
 /**
  * This is basically a union between a DoubleVector and a double[], allowing for efficient updates.
  */
-public final class WritableDoubleVector
+public final class WritableDoubleVector implements Serializable
 {
+    private static final long serialVersionUID = 0x176d0792e6484c84L;
     private final int _length;
     private double[] _data;
     private DoubleVector _vector;
