@@ -21,6 +21,7 @@ package edu.columbia.tjw.item.optimize;
 
 import edu.columbia.tjw.item.ItemSettings;
 import edu.columbia.tjw.item.algo.DoubleVector;
+import edu.columbia.tjw.item.algo.VectorTools;
 import edu.columbia.tjw.item.fit.calculator.BlockCalculationType;
 import edu.columbia.tjw.item.fit.calculator.FitPoint;
 import edu.columbia.tjw.item.fit.calculator.FitPointAnalyzer;
@@ -130,16 +131,16 @@ public abstract class Optimizer<F extends MultivariateOptimizationFunction>
         return output;
     }
 
-    protected boolean checkXTolerance(final MultivariatePoint a_, final MultivariatePoint b_)
+    protected boolean checkXTolerance(final DoubleVector a_, final DoubleVector b_)
     {
-        final double scale = SQRT_EPSILON * 0.5 * (a_.getMagnitude() + b_.getMagnitude());
+        final double scale = SQRT_EPSILON * 0.5 * (VectorTools.magnitude(a_) + VectorTools.magnitude(b_));
         return checkXTolerance(a_, b_, scale);
 
     }
 
-    protected boolean checkXTolerance(final MultivariatePoint a_, final MultivariatePoint b_, final double target_)
+    protected boolean checkXTolerance(final DoubleVector a_, final DoubleVector b_, final double target_)
     {
-        final double distance = a_.distance(b_);
+        final double distance = VectorTools.distance(a_, b_);
         return distance < target_;
     }
 

@@ -49,7 +49,7 @@ public final class VectorTools
     }
 
     /**
-     * Calculates a_ + scalar_ * b_
+     * Calculates a_ + (scalar_ * b_)
      *
      * @param a_
      * @param b_

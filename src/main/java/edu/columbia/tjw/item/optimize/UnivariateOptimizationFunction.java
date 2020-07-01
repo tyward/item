@@ -16,8 +16,8 @@ public final class UnivariateOptimizationFunction
                                           final DoubleVector direction_)
     {
         _base = base_;
-        _a = a_;
-        _direction = direction_;
+        _a = a_.collapse();
+        _direction = direction_.collapse();
 
         // Anything smaller than about sqrt(epsilon) times this value can't really be resolved.
         _scale = VectorTools.magnitude(a_) + VectorTools.magnitude(direction_);
