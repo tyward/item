@@ -36,7 +36,7 @@ public final class ModelFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         _settings = settings_;
         _starting = starting_;
 
-        final EntropyCalculator<S, R, T> calc = new EntropyCalculator<>(grid_);
+        final EntropyCalculator<S, R, T> calc = new EntropyCalculator<>(grid_, settings_);
         _base = new BaseFitter<>(calc, _settings);
         _fitter = new ParamFitter<>(_base);
         _curveFitter = new CurveFitter<>(_settings, _base);
