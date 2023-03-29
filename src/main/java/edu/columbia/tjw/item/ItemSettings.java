@@ -22,6 +22,7 @@ package edu.columbia.tjw.item;
 import edu.columbia.tjw.item.optimize.OptimizationTarget;
 import edu.columbia.tjw.item.util.random.PrngType;
 import edu.columbia.tjw.item.util.random.RandomTool;
+import org.apache.commons.math3.random.RandomGenerator;
 
 import java.io.Serializable;
 import java.util.Random;
@@ -56,7 +57,7 @@ public final class ItemSettings implements Serializable
 
     private static final ItemSettings DEFAULT = new ItemSettings();
 
-    private final Random _rand;
+    private final RandomGenerator _rand;
     private final boolean _randomShuffle;
     private final boolean _useThreading;
     private final boolean _approximateDerivatives;
@@ -91,7 +92,7 @@ public final class ItemSettings implements Serializable
 
     public ItemSettings()
     {
-        _rand = RandomTool.getRandom();
+        _rand = RandomTool.getRandomGenerator();
         _randomShuffle = true;
         _useThreading = DEFAULT_USE_THREADING;
         _approximateDerivatives = false;
@@ -201,7 +202,7 @@ public final class ItemSettings implements Serializable
         return _randomShuffle;
     }
 
-    public Random getRandom()
+    public RandomGenerator getRandom()
     {
         return _rand;
     }
@@ -243,7 +244,7 @@ public final class ItemSettings implements Serializable
 
     public static final class Builder
     {
-        private Random _rand;
+        private RandomGenerator _rand;
         private boolean _randomShuffle;
         private boolean _useThreading;
         private boolean _approximateDerivatives;
@@ -297,19 +298,19 @@ public final class ItemSettings implements Serializable
             return new ItemSettings(this);
         }
 
-        public Random getRand()
+        public RandomGenerator getRand()
         {
             return _rand;
         }
 
         public Builder setRand(final long seed_)
         {
-            return this.setRand(RandomTool.getRandom(PrngType.SECURE, seed_));
+            return this.setRand(RandomTool.getRandomGenerator(PrngType.SECURE, seed_));
         }
 
-        public Builder setRand(Random _rand)
+        public Builder setRand(RandomGenerator rand_)
         {
-            this._rand = _rand;
+            this._rand = rand_;
             return this;
         }
 

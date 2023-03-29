@@ -30,6 +30,7 @@ import org.apache.commons.math3.optim.nonlinear.scalar.MultiStartMultivariateOpt
 import org.apache.commons.math3.optim.nonlinear.scalar.MultivariateOptimizer;
 import org.apache.commons.math3.optim.nonlinear.scalar.ObjectiveFunction;
 import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.PowellOptimizer;
+import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.random.RandomVectorGenerator;
 
 import java.util.Arrays;
@@ -121,10 +122,10 @@ public class RawCurveCalibrator<S extends ItemStatus<S>, R extends ItemRegressor
 
     private static final class VectorGenerator implements RandomVectorGenerator
     {
-        private final Random _rand;
+        private final RandomGenerator _rand;
         private final double[] _base;
 
-        public VectorGenerator(final double[] base_, final Random rand_)
+        public VectorGenerator(final double[] base_, final RandomGenerator rand_)
         {
             _base = base_.clone();
             _rand = rand_;

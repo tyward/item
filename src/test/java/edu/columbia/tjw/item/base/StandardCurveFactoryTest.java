@@ -5,6 +5,7 @@ import edu.columbia.tjw.item.ItemCurveFactory;
 import edu.columbia.tjw.item.util.MathTools;
 import edu.columbia.tjw.item.util.random.PrngType;
 import edu.columbia.tjw.item.util.random.RandomTool;
+import org.apache.commons.math3.random.RandomGenerator;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -16,7 +17,7 @@ class StandardCurveFactoryTest
 
     private double testCurve(final StandardCurveType type_,
                              final ItemCurveFactory<SimpleRegressor, StandardCurveType> factory_,
-                             final Random rand_)
+                             final RandomGenerator rand_)
     {
         final double center = rand_.nextDouble();
         final double slope = 0.1 + rand_.nextDouble();
@@ -70,7 +71,7 @@ class StandardCurveFactoryTest
 
     private double testSecondDerivativeIsolated(final StandardCurveType type_,
                                                 final ItemCurveFactory<SimpleRegressor, StandardCurveType> factory_,
-                                                final Random rand_, int index_)
+                                                final RandomGenerator rand_, int index_)
     {
         final double center = rand_.nextDouble();
         final double slope = 0.1 + rand_.nextDouble();
@@ -113,7 +114,7 @@ class StandardCurveFactoryTest
 
         final byte[] seed = RandomTool.getStrong(32);
         System.out.println("Seed: " + Arrays.toString(seed));
-        final Random rand = RandomTool.getRandom(PrngType.SECURE, seed);
+        final RandomGenerator rand = RandomTool.getRandomGenerator(PrngType.SECURE, seed);
 
         double maxSkew = 0.0;
 
@@ -138,7 +139,7 @@ class StandardCurveFactoryTest
 
         final byte[] seed = RandomTool.getStrong(32);
         System.out.println("Seed: " + Arrays.toString(seed));
-        final Random rand = RandomTool.getRandom(PrngType.SECURE, seed);
+        final RandomGenerator rand = RandomTool.getRandomGenerator(PrngType.SECURE, seed);
 
         double maxSkew = 0.0;
 

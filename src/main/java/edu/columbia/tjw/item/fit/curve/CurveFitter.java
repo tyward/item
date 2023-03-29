@@ -28,6 +28,7 @@ import edu.columbia.tjw.item.fit.param.ParamFitter;
 import edu.columbia.tjw.item.optimize.ConvergenceException;
 import edu.columbia.tjw.item.util.LogUtil;
 import edu.columbia.tjw.item.util.MathFunctions;
+import edu.columbia.tjw.item.util.random.RandomTool;
 import org.apache.commons.math3.util.Pair;
 
 import java.util.*;
@@ -91,7 +92,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
         }
 
         //Go through these in a random order.
-        Collections.shuffle(curveEntries, _settings.getRandom());
+        RandomTool.shuffle(curveEntries, _settings.getRandom());
         final int minCurves = _settings.getCalibrateSize();
 
         //So long as average improvement is above the bound, we will continue...
@@ -343,7 +344,7 @@ public final class CurveFitter<S extends ItemStatus<S>, R extends ItemRegressor<
     {
         final ItemParameters<S, R, T> base = chain_.getBestParameters();
         final List<Pair<R, ItemCurve<T>>> allRegs = extractRegs(base, toStatus_);
-        Collections.shuffle(allRegs, _settings.getRandom());
+        RandomTool.shuffle(allRegs, _settings.getRandom());
 
         final FitResult<S, R, T> prevResult = chain_.getLatestFrame().getFitResults();
         final double startingLL = prevResult.getEntropy();

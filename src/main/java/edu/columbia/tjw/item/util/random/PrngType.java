@@ -11,7 +11,7 @@ package edu.columbia.tjw.item.util.random;
  */
 public enum PrngType
 {
-    STANDARD, SECURE;
+    STANDARD, SECURE, MERSENNE_TWISTER;
 
 
 }

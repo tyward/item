@@ -25,6 +25,7 @@ import edu.columbia.tjw.item.ItemCurveParams;
 import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.util.EnumFamily;
+import org.apache.commons.math3.random.RandomGenerator;
 
 import java.util.Random;
 
@@ -53,7 +54,7 @@ public class SplineFactory<R extends ItemRegressor<R>> implements ItemCurveFacto
 
     @Override
     public ItemCurveParams<R, SplineCurveType> generateStartingParameters(final SplineCurveType type_, final R field_
-            , final QuantileStatistics dist_, final Random rand_)
+            , final QuantileStatistics dist_, final RandomGenerator rand_)
     {
         throw new UnsupportedOperationException("Not supported.");
 //
