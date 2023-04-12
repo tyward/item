@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.util;
 
+import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.util.FastMath;
 
 /**
@@ -149,6 +150,21 @@ public final class MultiLogistic
         }
     }
 
+    public static final int chooseOne(final double[] probArray_, final RandomGenerator gen_) {
+        double sum = 0.0;
+        final double rand = gen_.nextDouble();
+
+        for(int i = 0; i < probArray_.length; i++) {
+            sum += probArray_[i];
+            if(rand <= sum) {
+                return i;
+            }
+        }
+
+        // Possible due to rounding, but super rare.
+        System.err.println("Very rare case hit due to rounding, continuing.");
+        return probArray_.length - 1;
+    }
 
 //    public static double multiLogisticBetaDerivative(final double[] regressors_,
 //                                                     final double[] computedProbabilities_, final int regressorIndex_
