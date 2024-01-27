@@ -1,7 +1,7 @@
 package edu.columbia.tjw.item.algo;
 
 /**
- * TODO: Use Welford's online algorithm.
+ * Uses Welford's online algorithm.
  * https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
  */
 public final class VarianceCalculator

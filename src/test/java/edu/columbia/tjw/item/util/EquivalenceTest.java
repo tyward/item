@@ -17,22 +17,36 @@ public class EquivalenceTest
     {
     }
 
-
     @Test
     void equivalenceTest() throws Exception
     {
-        final int outputSize = 2;
-        final int xSize = 1;
-        final int observationCount = 1000;
+        //runTest(2, 1, 1000, false, false);
+        //runTest(2, 2, 1000, false, true);
+        runTest(2, 3, 1000, true, true);
+        runTest(2, 4, 1000, false, true);
+
+    }
+
+
+    void runTest(final int outputSize, final int xSize, final int observationCount, final boolean trueTheta, final boolean hasIntercept) throws Exception
+    {
         final double h = 0.00001;
-        final boolean trueTheta = false;
         final RandomGenerator gen = RandomTool.getRandomGenerator();
 
         final double[][] x = new double[observationCount][xSize];
 
         for (int i = 0; i < observationCount; i++)
         {
-            for (int k = 0; k < xSize; k++)
+            if (hasIntercept)
+            {
+                x[i][0] = 1.0;
+            }
+            else
+            {
+                x[i][0] = gen.nextDouble();
+            }
+
+            for (int k = 1; k < xSize; k++)
             {
                 x[i][k] = gen.nextDouble();
             }
@@ -40,11 +54,23 @@ public class EquivalenceTest
 
         final double[][] theta = new double[outputSize][xSize];
         final int thetaCount = (outputSize - 1) * xSize; // First row is always zero.
-        final int xCount = xSize; // First element is always 1.
+        final int xCount;
+        final int xOffset;
+
+        if (hasIntercept)
+        {
+            xCount = xSize - 1;// First element is always 1.
+            xOffset = 1;
+        }
+        else
+        {
+            xCount = xSize;
+            xOffset = 0;
+        }
 
         for (int w = 1; w < outputSize; w++)
         {
-            for (int k = 0; k < xCount; k++)
+            for (int k = 0; k < xSize; k++)
             {
                 theta[w][k] = gen.nextDouble();
             }
@@ -96,16 +122,16 @@ public class EquivalenceTest
             final double baseEntropy = crossEntropy(x[i], theta, y[i]);
 
             // Fill the gradient with respect to X and theta.
-            final double[] nextGradX = gradientX(x[i], theta, gradientS);
+            final double[] nextGradX = gradientX(x[i], theta, gradientS, hasIntercept);
             final double[] nextGradT = gradientT(x[i], theta, gradientS);
 
             final double[] testGradX = new double[nextGradX.length];
 
             // Test X gradient
-            for (int k = 0; k < xSize; k++)
+            for (int k = 0; k < xCount; k++)
             {
                 final double[] x2 = x[i].clone();
-                x2[k] += h;
+                x2[k + xOffset] += h;
                 final double nextEntropy = crossEntropy(x2, theta, y[i]);
 
                 testGradX[k] = (nextEntropy - baseEntropy) / h;
@@ -134,16 +160,16 @@ public class EquivalenceTest
             Assertions.assertArrayEquals(nextGradT, testGradT, 0.001, "Theta gradient failed");
 
             // Fill the hessian with respecc to X and theta .
-            final double[][] nextHessX = hessianX(x[i], theta, hessianS);
+            final double[][] nextHessX = hessianX(x[i], theta, hessianS, hasIntercept);
             final double[][] nextHessT = hessianT(x[i], theta, hessianS);
 
             final double[][] testHessX = new double[nextHessX.length][nextHessX.length];
 
             // Test X hessian.
-            for (int k = 0; k < xSize; k++)
+            for (int k = 0; k < xCount; k++)
             {
                 final double[] x2 = x[i].clone();
-                x2[k] += h;
+                x2[k + xOffset] += h;
 
                 final double[] p2 = powerScores(x2, theta);
                 final double[] m2 = new double[p2.length];
@@ -151,15 +177,15 @@ public class EquivalenceTest
 
                 MultiLogistic.multiLogisticFunction(p2, m2);
                 MultiLogistic.powerScoreEntropyGradient(m2, y[i], g2S);
-                final double[] shiftGrad = gradientX(x2, theta, g2S);
+                final double[] shiftGrad = gradientX(x2, theta, g2S, hasIntercept);
 
-                for (int k2 = 0; k2 < xSize; k2++)
+                for (int k2 = 0; k2 < xCount; k2++)
                 {
                     testHessX[k][k2] = (shiftGrad[k2] - nextGradX[k2]) / h;
                 }
             }
 
-            for (int k = 0; k < xSize; k++)
+            for (int k = 0; k < xCount; k++)
             {
                 Assertions.assertArrayEquals(nextHessX[k], testHessX[k], 0.001, "X hessian failed: " + k);
             }
@@ -208,11 +234,11 @@ public class EquivalenceTest
                 }
             }
 
-            for (int k = 0; k < xSize; k++)
+            for (int k = 0; k < xCount; k++)
             {
                 gradientX[k] += nextGradX[k];
 
-                for (int k2 = 0; k2 < xSize; k2++)
+                for (int k2 = 0; k2 < xCount; k2++)
                 {
                     hessianX[k][k2] += nextHessX[k][k2];
                 }
@@ -227,8 +253,8 @@ public class EquivalenceTest
         RealMatrix hessMatrixT = new Array2DRowRealMatrix(hessianT);
         final SingularValueDecomposition svd = new SingularValueDecomposition(hessMatrixT);
 
-        System.out.println("Hess condition number: " + svd.getConditionNumber());
-        System.out.println("Singular values: " + Arrays.toString(svd.getSingularValues()));
+        System.out.println("Hess condition number[T]: " + svd.getConditionNumber());
+        System.out.println("Singular values[T]: " + Arrays.toString(svd.getSingularValues()));
 
         final RealMatrix inverseHessT = MatrixUtils.inverse(hessMatrixT);
 
@@ -250,13 +276,19 @@ public class EquivalenceTest
             final RealMatrix gradX = new Array2DRowRealMatrix(allGradientsX[i]);
             final RealMatrix gradT = new Array2DRowRealMatrix(allGradientsT[i]);
 
-//            final RealMatrix inverseHessX2 = MatrixUtils.inverse(new Array2DRowRealMatrix(allHessX[i]));
-//            final RealMatrix inverseHessT2 = MatrixUtils.inverse(new Array2DRowRealMatrix(allHessT[i]));
-//            final RealMatrix resX = gradX.transpose().multiply(inverseHessX2).multiply(gradX);
-//            final RealMatrix resT = gradT.transpose().multiply(inverseHessT2).multiply(gradT);
+            final RealMatrix nextHessX = new Array2DRowRealMatrix(allHessX[i]);
+            final RealMatrix nextHessT = new Array2DRowRealMatrix(allHessT[i]);
+            final SingularValueDecomposition nextSvdX = new SingularValueDecomposition(nextHessX);
+            final SingularValueDecomposition nextSvdT = new SingularValueDecomposition(nextHessT);
+            System.out.println("Singular values[X, " + i + "]: " + Arrays.toString(nextSvdX.getSingularValues()));
+            System.out.println("Singular values[T, " + i + "]: " + Arrays.toString(nextSvdT.getSingularValues()));
+            final RealMatrix inverseHessX2 = MatrixUtils.inverse(nextHessX);
+            final RealMatrix inverseHessT2 = MatrixUtils.inverse(nextHessT);
+            final RealMatrix resX = gradX.transpose().multiply(inverseHessX2).multiply(gradX);
+            final RealMatrix resT = gradT.transpose().multiply(inverseHessT2).multiply(gradT);
 
-            final RealMatrix resX = gradX.transpose().multiply(inverseHessX).multiply(gradX);
-            final RealMatrix resT = gradT.transpose().multiply(inverseHessT).multiply(gradT);
+//            final RealMatrix resX = gradX.transpose().multiply(inverseHessX).multiply(gradX);
+//            final RealMatrix resT = gradT.transpose().multiply(inverseHessT).multiply(gradT);
 
             final double tX = resX.getEntry(0, 0);
             final double tT = resT.getEntry(0, 0);
@@ -265,7 +297,7 @@ public class EquivalenceTest
             termT += tT;
         }
 
-        System.out.println("Computed " + termX + " vs " + termT);
+        System.out.println("Computed[" + outputSize + ", " + xSize + ", " + trueTheta + "] " + termX + " vs " + termT);
         System.out.println("Done.");
 
     }
@@ -301,15 +333,30 @@ public class EquivalenceTest
         return crossEntropy;
     }
 
-    private static double[] gradientX(final double[] x_, final double[][] theta_, final double[] gradientS_)
+    private static double[] gradientX(final double[] x_, final double[][] theta_, final double[] gradientS_, final boolean hasIntercept_)
     {
-        final double[] output = new double[x_.length];
+        final int xCount;
+        final int offset;
 
-        for (int k = 0; k < x_.length; k++)
+        if (hasIntercept_)
+        {
+            xCount = x_.length - 1;
+            offset = 1;
+        }
+        else
+        {
+            xCount = x_.length;
+            offset = 0;
+        }
+
+
+        final double[] output = new double[xCount];
+
+        for (int k = 0; k < xCount; k++)
         {
             for (int w = 0; w < theta_.length; w++)
             {
-                output[k] += gradientS_[w] * theta_[w][k];
+                output[k] += gradientS_[w] * theta_[w][k + offset];
             }
         }
 
@@ -331,20 +378,33 @@ public class EquivalenceTest
      * @param hessianS_
      * @return
      */
-    private static double[][] hessianX(final double[] x_, final double[][] theta_, final double[][] hessianS_)
+    private static double[][] hessianX(final double[] x_, final double[][] theta_, final double[][] hessianS_, final boolean hasIntercept_)
     {
-        final int outputSize = x_.length;
-        final double[][] hessianX = new double[outputSize][outputSize];
+        final int xCount;
+        final int offset;
 
-        for (int k = 0; k < x_.length; k++)
+        if (hasIntercept_)
         {
-            for (int k2 = 0; k2 < x_.length; k2++)
+            xCount = x_.length - 1;
+            offset = 1;
+        }
+        else
+        {
+            xCount = x_.length;
+            offset = 0;
+        }
+
+        final double[][] hessianX = new double[xCount][xCount];
+
+        for (int k = 0; k < xCount; k++)
+        {
+            for (int k2 = 0; k2 < xCount; k2++)
             {
                 for (int w = 0; w < theta_.length; w++)
                 {
                     for (int w2 = 0; w2 < theta_.length; w2++)
                     {
-                        hessianX[k][k2] += hessianS_[w][w2] * theta_[w][k] * theta_[w2][k2];
+                        hessianX[k][k2] += hessianS_[w][w2] * theta_[w][k + offset] * theta_[w2][k2 + offset];
                     }
                 }
             }
