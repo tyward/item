@@ -47,6 +47,9 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double _invConditionNumberJ;
     private final double _invConditionNumberI;
 
+    private final RealMatrix _jMatrix;
+
+    // private final RealMatrix _kMatrix;
 
     /**
      * Make a new fit result based on current_, but with a new prev_.
@@ -79,6 +82,9 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         _invConditionNumberI = current_._invConditionNumberI;
         _invConditionNumberJ = current_._invConditionNumberJ;
+
+        _jMatrix = current_._jMatrix;
+        // _kMatrix = current_._kMatrix;
     }
 
     public FitResult(final ItemFitPoint<S, R, T> fitPoint_, final FitResult<S, R, T> prev_,
@@ -148,6 +154,9 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
             _iceSum3 = IceTools.computeIce3Sum(secondDerivative);
 
+            _jMatrix = jMatrix;
+
+
         }
         else
         {
@@ -169,6 +178,8 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _invConditionNumber = Double.NaN;
             _invConditionNumberJ = Double.NaN;
             _invConditionNumberI = Double.NaN;
+
+            _jMatrix = null;
         }
 
         _aic = computeAic(_entropy, rowCount, _params.getEffectiveParamCount());
@@ -258,6 +269,10 @@ public final class FitResult<S extends ItemStatus<S>, R extends ItemRegressor<R>
     public double getInvConditionNumberI()
     {
         return _invConditionNumberI;
+    }
+
+    public RealMatrix getJMatrix() {
+        return _jMatrix;
     }
 
     public double getInformationCriterion()

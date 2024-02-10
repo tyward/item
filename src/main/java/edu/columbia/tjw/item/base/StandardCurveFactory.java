@@ -26,6 +26,7 @@ import edu.columbia.tjw.item.ItemRegressor;
 import edu.columbia.tjw.item.algo.QuantileStatistics;
 import edu.columbia.tjw.item.util.EnumFamily;
 import edu.columbia.tjw.item.util.MathFunctions;
+import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.util.FastMath;
 
 import java.util.Random;
@@ -70,7 +71,7 @@ public final class StandardCurveFactory<R extends ItemRegressor<R>> implements I
     public ItemCurveParams<R, StandardCurveType> generateStartingParameters(final StandardCurveType type_,
                                                                             final R field_,
                                                                             final QuantileStatistics dist_,
-                                                                            final Random rand_)
+                                                                            final RandomGenerator rand_)
     {
         final double[] curveParams = new double[2]; //== type_.getParamCount();
 

@@ -19,6 +19,7 @@
  */
 package edu.columbia.tjw.item.util;
 
+import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.util.FastMath;
 
 /**
@@ -30,6 +31,12 @@ public final class MultiLogistic
     // be any justification for saying the odds of an event are worse than 1/N for the N observations we have. In this
     // case, use an N deep into the billions, but still low enough to avoid overflow issues.
     private static final double MIN_POWER_SCORE = -30.0;
+
+    /**
+     * This should really be something like 1/N for N being the number of observations.
+     * Set the default value low, but not insanely low.
+     */
+    private static final double MIN_PROBABILITY = 1.0e-9;
 
     private MultiLogistic()
     {
@@ -49,9 +56,9 @@ public final class MultiLogistic
         final int size = powerScores_.length;
         double maxSum = Double.NEGATIVE_INFINITY;
 
-        for (int i = 0; i < size; i++)
+        for (final double next : powerScores_)
         {
-            maxSum = Math.max(powerScores_[i], maxSum);
+            maxSum = Math.max(next, maxSum);
         }
 
         double expSum = 0.0;
@@ -74,6 +81,89 @@ public final class MultiLogistic
         }
 
         return expSum;
+    }
+
+    public static double multiLogisticEntropy(final double[] modelProbabilities_, final int actualIndex_)
+    {
+        return -Math.log(modelProbabilities_[actualIndex_]);
+    }
+
+    /**
+     * Calculate the gradient of the entropy of a multi-logistic distribution with respect to the
+     * power scores.
+     *
+     * @param modelProbabilities_ Probabilities produced by the multiLogistic function
+     * @param actualIndex_        The index of the actual transition taken by this observation.
+     */
+    public static void powerScoreEntropyGradient(final double[] modelProbabilities_, final int actualIndex_, final double[] gradOutput_)
+    {
+        //final double computedProbability = modelProbabilities_[actualIndex_];
+        //final double scale = -1.0 / computedProbability;
+
+        for (int i = 0; i < modelProbabilities_.length; i++)
+        {
+            final double delta;
+
+            if (i == actualIndex_)
+            {
+                delta = 1.0;
+            }
+            else
+            {
+                delta = 0.0;
+            }
+
+            gradOutput_[i] = (modelProbabilities_[i] - delta);
+        }
+    }
+
+    /**
+     * Calculate the Hessian of the logistic cross entropy w.r.t. the power scores.
+     * <p>
+     * We can then use this to quickly calculate the Hessian w.r.t. the params or X values
+     * using the chain rule.
+     *
+     * @param modelProbabilities_ Probabilities produced by the multiLogistic function
+     * @param hessianOutput_ The output to hold the computed hessian.
+     */
+    public static void powerScoreEntropyHessian(final double[] modelProbabilities_,
+                                                final double[][] hessianOutput_)
+    {
+        final int size = modelProbabilities_.length;
+
+        for (int i = 0; i < size; i++)
+        {
+            final double prob = modelProbabilities_[i];
+            hessianOutput_[i][i] = prob * (1.0 - prob);
+        }
+
+        for (int i = 0; i < size - 1; i++)
+        {
+            final double rowProb = modelProbabilities_[i];
+
+            for (int k = i + 1; k < size; k++)
+            {
+                final double hessianValue = -rowProb * modelProbabilities_[k];
+                hessianOutput_[i][k] = hessianValue;
+                hessianOutput_[k][i] = hessianValue;
+            }
+        }
+    }
+
+    public static final int chooseOne(final double[] probArray_, final RandomGenerator gen_) {
+        double sum = 0.0;
+        final double rand = gen_.nextDouble();
+
+        for(int i = 0; i < probArray_.length; i++) {
+            sum += probArray_[i];
+            if(rand <= sum) {
+                return i;
+            }
+        }
+
+        // Possible due to rounding, but super rare.
+        System.err.println("Very rare case hit due to rounding, continuing.");
+        return probArray_.length - 1;
     }
 
 //    public static double multiLogisticBetaDerivative(final double[] regressors_,

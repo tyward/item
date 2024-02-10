@@ -61,6 +61,15 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     private final double[] _probWorkspace;
     private final double[] _psDerivativeWorkspace;
 
+    // These workspace hold the derivative of the entropy w.r.t. the power scores,
+    // and the hessian of same. This is used to compute gradient and hessian w.r.t. the
+    // parameters (or regressors, theoretically) using the chain rule.
+    private final double[] _entropyScoreDerivative;
+    private final double[][] _entropyScoreHessian;
+
+
+
+
     /**
      * Create a new item model from its parameters.
      *
@@ -99,6 +108,9 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             _regWorkspace = new double[entryCount];
             _probWorkspace = new double[_reachableSize];
             _psDerivativeWorkspace = new double[_packed.size()];
+
+            _entropyScoreDerivative = new double[_reachableSize];
+            _entropyScoreHessian = new double[_reachableSize][_reachableSize];
         }
     }
 
@@ -251,29 +263,18 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
             return;
         }
 
-        // d -ln(L) = - dL / L, so scale = -1/L
-        final double computedProbability = modelProbabilities[actualOffset];
-        //final double entropy = LogLikelihood.calcEntropy(computedProbability);
-        final double scale = -1.0 / computedProbability;
+        // We will use the chain rule. We have h(s(Theta)), so first compute dh/ds, then multiply
+        // by ds/dTheta to get dh/dTheta
+        MultiLogistic.powerScoreEntropyGradient(modelProbabilities, actualOffset, _entropyScoreDerivative);
+
 
         for (int k = 0; k < dimension; k++)
         {
             final int entry = _packed.getEntry(k);
             final boolean isBetaDerivative = _packed.isBeta(k);
             final int derivToStatus = _packed.getTransition(k);
-            final double delta;
+            final double derivCore = _entropyScoreDerivative[derivToStatus];
 
-            if (derivToStatus == actualOffset)
-            {
-                delta = 1.0;
-            }
-            else
-            {
-                delta = 0.0;
-            }
-
-            // This is common whether we are taking deriv w.r.t. w or beta.
-            final double derivCore = (delta - modelProbabilities[derivToStatus]) * computedProbability;
             final double entryWeight = this.computeEntryWeight(rawReg, entry);
 
             if (entryWeight != entryWeights[entry])
@@ -303,18 +304,11 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
 
         if (null != secondDerivative_ || null != jDiag_)
         {
-            fillSecondDerivatives(rawReg, actualOffset, computedProbability,
+            fillSecondDerivatives(rawReg, actualOffset,
                     modelProbabilities,
-                    powerScoreDerivatives,
-                    derivative_, jDiag_, secondDerivative_);
+                    powerScoreDerivatives, _entropyScoreDerivative,
+                    jDiag_, secondDerivative_);
         }
-
-        // Rescale after we computed the second derivative, if applicable. We need dg more than we need d ln[g].
-        for (int k = 0; k < derivative_.length; k++)
-        {
-            derivative_[k] = derivative_[k] * scale;
-        }
-
     }
 
     private double computeWeightDerivative(final double[] x_, final int k, double entryWeight_,
@@ -349,117 +343,80 @@ public final class ItemModel<S extends ItemStatus<S>, R extends ItemRegressor<R>
     }
 
 
-    private void fillSecondDerivatives(final double[] x_, final int actualOffset_, final double computedProb,
+    private void fillSecondDerivatives(final double[] x_, final int actualOffset_,
                                        final double[] modelProbabilities_, final double[] pDeriv_,
-                                       final double[] derivative_, final double[] jDiag_,
-                                       final double[][] secondDerivative_)
+                                       double[] scoreGradient_, final double[] jDiag_,
+                                       double[][] secondDerivative_)
     {
-        if (null != secondDerivative_ && secondDerivative_.length != derivative_.length)
+        if (null != secondDerivative_ && secondDerivative_.length != jDiag_.length)
         {
             throw new IllegalArgumentException("Mismatched sizes! " + secondDerivative_.length +
-                    " != " + derivative_.length);
+                    " != " + jDiag_.length);
         }
 
-        // First step, fill the top half of the derivative matrix.
-        final double gk = computedProb;
-        final double gk2 = computedProb * computedProb;
+        final int outputSize = modelProbabilities_.length;
 
-        for (int w = 0; w < derivative_.length; w++)
+        // Also compute second derivatives using the chain rule, it's just a little bit more complicated.
+        MultiLogistic.powerScoreEntropyHessian(modelProbabilities_, _entropyScoreHessian);
+
+        // We will use the chain rule. We have h(s(Theta)), so first compute dh/ds, then multiply
+        // by ds/dTheta to get dh/dTheta
+
+        final int derivSize = jDiag_.length;
+
+        for (int w = 0; w < derivSize; w++)
         {
-            if (null != secondDerivative_ && secondDerivative_[w].length != derivative_.length)
-            {
-                throw new IllegalArgumentException("Mismatched sizes! " + secondDerivative_[w].length +
-                        " != " + derivative_.length);
-            }
-
-            final int wToStatus = _packed.getTransition(w);
-            final double gw = modelProbabilities_[wToStatus];
-            final double pw = pDeriv_[w];
-            final double dw = derivative_[w];
+            final int wStatus = _packed.getTransition(w);
             final int entryW = _packed.getEntry(w);
-            final double delta_wk;
+            final double pw = pDeriv_[w];
+            final double psHessDiag = _entropyScoreHessian[wStatus][wStatus];
+            final double psGradW = scoreGradient_[wStatus];
 
-            if (wToStatus == actualOffset_)
+            final double diag1 = pw * pw * psHessDiag;
+
+            // N.B: We know wToStatus == zToStatus because their entries match and they have at least one curve
+            // (otherwise both are betas, and this is zero).
+            final double psdDiag = powerScoreSecondDerivative(x_, w, w, wStatus, entryW);
+            final double diag2 = psdDiag * psGradW;
+
+            final double diagVal = diag1 + diag2;
+            jDiag_[w] = diagVal;
+
+            if (null != secondDerivative_)
             {
-                delta_wk = 1.0;
-            }
-            else
-            {
-                delta_wk = 0.0;
-            }
+                secondDerivative_[w][w] = diagVal;
 
-            final double dm = (delta_wk - gw);
-
-            final int end;
-
-            if (secondDerivative_ != null)
-            {
-                end = derivative_.length;
-            }
-            else
-            {
-                end = w + 1;
-            }
-
-            for (int z = w; z < end; z++)
-            {
-                final int zToStatus = _packed.getTransition(z);
-                final double delta_wz;
-                final double pz = pDeriv_[z];
-                final double gz = modelProbabilities_[zToStatus];
-                final int entryZ = _packed.getEntry(z);
-
-                if (wToStatus == zToStatus)
+                // Fill the off diagonal elements if needed.
+                for (int w2 = w + 1; w2 < derivSize; w2++)
                 {
-                    delta_wz = 1.0;
-                }
-                else
-                {
-                    delta_wz = 0.0;
-                }
+                    final int w2Status = _packed.getTransition(w2);
+                    final double pw2 = pDeriv_[w2];
+                    final double ds2 = _entropyScoreHessian[wStatus][w2Status];
+                    final int entryW2 = _packed.getEntry(w2);
 
-                final double dz = derivative_[z];
+                    final double term1 = pw * pw2 * ds2;
+                    final double term2;
 
-                final double term1;
+                    if (entryW != entryW2)
+                    {
+                        // These are different entries, the second derivative is zero (taking derivative
+                        // w.r.t. something that isn't a parameter of this entry)
+                        term2 = 0.0;
+                    }
+                    else
+                    {
+                        // N.B: We know wToStatus == zToStatus because their entries match and they have at least one curve
+                        // (otherwise both are betas, and this is zero).
+                        final double psd = powerScoreSecondDerivative(x_, w, w2, wStatus, entryW);
+                        term2 = psd * psGradW;
+                    }
 
-                if (entryW != entryZ)
-                {
-                    term1 = 0.0;
-                }
-                else
-                {
-                    // N.B: We know wToStatus == zToStatus because their entries match and they have at least one curve
-                    // (otherwise both are betas, and this is zero).
-                    final double psd = powerScoreSecondDerivative(x_, w, z, wToStatus, entryW
-                    );
-
-                    // TODO: This minus sign seems stray.
-                    term1 = -psd * gk * dm;
-                }
-
-                final double term2 = pw * dz * dm;
-                final double term3 = pw * pz * gk * gw * (delta_wz - gz);
-                final double dwz = term1 + term2 + term3;
-
-                // Now compute the second derivative of the log likelihood, which is -dwz/gk + (dw * dz) / gk*gk
-                final double d2 = (-dwz / gk) + (dw * dz) / (gk2);
-
-                if (z == w)
-                {
-                    jDiag_[z] = -d2;
-                }
-
-                if (secondDerivative_ != null)
-                {
-                    // I don't know where the extra - sign comes from, but FD approx shows
-                    // that it's needed.
-                    secondDerivative_[w][z] = -d2;
-                    secondDerivative_[z][w] = -d2;
+                    final double hessianEntry = term1 + term2;
+                    secondDerivative_[w][w2] = hessianEntry;
+                    secondDerivative_[w2][w] = hessianEntry;
                 }
             }
         }
-
-
     }
 
     private double powerScoreSecondDerivative(final double[] x_, final int w, final int z, final int toStatus_,

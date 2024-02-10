@@ -297,7 +297,7 @@ public class ItemFitterTest
         final SimpleRegressor intercept = rawData.getRegressorFamily().getFromName("INTERCEPT");
 
         ItemSettings settings = ItemSettings.newBuilder()
-                .setRand(RandomTool.getRandom(PrngType.SECURE, 0xcafebabe))
+                .setRand(RandomTool.getRandomGenerator(PrngType.SECURE, 0xcafebabe))
                 .setTarget(target_).build();
 
 
